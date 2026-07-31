@@ -1,93 +1,26 @@
 <!DOCTYPE html>
-<!-- isso é um comentário: Definição da estrutura HTML5 principal e universal -->
+<!-- isso é um comentário: Definição da estrutura HTML5 principal do catálogo JBS | Seara -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JBS | Seara — Catálogo & Coleta</title>
+    <title>JBS | Seara — Consulta de Almoxarifado</title>
     
-    <!-- isso é um comentário: Meta tags para proibir cache do navegador -->
+    <!-- isso é um comentário: Meta tags para proibir o cache do navegador -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
-    <!-- isso é um comentário: Biblioteca SheetJS para leitura de planilhas -->
+    <!-- isso é um comentário: Biblioteca SheetJS para leitura de planilhas Excel/CSV -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- isso é um comentário: Estilos CSS principais -->
+    <!-- isso é um comentário: Estilos CSS do sistema -->
     <link rel="stylesheet" href="style.css">
-
-    <style>
-        /* Estilos específicos para a aba de coleta integrada */
-        .nav-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 10px 14px;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            color: #475569;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.15s ease;
-        }
-        .tab-btn.active {
-            background: #0f172a;
-            color: #ffffff;
-            border-color: #0f172a;
-        }
-        .coleta-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-        }
-        .preview-box {
-            width: 100%;
-            height: 220px;
-            background: #f8fafc;
-            border: 2px dashed #cbd5e1;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            margin: 14px 0;
-            overflow: hidden;
-        }
-        .preview-box img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        .btn-capture {
-            background: #16a34a;
-            color: #ffffff;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            width: 100%;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-    </style>
 </head>
 <body class="desktop-mode">
 
 <div class="app-layout">
-    <!-- Barra Lateral (PC) / Cabeçalho Superior (Mobile) -->
+    <!-- Barra Lateral (Desktop) / Barra Superior (Mobile) -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-placeholder" id="logo-container">
@@ -101,18 +34,14 @@
 
         <nav class="sidebar-nav">
             <span class="nav-section-title">Navegação</span>
-            <a href="#" class="nav-item active" onclick="alternarAba('consulta')">
+            <a href="#" class="nav-item active">
                 <span>🔍</span>
                 <span>Pesquisa de Itens</span>
-            </a>
-            <a href="#" class="nav-item" onclick="alternarAba('coleta')">
-                <span>📸</span>
-                <span>Coleta de Fotos</span>
             </a>
         </nav>
     </aside>
 
-    <!-- Área Principal de Conteúdo -->
+    <!-- Conteúdo Principal de Consulta -->
     <main class="main-content">
         <div class="container">
             <header>
@@ -126,66 +55,28 @@
                 </div>
             </header>
 
-            <!-- Abas Visíveis para alternância em Telas Menores -->
-            <div class="nav-tabs">
-                <button class="tab-btn active" id="tab-consulta-btn" onclick="alternarAba('consulta')">🔍 Pesquisar Itens</button>
-                <button class="tab-btn" id="tab-coleta-btn" onclick="alternarAba('coleta')">📸 Coletar Fotos</button>
+            <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
+
+            <div class="status">
+                <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
+                <span id="contador-itens"></span>
             </div>
 
-            <!-- SEÇÃO 1: CONSULTA DE PEÇAS -->
-            <div id="secao-consulta">
-                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
+            <div id="resultados"></div>
 
-                <div class="status">
-                    <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
-                    <span id="contador-itens"></span>
-                </div>
-
-                <div id="resultados"></div>
-
-                <div class="pagination" id="paginacao" style="display: none;">
-                    <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
-                    <span id="info-pagina" style="font-weight: bold;">Página 1</span>
-                    <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
-                </div>
+            <div class="pagination" id="paginacao" style="display: none;">
+                <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
+                <span id="info-pagina" style="font-weight: bold;">Página 1</span>
+                <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
             </div>
-
-            <!-- SEÇÃO 2: COLETA E ALIMENTAÇÃO DE FOTOS -->
-            <div id="secao-coleta" style="display: none;">
-                <div class="coleta-card">
-                    <h3 style="margin-top:0; font-size:16px; color:#0f172a;">Captura Sequencial de Fotos</h3>
-                    <p style="font-size:13px; color:#64748b; margin-bottom:14px;">Digite o código do item para identificar automaticamente fotos já existentes e calcular a próxima sequência.</p>
-                    
-                    <label style="font-size:13px; font-weight:600; color:#334155;">Código do Item:</label>
-                    <input type="text" id="coleta-codigo" class="search-box" placeholder="Digite o código da peça..." oninput="verificarSequenciaExistente()" style="margin-top:4px; margin-bottom:10px;">
-
-                    <div id="coleta-status-seq" style="font-size:13px; font-weight:600; color:#2563eb; margin-bottom:12px;">
-                        Aguardando código do item...
-                    </div>
-
-                    <label class="btn-capture">
-                        📷 Tirar Foto / Selecionar Imagem
-                        <input type="file" id="coleta-input-foto" accept="image/*" capture="environment" style="display:none;" onchange="processarFotoCapturada(event)">
-                    </label>
-
-                    <div class="preview-box" id="coleta-preview">
-                        <span style="font-size:13px; color:#94a3b8;">Nenhuma foto capturada</span>
-                    </div>
-
-                    <button id="btn-salvar-foto" class="btn-reload" style="width:100%; padding:12px; font-weight:600; display:none;" onclick="baixarFotoFormatada()">
-                        💾 Baixar Foto Formatada
-                    </button>
-                </div>
-            </div>
-
         </div>
     </main>
 </div>
 
-<!-- Card Flutuante Hover (Ativo apenas no PC) -->
+<!-- Card Flutuante de Previsualização ao Passar o Mouse (Ativo no PC) -->
 <div id="hover-card" class="hover-card"></div>
 
-<!-- Modal Detalhada de Item -->
+<!-- Modal com Detalhes do Item Selecionado -->
 <div class="modal-overlay" id="modal-item" onclick="fecharModalFora(event)">
     <div class="modal-card">
         <span class="modal-close" onclick="fecharModal()">&times;</span>
@@ -200,21 +91,8 @@
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
 
-    // Variáveis da Coleta de Fotos
-    let proximaSequencia = 1;
-    let fotoBlobAtual = null;
-
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // Alternar entre abas Consulta e Coleta
-    function alternarAba(aba) {
-        document.getElementById('tab-consulta-btn').classList.toggle('active', aba === 'consulta');
-        document.getElementById('tab-coleta-btn').classList.toggle('active', aba === 'coleta');
-        document.getElementById('secao-consulta').style.display = aba === 'consulta' ? 'block' : 'none';
-        document.getElementById('secao-coleta').style.display = aba === 'coleta' ? 'block' : 'none';
-    }
-
-    // Função de detecção de dispositivo (Ajusta responsividade)
     function detectarDispositivo() {
         const telaPequena = window.innerWidth <= 900;
         const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -235,7 +113,6 @@
         }
     }
 
-    // Busca da Logo Universal (.png, .jpg, .webp, .svg)
     function carregarLogoUniversal() {
         const logoContainer = document.getElementById('logo-container');
         const extensoesLogo = ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'webp', 'WEBP', 'svg', 'SVG', 'gif'];
@@ -256,90 +133,6 @@
                 img.src = caminho;
             });
         });
-    }
-
-    // Identifica fotos existentes do item e calcula a próxima sequência
-    async function verificarSequenciaExistente() {
-        const codInput = document.getElementById('coleta-codigo').value.trim();
-        const statusSeq = document.getElementById('coleta-status-seq');
-        
-        if (!codInput) {
-            statusSeq.innerText = "Aguardando código do item...";
-            proximaSequencia = 1;
-            return;
-        }
-
-        statusSeq.innerText = "🔍 Verificando imagens existentes na pasta...";
-        const extensoes = ['jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG', 'webp', 'WEBP'];
-        let maiorSeqEncontrada = 0;
-
-        for (let seq = 1; seq <= 10; seq++) {
-            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-            let existe = false;
-
-            for (const ext of extensoes) {
-                const src = `imagens/${codInput} - ${numSeq}.${ext}`;
-                try {
-                    const res = await fetch(src, { method: 'HEAD' });
-                    if (res.ok) {
-                        existe = true;
-                        maiorSeqEncontrada = seq;
-                        break;
-                    }
-                } catch (e) {}
-            }
-            if (!existe && seq > maiorSeqEncontrada + 1) break;
-        }
-
-        proximaSequencia = maiorSeqEncontrada + 1;
-        const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
-
-        if (maiorSeqEncontrada > 0) {
-            statusSeq.innerHTML = `✅ Encontrada(s) <strong>${maiorSeqEncontrada}</strong> foto(s). Próximo arquivo: <span style="color:#16a34a;">${codInput} - ${seqFormatada}.jpg</span>`;
-        } else {
-            statusSeq.innerHTML = `ℹ️ Nenhuma foto anterior encontrada. Próximo arquivo: <span style="color:#16a34a;">${codInput} - ${seqFormatada}.jpg</span>`;
-        }
-    }
-
-    function processarFotoCapturada(event) {
-        const file = event.target.files[0];
-        const codInput = document.getElementById('coleta-codigo').value.trim();
-        
-        if (!codInput) {
-            alert("Por favor, digite o código do item antes de capturar a foto.");
-            return;
-        }
-
-        if (!file) return;
-
-        fotoBlobAtual = file;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const previewBox = document.getElementById('coleta-preview');
-            previewBox.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-            document.getElementById('btn-salvar-foto').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function baixarFotoFormatada() {
-        const codInput = document.getElementById('coleta-codigo').value.trim();
-        if (!codInput || !fotoBlobAtual) return;
-
-        const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
-        const nomeArquivoFinal = `${codInput} - ${seqFormatada}.jpg`;
-
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(fotoBlobAtual);
-        a.download = nomeArquivoFinal;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        alert(`Foto [${nomeArquivoFinal}] baixada com sucesso! Mova para a pasta "imagens" do repositório.`);
-        
-        proximaSequencia++;
-        verificarSequenciaExistente();
     }
 
     function getVal(item, termosChave) {
@@ -588,11 +381,26 @@
         const leadTime = getVal(item, ['lead_time', 'lead']);
 
         let camposExtrasHTML = '';
-        const chavesPadrao = ['cod_item','codigo','cod','nome_item','nome','item','descricao','cod_fornecedor','fornecedor','forn','equipamento','equip','especificacao','espec','prateleira','prat','rua','divisao','div','gaveta','reparticao','rep','nicho','locais_aplicacao','aplicacao','est_min','minimo','est_max','maximo','lead_time','lead'];
+        
+        // Lista completa de chaves tratadas no layout principal para evitar duplicações
+        const chavesIgnorar = [
+            'cod_item','codigo','cod',
+            'nome_item','nome','item','descricao',
+            'cod_fornecedor','fornecedor','forn',
+            'equipamento','equip',
+            'especificacao','espec',
+            'prateleira','prat','rua',
+            'divisao','div','gaveta',
+            'reparticao','rep','nicho',
+            'locais_aplicacao','aplicacao',
+            'est_min','estmin','minimo',
+            'est_max','estmax','maximo',
+            'lead_time','leadtime','lead'
+        ];
         
         Object.keys(item).forEach(key => {
             const keyNorm = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!chavesPadrao.some(p => keyNorm === p || keyNorm.includes(p))) {
+            if (!chavesIgnorar.some(p => keyNorm === p || keyNorm.includes(p))) {
                 if (item[key] !== undefined && item[key] !== null && String(item[key]).trim() !== '') {
                     camposExtrasHTML += `<p><strong>${key}:</strong> ${item[key]}</p>`;
                 }
@@ -671,7 +479,7 @@
                 const nomeFoto = `${codLimpo} - ${numSeq}`;
 
                 extensoes.forEach(ext => {
-                    const caminho = `imagens/${nomeFoto}.${ext}`;
+                    const caminho = `imagens/${nomeFoto}.${ext}?v=${new Date().getTime()}`;
                     const img = new Image();
                     img.onload = () => {
                         midias.push({ tipo: 'foto', seq: seq, src: caminho });
