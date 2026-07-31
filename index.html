@@ -5,7 +5,7 @@
     <!-- isso é um comentário: Metadados de codificação e responsividade essencial para celulares -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Consulta Almoxarifado - Multiplataforma (PC e Mobile)</title>
+    <title>JBS | Seara — Catálogo de Itens</title>
     
     <!-- isso é um comentário: Meta tags para proibir o navegador de guardar cache -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -15,40 +15,32 @@
     <!-- isso é um comentário: Biblioteca SheetJS para leitura nativa universal (XLSB, XLSX, XLS, CSV) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- isso é um comentário: Folha de estilos CSS com suporte a adaptação dinâmica via Media Queries -->
+    <!-- isso é um comentário: Folha de estilos CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="desktop-mode">
 
 <!-- isso é um comentário: Layout base do sistema -->
 <div class="app-layout">
-    <!-- isso é um comentário: Barra de navegação lateral (Sidebar em PC / Header compacto em Celular) -->
+    <!-- isso é um comentário: Barra de navegação lateral contendo exclusivamente a marca e o módulo de pesquisa -->
     <aside class="sidebar">
         <div class="sidebar-logo">
-            <div class="logo-placeholder">LOG</div>
+            <!-- isso é um comentário: Container dinâmico para a imagem da logo (auto-detecta .png, .jpg, .webp, .svg, etc) -->
+            <div class="logo-placeholder" id="logo-container">
+                <span id="logo-fallback">JBS</span>
+            </div>
             <div class="logo-text">
-                <span class="brand-name">Sua Empresa</span>
-                <span class="brand-sub" id="device-badge">Gestão Logística</span>
+                <span class="brand-name">JBS | Seara</span>
+                <span class="brand-sub">Catálogo de Itens</span>
             </div>
         </div>
 
+        <!-- isso é um comentário: Menu lateral contendo unicamente a funcionalidade de consulta -->
         <nav class="sidebar-nav">
-            <span class="nav-section-title">Módulos</span>
+            <span class="nav-section-title">Navegação</span>
             <a href="#" class="nav-item active">
-                <span>📦</span>
-                <span>Consulta de Peças</span>
-            </a>
-            <a href="#" class="nav-item">
-                <span>📍</span>
-                <span>Localizações</span>
-            </a>
-            <a href="#" class="nav-item">
-                <span>📊</span>
-                <span>Parâmetros Mín/Máx</span>
-            </a>
-            <a href="#" class="nav-item">
-                <span>⏱️</span>
-                <span>Lead Time</span>
+                <span>🔍</span>
+                <span>Pesquisa de Itens</span>
             </a>
         </nav>
     </aside>
@@ -88,7 +80,7 @@
 <!-- isso é um comentário: Elemento flutuante exibido apenas no Computador/Mouse -->
 <div id="hover-card" class="hover-card"></div>
 
-<!-- isso é um comentário: Janela modal de detalhes (Ideal para toques no Celular e cliques no PC) -->
+<!-- isso é um comentário: Janela modal de detalhes do item -->
 <div class="modal-overlay" id="modal-item" onclick="fecharModalFora(event)">
     <div class="modal-card">
         <span class="modal-close" onclick="fecharModal()">&times;</span>
@@ -102,36 +94,54 @@
     let dadosFiltrados = [];
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
-    
-    // isso é um comentário: Flag global que identifica se o usuário está acessando pelo celular ou PC
     let isMobile = false;
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // isso é um comentário: Função de detecção inteligente do dispositivo do usuário
-    function detectarDispositivo() {
-        // Verifica largura da tela e suporte a eventos de toque / User Agent
-        const userAgentMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const telaPequena = window.innerWidth <= 900;
-        const possuiTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    // isso é um comentário: Função de varredura automática para carregar a imagem da logo independente da extensão
+    function carregarLogoUniversal() {
+        const logoContainer = document.getElementById('logo-container');
+        const extensoesLogo = ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'webp', 'WEBP', 'svg', 'SVG', 'gif'];
+        let encontrada = false;
 
-        isMobile = userAgentMobile || (telaPequena && possuiTouch);
+        extensoesLogo.forEach(ext => {
+            if (encontrada) return;
+            
+            // Testa opções na raiz ou dentro da pasta imagens/
+            const caminhosTestar = [`logo.${ext}`, `imagens/logo.${ext}`];
+            
+            caminhosTestar.forEach(caminho => {
+                if (encontrada) return;
+                const img = new Image();
+                img.onload = () => {
+                    if (!encontrada) {
+                        encontrada = true;
+                        logoContainer.innerHTML = `<img src="${caminho}" alt="Logo JBS Seara" style="width:100%; height:100%; object-fit:contain;">`;
+                    }
+                };
+                img.src = caminho;
+            });
+        });
+    }
+
+    // isso é um comentário: Função para detectar celular vs computador
+    function detectarDispositivo() {
+        const telaPequena = window.innerWidth <= 900;
+        const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+        isMobile = telaPequena || (eTouch && window.innerWidth <= 1024);
 
         const body = document.body;
-        const badge = document.getElementById('device-badge');
-
         if (isMobile) {
             body.classList.remove('desktop-mode');
             body.classList.add('mobile-mode');
-            if (badge) badge.innerText = '📱 Modo Mobile';
         } else {
             body.classList.remove('mobile-mode');
             body.classList.add('desktop-mode');
-            if (badge) badge.innerText = '💻 Modo Desktop';
         }
     }
 
-    // isso é um comentário: Extração flexível de colunas independentemente de maiúsculas/minúsculas
+    // isso é um comentário: Extração flexível de colunas
     function getVal(item, termosChave) {
         if (!item || typeof item !== 'object') return '-';
         const keys = Object.keys(item);
@@ -170,7 +180,7 @@
         }
 
         if (!arquivoEncontrado || !bufferArquivo) {
-            statusDiv.innerText = "⚠️ Se o carregamento automático falhar, clique em '📂 Selecionar Planilha'.";
+            statusDiv.innerText = "⚠️ Clique em '📂 Selecionar Planilha' para carregar a base de dados.";
             return;
         }
 
@@ -242,10 +252,8 @@
             const row = document.createElement('div');
             row.className = 'item-row';
             
-            // Toque/Clique abre o modal em qualquer cenário
             row.onclick = () => abrirModal(indexReal);
 
-            // Eventos de hover ativados exclusivamente quando executado em Desktop
             if (!isMobile) {
                 row.onmousemove = (e) => mostrarHoverCard(e, indexReal);
                 row.onmouseleave = esconderHoverCard;
@@ -286,7 +294,6 @@
         }
     }
 
-    // isso é um comentário: Busca imagens aceitando variações de nomenclatura e formatos com/sem espaço
     function carregarFotoCapaLinha(codItem, indexReal) {
         const thumbDiv = document.getElementById(`row-thumb-${indexReal}`);
         if (!codItem || codItem === '-') {
@@ -325,7 +332,6 @@
         }
     }
 
-    // isso é um comentário: Card flutuante (Executado unicamente no Desktop)
     function mostrarHoverCard(e, indexReal) {
         if (isMobile) return;
 
@@ -368,7 +374,6 @@
         document.getElementById('hover-card').style.display = 'none';
     }
 
-    // isso é um comentário: Abertura da Modal (Otimizada para toques touch e cliques)
     function abrirModal(indexReal) {
         esconderHoverCard();
         
@@ -564,11 +569,11 @@
         renderizarPagina();
     }
 
-    // isso é um comentário: Eventos de inicialização e redimensionamento da janela
     window.addEventListener('resize', detectarDispositivo);
     
     window.onload = () => {
         detectarDispositivo();
+        carregarLogoUniversal();
         carregarCSV();
     };
 </script>
