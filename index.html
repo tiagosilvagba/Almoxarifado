@@ -2,10 +2,10 @@
 <!-- isso é um comentário: Definição da estrutura HTML5 principal -->
 <html lang="pt-BR">
 <head>
-    <!-- isso é um comentário: Metadados de codificação e responsividade da página -->
+    <!-- isso é um comentário: Metadados de codificação e responsividade essencial para celulares -->
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta Almoxarifado - JBS | Seara</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Consulta Almoxarifado - Multiplataforma (PC e Mobile)</title>
     
     <!-- isso é um comentário: Meta tags para proibir o navegador de guardar cache -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -15,50 +15,62 @@
     <!-- isso é um comentário: Biblioteca SheetJS para leitura nativa universal (XLSB, XLSX, XLS, CSV) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- isso é um comentário: Vínculo com a folha de estilos CSS externa -->
+    <!-- isso é um comentário: Folha de estilos CSS com suporte a adaptação dinâmica via Media Queries -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="desktop-mode">
 
-<!-- isso é um comentário: Layout base dividido entre a barra lateral e a área de trabalho -->
+<!-- isso é um comentário: Layout base do sistema -->
 <div class="app-layout">
+    <!-- isso é um comentário: Barra de navegação lateral (Sidebar em PC / Header compacto em Celular) -->
     <aside class="sidebar">
         <div class="sidebar-logo">
-            <!-- isso é um comentário: Container da logo com suporte multiformato (.png, .jpg, .webp, .svg, etc.) -->
-            <div class="logo-placeholder" id="box-logo">JBS</div>
+            <div class="logo-placeholder">LOG</div>
             <div class="logo-text">
-                <span class="brand-name">JBS | Seara</span>
-                <span class="brand-sub">Catálogo de Itens</span>
+                <span class="brand-name">Sua Empresa</span>
+                <span class="brand-sub" id="device-badge">Gestão Logística</span>
             </div>
         </div>
 
-        <!-- isso é um comentário: Menu de navegação exibindo apenas a consulta -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Módulos</span>
             <a href="#" class="nav-item active">
-                <span>🔍</span>
+                <span>📦</span>
                 <span>Consulta de Peças</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span>📍</span>
+                <span>Localizações</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span>📊</span>
+                <span>Parâmetros Mín/Máx</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span>⏱️</span>
+                <span>Lead Time</span>
             </a>
         </nav>
     </aside>
 
+    <!-- isso é um comentário: Área de conteúdo principal -->
     <main class="main-content">
         <div class="container">
             <header>
                 <h1>Consulta de Almoxarifado</h1>
-                <div style="display:flex; gap:10px; align-items:center;">
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <label class="btn-reload" style="cursor:pointer; display:inline-block;">
                         📂 Selecionar Planilha
                         <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
                     </label>
-                    <button class="btn-reload" onclick="carregarCSV()">🔄 Sincronizar Rede</button>
+                    <button class="btn-reload" onclick="carregarCSV()">🔄 Sincronizar</button>
                 </div>
             </header>
 
             <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
 
             <div class="status">
-                <span id="status-texto">Procurando base de dados (dados.xlsx, dados.csv)...</span>
+                <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
                 <span id="contador-itens"></span>
             </div>
 
@@ -73,8 +85,10 @@
     </main>
 </div>
 
+<!-- isso é um comentário: Elemento flutuante exibido apenas no Computador/Mouse -->
 <div id="hover-card" class="hover-card"></div>
 
+<!-- isso é um comentário: Janela modal de detalhes (Ideal para toques no Celular e cliques no PC) -->
 <div class="modal-overlay" id="modal-item" onclick="fecharModalFora(event)">
     <div class="modal-card">
         <span class="modal-close" onclick="fecharModal()">&times;</span>
@@ -83,35 +97,41 @@
 </div>
 
 <script>
+    // isso é um comentário: Variáveis globais do sistema
     let dadosCSV = [];
     let dadosFiltrados = [];
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
+    
+    // isso é um comentário: Flag global que identifica se o usuário está acessando pelo celular ou PC
+    let isMobile = false;
 
-    const FORMATOS_SUPORTADOS = ['dados.xlsx', 'dados.xlsb', 'dados.csv', 'dados.xls'];
+    const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // isso é um comentário: Função para testar e carregar a foto da logo em qualquer formato (logo.png, logo.jpg, logo.webp, etc.)
-    function carregarLogoEmpresa() {
-        const logoBox = document.getElementById('box-logo');
-        const extensoesLogo = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];
-        let encontrada = false;
+    // isso é um comentário: Função de detecção inteligente do dispositivo do usuário
+    function detectarDispositivo() {
+        // Verifica largura da tela e suporte a eventos de toque / User Agent
+        const userAgentMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const telaPequena = window.innerWidth <= 900;
+        const possuiTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-        extensoesLogo.forEach(ext => {
-            if (encontrada) return;
-            const src = `logo.${ext}?v=${new Date().getTime()}`;
-            const img = new Image();
-            img.onload = () => {
-                if (!encontrada) {
-                    encontrada = true;
-                    logoBox.style.background = 'transparent';
-                    logoBox.innerHTML = `<img src="${src}" alt="Logo Empresa" style="width:100%; height:100%; object-fit:contain;">`;
-                }
-            };
-            img.src = src;
-        });
+        isMobile = userAgentMobile || (telaPequena && possuiTouch);
+
+        const body = document.body;
+        const badge = document.getElementById('device-badge');
+
+        if (isMobile) {
+            body.classList.remove('desktop-mode');
+            body.classList.add('mobile-mode');
+            if (badge) badge.innerText = '📱 Modo Mobile';
+        } else {
+            body.classList.remove('mobile-mode');
+            body.classList.add('desktop-mode');
+            if (badge) badge.innerText = '💻 Modo Desktop';
+        }
     }
 
-    // isso é um comentário: Função para buscar valores independentemente da grafia das colunas no Excel
+    // isso é um comentário: Extração flexível de colunas independentemente de maiúsculas/minúsculas
     function getVal(item, termosChave) {
         if (!item || typeof item !== 'object') return '-';
         const keys = Object.keys(item);
@@ -150,7 +170,7 @@
         }
 
         if (!arquivoEncontrado || !bufferArquivo) {
-            statusDiv.innerText = "⚠️ Clique em '📂 Selecionar Planilha' acima para escolher seu arquivo Excel do computador.";
+            statusDiv.innerText = "⚠️ Se o carregamento automático falhar, clique em '📂 Selecionar Planilha'.";
             return;
         }
 
@@ -213,18 +233,23 @@
             const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
             const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
             const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
-            const estMin = getVal(item, ['est_min', 'minimo', 'estmin', 'est_minimo']);
-            const estMax = getVal(item, ['est_max', 'maximo', 'estmax', 'est_maximo']);
-            const leadTime = getVal(item, ['lead_time', 'lead', 'prazodeentrega']);
+            const estMin = getVal(item, ['est_min', 'minimo']);
+            const estMax = getVal(item, ['est_max', 'maximo']);
+            const leadTime = getVal(item, ['lead_time', 'lead']);
 
             const indexReal = inicio + index;
 
             const row = document.createElement('div');
             row.className = 'item-row';
             
+            // Toque/Clique abre o modal em qualquer cenário
             row.onclick = () => abrirModal(indexReal);
-            row.onmousemove = (e) => mostrarHoverCard(e, indexReal);
-            row.onmouseleave = esconderHoverCard;
+
+            // Eventos de hover ativados exclusivamente quando executado em Desktop
+            if (!isMobile) {
+                row.onmousemove = (e) => mostrarHoverCard(e, indexReal);
+                row.onmouseleave = esconderHoverCard;
+            }
 
             row.innerHTML = `
                 <div class="row-thumb" id="row-thumb-${indexReal}">
@@ -261,6 +286,7 @@
         }
     }
 
+    // isso é um comentário: Busca imagens aceitando variações de nomenclatura e formatos com/sem espaço
     function carregarFotoCapaLinha(codItem, indexReal) {
         const thumbDiv = document.getElementById(`row-thumb-${indexReal}`);
         if (!codItem || codItem === '-') {
@@ -268,37 +294,49 @@
             return;
         }
 
-        const extensoes = ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'];
+        const codLimpo = String(codItem).trim();
+        const extensoes = ['jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG', 'webp', 'WEBP', 'gif'];
+        const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}_01`, `${codLimpo}`];
+
         let encontrada = false;
 
-        extensoes.forEach(ext => {
-            if (encontrada) return;
-            const src = `imagens/${codItem} - 01.${ext}`;
-            const img = new Image();
-            img.onload = () => {
-                if (!encontrada) {
-                    encontrada = true;
-                    thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
-                }
-            };
-            img.onerror = () => {
-                if (!encontrada && ext === extensoes[extensoes.length - 1]) {
-                    thumbDiv.innerHTML = '<span>Sem foto</span>';
-                }
-            };
-            img.src = src;
-        });
+        for (const padrao of padroes) {
+            if (encontrada) break;
+            extensoes.forEach(ext => {
+                if (encontrada) return;
+                const src = `imagens/${padrao}.${ext}`;
+                const img = new Image();
+                
+                img.onload = () => {
+                    if (!encontrada) {
+                        encontrada = true;
+                        thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+                    }
+                };
+                
+                img.onerror = () => {
+                    if (!encontrada && padrao === padroes[padroes.length - 1] && ext === extensoes[extensoes.length - 1]) {
+                        thumbDiv.innerHTML = '<span>Sem foto</span>';
+                    }
+                };
+                
+                img.src = src;
+            });
+        }
     }
 
+    // isso é um comentário: Card flutuante (Executado unicamente no Desktop)
     function mostrarHoverCard(e, indexReal) {
+        if (isMobile) return;
+
         const item = dadosFiltrados[indexReal];
         const cardHover = document.getElementById('hover-card');
         const imgCapa = document.getElementById(`img-capa-${indexReal}`);
         
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const estMin = getVal(item, ['est_min', 'minimo', 'est_minimo']);
-        const estMax = getVal(item, ['est_max', 'maximo', 'est_maximo']);
+        const estMin = getVal(item, ['est_min', 'minimo']);
+        const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
         const especificacao = getVal(item, ['especificacao', 'espec']);
         const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
@@ -330,6 +368,7 @@
         document.getElementById('hover-card').style.display = 'none';
     }
 
+    // isso é um comentário: Abertura da Modal (Otimizada para toques touch e cliques)
     function abrirModal(indexReal) {
         esconderHoverCard();
         
@@ -343,18 +382,12 @@
         const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
         const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
         const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
-        const estMin = getVal(item, ['est_min', 'minimo', 'est_minimo']);
-        const estMax = getVal(item, ['est_max', 'maximo', 'est_maximo']);
+        const estMin = getVal(item, ['est_min', 'minimo']);
+        const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
 
         let camposExtrasHTML = '';
-        const chavesPadrao = [
-            'cod_item','codigo','cod','nome_item','nome','item','descricao',
-            'cod_fornecedor','fornecedor','forn','equipamento','equip',
-            'especificacao','espec','prateleira','prat','rua','divisao','div',
-            'gaveta','reparticao','rep','nicho','locais_aplicacao','aplicacao',
-            'est_min','est_max','est_máx','est_minimo','est_maximo','estmin','estmax','minimo','maximo','lead_time','lead'
-        ];
+        const chavesPadrao = ['cod_item','codigo','cod','nome_item','nome','item','descricao','cod_fornecedor','fornecedor','forn','equipamento','equip','especificacao','espec','prateleira','prat','rua','divisao','div','gaveta','reparticao','rep','nicho','locais_aplicacao','aplicacao','est_min','minimo','est_max','maximo','lead_time','lead'];
         
         Object.keys(item).forEach(key => {
             const keyNorm = key.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -367,14 +400,14 @@
 
         const conteudoDiv = document.getElementById('modal-conteudo');
         conteudoDiv.innerHTML = `
-            <h2 style="color:#0f172a; margin-top:0; font-size:20px; font-weight:600;">[Código: ${cod}] — ${nome}</h2>
+            <h2 style="color:#0f172a; margin-top:0; font-size:18px; font-weight:600;">[Código: ${cod}] — ${nome}</h2>
             <div class="modal-body">
                 <div class="modal-info">
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px 16px; border-radius:8px; margin-bottom:12px; color:#334155;">
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; margin-bottom:10px; color:#334155;">
                         <p style="margin:2px 0;">📍 <strong>Prateleira:</strong> ${prateleira} &nbsp;|&nbsp; 📂 <strong>Divisão:</strong> ${divisao} &nbsp;|&nbsp; 📦 <strong>Repartição:</strong> ${reparticao}</p>
                     </div>
 
-                    <div style="background:#fef3c7; color:#92400e; padding:12px 16px; border-radius:8px; margin-bottom:16px; border:1px solid #fde68a;">
+                    <div style="background:#fef3c7; color:#92400e; padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid #fde68a;">
                         <p style="margin:2px 0;">📊 <strong>Estoque Mínimo:</strong> ${estMin} un. &nbsp;|&nbsp; 📈 <strong>Estoque Máximo:</strong> ${estMax} un.</p>
                         <p style="margin:2px 0;">⏱️ <strong>Lead Time de Entrega:</strong> ${leadTime}</p>
                     </div>
@@ -413,9 +446,10 @@
         }
 
         let midias = [];
-        const extensoes = ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'];
+        const codLimpo = String(codItem).trim();
+        const extensoes = ['jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG', 'webp', 'WEBP', 'gif'];
         
-        const videoSrc = `imagens/${codItem} - 360.mp4`;
+        const videoSrc = `imagens/${codLimpo} - 360.mp4`;
         const tempVideo = document.createElement('video');
         
         tempVideo.onloadedmetadata = function() {
@@ -433,7 +467,7 @@
 
             for (let seq = 1; seq <= MAX_FOTOS; seq++) {
                 const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-                const nomeFoto = `${codItem} - ${numSeq}`;
+                const nomeFoto = `${codLimpo} - ${numSeq}`;
 
                 extensoes.forEach(ext => {
                     const caminho = `imagens/${nomeFoto}.${ext}`;
@@ -530,9 +564,11 @@
         renderizarPagina();
     }
 
-    // isso é um comentário: Disparo do carregamento da logo e da base de dados ao abrir a página
-    window.onload = function() {
-        carregarLogoEmpresa();
+    // isso é um comentário: Eventos de inicialização e redimensionamento da janela
+    window.addEventListener('resize', detectarDispositivo);
+    
+    window.onload = () => {
+        detectarDispositivo();
         carregarCSV();
     };
 </script>
