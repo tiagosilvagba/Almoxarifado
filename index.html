@@ -1,55 +1,122 @@
 <!DOCTYPE html>
-<!-- isso é um comentário: Definição da estrutura HTML5 principal -->
+<!-- isso é um comentário: Definição da estrutura HTML5 principal e universal -->
 <html lang="pt-BR">
 <head>
-    <!-- isso é um comentário: Metadados de codificação e responsividade essencial para celulares -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JBS | Seara — Catálogo de Itens</title>
+    <title>JBS | Seara — Catálogo & Coleta</title>
     
-    <!-- isso é um comentário: Meta tags para proibir o navegador de guardar cache -->
+    <!-- isso é um comentário: Meta tags para proibir cache do navegador -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
-    <!-- isso é um comentário: Biblioteca SheetJS para leitura nativa universal (XLSB, XLSX, XLS, CSV) -->
+    <!-- isso é um comentário: Biblioteca SheetJS para leitura de planilhas -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- isso é um comentário: Folha de estilos CSS -->
+    <!-- isso é um comentário: Estilos CSS principais -->
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Estilos específicos para a aba de coleta integrada */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 14px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #475569;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .tab-btn.active {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+        .coleta-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .preview-box {
+            width: 100%;
+            height: 220px;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            margin: 14px 0;
+            overflow: hidden;
+        }
+        .preview-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .btn-capture {
+            background: #16a34a;
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+    </style>
 </head>
 <body class="desktop-mode">
 
-<!-- isso é um comentário: Layout base do sistema -->
 <div class="app-layout">
-    <!-- isso é um comentário: Barra de navegação lateral contendo exclusivamente a marca e o módulo de pesquisa -->
+    <!-- Barra Lateral (PC) / Cabeçalho Superior (Mobile) -->
     <aside class="sidebar">
         <div class="sidebar-logo">
-            <!-- isso é um comentário: Container dinâmico para a imagem da logo (auto-detecta .png, .jpg, .webp, .svg, etc) -->
             <div class="logo-placeholder" id="logo-container">
                 <span id="logo-fallback">JBS</span>
             </div>
             <div class="logo-text">
                 <span class="brand-name">JBS | Seara</span>
-                <span class="brand-sub">Catálogo de Itens</span>
+                <span class="brand-sub" id="device-badge">Catálogo de Itens</span>
             </div>
         </div>
 
-        <!-- isso é um comentário: Menu lateral contendo unicamente a funcionalidade de consulta -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Navegação</span>
-            <a href="#" class="nav-item active">
+            <a href="#" class="nav-item active" onclick="alternarAba('consulta')">
                 <span>🔍</span>
                 <span>Pesquisa de Itens</span>
+            </a>
+            <a href="#" class="nav-item" onclick="alternarAba('coleta')">
+                <span>📸</span>
+                <span>Coleta de Fotos</span>
             </a>
         </nav>
     </aside>
 
-    <!-- isso é um comentário: Área de conteúdo principal -->
+    <!-- Área Principal de Conteúdo -->
     <main class="main-content">
         <div class="container">
             <header>
-                <h1>Consulta de Almoxarifado</h1>
+                <h1>Almoxarifado JBS | Seara</h1>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <label class="btn-reload" style="cursor:pointer; display:inline-block;">
                         📂 Selecionar Planilha
@@ -59,28 +126,66 @@
                 </div>
             </header>
 
-            <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
-
-            <div class="status">
-                <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
-                <span id="contador-itens"></span>
+            <!-- Abas Visíveis para alternância em Telas Menores -->
+            <div class="nav-tabs">
+                <button class="tab-btn active" id="tab-consulta-btn" onclick="alternarAba('consulta')">🔍 Pesquisar Itens</button>
+                <button class="tab-btn" id="tab-coleta-btn" onclick="alternarAba('coleta')">📸 Coletar Fotos</button>
             </div>
 
-            <div id="resultados"></div>
+            <!-- SEÇÃO 1: CONSULTA DE PEÇAS -->
+            <div id="secao-consulta">
+                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
 
-            <div class="pagination" id="paginacao" style="display: none;">
-                <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
-                <span id="info-pagina" style="font-weight: bold;">Página 1</span>
-                <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
+                <div class="status">
+                    <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
+                    <span id="contador-itens"></span>
+                </div>
+
+                <div id="resultados"></div>
+
+                <div class="pagination" id="paginacao" style="display: none;">
+                    <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
+                    <span id="info-pagina" style="font-weight: bold;">Página 1</span>
+                    <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
+                </div>
             </div>
+
+            <!-- SEÇÃO 2: COLETA E ALIMENTAÇÃO DE FOTOS -->
+            <div id="secao-coleta" style="display: none;">
+                <div class="coleta-card">
+                    <h3 style="margin-top:0; font-size:16px; color:#0f172a;">Captura Sequencial de Fotos</h3>
+                    <p style="font-size:13px; color:#64748b; margin-bottom:14px;">Digite o código do item para identificar automaticamente fotos já existentes e calcular a próxima sequência.</p>
+                    
+                    <label style="font-size:13px; font-weight:600; color:#334155;">Código do Item:</label>
+                    <input type="text" id="coleta-codigo" class="search-box" placeholder="Digite o código da peça..." oninput="verificarSequenciaExistente()" style="margin-top:4px; margin-bottom:10px;">
+
+                    <div id="coleta-status-seq" style="font-size:13px; font-weight:600; color:#2563eb; margin-bottom:12px;">
+                        Aguardando código do item...
+                    </div>
+
+                    <label class="btn-capture">
+                        📷 Tirar Foto / Selecionar Imagem
+                        <input type="file" id="coleta-input-foto" accept="image/*" capture="environment" style="display:none;" onchange="processarFotoCapturada(event)">
+                    </label>
+
+                    <div class="preview-box" id="coleta-preview">
+                        <span style="font-size:13px; color:#94a3b8;">Nenhuma foto capturada</span>
+                    </div>
+
+                    <button id="btn-salvar-foto" class="btn-reload" style="width:100%; padding:12px; font-weight:600; display:none;" onclick="baixarFotoFormatada()">
+                        💾 Baixar Foto Formatada
+                    </button>
+                </div>
+            </div>
+
         </div>
     </main>
 </div>
 
-<!-- isso é um comentário: Elemento flutuante exibido apenas no Computador/Mouse -->
+<!-- Card Flutuante Hover (Ativo apenas no PC) -->
 <div id="hover-card" class="hover-card"></div>
 
-<!-- isso é um comentário: Janela modal de detalhes do item -->
+<!-- Modal Detalhada de Item -->
 <div class="modal-overlay" id="modal-item" onclick="fecharModalFora(event)">
     <div class="modal-card">
         <span class="modal-close" onclick="fecharModal()">&times;</span>
@@ -89,16 +194,48 @@
 </div>
 
 <script>
-    // isso é um comentário: Variáveis globais do sistema
     let dadosCSV = [];
     let dadosFiltrados = [];
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
 
+    // Variáveis da Coleta de Fotos
+    let proximaSequencia = 1;
+    let fotoBlobAtual = null;
+
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // isso é um comentário: Função de varredura automática para carregar a imagem da logo independente da extensão
+    // Alternar entre abas Consulta e Coleta
+    function alternarAba(aba) {
+        document.getElementById('tab-consulta-btn').classList.toggle('active', aba === 'consulta');
+        document.getElementById('tab-coleta-btn').classList.toggle('active', aba === 'coleta');
+        document.getElementById('secao-consulta').style.display = aba === 'consulta' ? 'block' : 'none';
+        document.getElementById('secao-coleta').style.display = aba === 'coleta' ? 'block' : 'none';
+    }
+
+    // Função de detecção de dispositivo (Ajusta responsividade)
+    function detectarDispositivo() {
+        const telaPequena = window.innerWidth <= 900;
+        const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+        isMobile = telaPequena || (eTouch && window.innerWidth <= 1024);
+
+        const body = document.body;
+        const badge = document.getElementById('device-badge');
+
+        if (isMobile) {
+            body.classList.remove('desktop-mode');
+            body.classList.add('mobile-mode');
+            if (badge) badge.innerText = '📱 Modo Mobile';
+        } else {
+            body.classList.remove('mobile-mode');
+            body.classList.add('desktop-mode');
+            if (badge) badge.innerText = '💻 Modo Desktop';
+        }
+    }
+
+    // Busca da Logo Universal (.png, .jpg, .webp, .svg)
     function carregarLogoUniversal() {
         const logoContainer = document.getElementById('logo-container');
         const extensoesLogo = ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'webp', 'WEBP', 'svg', 'SVG', 'gif'];
@@ -106,10 +243,7 @@
 
         extensoesLogo.forEach(ext => {
             if (encontrada) return;
-            
-            // Testa opções na raiz ou dentro da pasta imagens/
             const caminhosTestar = [`logo.${ext}`, `imagens/logo.${ext}`];
-            
             caminhosTestar.forEach(caminho => {
                 if (encontrada) return;
                 const img = new Image();
@@ -124,28 +258,93 @@
         });
     }
 
-    // isso é um comentário: Função para detectar celular vs computador
-    function detectarDispositivo() {
-        const telaPequena = window.innerWidth <= 900;
-        const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    // Identifica fotos existentes do item e calcula a próxima sequência
+    async function verificarSequenciaExistente() {
+        const codInput = document.getElementById('coleta-codigo').value.trim();
+        const statusSeq = document.getElementById('coleta-status-seq');
+        
+        if (!codInput) {
+            statusSeq.innerText = "Aguardando código do item...";
+            proximaSequencia = 1;
+            return;
+        }
 
-        isMobile = telaPequena || (eTouch && window.innerWidth <= 1024);
+        statusSeq.innerText = "🔍 Verificando imagens existentes na pasta...";
+        const extensoes = ['jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG', 'webp', 'WEBP'];
+        let maiorSeqEncontrada = 0;
 
-        const body = document.body;
-        if (isMobile) {
-            body.classList.remove('desktop-mode');
-            body.classList.add('mobile-mode');
+        for (let seq = 1; seq <= 10; seq++) {
+            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
+            let existe = false;
+
+            for (const ext of extensoes) {
+                const src = `imagens/${codInput} - ${numSeq}.${ext}`;
+                try {
+                    const res = await fetch(src, { method: 'HEAD' });
+                    if (res.ok) {
+                        existe = true;
+                        maiorSeqEncontrada = seq;
+                        break;
+                    }
+                } catch (e) {}
+            }
+            if (!existe && seq > maiorSeqEncontrada + 1) break;
+        }
+
+        proximaSequencia = maiorSeqEncontrada + 1;
+        const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
+
+        if (maiorSeqEncontrada > 0) {
+            statusSeq.innerHTML = `✅ Encontrada(s) <strong>${maiorSeqEncontrada}</strong> foto(s). Próximo arquivo: <span style="color:#16a34a;">${codInput} - ${seqFormatada}.jpg</span>`;
         } else {
-            body.classList.remove('mobile-mode');
-            body.classList.add('desktop-mode');
+            statusSeq.innerHTML = `ℹ️ Nenhuma foto anterior encontrada. Próximo arquivo: <span style="color:#16a34a;">${codInput} - ${seqFormatada}.jpg</span>`;
         }
     }
 
-    // isso é um comentário: Extração flexível de colunas
+    function processarFotoCapturada(event) {
+        const file = event.target.files[0];
+        const codInput = document.getElementById('coleta-codigo').value.trim();
+        
+        if (!codInput) {
+            alert("Por favor, digite o código do item antes de capturar a foto.");
+            return;
+        }
+
+        if (!file) return;
+
+        fotoBlobAtual = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewBox = document.getElementById('coleta-preview');
+            previewBox.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            document.getElementById('btn-salvar-foto').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function baixarFotoFormatada() {
+        const codInput = document.getElementById('coleta-codigo').value.trim();
+        if (!codInput || !fotoBlobAtual) return;
+
+        const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
+        const nomeArquivoFinal = `${codInput} - ${seqFormatada}.jpg`;
+
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(fotoBlobAtual);
+        a.download = nomeArquivoFinal;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        alert(`Foto [${nomeArquivoFinal}] baixada com sucesso! Mova para a pasta "imagens" do repositório.`);
+        
+        proximaSequencia++;
+        verificarSequenciaExistente();
+    }
+
     function getVal(item, termosChave) {
         if (!item || typeof item !== 'object') return '-';
         const keys = Object.keys(item);
-        
         for (const termo of termosChave) {
             const termoNorm = termo.toLowerCase().replace(/[^a-z0-9]/g, '');
             for (const key of keys) {
@@ -313,20 +512,17 @@
                 if (encontrada) return;
                 const src = `imagens/${padrao}.${ext}`;
                 const img = new Image();
-                
                 img.onload = () => {
                     if (!encontrada) {
                         encontrada = true;
                         thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
                     }
                 };
-                
                 img.onerror = () => {
                     if (!encontrada && padrao === padroes[padroes.length - 1] && ext === extensoes[extensoes.length - 1]) {
                         thumbDiv.innerHTML = '<span>Sem foto</span>';
                     }
                 };
-                
                 img.src = src;
             });
         }
@@ -570,7 +766,7 @@
     }
 
     window.addEventListener('resize', detectarDispositivo);
-    
+
     window.onload = () => {
         detectarDispositivo();
         carregarLogoUniversal();
