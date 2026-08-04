@@ -47,6 +47,7 @@
             <header>
                 <h1>Almoxarifado JBS | Seara</h1>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn-reload" style="background:#16a34a;" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
                     <label class="btn-reload" style="cursor:pointer; display:inline-block;">
                         📂 Selecionar Planilha
                         <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
@@ -91,6 +92,9 @@
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
 
+    // Guarda a conexão com a pasta imagens selecionada no computador
+    let pastaImagensHandle = null;
+
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
     function detectarDispositivo() {
@@ -110,6 +114,20 @@
             body.classList.remove('mobile-mode');
             body.classList.add('desktop-mode');
             if (badge) badge.innerText = '💻 Modo Desktop';
+        }
+    }
+
+    // Permite ao usuário vincular a pasta /imagens diretamente uma vez[cite: 1]
+    async function conectarPastaImagens() {
+        if ('showDirectoryPicker' in window) {
+            try {
+                pastaImagensHandle = await window.showDirectoryPicker();
+                alert("✅ Pasta 'imagens' conectada! As fotos serão salvas diretamente nela.");
+            } catch (err) {
+                console.log("Seleção de pasta cancelada.");
+            }
+        } else {
+            alert("⚠️ Seu navegador não suporta gravação direta de diretório. As fotos serão enviadas via Download.");
         }
     }
 
@@ -452,52 +470,49 @@
         carregarMidiasCompletas(cod);
     }
 
-    // Testa no servidor/pasta se a imagem existe carregando via Image()
-    function checarImagemExiste(url) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve(true);
-            img.onerror = () => resolve(false);
-            img.src = url;
-        });
-    }
-
-    // Identifica dinamicamente imagens existentes (ex: 4515 - 01, 4515 - 02) e sugere o próximo número vago (ex: 4515 - 03)
+    // Grava diretamente na pasta escolhida ou faz fallback para download
     async function salvarFotoCapturada(event, codItem) {
         const file = event.target.files[0];
         const statusText = document.getElementById('camera-status');
         if (!file || !codItem || codItem === '-') return;
 
         const codLimpo = String(codItem).trim();
-        statusText.innerText = "Verificando sequência de fotos existentes...";
+        statusText.innerText = "Calculando sequência...";
 
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
-        let proximaSequencia = 1;
+        // 1. Identifica maior sequência existente
+        const imagensGaleria = document.querySelectorAll('#modal-thumbs-box .thumb-item img');
+        let maiorSequencia = 0;
 
-        // Testa do 01 até o 99 para encontrar qual é a primeira posição que NÃO existe na pasta
-        for (let seq = 1; seq <= 99; seq++) {
-            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-            let existeNaPasta = false;
-
-            for (const ext of extensoes) {
-                const urlTestar = `imagens/${codLimpo} - ${numSeq}.${ext}?v=${new Date().getTime()}`;
-                const existe = await checarImagemExiste(urlTestar);
-                if (existe) {
-                    existeNaPasta = true;
-                    break;
-                }
+        imagensGaleria.forEach(img => {
+            const src = decodeURIComponent(img.src);
+            const match = src.match(/[-_]\s*(\d{2})/);
+            if (match && match[1]) {
+                const numSeq = parseInt(match[1], 10);
+                if (numSeq > maiorSequencia) maiorSequencia = numSeq;
             }
+        });
 
-            if (!existeNaPasta) {
-                proximaSequencia = seq;
-                break;
-            }
-        }
-
+        const proximaSequencia = maiorSequencia + 1;
         const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
         const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
 
-        // Dispara o download com o próximo número da sequência (ex: 4515 - 03.jpg)
+        // 2. Se a pasta imagens estiver conectada via File System Access API, grava direto[cite: 1]
+        if (pastaImagensHandle) {
+            try {
+                const fileHandle = await pastaImagensHandle.getFileHandle(nomeFinal, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(file);
+                await writable.close();
+
+                statusText.innerText = `✅ Salvo direto na pasta: ${nomeFinal}`;
+                setTimeout(() => carregarMidiasCompletas(codItem), 800); // Atualiza galeria na hora
+                return;
+            } catch (err) {
+                console.error("Erro ao gravar direto na pasta:", err);
+            }
+        }
+
+        // 3. Caso não tenha conectado a pasta, faz o download automático convencional[cite: 1]
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
         a.download = nomeFinal;
@@ -505,7 +520,7 @@
         a.click();
         document.body.removeChild(a);
 
-        statusText.innerText = `💾 Baixado: ${nomeFinal} (Mova para a pasta /imagens)`;
+        statusText.innerText = `💾 Baixado: ${nomeFinal} (Clique em "📂 Conectar Pasta Imagens" para salvar direto)`;
     }
 
     function carregarMidiasCompletas(codItem) {
