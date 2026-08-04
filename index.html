@@ -311,7 +311,6 @@
             paginaAtual = 1;
 
             popularSegmentacaoDados();
-            varrerFotosGitHubPages();
 
             statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada com sucesso!`;
             renderizarPagina();
@@ -320,56 +319,62 @@
         }
     }
 
-    // VARREDURA CORRIGIDA PARA O GITHUB PAGES E SERVIDOR LOCAL
-    async function varrerFotosGitHubPages() {
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp', 'JPG', 'PNG', 'JPEG'];
+    // MAPEAMENTO CONTROLADO EM LOTES (NÃO TRAVA A TELA E RODA RÁPIDO)
+    async function varrerFotosGitHubPagesManual() {
+        const statusDiv = document.getElementById('status-texto');
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
         
-        const promessas = dadosCSV.map(item => {
-            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-            if (!cod || cod === '-') return Promise.resolve();
-            const codLimpo = String(cod).trim();
+        statusDiv.innerText = "🔄 Mapeando imagens no servidor... Aguarde.";
 
-            const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}_01`, `${codLimpo}`];
+        const LOTE_TAMANHO = 25; // Processa em pequenos blocos para evitar sobrecarga de rede
+        const total = dadosCSV.length;
 
-            return new Promise(resolve => {
-                let achou = false;
-                let contadorTestes = 0;
-                const totalTestes = padroes.length * extensoes.length;
+        for (let i = 0; i < total; i += LOTE_TAMANHO) {
+            const lote = dadosCSV.slice(i, i + LOTE_TAMANHO);
 
-                padroes.forEach(padrao => {
-                    extensoes.forEach(ext => {
-                        const src = `imagens/${padrao}.${ext}`;
-                        const img = new Image();
-                        
-                        img.onload = () => {
-                            if (!achou) {
-                                achou = true;
-                                itensComFoto.add(codLimpo);
-                                cacheCaminhoFoto.set(codLimpo, src);
-                                resolve();
-                            }
-                        };
-                        
-                        img.onerror = () => {
-                            contadorTestes++;
-                            if (contadorTestes === totalTestes && !achou) resolve();
-                        };
+            const promessasLote = lote.map(item => {
+                const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+                if (!cod || cod === '-') return Promise.resolve();
+                const codLimpo = String(cod).trim();
 
-                        img.src = src;
+                const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}`];
+
+                return new Promise(resolve => {
+                    let achou = false;
+                    let contadorTestes = 0;
+                    const totalTestes = padroes.length * extensoes.length;
+
+                    padroes.forEach(padrao => {
+                        extensoes.forEach(ext => {
+                            const src = `imagens/${padrao}.${ext}`;
+                            const img = new Image();
+                            
+                            img.onload = () => {
+                                if (!achou) {
+                                    achou = true;
+                                    itensComFoto.add(codLimpo);
+                                    cacheCaminhoFoto.set(codLimpo, src);
+                                    resolve();
+                                }
+                            };
+                            
+                            img.onerror = () => {
+                                contadorTestes++;
+                                if (contadorTestes === totalTestes && !achou) resolve();
+                            };
+
+                            img.src = src;
+                        });
                     });
                 });
             });
-        });
 
-        await Promise.all(promessas);
+            await Promise.all(promessasLote);
+            statusDiv.innerText = `🔄 Mapeando imagens: ${Math.min(i + LOTE_TAMANHO, total)} / ${total} itens verificados...`;
+        }
+
+        statusDiv.innerText = `✅ Mapeamento concluído! Total de itens com foto: ${itensComFoto.size}`;
         filtrar();
-    }
-
-    async function varrerFotosGitHubPagesManual() {
-        const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "🔄 Mapeando todas as imagens da pasta /imagens no servidor...";
-        await varrerFotosGitHubPages();
-        statusDiv.innerText = `✅ Mapeamento concluído! Itens com foto identificados: ${itensComFoto.size}`;
     }
 
     function popularSegmentacaoDados() {
@@ -484,6 +489,7 @@
         }
     }
 
+    // Carregamento direto da imagem na linha visível
     function carregarFotoCapaLinha(codItem, indexReal) {
         const thumbDiv = document.getElementById(`row-thumb-${indexReal}`);
         if (!codItem || codItem === '-') return;
@@ -494,8 +500,43 @@
             const src = cacheCaminhoFoto.get(codLimpo);
             if (src) {
                 thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+                return;
             }
         }
+
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}`];
+        let encontrada = false;
+
+        const testarProxima = (pIndex, eIndex) => {
+            if (encontrada || pIndex >= padroes.length) return;
+
+            const src = `imagens/${padroes[pIndex]}.${extensoes[eIndex]}`;
+            const img = new Image();
+            
+            img.onload = () => {
+                if (!encontrada) {
+                    encontrada = true;
+                    itensComFoto.add(codLimpo);
+                    cacheCaminhoFoto.set(codLimpo, src);
+                    thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+                }
+            };
+
+            img.onerror = () => {
+                if (!encontrada) {
+                    if (eIndex + 1 < extensoes.length) {
+                        testarProxima(pIndex, eIndex + 1);
+                    } else {
+                        testarProxima(pIndex + 1, 0);
+                    }
+                }
+            };
+
+            img.src = src;
+        };
+
+        testarProxima(0, 0);
     }
 
     function mostrarHoverCard(e, indexReal) {
