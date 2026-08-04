@@ -1,26 +1,20 @@
 ﻿<!DOCTYPE html>
-<!-- isso é um comentário: Definição da estrutura HTML5 principal do catálogo JBS | Seara -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JBS | Seara — Consulta de Almoxarifado</title>
     
-    <!-- isso é um comentário: Meta tags para proibir o cache do navegador -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
-    <!-- isso é um comentário: Biblioteca SheetJS para leitura de planilhas Excel/CSV -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-    <!-- isso é um comentário: Estilos CSS do sistema -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="desktop-mode">
 
 <div class="app-layout">
-    <!-- Barra Lateral (Desktop) / Barra Superior (Mobile) -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-placeholder" id="logo-container">
@@ -41,15 +35,23 @@
         </nav>
     </aside>
 
-    <!-- Conteúdo Principal de Consulta -->
     <main class="main-content">
         <div class="container">
             <header>
                 <h1>Almoxarifado JBS | Seara</h1>
-                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn-reload" style="background:#16a34a;" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
+                
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <!-- Seletor de Temas de Cores no Topo -->
+                    <div class="theme-selector-box" title="Trocar combinação de cores da tela">
+                        <span style="font-size:11px; font-weight:700; color:var(--text-secondary); margin-right:4px;">TEMA:</span>
+                        <div class="theme-btn btn-blue" onclick="aplicarTema('blue')" title="Azul JBS (Padrão)"></div>
+                        <div class="theme-btn btn-red" onclick="aplicarTema('red')" title="Seara (Vermelho/Dourado)"></div>
+                        <div class="theme-btn btn-dark" onclick="aplicarTema('dark')" title="Modo Noturno (Dark)"></div>
+                    </div>
+
+                    <button class="btn-reload" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
                     <label class="btn-reload" style="cursor:pointer; display:inline-block;">
-                        📂 Selecionar Planilha
+                        📂 Planilha
                         <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
                     </label>
                     <button class="btn-reload" onclick="carregarCSV()">🔄 Sincronizar</button>
@@ -74,10 +76,8 @@
     </main>
 </div>
 
-<!-- Card Flutuante de Previsualização ao Passar o Mouse (Ativo no PC) -->
 <div id="hover-card" class="hover-card"></div>
 
-<!-- Modal com Detalhes do Item Selecionado -->
 <div class="modal-overlay" id="modal-item" onclick="fecharModalFora(event)">
     <div class="modal-card">
         <span class="modal-close" onclick="fecharModal()">&times;</span>
@@ -92,10 +92,24 @@
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
 
-    // Guarda a conexão com a pasta imagens selecionada no computador
     let pastaImagensHandle = null;
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
+
+    // Lógica para Troca de Tema e Salvar Preferência
+    function aplicarTema(tema) {
+        if (tema === 'blue') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', tema);
+        }
+        localStorage.setItem('jbs_theme_preference', tema);
+    }
+
+    function carregarTemaSalvo() {
+        const temaSalvo = localStorage.getItem('jbs_theme_preference');
+        if (temaSalvo) aplicarTema(temaSalvo);
+    }
 
     function detectarDispositivo() {
         const telaPequena = window.innerWidth <= 900;
@@ -117,17 +131,16 @@
         }
     }
 
-    // Permite ao usuário vincular a pasta /imagens diretamente uma vez[cite: 1]
     async function conectarPastaImagens() {
         if ('showDirectoryPicker' in window) {
             try {
                 pastaImagensHandle = await window.showDirectoryPicker();
-                alert("✅ Pasta 'imagens' conectada! As fotos serão salvas diretamente nela.");
+                alert("✅ Pasta 'imagens' conectada com sucesso!");
             } catch (err) {
                 console.log("Seleção de pasta cancelada.");
             }
         } else {
-            alert("⚠️ Seu navegador não suporta gravação direta de diretório. As fotos serão enviadas via Download.");
+            alert("⚠️ Seu navegador não suporta gravação direta de diretório. As fotos serão salvas via download.");
         }
     }
 
@@ -190,7 +203,7 @@
         }
 
         if (!arquivoEncontrado || !bufferArquivo) {
-            statusDiv.innerText = "⚠️ Clique em '📂 Selecionar Planilha' para carregar a base de dados.";
+            statusDiv.innerText = "⚠️ Clique em '📂 Planilha' para carregar a base de dados.";
             return;
         }
 
@@ -283,7 +296,7 @@
                         <span><strong>Forn:</strong> ${fornecedor}</span>
                         <span><strong>Equip:</strong> ${equipamento}</span>
                     </div>
-                    <div style="font-size: 12px; color: #777; margin-top:2px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top:2px;">
                         <strong>Espec:</strong> ${especificacao}
                     </div>
                 </div>
@@ -312,7 +325,7 @@
         }
 
         const codLimpo = String(codItem).trim();
-        const extensoes = ['jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG', 'webp', 'WEBP', 'gif'];
+        const extensoes = ['jpg', 'JPG', 'png', 'PNG', 'webp', 'jpeg'];
         const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}_01`, `${codLimpo}`];
 
         let encontrada = false;
@@ -426,14 +439,14 @@
 
         const conteudoDiv = document.getElementById('modal-conteudo');
         conteudoDiv.innerHTML = `
-            <h2 style="color:#0f172a; margin-top:0; font-size:18px; font-weight:600;">[Código: ${cod}] — ${nome}</h2>
+            <h2 style="color:var(--primary-color); margin-top:0; font-size:18px; font-weight:700;">[Código: ${cod}] — ${nome}</h2>
             <div class="modal-body">
                 <div class="modal-info">
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; margin-bottom:10px; color:#334155;">
+                    <div style="background:var(--bg-subcard); border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; margin-bottom:10px; color:var(--text-primary);">
                         <p style="margin:2px 0;">📍 <strong>Prateleira:</strong> ${prateleira} &nbsp;|&nbsp; 📂 <strong>Divisão:</strong> ${divisao} &nbsp;|&nbsp; 📦 <strong>Repartição:</strong> ${reparticao}</p>
                     </div>
 
-                    <div style="background:#fef3c7; color:#92400e; padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid #fde68a;">
+                    <div style="background:#fffbebf1; color:#b45309; padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid #fde68a;">
                         <p style="margin:2px 0;">📊 <strong>Estoque Mínimo:</strong> ${estMin} un. &nbsp;|&nbsp; 📈 <strong>Estoque Máximo:</strong> ${estMax} un.</p>
                         <p style="margin:2px 0;">⏱️ <strong>Lead Time de Entrega:</strong> ${leadTime}</p>
                     </div>
@@ -445,7 +458,6 @@
                     
                     ${camposExtrasHTML}
 
-                    <!-- Seção de Captura da Foto da Prateleira -->
                     <div class="camera-section">
                         <label class="btn-camera">
                             📸 Retirar Foto da Prateleira
@@ -470,16 +482,13 @@
         carregarMidiasCompletas(cod);
     }
 
-    // Grava diretamente na pasta escolhida ou faz fallback para download
     async function salvarFotoCapturada(event, codItem) {
         const file = event.target.files[0];
         const statusText = document.getElementById('camera-status');
         if (!file || !codItem || codItem === '-') return;
 
         const codLimpo = String(codItem).trim();
-        statusText.innerText = "Calculando sequência...";
-
-        // 1. Identifica maior sequência existente
+        
         const imagensGaleria = document.querySelectorAll('#modal-thumbs-box .thumb-item img');
         let maiorSequencia = 0;
 
@@ -496,7 +505,6 @@
         const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
         const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
 
-        // 2. Se a pasta imagens estiver conectada via File System Access API, grava direto[cite: 1]
         if (pastaImagensHandle) {
             try {
                 const fileHandle = await pastaImagensHandle.getFileHandle(nomeFinal, { create: true });
@@ -504,15 +512,14 @@
                 await writable.write(file);
                 await writable.close();
 
-                statusText.innerText = `✅ Salvo direto na pasta: ${nomeFinal}`;
-                setTimeout(() => carregarMidiasCompletas(codItem), 800); // Atualiza galeria na hora
+                statusText.innerText = `✅ Salvo na pasta: ${nomeFinal}`;
+                carregarMidiasCompletas(codItem);
                 return;
             } catch (err) {
-                console.error("Erro ao gravar direto na pasta:", err);
+                console.error(err);
             }
         }
 
-        // 3. Caso não tenha conectado a pasta, faz o download automático convencional[cite: 1]
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
         a.download = nomeFinal;
@@ -520,10 +527,10 @@
         a.click();
         document.body.removeChild(a);
 
-        statusText.innerText = `💾 Baixado: ${nomeFinal} (Clique em "📂 Conectar Pasta Imagens" para salvar direto)`;
+        statusText.innerText = `💾 Baixado: ${nomeFinal}`;
     }
 
-    function carregarMidiasCompletas(codItem) {
+    async function carregarMidiasCompletas(codItem) {
         const mediaBox = document.getElementById('modal-media-box');
         const thumbsBox = document.getElementById('modal-thumbs-box');
         thumbsBox.innerHTML = '';
@@ -533,95 +540,86 @@
             return;
         }
 
-        let midias = [];
         const codLimpo = String(codItem).trim();
-        const extensoes = ['jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG', 'webp', 'WEBP', 'gif'];
-        
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        let midias = [];
+
         const videoSrc = `imagens/${codLimpo} - 360.mp4`;
-        const tempVideo = document.createElement('video');
-        
-        tempVideo.onloadedmetadata = function() {
+        const videoExiste = await new Promise(resolve => {
+            const v = document.createElement('video');
+            v.onloadedmetadata = () => resolve(true);
+            v.onerror = () => resolve(false);
+            v.src = videoSrc;
+        });
+
+        if (videoExiste) {
             midias.push({ tipo: 'video', src: videoSrc });
-            testarFotos();
-        };
-        tempVideo.onerror = function() {
-            testarFotos();
-        };
-        tempVideo.src = videoSrc;
+        }
 
-        function testarFotos() {
-            let fotosTestadas = 0;
-            const MAX_FOTOS = 10;
+        for (let seq = 1; seq <= 15; seq++) {
+            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
+            let achouNaSeq = false;
 
-            for (let seq = 1; seq <= MAX_FOTOS; seq++) {
-                const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-                const nomeFoto = `${codLimpo} - ${numSeq}`;
-
-                extensoes.forEach(ext => {
-                    const caminho = `imagens/${nomeFoto}.${ext}?v=${new Date().getTime()}`;
+            for (const ext of extensoes) {
+                const src = `imagens/${codLimpo} - ${numSeq}.${ext}?v=${new Date().getTime()}`;
+                const existe = await new Promise(resolve => {
                     const img = new Image();
-                    img.onload = () => {
-                        midias.push({ tipo: 'foto', seq: seq, src: caminho });
-                        checarFim();
-                    };
-                    img.onerror = () => {
-                        checarFim();
-                    };
-                    img.src = caminho;
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
+                    img.src = src;
                 });
+
+                if (existe) {
+                    midias.push({ tipo: 'foto', seq: seq, src: src });
+                    achouNaSeq = true;
+                    break;
+                }
             }
 
-            function checarFim() {
-                fotosTestadas++;
-                if (fotosTestadas === MAX_FOTOS * extensoes.length) {
-                    exibirMidias();
-                }
+            if (!achouNaSeq && seq > 1) {
+                break;
             }
         }
 
-        function exibirMidias() {
-            if (midias.length === 0) {
-                mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens/vídeos</span>';
-                return;
-            }
-
-            midias.sort((a, b) => (a.seq || 0) - (b.seq || 0));
-
-            exibirNoPlayer(midias[0]);
-
-            midias.forEach((m, i) => {
-                const thumb = document.createElement('div');
-                thumb.className = `thumb-item ${i === 0 ? 'active' : ''}`;
-
-                if (m.tipo === 'video') {
-                    thumb.classList.add('thumb-video-badge');
-                    thumb.innerText = '360°';
-                } else {
-                    const img = document.createElement('img');
-                    img.src = m.src;
-                    thumb.appendChild(img);
-                }
-
-                thumb.onclick = () => {
-                    exibirNoPlayer(m);
-                    thumbsBox.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
-                    thumb.classList.add('active');
-                };
-
-                thumbsBox.appendChild(thumb);
-            });
+        if (midias.length === 0) {
+            mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens/vídeos</span>';
+            return;
         }
 
-        function exibirNoPlayer(midia) {
-            if (midia.tipo === 'video') {
-                mediaBox.innerHTML = `
-                    <video src="${midia.src}" autoplay loop muted playsinline controls>
-                        Seu navegador não suporta vídeos.
-                    </video>
-                `;
+        exibirNoPlayer(midias[0], mediaBox);
+
+        midias.forEach((m, i) => {
+            const thumb = document.createElement('div');
+            thumb.className = `thumb-item ${i === 0 ? 'active' : ''}`;
+
+            if (m.tipo === 'video') {
+                thumb.classList.add('thumb-video-badge');
+                thumb.innerText = '360°';
             } else {
-                mediaBox.innerHTML = `<img src="${midia.src}" alt="Foto Peça">`;
+                const img = document.createElement('img');
+                img.src = m.src;
+                thumb.appendChild(img);
             }
+
+            thumb.onclick = () => {
+                exibirNoPlayer(m, mediaBox);
+                thumbsBox.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
+                thumb.classList.add('active');
+            };
+
+            thumbsBox.appendChild(thumb);
+        });
+    }
+
+    function exibirNoPlayer(midia, container) {
+        if (midia.tipo === 'video') {
+            container.innerHTML = `
+                <video src="${midia.src}" autoplay loop muted playsinline controls>
+                    Seu navegador não suporta vídeos.
+                </video>
+            `;
+        } else {
+            container.innerHTML = `<img src="${midia.src}" alt="Foto Peça">`;
         }
     }
 
@@ -657,6 +655,7 @@
     window.addEventListener('resize', detectarDispositivo);
 
     window.onload = () => {
+        carregarTemaSalvo();
         detectarDispositivo();
         carregarLogoUniversal();
         carregarCSV();

@@ -1,622 +1,248 @@
-﻿/* isso é um comentário: Definição das regras globais de reset e caixa */
+﻿/* ==========================================================================
+   VARIÁVEIS DE CORES & TEMAS (Troca Dinâmica)
+   ========================================================================== */
+:root {
+    /* Tema 1: Azul JBS (Padrão) */
+    --bg-body: #f4f6f9;
+    --bg-card: #ffffff;
+    --bg-subcard: #eef2f7;
+    --border-color: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --primary-color: #0A3D78;
+    --primary-hover: #072B54;
+    --accent-color: #0066CC;
+    --accent-hover: #004C99;
+}
+
+[data-theme="red"] {
+    /* Tema 2: Seara / Vermelho JBS */
+    --bg-body: #fdf2f2;
+    --bg-card: #ffffff;
+    --bg-subcard: #fef2f2;
+    --border-color: #fecaca;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --primary-color: #D32F2F;
+    --primary-hover: #B71C1C;
+    --accent-color: #D32F2F;
+    --accent-hover: #B71C1C;
+}
+
+[data-theme="dark"] {
+    /* Tema 3: Dark / Modo Noturno */
+    --bg-body: #0f172a;
+    --bg-card: #1e293b;
+    --bg-subcard: #334155;
+    --border-color: #475569;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --primary-color: #38bdf8;
+    --primary-hover: #0284c7;
+    --accent-color: #38bdf8;
+    --accent-hover: #0284c7;
+}
+
+/* Reset Global */
 * { 
     box-sizing: border-box; 
     margin: 0; 
     padding: 0; 
 }
 
-/* isso é um comentário: Configurações do corpo da página e layout principal em duas colunas */
 body { 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-    background-color: #f8fafc; 
-    color: #0f172a; 
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; 
+    background-color: var(--bg-body); 
+    color: var(--text-primary); 
     display: flex;
     min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* isso é um comentário: Container pai flexível para alinhar a sidebar e o conteúdo principal */
 .app-layout {
     display: flex;
     width: 100%;
 }
 
-/* isso é um comentário: Menu lateral fixo (Sidebar) para navegação e exibição da logo */
+/* Sidebar */
 .sidebar {
     width: 260px;
-    background-color: #ffffff;
-    border-right: 1px solid #e2e8f0;
+    background-color: var(--bg-card);
+    border-right: 2px solid var(--border-color);
     display: flex;
     flex-direction: column;
     padding: 24px 16px;
     position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
+    top: 0; bottom: 0; left: 0;
     z-index: 100;
 }
 
-/* isso é um comentário: Seção de marca e logo no topo da barra lateral */
 .sidebar-logo {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 8px 12px 24px 12px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 8px 12px 20px 12px;
+    border-bottom: 2px solid var(--border-color);
     margin-bottom: 20px;
 }
 
-/* isso é um comentário: Container visual substituto para a imagem da logo */
 .logo-placeholder {
-    width: 40px;
-    height: 40px;
-    background-color: #0f172a;
+    width: 44px; height: 44px;
+    background-color: var(--primary-color);
     color: #ffffff;
     border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 14px;
-    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; flex-shrink: 0;
 }
 
-/* isso é um comentário: Estrutura de texto para o nome e subtítulo da empresa */
-.logo-text {
-    display: flex;
-    flex-direction: column;
-}
-
-/* isso é um comentário: Estilo do nome principal da marca */
 .logo-text .brand-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.2;
+    font-size: 16px; font-weight: 800;
+    color: var(--primary-color);
 }
 
-/* isso é um comentário: Estilo do subtítulo descritivo da marca */
 .logo-text .brand-sub {
-    font-size: 11px;
-    color: #64748b;
-    font-weight: 500;
+    font-size: 11px; color: var(--text-secondary); font-weight: 600;
 }
 
-/* isso é um comentário: Container dos links de navegação da sidebar */
 .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
+    display: flex; flex-direction: column; gap: 6px; flex: 1;
 }
 
-/* isso é um comentário: Título das seções do menu lateral */
 .nav-section-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 12px 12px 6px 12px;
+    font-size: 11px; font-weight: 700; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 12px 6px 12px;
 }
 
-/* isso é um comentário: Estilo dos botões/links do menu lateral */
 .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    color: #475569;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 8px;
-    transition: all 0.15s ease;
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 600;
+    border-radius: 8px; transition: all 0.2s ease;
 }
 
-/* isso é um comentário: Efeito de passar o mouse nos itens do menu */
-.nav-item:hover {
-    background-color: #f1f5f9;
-    color: #0f172a;
-}
-
-/* isso é um comentário: Estilo do item do menu atualmente selecionado */
 .nav-item.active {
-    background-color: #0f172a;
+    background-color: var(--primary-color);
     color: #ffffff;
 }
 
-/* isso é um comentário: Área de conteúdo da direita que compensa o espaço da sidebar */
 .main-content {
-    margin-left: 260px;
-    flex: 1;
-    padding: 30px;
+    margin-left: 260px; flex: 1; padding: 32px;
     max-width: calc(100% - 260px);
 }
 
-/* isso é um comentário: Container centralizador de largura máxima */
-.container { 
-    max-width: 1100px; 
-    margin: 0 auto; 
-}
+.container { max-width: 1150px; margin: 0 auto; }
 
-/* isso é um comentário: Cabeçalho superior da página principal */
+/* Header & Seletor de Temas */
 header { 
-    background: #ffffff; 
-    padding: 20px 24px; 
+    background: var(--bg-card); 
+    padding: 22px 28px; 
     border-radius: 12px; 
-    border: 1px solid #e2e8f0;
+    border-left: 6px solid var(--primary-color);
+    border-top: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: 24px; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
+    display: flex; justify-content: space-between; align-items: center; 
 }
 
-/* isso é um comentário: Título h1 da aplicação */
-header h1 { 
-    font-size: 20px; 
-    font-weight: 600; 
-    letter-spacing: -0.02em;
-    color: #0f172a;
+header h1 { font-size: 20px; font-weight: 700; color: var(--primary-color); }
+
+/* Bloco dos Temas no Topo */
+.theme-selector-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-subcard);
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
 }
 
-/* isso é um comentário: Campo de entrada para pesquisa em tempo real */
+.theme-btn {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.theme-btn:hover { transform: scale(1.2); }
+.theme-btn.btn-blue { background-color: #0A3D78; }
+.theme-btn.btn-red { background-color: #D32F2F; }
+.theme-btn.btn-dark { background-color: #0f172a; }
+
+/* Busca */
 .search-box { 
-    width: 100%; 
-    padding: 14px 18px; 
-    font-size: 15px; 
-    background-color: #ffffff;
-    color: #0f172a;
-    border: 1px solid #cbd5e1; 
-    border-radius: 10px; 
-    margin-bottom: 20px; 
-    outline: none; 
+    width: 100%; padding: 16px 20px; font-size: 15px; 
+    background-color: var(--bg-card); color: var(--text-primary);
+    border: 2px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; 
+    outline: none; transition: all 0.2s ease;
+}
+
+.search-box:focus { border-color: var(--primary-color); }
+
+.status { margin-bottom: 18px; font-size: 13px; font-weight: 600; color: var(--text-secondary); display: flex; justify-content: space-between; }
+
+/* Tabela/Linhas */
+.item-row {
+    background: var(--bg-card); border-radius: 10px; border: 1px solid var(--border-color);
+    margin-bottom: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 18px; cursor: pointer;
     transition: all 0.2s ease;
 }
 
-/* isso é um comentário: Destaque visual no foco do campo de busca */
-.search-box:focus {
-    border-color: #0f172a;
-    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05);
-}
+.item-row:hover { border-color: var(--primary-color); transform: translateY(-2px); }
 
-/* isso é um comentário: Estilo do texto de exemplo dentro do campo de busca */
-.search-box::placeholder { 
-    color: #94a3b8; 
-}
-
-/* isso é um comentário: Barra de status e contador de registros */
-.status { 
-    margin-bottom: 16px; 
-    font-size: 13px;
-    font-weight: 500; 
-    color: #64748b; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-}
-
-/* isso é um comentário: Linha individual da lista de resultados com cantos arredondados */
-.item-row {
-    background: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 10px;
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.15s ease-in-out;
-}
-
-/* isso é um comentário: Efeito de hover e elevação da linha selecionada */
-.item-row:hover {
-    border-color: #0f172a;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-    transform: translateY(-1px);
-}
-
-/* isso é um comentário: Moldura da miniatura da foto da peça na linha */
 .row-thumb {
-    width: 100px;
-    height: 60px;
-    border-radius: 8px;
-    border: 1px solid #f1f5f9;
-    background: #f8fafc;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    color: #94a3b8;
-    overflow: hidden;
+    width: 100px; height: 65px; border-radius: 8px; border: 1px solid var(--border-color);
+    background: var(--bg-subcard); flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-secondary); overflow: hidden;
 }
 
-/* isso é um comentário: Ajuste proporcional da imagem sem distorção */
-.row-thumb img { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: contain;
-    object-position: center;
-    will-change: transform;
-}
+.row-thumb img { width: 100%; height: 100%; object-fit: contain; }
 
-/* isso é um comentário: Container do conteúdo textual da linha */
-.row-content { 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 6px; 
-}
+.row-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.row-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.row-details { font-size: 13px; color: var(--text-secondary); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-/* isso é um comentário: Estilo do título do item na linha */
-.row-title { 
-    font-size: 15px; 
-    font-weight: 600; 
-    color: #0f172a; 
-    letter-spacing: -0.01em;
-}
+.row-location { background: var(--bg-subcard); color: var(--primary-color); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+.row-stock-badge { background: #fffbebf1; color: #b45309; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+.row-lead-badge { background: var(--bg-subcard); color: var(--text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 
-/* isso é um comentário: Linha de detalhes secundários e badges */
-.row-details { 
-    font-size: 13px; 
-    color: #64748b; 
-    display: flex; 
-    gap: 10px; 
-    flex-wrap: wrap; 
-    align-items: center; 
-}
-
-/* isso é um comentário: Badge indicadora de localização física no almoxarifado */
-.row-location { 
-    background: #f1f5f9; 
-    color: #334155; 
-    padding: 3px 8px; 
-    border-radius: 6px; 
-    font-size: 12px; 
-    font-weight: 600; 
-}
-
-/* isso é um comentário: Badge indicadora dos parâmetros de estoque mínimo e máximo */
-.row-stock-badge { 
-    background: #fef3c7; 
-    color: #92400e; 
-    padding: 3px 8px; 
-    border-radius: 6px; 
-    font-size: 12px; 
-    font-weight: 600; 
-}
-
-/* isso é um comentário: Badge indicadora do lead time de entrega */
-.row-lead-badge { 
-    background: #f1f5f9; 
-    color: #475569; 
-    padding: 3px 8px; 
-    border-radius: 6px; 
-    font-size: 12px; 
-    font-weight: 500; 
-}
-
-/* isso é um comentário: Card flutuante que segue o ponteiro do mouse */
-.hover-card {
-    position: fixed;
-    display: none;
-    width: 340px;
-    background: #ffffff;
-    border-radius: 12px;
-    border: 1px solid #0f172a;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    padding: 16px;
-    z-index: 9999;
-    pointer-events: none;
-    color: #0f172a;
-}
-
-/* isso é um comentário: Container da foto de pré-visualização no card flutuante */
-.hover-card-img {
-    width: 100%;
-    height: 170px;
-    object-fit: contain;
-    object-position: center;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #f1f5f9;
-    margin-bottom: 12px;
-}
-
-/* isso é um comentário: Título do item no card flutuante */
-.hover-card-title { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #0f172a; 
-    margin-bottom: 8px; 
-    border-bottom: 1px solid #f1f5f9; 
-    padding-bottom: 6px; 
-}
-
-/* isso é um comentário: Seções de texto explicativo no card flutuante */
-.hover-card-section { 
-    font-size: 12px; 
-    margin-bottom: 6px; 
-    line-height: 1.4; 
-    color: #475569; 
-}
-
-/* isso é um comentário: Destaques em negrito no card flutuante */
-.hover-card-section strong { 
-    color: #0f172a; 
-}
-
-/* isso é um comentário: Máscara escura de fundo para a janela modal */
+/* Modal */
 .modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    padding: 24px;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px);
+    display: none; justify-content: center; align-items: center; z-index: 10000; padding: 24px;
 }
 
-/* isso é um comentário: Caixa da janela modal ajustada para 75% de largura da tela (75vw) */
 .modal-card {
-    background: #ffffff;
-    color: #0f172a;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    width: 75vw;
-    max-width: 1200px;
-    min-width: 320px;
-    max-height: 88vh;
-    overflow-y: auto;
-    padding: 32px;
-    position: relative;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    background: var(--bg-card); color: var(--text-primary); border-radius: 16px;
+    border-top: 6px solid var(--primary-color); width: 75vw; max-width: 1200px;
+    max-height: 88vh; overflow-y: auto; padding: 32px; position: relative;
 }
 
-/* isso é um comentário: Botão de fechar (X) da janela modal */
-.modal-close { 
-    position: absolute; 
-    top: 20px; right: 24px; 
-    font-size: 28px; 
-    font-weight: 400; 
-    color: #94a3b8; 
-    cursor: pointer; 
-}
+.modal-close { position: absolute; top: 20px; right: 24px; font-size: 28px; color: var(--text-secondary); cursor: pointer; }
+.modal-body { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 20px; }
+.modal-info { flex: 1; min-width: 300px; font-size: 15px; color: var(--text-primary); }
 
-/* isso é um comentário: Efeito de hover no botão de fechar a modal */
-.modal-close:hover { 
-    color: #0f172a; 
-}
+.modal-gallery { width: 420px; display: flex; flex-direction: column; align-items: center; }
+.main-media-box { width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; background: var(--bg-subcard); border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 14px; overflow: hidden; }
+.main-media-box img, .main-media-box video { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-/* isso é um comentário: Corpo interno da modal com divisão em duas colunas amplas */
-.modal-body { 
-    display: flex; 
-    gap: 32px; 
-    flex-wrap: wrap; 
-    margin-top: 20px; 
-}
+.thumbnails-box { display: flex; gap: 10px; width: 100%; flex-wrap: wrap; }
+.thumb-item { width: 56px; height: 56px; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer; overflow: hidden; background: var(--bg-subcard); }
+.thumb-item img { width: 100%; height: 100%; object-fit: contain; }
+.thumb-item.active { border-color: var(--primary-color); }
 
-/* isso é um comentário: Coluna da esquerda na modal para dados do cadastro */
-.modal-info { 
-    flex: 1; 
-    min-width: 300px; 
-    font-size: 15px;
-    color: #334155;
-    line-height: 1.6;
-}
+.camera-section { margin-top: 18px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.btn-camera { background: var(--accent-color); color: #ffffff; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; display: inline-block; text-align: center; }
+.btn-camera:hover { background: var(--accent-hover); }
 
-/* isso é um comentário: Espaçamento entre parágrafos na modal */
-.modal-info p {
-    margin-bottom: 10px;
-}
+/* Botões */
+.btn-reload { background: var(--primary-color); color: #ffffff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.btn-reload:hover { background: var(--primary-hover); }
+.btn-print { background: var(--bg-subcard); color: var(--text-primary); border: 1px solid var(--border-color); padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 16px; }
 
-/* isso é um comentário: Coluna da direita na modal para mídias e vídeos expandida */
-.modal-gallery { 
-    width: 420px; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-}
-
-/* isso é um comentário: Player principal expandido para fotos e vídeos na modal grande */
-.main-media-box {
-    width: 100%; 
-    height: 320px;
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    background: #f8fafc; 
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 14px; 
-    overflow: hidden;
-}
-
-/* isso é um comentário: Ajuste de proporção para as mídias dentro do player principal */
-.main-media-box img, 
-.main-media-box video { 
-    max-width: 100%; 
-    max-height: 100%; 
-    object-fit: contain; 
-    object-position: center;
-}
-
-/* isso é um comentário: Container da galeria de miniaturas na modal */
-.thumbnails-box { 
-    display: flex; 
-    gap: 10px; 
-    width: 100%; 
-    flex-wrap: wrap; 
-}
-
-/* isso é um comentário: Item de miniatura individual na galeria da modal */
-.thumb-item { 
-    width: 56px; 
-    height: 56px; 
-    border-radius: 8px;
-    border: 1px solid #e2e8f0; 
-    cursor: pointer; 
-    object-fit: cover; 
-    opacity: 0.85; 
-    transition: all 0.2s ease; 
-    overflow: hidden;
-    background: #f8fafc;
-}
-
-/* isso é um comentário: Ajuste de adaptação para as fotos dentro das miniaturas da modal */
-.thumb-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
-}
-
-/* isso é um comentário: Efeito de desfoque aplicado em todas as miniaturas não selecionadas */
-.thumbnails-box:hover .thumb-item {
-    filter: blur(1.5px);
-    opacity: 0.4;
-}
-
-/* isso é um comentário: Remove o desfoque exclusivamente da miniatura focada pelo mouse */
-.thumbnails-box .thumb-item:hover {
-    filter: blur(0px) !important;
-    opacity: 1 !important;
-    border-color: #0f172a;
-    transform: scale(1.05);
-}
-
-/* isso é um comentário: Estilo da miniatura ativa selecionada */
-.thumb-item.active { 
-    border-color: #0f172a; 
-    opacity: 1; 
-    filter: blur(0px); 
-}
-
-/* isso é um comentário: Ícone de destaque para miniatura de vídeo 360 graus */
-.thumb-video-badge { 
-    background: #0f172a; 
-    color: #ffffff; 
-    font-size: 11px; 
-    font-weight: 600; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    border-radius: 8px; 
-}
-
-/* isso é um comentário: Container e botão de captura de câmera */
-.camera-section {
-    margin-top: 16px;
-    margin-bottom: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.btn-camera {
-    background: #16a34a;
-    color: #ffffff;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    display: inline-block;
-    text-align: center;
-    transition: background 0.15s ease;
-}
-
-.btn-camera:hover {
-    background: #15803d;
-}
-
-#camera-status {
-    font-size: 12px;
-    color: #64748b;
-}
-
-/* isso é um comentário: Container dos botões de navegação por página */
-.pagination { 
-    display: flex; 
-    justify-content: center; 
-    gap: 12px; 
-    margin: 24px 0; 
-}
-
-/* isso é um comentário: Estilo dos botões de trocar de página */
-.btn-page { 
-    background: #ffffff; 
-    color: #0f172a; 
-    border: 1px solid #cbd5e1; 
-    padding: 8px 16px; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    font-weight: 500; 
-    font-size: 13px;
-    transition: all 0.15s ease;
-}
-
-/* isso é um comentário: Efeito hover nos botões de paginação */
-.btn-page:hover:not(:disabled) {
-    border-color: #0f172a;
-}
-
-/* isso é um comentário: Estilo para botão de página desabilitado */
-.btn-page:disabled { 
-    background: #f1f5f9; 
-    border-color: #e2e8f0; 
-    color: #cbd5e1; 
-    cursor: not-allowed; 
-}
-
-/* isso é um comentário: Botão principal para recarregar a base CSV */
-.btn-reload { 
-    background: #0f172a; 
-    color: #ffffff; 
-    border: none; 
-    padding: 8px 16px; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    font-weight: 500; 
-    font-size: 13px;
-    transition: background 0.15s ease;
-}
-
-/* isso é um comentário: Efeito hover no botão de recarregar */
-.btn-reload:hover { 
-    background: #334155; 
-}
-
-/* isso é um comentário: Botão de acionamento da impressão da ficha técnica */
-.btn-print { 
-    background: #f1f5f9; 
-    color: #0f172a; 
-    border: 1px solid #cbd5e1; 
-    padding: 10px 18px; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    font-size: 14px; 
-    font-weight: 500;
-    margin-top: 16px; 
-    transition: all 0.15s ease;
-}
-
-/* isso é um comentário: Efeito hover no botão de impressão */
-.btn-print:hover {
-    border-color: #0f172a;
-}
-
-/* isso é um comentário: Regras do motor de impressão para ocultar a interface e imprimir apenas a ficha em PDF */
-@media print {
-    body * { visibility: hidden; }
-    .modal-card, .modal-card * { visibility: visible; }
-    .modal-overlay { position: absolute; background: none; display: block !important; backdrop-filter: none; }
-    .modal-close, .btn-print, .btn-camera, .camera-section, .thumbnails-box, .btn-reload, .hover-card, .sidebar { display: none !important; }
-    .main-content { margin-left: 0 !important; max-width: 100% !important; }
-}
+/* Hover Card */
+.hover-card { position: fixed; display: none; width: 350px; background: var(--bg-card); border-radius: 12px; border: 2px solid var(--primary-color); padding: 18px; z-index: 9999; pointer-events: none; color: var(--text-primary); }
+.hover-card-img { width: 100%; height: 170px; object-fit: contain; background: var(--bg-subcard); border-radius: 8px; margin-bottom: 12px; }
+.hover-card-title { font-size: 15px; font-weight: 700; color: var(--primary-color); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
