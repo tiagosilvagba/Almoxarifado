@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JBS | Seara — Consulta de Almoxarifado</title>
     
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="desktop-mode">
 
 <div class="app-layout">
+    <!-- Barra Lateral (Sidebar) com Temas e Botões de Ação -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-placeholder" id="logo-container">
@@ -26,6 +23,17 @@
             </div>
         </div>
 
+        <!-- Seletor de Temas de Cores -->
+        <div class="sidebar-theme-container">
+            <span class="theme-label">TEMA DE CORES:</span>
+            <div class="theme-selector-box">
+                <div class="theme-btn btn-blue" onclick="aplicarTema('blue')" title="Azul JBS (Padrão)"></div>
+                <div class="theme-btn btn-red" onclick="aplicarTema('red')" title="Seara (Vermelho)"></div>
+                <div class="theme-btn btn-dark" onclick="aplicarTema('dark')" title="Modo Noturno (Dark)"></div>
+            </div>
+        </div>
+
+        <!-- Menu de Navegação -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Navegação</span>
             <a href="#" class="nav-item active">
@@ -33,29 +41,23 @@
                 <span>Pesquisa de Itens</span>
             </a>
         </nav>
+
+        <!-- Botões de Ação do Sistema (Posicionados Abaixo da Navegação) -->
+        <div class="sidebar-actions-container">
+            <span class="nav-section-title" style="padding: 0 0 4px 0;">Ações do Sistema</span>
+            <button class="btn-sidebar-action" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
+            <label class="btn-sidebar-action" style="cursor:pointer; display:block; text-align:center;">
+                📂 Selecionar Planilha
+                <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
+            </label>
+            <button class="btn-sidebar-action" onclick="carregarCSV()">🔄 Sincronizar Base</button>
+        </div>
     </aside>
 
     <main class="main-content">
         <div class="container">
             <header>
                 <h1>Almoxarifado JBS | Seara</h1>
-                
-                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                    <!-- Seletor de Temas de Cores no Topo -->
-                    <div class="theme-selector-box" title="Trocar combinação de cores da tela">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-secondary); margin-right:4px;">TEMA:</span>
-                        <div class="theme-btn btn-blue" onclick="aplicarTema('blue')" title="Azul JBS (Padrão)"></div>
-                        <div class="theme-btn btn-red" onclick="aplicarTema('red')" title="Seara (Vermelho/Dourado)"></div>
-                        <div class="theme-btn btn-dark" onclick="aplicarTema('dark')" title="Modo Noturno (Dark)"></div>
-                    </div>
-
-                    <button class="btn-reload" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
-                    <label class="btn-reload" style="cursor:pointer; display:inline-block;">
-                        📂 Planilha
-                        <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
-                    </label>
-                    <button class="btn-reload" onclick="carregarCSV()">🔄 Sincronizar</button>
-                </div>
             </header>
 
             <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
@@ -93,10 +95,10 @@
     let isMobile = false;
 
     let pastaImagensHandle = null;
+    const cacheImagensConhecidas = new Map();
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // Lógica para Troca de Tema e Salvar Preferência
     function aplicarTema(tema) {
         if (tema === 'blue') {
             document.documentElement.removeAttribute('data-theme');
@@ -146,7 +148,7 @@
 
     function carregarLogoUniversal() {
         const logoContainer = document.getElementById('logo-container');
-        const extensoesLogo = ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'webp', 'WEBP', 'svg', 'SVG', 'gif'];
+        const extensoesLogo = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
         let encontrada = false;
 
         extensoesLogo.forEach(ext => {
@@ -193,7 +195,7 @@
 
         for (const arquivo of FORMATOS_SUPORTADOS) {
             try {
-                const resposta = await fetch(`${arquivo}?v=${new Date().getTime()}`, { cache: 'no-store' });
+                const resposta = await fetch(`${arquivo}`, { cache: 'reload' });
                 if (resposta.ok) {
                     arquivoEncontrado = arquivo;
                     bufferArquivo = await resposta.arrayBuffer();
@@ -203,7 +205,7 @@
         }
 
         if (!arquivoEncontrado || !bufferArquivo) {
-            statusDiv.innerText = "⚠️ Clique em '📂 Planilha' para carregar a base de dados.";
+            statusDiv.innerText = "⚠️ Clique em '📂 Selecionar Planilha' para carregar a base de dados.";
             return;
         }
 
@@ -284,7 +286,7 @@
 
             row.innerHTML = `
                 <div class="row-thumb" id="row-thumb-${indexReal}">
-                    <span>Buscando...</span>
+                    <span>Sem foto</span>
                 </div>
 
                 <div class="row-content">
@@ -319,37 +321,53 @@
 
     function carregarFotoCapaLinha(codItem, indexReal) {
         const thumbDiv = document.getElementById(`row-thumb-${indexReal}`);
-        if (!codItem || codItem === '-') {
-            thumbDiv.innerHTML = '<span>Sem foto</span>';
+        if (!codItem || codItem === '-') return;
+
+        const codLimpo = String(codItem).trim();
+
+        if (cacheImagensConhecidas.has(codLimpo)) {
+            const srcCache = cacheImagensConhecidas.get(codLimpo);
+            if (srcCache) {
+                thumbDiv.innerHTML = `<img src="${srcCache}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+            }
             return;
         }
 
-        const codLimpo = String(codItem).trim();
-        const extensoes = ['jpg', 'JPG', 'png', 'PNG', 'webp', 'jpeg'];
-        const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}_01`, `${codLimpo}`];
-
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}`];
         let encontrada = false;
 
-        for (const padrao of padroes) {
-            if (encontrada) break;
-            extensoes.forEach(ext => {
-                if (encontrada) return;
-                const src = `imagens/${padrao}.${ext}?v=${new Date().getTime()}`;
-                const img = new Image();
-                img.onload = () => {
-                    if (!encontrada) {
-                        encontrada = true;
-                        thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+        const testarProxima = (pIndex, eIndex) => {
+            if (encontrada || pIndex >= padroes.length) {
+                if (!encontrada) cacheImagensConhecidas.set(codLimpo, null);
+                return;
+            }
+
+            const src = `imagens/${padroes[pIndex]}.${extensoes[eIndex]}`;
+            const img = new Image();
+            
+            img.onload = () => {
+                if (!encontrada) {
+                    encontrada = true;
+                    cacheImagensConhecidas.set(codLimpo, src);
+                    thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+                }
+            };
+
+            img.onerror = () => {
+                if (!encontrada) {
+                    if (eIndex + 1 < extensoes.length) {
+                        testarProxima(pIndex, eIndex + 1);
+                    } else {
+                        testarProxima(pIndex + 1, 0);
                     }
-                };
-                img.onerror = () => {
-                    if (!encontrada && padrao === padroes[padroes.length - 1] && ext === extensoes[extensoes.length - 1]) {
-                        thumbDiv.innerHTML = '<span>Sem foto</span>';
-                    }
-                };
-                img.src = src;
-            });
-        }
+                }
+            };
+
+            img.src = src;
+        };
+
+        testarProxima(0, 0);
     }
 
     function mostrarHoverCard(e, indexReal) {
@@ -513,7 +531,9 @@
                 await writable.close();
 
                 statusText.innerText = `✅ Salvo na pasta: ${nomeFinal}`;
-                carregarMidiasCompletas(codItem);
+                
+                cacheImagensConhecidas.delete(codLimpo);
+                carregarMidiasCompletas(codItem, true);
                 return;
             } catch (err) {
                 console.error(err);
@@ -530,7 +550,7 @@
         statusText.innerText = `💾 Baixado: ${nomeFinal}`;
     }
 
-    async function carregarMidiasCompletas(codItem) {
+    async function carregarMidiasCompletas(codItem, forcarReload = false) {
         const mediaBox = document.getElementById('modal-media-box');
         const thumbsBox = document.getElementById('modal-thumbs-box');
         thumbsBox.innerHTML = '';
@@ -544,24 +564,14 @@
         const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
         let midias = [];
 
-        const videoSrc = `imagens/${codLimpo} - 360.mp4`;
-        const videoExiste = await new Promise(resolve => {
-            const v = document.createElement('video');
-            v.onloadedmetadata = () => resolve(true);
-            v.onerror = () => resolve(false);
-            v.src = videoSrc;
-        });
+        const timestamp = forcarReload ? `?v=${new Date().getTime()}` : '';
 
-        if (videoExiste) {
-            midias.push({ tipo: 'video', src: videoSrc });
-        }
-
-        for (let seq = 1; seq <= 15; seq++) {
+        for (let seq = 1; seq <= 10; seq++) {
             const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
             let achouNaSeq = false;
 
             for (const ext of extensoes) {
-                const src = `imagens/${codLimpo} - ${numSeq}.${ext}?v=${new Date().getTime()}`;
+                const src = `imagens/${codLimpo} - ${numSeq}.${ext}${timestamp}`;
                 const existe = await new Promise(resolve => {
                     const img = new Image();
                     img.onload = () => resolve(true);
@@ -576,7 +586,7 @@
                 }
             }
 
-            if (!achouNaSeq && seq > 1) {
+            if (!achouNaSeq) {
                 break;
             }
         }
@@ -592,14 +602,9 @@
             const thumb = document.createElement('div');
             thumb.className = `thumb-item ${i === 0 ? 'active' : ''}`;
 
-            if (m.tipo === 'video') {
-                thumb.classList.add('thumb-video-badge');
-                thumb.innerText = '360°';
-            } else {
-                const img = document.createElement('img');
-                img.src = m.src;
-                thumb.appendChild(img);
-            }
+            const img = document.createElement('img');
+            img.src = m.src;
+            thumb.appendChild(img);
 
             thumb.onclick = () => {
                 exibirNoPlayer(m, mediaBox);
