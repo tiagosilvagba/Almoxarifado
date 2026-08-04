@@ -60,6 +60,16 @@
             <span class="panel-title">⚡ Segmentação de Dados</span>
         </div>
 
+        <!-- NOVO FILTRO: Status da Imagem -->
+        <div class="filter-group">
+            <label class="filter-label">🖼️ Imagem do Item:</label>
+            <select id="select-imagem" class="segmentation-select" onchange="filtrar()">
+                <option value="">Todas as Fotos</option>
+                <option value="com_foto">📸 Com Imagem</option>
+                <option value="sem_foto">🚫 Sem Imagem</option>
+            </select>
+        </div>
+
         <div class="filter-group">
             <label class="filter-label">🏢 Fornecedor:</label>
             <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
@@ -294,6 +304,7 @@
     }
 
     function limparFiltrosSegmentacao() {
+        document.getElementById('select-imagem').value = "";
         document.getElementById('select-fornecedor').value = "";
         document.getElementById('select-aplicacao').value = "";
         filtrar();
@@ -559,7 +570,6 @@
         carregarMidiasCompletas(cod);
     }
 
-    // Varredura direta na pasta do celular/dispositivo
     async function salvarFotoCapturada(event, codItem) {
         const file = event.target.files[0];
         const statusText = document.getElementById('camera-status');
@@ -728,12 +738,17 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // FILTRO COMBINADO: TEXTO + FORNECEDOR + APLICAÇÃO + STATUS DA IMAGEM
     function filtrar() {
         const termo = document.getElementById('busca').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
         const aplicSel = document.getElementById('select-aplicacao').value.toLowerCase().trim();
+        const imagemSel = document.getElementById('select-imagem').value;
 
         dadosFiltrados = dadosCSV.filter(item => {
+            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            const codLimpo = String(cod).trim();
+
             const linhaCompleta = Object.values(item).join(' ').toLowerCase();
             const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
             const aplicItem = getVal(item, ['locais_aplicacao', 'aplicacao']).toLowerCase();
@@ -742,7 +757,18 @@
             const bateForn = !fornSel || fornItem === fornSel;
             const bateAplic = !aplicSel || aplicItem === aplicSel;
 
-            return bateTexto && bateForn && bateAplic;
+            // Checagem do filtro de Imagem
+            let bateImagem = true;
+            if (imagemSel) {
+                const temFotoNoCache = cacheImagensConhecidas.get(codLimpo) !== null && cacheImagensConhecidas.has(codLimpo);
+                if (imagemSel === 'com_foto') {
+                    bateImagem = temFotoNoCache;
+                } else if (imagemSel === 'sem_foto') {
+                    bateImagem = !temFotoNoCache;
+                }
+            }
+
+            return bateTexto && bateForn && bateAplic && bateImagem;
         });
 
         paginaAtual = 1;
