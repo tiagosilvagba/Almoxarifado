@@ -11,7 +11,7 @@
 <body class="desktop-mode">
 
 <div class="app-layout">
-    <!-- Barra Lateral (Sidebar) com Temas e Botões de Ação -->
+    <!-- Barra Lateral (Sidebar) -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-placeholder" id="logo-container">
@@ -42,7 +42,7 @@
             </a>
         </nav>
 
-        <!-- Botões de Ação do Sistema (Posicionados Abaixo da Navegação) -->
+        <!-- Ações do Sistema -->
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="padding: 0 0 4px 0;">Ações do Sistema</span>
             <button class="btn-sidebar-action" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
@@ -60,7 +60,20 @@
                 <h1>Almoxarifado JBS | Seara</h1>
             </header>
 
-            <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
+            <!-- BARRA DE PESQUISA + SEGMENTAÇÃO DE DADOS -->
+            <div class="filter-bar">
+                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento..." oninput="filtrar()">
+                
+                <div class="segmentation-container">
+                    <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
+                        <option value="">🏢 Todo Fornecedor</option>
+                    </select>
+
+                    <select id="select-aplicacao" class="segmentation-select" onchange="filtrar()">
+                        <option value="">⚙️ Todo Local de Aplicação</option>
+                    </select>
+                </div>
+            </div>
 
             <div class="status">
                 <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
@@ -233,11 +246,44 @@
             dadosCSV = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             dadosFiltrados = dadosCSV;
             paginaAtual = 1;
+
+            // Alimenta a segmentação de dados (Dropdowns) dinamicamente
+            popularSegmentacaoDados();
+
             statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada com sucesso!`;
             renderizarPagina();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
         }
+    }
+
+    // MONTA AS OPÇÕES ÚNICAS PARA CADA SEGMENTAÇÃO
+    function popularSegmentacaoDados() {
+        const selectForn = document.getElementById('select-fornecedor');
+        const selectAplic = document.getElementById('select-aplicacao');
+
+        const fornecedoresUnicos = new Set();
+        const aplicacoesUnicas = new Set();
+
+        dadosCSV.forEach(item => {
+            const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+            const aplic = getVal(item, ['locais_aplicacao', 'aplicacao']);
+
+            if (forn && forn !== '-') fornecedoresUnicos.add(forn);
+            if (aplic && aplic !== '-') aplicacoesUnicas.add(aplic);
+        });
+
+        // Limpa e popula Fornecedores
+        selectForn.innerHTML = '<option value="">🏢 Todos os Fornecedores</option>';
+        Array.from(fornecedoresUnicos).sort().forEach(f => {
+            selectForn.innerHTML += `<option value="${f}">${f}</option>`;
+        });
+
+        // Limpa e popula Locais de Aplicação
+        selectAplic.innerHTML = '<option value="">⚙️ Todos os Locais de Aplicação</option>';
+        Array.from(aplicacoesUnicas).sort().forEach(a => {
+            selectAplic.innerHTML += `<option value="${a}">${a}</option>`;
+        });
     }
 
     function renderizarPagina() {
@@ -250,7 +296,7 @@
         contDiv.innerText = `Total: ${totalItens} itens encontrados`;
 
         if (totalItens === 0) {
-            divContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
+            divContainer.innerHTML = '<p>Nenhum item encontrado com os filtros selecionados.</p>';
             paginacaoDiv.style.display = 'none';
             return;
         }
@@ -643,16 +689,24 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // FILTRO COMBINADO: BUSCA DIGITADA + SEGMENTAÇÕES DE DADOS
     function filtrar() {
         const termo = document.getElementById('busca').value.toLowerCase().trim();
-        if (!termo) {
-            dadosFiltrados = dadosCSV;
-        } else {
-            dadosFiltrados = dadosCSV.filter(item => {
-                const linhaCompleta = Object.values(item).join(' ').toLowerCase();
-                return linhaCompleta.includes(termo);
-            });
-        }
+        const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
+        const aplicSel = document.getElementById('select-aplicacao').value.toLowerCase().trim();
+
+        dadosFiltrados = dadosCSV.filter(item => {
+            const linhaCompleta = Object.values(item).join(' ').toLowerCase();
+            const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
+            const aplicItem = getVal(item, ['locais_aplicacao', 'aplicacao']).toLowerCase();
+
+            const bateTexto = !termo || linhaCompleta.includes(termo);
+            const bateForn = !fornSel || fornItem === fornSel;
+            const bateAplic = !aplicSel || aplicItem === aplicSel;
+
+            return bateTexto && bateForn && bateAplic;
+        });
+
         paginaAtual = 1;
         renderizarPagina();
     }
