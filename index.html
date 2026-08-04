@@ -91,7 +91,6 @@
         </div>
     </aside>
 
-    <!-- Botão Flutuante para Exibir/Esconder Painel em Telas Pequenas/Mobile -->
     <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
 
     <!-- Conteúdo Principal -->
@@ -210,9 +209,9 @@
             for await (const entry of pastaImagensHandle.values()) {
                 if (entry.kind === 'file') {
                     const nome = entry.name;
-                    const matchCod = nome.match(/^([^\s_-]+)/);
-                    if (matchCod && matchCod[1]) {
-                        const cod = matchCod[1].trim();
+                    const matchSeq = nome.match(/(.+?)\s*[-_]\s*\d{2}\.[a-zA-Z0-9]+$/);
+                    if (matchSeq && matchSeq[1]) {
+                        const cod = matchSeq[1].trim();
                         itensComFoto.add(cod);
                     }
                 }
@@ -321,36 +320,43 @@
         }
     }
 
-    // VARREDURA COMPATÍVEL COM GITHUB PAGES (Execução Silenciosa ou Manual)
+    // VARREDURA CORRIGIDA PARA O GITHUB PAGES E SERVIDOR LOCAL
     async function varrerFotosGitHubPages() {
-        const statusDiv = document.getElementById('status-texto');
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp', 'JPG', 'PNG', 'JPEG'];
         
         const promessas = dadosCSV.map(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             if (!cod || cod === '-') return Promise.resolve();
             const codLimpo = String(cod).trim();
 
-            return new Promise(resolve => {
-                let testadas = 0;
-                let achou = false;
+            const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}_01`, `${codLimpo}`];
 
-                extensoes.forEach(ext => {
-                    const src = `imagens/${codLimpo} - 01.${ext}`;
-                    const img = new Image();
-                    img.onload = () => {
-                        if (!achou) {
-                            achou = true;
-                            itensComFoto.add(codLimpo);
-                            cacheCaminhoFoto.set(codLimpo, src);
-                            resolve();
-                        }
-                    };
-                    img.onerror = () => {
-                        testadas++;
-                        if (testadas === extensoes.length && !achou) resolve();
-                    };
-                    img.src = src;
+            return new Promise(resolve => {
+                let achou = false;
+                let contadorTestes = 0;
+                const totalTestes = padroes.length * extensoes.length;
+
+                padroes.forEach(padrao => {
+                    extensoes.forEach(ext => {
+                        const src = `imagens/${padrao}.${ext}`;
+                        const img = new Image();
+                        
+                        img.onload = () => {
+                            if (!achou) {
+                                achou = true;
+                                itensComFoto.add(codLimpo);
+                                cacheCaminhoFoto.set(codLimpo, src);
+                                resolve();
+                            }
+                        };
+                        
+                        img.onerror = () => {
+                            contadorTestes++;
+                            if (contadorTestes === totalTestes && !achou) resolve();
+                        };
+
+                        img.src = src;
+                    });
                 });
             });
         });
@@ -361,7 +367,7 @@
 
     async function varrerFotosGitHubPagesManual() {
         const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "🔄 Mapeando todas as imagens da pasta /imagens no GitHub...";
+        statusDiv.innerText = "🔄 Mapeando todas as imagens da pasta /imagens no servidor...";
         await varrerFotosGitHubPages();
         statusDiv.innerText = `✅ Mapeamento concluído! Itens com foto identificados: ${itensComFoto.size}`;
     }
