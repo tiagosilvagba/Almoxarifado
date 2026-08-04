@@ -1,4 +1,4 @@
-/* isso é um comentário: Definição das regras globais de reset e caixa */
+﻿/* isso é um comentário: Definição das regras globais de reset e caixa */
 * { 
     box-sizing: border-box; 
     margin: 0; 
@@ -509,6 +509,38 @@ header h1 {
     border-radius: 8px; 
 }
 
+/* isso é um comentário: Container e botão de captura de câmera */
+.camera-section {
+    margin-top: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.btn-camera {
+    background: #16a34a;
+    color: #ffffff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-block;
+    text-align: center;
+    transition: background 0.15s ease;
+}
+
+.btn-camera:hover {
+    background: #15803d;
+}
+
+#camera-status {
+    font-size: 12px;
+    color: #64748b;
+}
+
 /* isso é um comentário: Container dos botões de navegação por página */
 .pagination { 
     display: flex; 
@@ -585,6 +617,6 @@ header h1 {
     body * { visibility: hidden; }
     .modal-card, .modal-card * { visibility: visible; }
     .modal-overlay { position: absolute; background: none; display: block !important; backdrop-filter: none; }
-    .modal-close, .btn-print, .thumbnails-box, .btn-reload, .hover-card, .sidebar { display: none !important; }
+    .modal-close, .btn-print, .btn-camera, .camera-section, .thumbnails-box, .btn-reload, .hover-card, .sidebar { display: none !important; }
     .main-content { margin-left: 0 !important; max-width: 100% !important; }
 }

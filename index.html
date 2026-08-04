@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!-- isso é um comentário: Definição da estrutura HTML5 principal do catálogo JBS | Seara -->
 <html lang="pt-BR">
 <head>
@@ -90,6 +90,9 @@
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
+
+    // Referência global da pasta de imagens selecionada via File System Access API
+    let imagensDirectoryHandle = null;
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
@@ -303,7 +306,7 @@
             if (encontrada) break;
             extensoes.forEach(ext => {
                 if (encontrada) return;
-                const src = `imagens/${padrao}.${ext}`;
+                const src = `imagens/${padrao}.${ext}?v=${new Date().getTime()}`;
                 const img = new Image();
                 img.onload = () => {
                     if (!encontrada) {
@@ -382,7 +385,6 @@
 
         let camposExtrasHTML = '';
         
-        // Lista completa de chaves tratadas no layout principal para evitar duplicações
         const chavesIgnorar = [
             'cod_item','codigo','cod',
             'nome_item','nome','item','descricao',
@@ -427,7 +429,16 @@
                     <p><strong>Locais de Aplicação:</strong> ${locaisAplicacao}</p>
                     
                     ${camposExtrasHTML}
-                    
+
+                    <!-- Seção de Captura da Foto -->
+                    <div class="camera-section">
+                        <label class="btn-camera">
+                            📸 Retirar Foto da Prateleira
+                            <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none;" onchange="salvarFotoCapturada(event, '${cod}')">
+                        </label>
+                        <span id="camera-status"></span>
+                    </div>
+
                     <button class="btn-print" onclick="window.print()">🖨️ Imprimir Ficha PDF</button>
                 </div>
 
@@ -442,6 +453,67 @@
 
         document.getElementById('modal-item').style.display = 'flex';
         carregarMidiasCompletas(cod);
+    }
+
+    async function salvarFotoCapturada(event, codItem) {
+        const file = event.target.files[0];
+        const statusText = document.getElementById('camera-status');
+        if (!file || !codItem || codItem === '-') return;
+
+        try {
+            statusText.innerText = "Processando foto...";
+
+            if (!imagensDirectoryHandle) {
+                if ('showDirectoryPicker' in window) {
+                    alert("Por favor, selecione a pasta 'imagens' do seu projeto para salvar as fotos tiradas.");
+                    imagensDirectoryHandle = await window.showDirectoryPicker();
+                } else {
+                    fazerDownloadFallback(file, codItem);
+                    return;
+                }
+            }
+
+            const codLimpo = String(codItem).trim();
+            let proximaSequencia = 1;
+
+            // Busca pelo próximo número de sequência disponível (ex: cod_item - 01.jpg, cod_item - 02.jpg)[cite: 1]
+            for (let i = 1; i <= 99; i++) {
+                const numSeq = i < 10 ? `0${i}` : `${i}`;
+                const nomeArquivo = `${codLimpo} - ${numSeq}.jpg`;
+                try {
+                    await imagensDirectoryHandle.getFileHandle(nomeArquivo);
+                    proximaSequencia = i + 1;
+                } catch (e) {
+                    break;
+                }
+            }
+
+            const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
+            const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
+
+            const fileHandle = await imagensDirectoryHandle.getFileHandle(nomeFinal, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(file);
+            await writable.close();
+
+            statusText.innerText = `✅ Salvo com sucesso: ${nomeFinal}`;
+            carregarMidiasCompletas(codItem);
+        } catch (err) {
+            console.error(err);
+            statusText.innerText = "⚠️ Erro ao salvar imagem no diretório local.";
+        }
+    }
+
+    function fazerDownloadFallback(file, codItem) {
+        const statusText = document.getElementById('camera-status');
+        const codLimpo = String(codItem).trim();
+        const nomePadrao = `${codLimpo} - 01.jpg`;
+        
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(file);
+        a.download = nomePadrao;
+        a.click();
+        statusText.innerText = `💾 Arquivo baixado: ${nomePadrao}. Mova para a pasta /imagens`;
     }
 
     function carregarMidiasCompletas(codItem) {
@@ -472,7 +544,7 @@
 
         function testarFotos() {
             let fotosTestadas = 0;
-            const MAX_FOTOS = 6;
+            const MAX_FOTOS = 10;
 
             for (let seq = 1; seq <= MAX_FOTOS; seq++) {
                 const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
@@ -505,6 +577,9 @@
                 mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens/vídeos</span>';
                 return;
             }
+
+            // Ordena fotos pelo número da sequência
+            midias.sort((a, b) => (a.seq || 0) - (b.seq || 0));
 
             exibirNoPlayer(midias[0]);
 
