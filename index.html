@@ -10,7 +10,7 @@
 </head>
 <body class="desktop-mode">
 
-<div class="app-layout">
+<div class="app-layout" id="app-layout">
     <!-- Barra Lateral 1: Sidebar de Navegação e Ações -->
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -54,41 +54,47 @@
         </div>
     </aside>
 
-    <!-- Coluna 2: Painel de Segmentação de Dados (Entre o Menu e os Itens) -->
-    <aside class="filter-panel-left">
+    <!-- Coluna 2: Painel de Segmentação de Dados com Botão de Ocultar/Exibir -->
+    <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
-            <span class="panel-title">⚡ Segmentação de Dados</span>
+            <span class="panel-title">⚡ Segmentação</span>
+            <button class="btn-toggle-filter" onclick="toggleSegmentacao()" title="Ocultar Filtros">◀</button>
         </div>
 
-        <!-- NOVO FILTRO: Status da Imagem -->
-        <div class="filter-group">
-            <label class="filter-label">🖼️ Imagem do Item:</label>
-            <select id="select-imagem" class="segmentation-select" onchange="filtrar()">
-                <option value="">Todas as Fotos</option>
-                <option value="com_foto">📸 Com Imagem</option>
-                <option value="sem_foto">🚫 Sem Imagem</option>
-            </select>
-        </div>
+        <div class="filter-panel-body">
+            <!-- Filtro: Status da Imagem -->
+            <div class="filter-group">
+                <label class="filter-label">🖼️ Imagem do Item:</label>
+                <select id="select-imagem" class="segmentation-select" onchange="filtrar()">
+                    <option value="">Todas as Fotos</option>
+                    <option value="com_foto">📸 Com Imagem</option>
+                    <option value="sem_foto">🚫 Sem Imagem</option>
+                </select>
+            </div>
 
-        <div class="filter-group">
-            <label class="filter-label">🏢 Fornecedor:</label>
-            <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
-                <option value="">Todos os Fornecedores</option>
-            </select>
-        </div>
+            <div class="filter-group">
+                <label class="filter-label">🏢 Fornecedor:</label>
+                <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
+                    <option value="">Todos os Fornecedores</option>
+                </select>
+            </div>
 
-        <div class="filter-group">
-            <label class="filter-label">⚙️ Local de Aplicação:</label>
-            <select id="select-aplicacao" class="segmentation-select" onchange="filtrar()">
-                <option value="">Todos os Locais</option>
-            </select>
-        </div>
+            <div class="filter-group">
+                <label class="filter-label">⚙️ Local de Aplicação:</label>
+                <select id="select-aplicacao" class="segmentation-select" onchange="filtrar()">
+                    <option value="">Todos os Locais</option>
+                </select>
+            </div>
 
-        <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()">🧹 Limpar Filtros</button>
+            <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()">🧹 Limpar Filtros</button>
+        </div>
     </aside>
 
+    <!-- Botão Flutuante de Reabrir Filtros quando Estiver Oculto -->
+    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
+
     <!-- Conteúdo Principal de Consulta (Direita da Segmentação) -->
-    <main class="main-content">
+    <main class="main-content" id="main-content">
         <div class="container">
             <header>
                 <h1>Almoxarifado JBS | Seara</h1>
@@ -132,6 +138,22 @@
     const cacheImagensConhecidas = new Map();
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
+
+    // Alternar Exibição da Segmentação de Dados
+    function toggleSegmentacao() {
+        const layout = document.getElementById('app-layout');
+        layout.classList.toggle('segmentation-hidden');
+        
+        const oculto = layout.classList.contains('segmentation-hidden');
+        localStorage.setItem('jbs_segmentation_hidden', oculto ? 'true' : 'false');
+    }
+
+    function carregarEstadoSegmentacao() {
+        const oculto = localStorage.getItem('jbs_segmentation_hidden') === 'true';
+        if (oculto) {
+            document.getElementById('app-layout').classList.add('segmentation-hidden');
+        }
+    }
 
     function aplicarTema(tema) {
         if (tema === 'blue') {
@@ -738,7 +760,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // FILTRO COMBINADO: TEXTO + FORNECEDOR + APLICAÇÃO + STATUS DA IMAGEM
     function filtrar() {
         const termo = document.getElementById('busca').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
@@ -757,7 +778,6 @@
             const bateForn = !fornSel || fornItem === fornSel;
             const bateAplic = !aplicSel || aplicItem === aplicSel;
 
-            // Checagem do filtro de Imagem
             let bateImagem = true;
             if (imagemSel) {
                 const temFotoNoCache = cacheImagensConhecidas.get(codLimpo) !== null && cacheImagensConhecidas.has(codLimpo);
@@ -779,6 +799,7 @@
 
     window.onload = () => {
         carregarTemaSalvo();
+        carregarEstadoSegmentacao();
         detectarDispositivo();
         carregarLogoUniversal();
         carregarCSV();

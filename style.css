@@ -2,7 +2,6 @@
    VARIÁVEIS DE CORES & TEMAS
    ========================================================================== */
 :root {
-    /* Tema 1: Azul JBS (Padrão) */
     --bg-body: #f4f6f9;
     --bg-card: #ffffff;
     --bg-subcard: #eef2f7;
@@ -16,7 +15,6 @@
 }
 
 [data-theme="red"] {
-    /* Tema 2: Seara / Vermelho JBS */
     --bg-body: #fdf2f2;
     --bg-card: #ffffff;
     --bg-subcard: #fef2f2;
@@ -30,7 +28,6 @@
 }
 
 [data-theme="dark"] {
-    /* Tema 3: Dark / Modo Noturno */
     --bg-body: #0f172a;
     --bg-card: #1e293b;
     --bg-subcard: #334155;
@@ -43,12 +40,7 @@
     --accent-hover: #0284c7;
 }
 
-/* Reset Global */
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body { 
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; 
@@ -59,99 +51,48 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.app-layout {
-    display: flex;
-    width: 100%;
-}
+.app-layout { display: flex; width: 100%; position: relative; }
 
-/* 1. Sidebar de Navegação (Esquerda) */
+/* 1. Sidebar de Navegação */
 .sidebar {
     width: 240px;
     background-color: var(--bg-card);
     border-right: 2px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
+    display: flex; flex-direction: column;
     padding: 24px 16px;
-    position: fixed;
-    top: 0; bottom: 0; left: 0;
-    z-index: 100;
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 100;
 }
 
 .sidebar-logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px 16px 12px;
-    border-bottom: 2px solid var(--border-color);
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px 16px 12px; border-bottom: 2px solid var(--border-color);
     margin-bottom: 16px;
 }
 
 .logo-placeholder {
-    width: 40px; height: 44px;
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 16px; flex-shrink: 0;
+    width: 40px; height: 44px; background-color: var(--primary-color);
+    color: #ffffff; border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0;
 }
 
-.logo-text .brand-name {
-    font-size: 15px; font-weight: 800;
-    color: var(--primary-color);
-}
-
-.logo-text .brand-sub {
-    font-size: 11px; color: var(--text-secondary); font-weight: 600;
-}
+.logo-text .brand-name { font-size: 15px; font-weight: 800; color: var(--primary-color); }
+.logo-text .brand-sub { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
 
 .sidebar-theme-container {
-    padding: 8px 12px 16px 12px;
-    border-bottom: 2px solid var(--border-color);
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    padding: 8px 12px 16px 12px; border-bottom: 2px solid var(--border-color);
+    margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;
 }
 
-.theme-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-secondary);
-    letter-spacing: 0.05em;
-}
-
-.theme-selector-box {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--bg-subcard);
-    padding: 8px 12px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    width: fit-content;
-}
-
-.theme-btn {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: 2px solid #ffffff;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
+.theme-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.05em; }
+.theme-selector-box { display: flex; align-items: center; gap: 10px; background: var(--bg-subcard); padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); width: fit-content; }
+.theme-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ffffff; cursor: pointer; transition: transform 0.2s ease; }
 .theme-btn:hover { transform: scale(1.2); }
 .theme-btn.btn-blue { background-color: #0A3D78; }
 .theme-btn.btn-red { background-color: #D32F2F; }
 .theme-btn.btn-dark { background-color: #0f172a; }
 
-.sidebar-nav {
-    display: flex; flex-direction: column; gap: 6px;
-}
-
-.nav-section-title {
-    font-size: 11px; font-weight: 700; color: var(--text-secondary);
-    text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 12px 6px 12px;
-}
+.sidebar-nav { display: flex; flex-direction: column; gap: 6px; }
+.nav-section-title { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 12px 6px 12px; }
 
 .nav-item {
     display: flex; align-items: center; gap: 12px; padding: 12px;
@@ -159,133 +100,112 @@ body {
     border-radius: 8px; transition: all 0.2s ease;
 }
 
-.nav-item.active {
-    background-color: var(--primary-color);
-    color: #ffffff;
-}
+.nav-item.active { background-color: var(--primary-color); color: #ffffff; }
 
 .sidebar-actions-container {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 2px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    margin-top: 20px; padding-top: 16px; border-top: 2px solid var(--border-color);
+    display: flex; flex-direction: column; gap: 10px;
 }
 
 .btn-sidebar-action {
-    background: var(--primary-color);
-    color: #ffffff;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 13px;
-    transition: background 0.2s ease;
-    width: 100%;
+    background: var(--primary-color); color: #ffffff; border: none;
+    padding: 10px 14px; border-radius: 8px; cursor: pointer;
+    font-weight: 600; font-size: 13px; transition: background 0.2s ease; width: 100%;
 }
 
-.btn-sidebar-action:hover {
-    background: var(--primary-hover);
-}
+.btn-sidebar-action:hover { background: var(--primary-hover); }
 
-/* 2. Painel de Segmentação de Dados (À direita da Sidebar e à esquerda do Conteúdo) */
+/* 2. Painel de Segmentação de Dados (Expandível / Ocultável) */
 .filter-panel-left {
     width: 280px;
     background-color: var(--bg-card);
     border-right: 2px solid var(--border-color);
-    position: fixed;
-    top: 0; bottom: 0; left: 240px;
+    position: fixed; top: 0; bottom: 0; left: 240px;
     padding: 24px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    z-index: 90;
-    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+    z-index: 90; overflow-y: auto;
+    transition: all 0.3s ease-in-out;
 }
 
 .panel-header {
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--border-color);
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 12px; border-bottom: 2px solid var(--border-color);
 }
 
-.panel-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--primary-color);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.panel-title { font-size: 13px; font-weight: 700; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.btn-toggle-filter {
+    background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-primary);
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;
+    transition: all 0.2s ease;
 }
 
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+.btn-toggle-filter:hover { background: var(--primary-color); color: #ffffff; }
 
-.filter-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-secondary);
-}
+.filter-panel-body { display: flex; flex-direction: column; gap: 16px; }
+.filter-group { display: flex; flex-direction: column; gap: 6px; }
+.filter-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
 
 .segmentation-select {
-    width: 100%;
-    padding: 10px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    background-color: var(--bg-subcard);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    outline: none;
-    cursor: pointer;
+    width: 100%; padding: 10px 12px; font-size: 13px; font-weight: 600;
+    background-color: var(--bg-subcard); color: var(--text-primary);
+    border: 1px solid var(--border-color); border-radius: 8px; outline: none; cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.segmentation-select:focus {
-    border-color: var(--primary-color);
-}
+.segmentation-select:focus { border-color: var(--primary-color); }
 
 .btn-reset-filters {
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 10px;
+    background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);
+    padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+    margin-top: 6px; transition: all 0.2s ease;
+}
+
+.btn-reset-filters:hover { color: var(--primary-color); border-color: var(--primary-color); }
+
+/* Botão Flutuante de Reabertura quando o Painel Estiver Recolhido */
+.btn-reopen-filter {
+    position: fixed; left: 250px; top: 20px; z-index: 95;
+    background: var(--primary-color); color: #ffffff; border: none;
+    padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    cursor: pointer; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     transition: all 0.2s ease;
 }
 
-.btn-reset-filters:hover {
-    color: var(--primary-color);
-    border-color: var(--primary-color);
+.btn-reopen-filter:hover { background: var(--primary-hover); transform: scale(1.05); }
+
+/* ESTADO RECOLHIDO/ESCONDIDO DA SEGMENTAÇÃO */
+.segmentation-hidden .filter-panel-left {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
 }
 
-/* 3. Área Principal dos Resultados (À direita da Segmentação) */
+.segmentation-hidden .btn-reopen-filter {
+    display: block;
+}
+
+.segmentation-hidden .main-content {
+    margin-left: 240px;
+    max-width: calc(100% - 240px);
+}
+
+/* 3. Área Principal dos Resultados */
 .main-content {
-    margin-left: 520px; /* Compensação das 2 barras esquerdas (240px + 280px) */
-    flex: 1; 
-    padding: 32px;
+    margin-left: 520px;
+    flex: 1; padding: 32px;
     max-width: calc(100% - 520px);
+    transition: all 0.3s ease-in-out;
 }
 
 .container { max-width: 1150px; margin: 0 auto; }
 
 header { 
-    background: var(--bg-card); 
-    padding: 22px 28px; 
-    border-radius: 12px; 
+    background: var(--bg-card); padding: 22px 28px; border-radius: 12px; 
     border-left: 6px solid var(--primary-color);
-    border-top: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 24px; 
-    display: flex; justify-content: space-between; align-items: center; 
+    border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; 
 }
 
 header h1 { font-size: 20px; font-weight: 700; color: var(--primary-color); }
