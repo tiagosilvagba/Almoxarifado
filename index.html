@@ -91,9 +91,6 @@
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
 
-    // Referência global da pasta de imagens selecionada via File System Access API
-    let imagensDirectoryHandle = null;
-
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
     function detectarDispositivo() {
@@ -430,7 +427,7 @@
                     
                     ${camposExtrasHTML}
 
-                    <!-- Seção de Captura da Foto -->
+                    <!-- Seção de Captura da Foto da Prateleira -->
                     <div class="camera-section">
                         <label class="btn-camera">
                             📸 Retirar Foto da Prateleira
@@ -455,65 +452,30 @@
         carregarMidiasCompletas(cod);
     }
 
-    async function salvarFotoCapturada(event, codItem) {
+    // Faz o download da foto renomeada com base no total de fotos encontradas na galeria[cite: 1]
+    function salvarFotoCapturada(event, codItem) {
         const file = event.target.files[0];
         const statusText = document.getElementById('camera-status');
         if (!file || !codItem || codItem === '-') return;
 
-        try {
-            statusText.innerText = "Processando foto...";
-
-            if (!imagensDirectoryHandle) {
-                if ('showDirectoryPicker' in window) {
-                    alert("Por favor, selecione a pasta 'imagens' do seu projeto para salvar as fotos tiradas.");
-                    imagensDirectoryHandle = await window.showDirectoryPicker();
-                } else {
-                    fazerDownloadFallback(file, codItem);
-                    return;
-                }
-            }
-
-            const codLimpo = String(codItem).trim();
-            let proximaSequencia = 1;
-
-            // Busca pelo próximo número de sequência disponível (ex: cod_item - 01.jpg, cod_item - 02.jpg)[cite: 1]
-            for (let i = 1; i <= 99; i++) {
-                const numSeq = i < 10 ? `0${i}` : `${i}`;
-                const nomeArquivo = `${codLimpo} - ${numSeq}.jpg`;
-                try {
-                    await imagensDirectoryHandle.getFileHandle(nomeArquivo);
-                    proximaSequencia = i + 1;
-                } catch (e) {
-                    break;
-                }
-            }
-
-            const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
-            const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
-
-            const fileHandle = await imagensDirectoryHandle.getFileHandle(nomeFinal, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(file);
-            await writable.close();
-
-            statusText.innerText = `✅ Salvo com sucesso: ${nomeFinal}`;
-            carregarMidiasCompletas(codItem);
-        } catch (err) {
-            console.error(err);
-            statusText.innerText = "⚠️ Erro ao salvar imagem no diretório local.";
-        }
-    }
-
-    function fazerDownloadFallback(file, codItem) {
-        const statusText = document.getElementById('camera-status');
         const codLimpo = String(codItem).trim();
-        const nomePadrao = `${codLimpo} - 01.jpg`;
-        
+
+        // Conta quantas fotos o item já tem exibidas nas miniaturas
+        const thumbs = document.querySelectorAll('#modal-thumbs-box .thumb-item img');
+        let proximaSequencia = thumbs.length + 1;
+
+        const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
+        const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
+
+        // Dispara o download automático do arquivo formatado
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
-        a.download = nomePadrao;
+        a.download = nomeFinal;
+        document.body.appendChild(a);
         a.click();
-        statusText.innerText = `💾 Arquivo baixado: ${nomePadrao}. Mova para a pasta /imagens`;
+        document.body.removeChild(a);
+
+        statusText.innerText = `💾 Baixado: ${nomeFinal} (Mova para a pasta /imagens)`;
     }
 
     function carregarMidiasCompletas(codItem) {
@@ -578,7 +540,6 @@
                 return;
             }
 
-            // Ordena fotos pelo número da sequência
             midias.sort((a, b) => (a.seq || 0) - (b.seq || 0));
 
             exibirNoPlayer(midias[0]);
