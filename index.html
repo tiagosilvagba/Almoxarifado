@@ -46,6 +46,7 @@
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="padding: 0 0 4px 0;">Ações do Sistema</span>
             <button class="btn-sidebar-action" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
+            <button class="btn-sidebar-action" style="background:#0066CC;" onclick="varrerFotosGitHubPagesManual()">🖼️ Mapear Imagens GitHub</button>
             <label class="btn-sidebar-action" style="cursor:pointer; display:block; text-align:center;">
                 📂 Selecionar Planilha
                 <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
@@ -54,7 +55,7 @@
         </div>
     </aside>
 
-    <!-- Coluna 2: Painel de Segmentação de Dados com Botão de Ocultar/Exibir -->
+    <!-- Coluna 2: Painel de Segmentação de Dados -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title">⚡ Segmentação</span>
@@ -90,10 +91,10 @@
         </div>
     </aside>
 
-    <!-- Botão Flutuante de Reabrir Filtros quando Estiver Oculto -->
+    <!-- Botão Flutuante para Exibir/Esconder Painel em Telas Pequenas/Mobile -->
     <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
 
-    <!-- Conteúdo Principal de Consulta (Direita da Segmentação) -->
+    <!-- Conteúdo Principal -->
     <main class="main-content" id="main-content">
         <div class="container">
             <header>
@@ -135,15 +136,15 @@
     let isMobile = false;
 
     let pastaImagensHandle = null;
-    const cacheImagensConhecidas = new Map();
+    
+    const itensComFoto = new Set();
+    const cacheCaminhoFoto = new Map();
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // Alternar Exibição da Segmentação de Dados
     function toggleSegmentacao() {
         const layout = document.getElementById('app-layout');
         layout.classList.toggle('segmentation-hidden');
-        
         const oculto = layout.classList.contains('segmentation-hidden');
         localStorage.setItem('jbs_segmentation_hidden', oculto ? 'true' : 'false');
     }
@@ -194,11 +195,31 @@
             try {
                 pastaImagensHandle = await window.showDirectoryPicker();
                 alert("✅ Pasta 'imagens' conectada com sucesso!");
+                await mapearFotosLocaisCelular();
             } catch (err) {
                 console.log("Seleção de pasta cancelada.");
             }
         } else {
             alert("⚠️ Seu navegador não suporta gravação direta de diretório. As fotos serão salvas via download.");
+        }
+    }
+
+    async function mapearFotosLocaisCelular() {
+        if (!pastaImagensHandle) return;
+        try {
+            for await (const entry of pastaImagensHandle.values()) {
+                if (entry.kind === 'file') {
+                    const nome = entry.name;
+                    const matchCod = nome.match(/^([^\s_-]+)/);
+                    if (matchCod && matchCod[1]) {
+                        const cod = matchCod[1].trim();
+                        itensComFoto.add(cod);
+                    }
+                }
+            }
+            filtrar();
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -291,12 +312,58 @@
             paginaAtual = 1;
 
             popularSegmentacaoDados();
+            varrerFotosGitHubPages();
 
             statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada com sucesso!`;
             renderizarPagina();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
         }
+    }
+
+    // VARREDURA COMPATÍVEL COM GITHUB PAGES (Execução Silenciosa ou Manual)
+    async function varrerFotosGitHubPages() {
+        const statusDiv = document.getElementById('status-texto');
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        
+        const promessas = dadosCSV.map(item => {
+            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            if (!cod || cod === '-') return Promise.resolve();
+            const codLimpo = String(cod).trim();
+
+            return new Promise(resolve => {
+                let testadas = 0;
+                let achou = false;
+
+                extensoes.forEach(ext => {
+                    const src = `imagens/${codLimpo} - 01.${ext}`;
+                    const img = new Image();
+                    img.onload = () => {
+                        if (!achou) {
+                            achou = true;
+                            itensComFoto.add(codLimpo);
+                            cacheCaminhoFoto.set(codLimpo, src);
+                            resolve();
+                        }
+                    };
+                    img.onerror = () => {
+                        testadas++;
+                        if (testadas === extensoes.length && !achou) resolve();
+                    };
+                    img.src = src;
+                });
+            });
+        });
+
+        await Promise.all(promessas);
+        filtrar();
+    }
+
+    async function varrerFotosGitHubPagesManual() {
+        const statusDiv = document.getElementById('status-texto');
+        statusDiv.innerText = "🔄 Mapeando todas as imagens da pasta /imagens no GitHub...";
+        await varrerFotosGitHubPages();
+        statusDiv.innerText = `✅ Mapeamento concluído! Itens com foto identificados: ${itensComFoto.size}`;
     }
 
     function popularSegmentacaoDados() {
@@ -417,49 +484,12 @@
 
         const codLimpo = String(codItem).trim();
 
-        if (cacheImagensConhecidas.has(codLimpo)) {
-            const srcCache = cacheImagensConhecidas.get(codLimpo);
-            if (srcCache) {
-                thumbDiv.innerHTML = `<img src="${srcCache}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
+        if (cacheCaminhoFoto.has(codLimpo)) {
+            const src = cacheCaminhoFoto.get(codLimpo);
+            if (src) {
+                thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
             }
-            return;
         }
-
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
-        const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo}`];
-        let encontrada = false;
-
-        const testarProxima = (pIndex, eIndex) => {
-            if (encontrada || pIndex >= padroes.length) {
-                if (!encontrada) cacheImagensConhecidas.set(codLimpo, null);
-                return;
-            }
-
-            const src = `imagens/${padroes[pIndex]}.${extensoes[eIndex]}`;
-            const img = new Image();
-            
-            img.onload = () => {
-                if (!encontrada) {
-                    encontrada = true;
-                    cacheImagensConhecidas.set(codLimpo, src);
-                    thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
-                }
-            };
-
-            img.onerror = () => {
-                if (!encontrada) {
-                    if (eIndex + 1 < extensoes.length) {
-                        testarProxima(pIndex, eIndex + 1);
-                    } else {
-                        testarProxima(pIndex + 1, 0);
-                    }
-                }
-            };
-
-            img.src = src;
-        };
-
-        testarProxima(0, 0);
     }
 
     function mostrarHoverCard(e, indexReal) {
@@ -632,7 +662,7 @@
 
                 statusText.innerText = `✅ Salvo na pasta local: ${nomeFinal}`;
                 
-                cacheImagensConhecidas.delete(codLimpo);
+                itensComFoto.add(codLimpo);
                 carregarMidiasCompletas(codItem, true);
                 return;
             } catch (err) {
@@ -780,11 +810,11 @@
 
             let bateImagem = true;
             if (imagemSel) {
-                const temFotoNoCache = cacheImagensConhecidas.get(codLimpo) !== null && cacheImagensConhecidas.has(codLimpo);
+                const temFoto = itensComFoto.has(codLimpo);
                 if (imagemSel === 'com_foto') {
-                    bateImagem = temFotoNoCache;
+                    bateImagem = temFoto;
                 } else if (imagemSel === 'sem_foto') {
-                    bateImagem = !temFotoNoCache;
+                    bateImagem = !temFoto;
                 }
             }
 
