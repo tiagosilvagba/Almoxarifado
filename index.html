@@ -11,7 +11,7 @@
 <body class="desktop-mode">
 
 <div class="app-layout">
-    <!-- Barra Lateral (Sidebar) -->
+    <!-- Barra Lateral 1: Sidebar de Navegação e Ações -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-placeholder" id="logo-container">
@@ -54,26 +54,37 @@
         </div>
     </aside>
 
+    <!-- Coluna 2: Painel de Segmentação de Dados (Entre o Menu e os Itens) -->
+    <aside class="filter-panel-left">
+        <div class="panel-header">
+            <span class="panel-title">⚡ Segmentação de Dados</span>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">🏢 Fornecedor:</label>
+            <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
+                <option value="">Todos os Fornecedores</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">⚙️ Local de Aplicação:</label>
+            <select id="select-aplicacao" class="segmentation-select" onchange="filtrar()">
+                <option value="">Todos os Locais</option>
+            </select>
+        </div>
+
+        <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()">🧹 Limpar Filtros</button>
+    </aside>
+
+    <!-- Conteúdo Principal de Consulta (Direita da Segmentação) -->
     <main class="main-content">
         <div class="container">
             <header>
                 <h1>Almoxarifado JBS | Seara</h1>
             </header>
 
-            <!-- BARRA DE PESQUISA + SEGMENTAÇÃO DE DADOS -->
-            <div class="filter-bar">
-                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento..." oninput="filtrar()">
-                
-                <div class="segmentation-container">
-                    <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
-                        <option value="">🏢 Todo Fornecedor</option>
-                    </select>
-
-                    <select id="select-aplicacao" class="segmentation-select" onchange="filtrar()">
-                        <option value="">⚙️ Todo Local de Aplicação</option>
-                    </select>
-                </div>
-            </div>
+            <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
 
             <div class="status">
                 <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
@@ -247,7 +258,6 @@
             dadosFiltrados = dadosCSV;
             paginaAtual = 1;
 
-            // Alimenta a segmentação de dados (Dropdowns) dinamicamente
             popularSegmentacaoDados();
 
             statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada com sucesso!`;
@@ -257,7 +267,6 @@
         }
     }
 
-    // MONTA AS OPÇÕES ÚNICAS PARA CADA SEGMENTAÇÃO
     function popularSegmentacaoDados() {
         const selectForn = document.getElementById('select-fornecedor');
         const selectAplic = document.getElementById('select-aplicacao');
@@ -273,17 +282,21 @@
             if (aplic && aplic !== '-') aplicacoesUnicas.add(aplic);
         });
 
-        // Limpa e popula Fornecedores
-        selectForn.innerHTML = '<option value="">🏢 Todos os Fornecedores</option>';
+        selectForn.innerHTML = '<option value="">Todos os Fornecedores</option>';
         Array.from(fornecedoresUnicos).sort().forEach(f => {
             selectForn.innerHTML += `<option value="${f}">${f}</option>`;
         });
 
-        // Limpa e popula Locais de Aplicação
-        selectAplic.innerHTML = '<option value="">⚙️ Todos os Locais de Aplicação</option>';
+        selectAplic.innerHTML = '<option value="">Todos os Locais</option>';
         Array.from(aplicacoesUnicas).sort().forEach(a => {
             selectAplic.innerHTML += `<option value="${a}">${a}</option>`;
         });
+    }
+
+    function limparFiltrosSegmentacao() {
+        document.getElementById('select-fornecedor').value = "";
+        document.getElementById('select-aplicacao').value = "";
+        filtrar();
     }
 
     function renderizarPagina() {
@@ -546,13 +559,56 @@
         carregarMidiasCompletas(cod);
     }
 
+    // Varredura direta na pasta do celular/dispositivo
     async function salvarFotoCapturada(event, codItem) {
         const file = event.target.files[0];
         const statusText = document.getElementById('camera-status');
         if (!file || !codItem || codItem === '-') return;
 
         const codLimpo = String(codItem).trim();
-        
+        statusText.innerText = "Verificando sequência na pasta local...";
+
+        let proximaSequencia = 1;
+
+        if (pastaImagensHandle) {
+            try {
+                let maiorSeqLocal = 0;
+
+                for await (const entry of pastaImagensHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const nomeArquivo = entry.name;
+                        if (nomeArquivo.toLowerCase().startsWith(codLimpo.toLowerCase())) {
+                            const match = nomeArquivo.match(/[-_]\s*(\d{2})/);
+                            if (match && match[1]) {
+                                const numSeq = parseInt(match[1], 10);
+                                if (numSeq > maiorSeqLocal) {
+                                    maiorSeqLocal = numSeq;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                proximaSequencia = maiorSeqLocal + 1;
+                const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
+                const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
+
+                const fileHandle = await pastaImagensHandle.getFileHandle(nomeFinal, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(file);
+                await writable.close();
+
+                statusText.innerText = `✅ Salvo na pasta local: ${nomeFinal}`;
+                
+                cacheImagensConhecidas.delete(codLimpo);
+                carregarMidiasCompletas(codItem, true);
+                return;
+            } catch (err) {
+                console.error("Erro ao ler/gravar na pasta conectada:", err);
+                statusText.innerText = "⚠️ Erro ao acessar pasta local. Tentando modo de download...";
+            }
+        }
+
         const imagensGaleria = document.querySelectorAll('#modal-thumbs-box .thumb-item img');
         let maiorSequencia = 0;
 
@@ -565,26 +621,9 @@
             }
         });
 
-        const proximaSequencia = maiorSequencia + 1;
+        proximaSequencia = maiorSequencia + 1;
         const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
         const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
-
-        if (pastaImagensHandle) {
-            try {
-                const fileHandle = await pastaImagensHandle.getFileHandle(nomeFinal, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(file);
-                await writable.close();
-
-                statusText.innerText = `✅ Salvo na pasta: ${nomeFinal}`;
-                
-                cacheImagensConhecidas.delete(codLimpo);
-                carregarMidiasCompletas(codItem, true);
-                return;
-            } catch (err) {
-                console.error(err);
-            }
-        }
 
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
@@ -689,7 +728,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // FILTRO COMBINADO: BUSCA DIGITADA + SEGMENTAÇÕES DE DADOS
     function filtrar() {
         const termo = document.getElementById('busca').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
