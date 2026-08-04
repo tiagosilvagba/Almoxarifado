@@ -452,22 +452,52 @@
         carregarMidiasCompletas(cod);
     }
 
-    // Faz o download da foto renomeada com base no total de fotos encontradas na galeria[cite: 1]
-    function salvarFotoCapturada(event, codItem) {
+    // Testa no servidor/pasta se a imagem existe carregando via Image()
+    function checarImagemExiste(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = url;
+        });
+    }
+
+    // Identifica dinamicamente imagens existentes (ex: 4515 - 01, 4515 - 02) e sugere o próximo número vago (ex: 4515 - 03)
+    async function salvarFotoCapturada(event, codItem) {
         const file = event.target.files[0];
         const statusText = document.getElementById('camera-status');
         if (!file || !codItem || codItem === '-') return;
 
         const codLimpo = String(codItem).trim();
+        statusText.innerText = "Verificando sequência de fotos existentes...";
 
-        // Conta quantas fotos o item já tem exibidas nas miniaturas
-        const thumbs = document.querySelectorAll('#modal-thumbs-box .thumb-item img');
-        let proximaSequencia = thumbs.length + 1;
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        let proximaSequencia = 1;
+
+        // Testa do 01 até o 99 para encontrar qual é a primeira posição que NÃO existe na pasta
+        for (let seq = 1; seq <= 99; seq++) {
+            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
+            let existeNaPasta = false;
+
+            for (const ext of extensoes) {
+                const urlTestar = `imagens/${codLimpo} - ${numSeq}.${ext}?v=${new Date().getTime()}`;
+                const existe = await checarImagemExiste(urlTestar);
+                if (existe) {
+                    existeNaPasta = true;
+                    break;
+                }
+            }
+
+            if (!existeNaPasta) {
+                proximaSequencia = seq;
+                break;
+            }
+        }
 
         const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
         const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
 
-        // Dispara o download automático do arquivo formatado
+        // Dispara o download com o próximo número da sequência (ex: 4515 - 03.jpg)
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
         a.download = nomeFinal;
