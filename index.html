@@ -23,18 +23,46 @@
             </div>
         </div>
 
+        <!-- Seletor de Temas Reformulado -->
         <div class="sidebar-theme-container">
-            <span class="theme-label">TEMA DE CORES:</span>
-            <div class="theme-selector-box">
-                <div class="theme-btn btn-blue" onclick="aplicarTema('blue')" title="Azul JBS (Padrão)"></div>
-                <div class="theme-btn btn-red" onclick="aplicarTema('red')" title="Seara (Vermelho)"></div>
-                <div class="theme-btn btn-dark" onclick="aplicarTema('dark')" title="Modo Noturno (Dark)"></div>
-                <div class="theme-btn btn-apple" onclick="aplicarTema('apple')" title="Apple Glass (Cupertino)"></div>
-                <div class="theme-btn btn-emerald" onclick="aplicarTema('emerald')" title="Industrial Emerald"></div>
-                <div class="theme-btn btn-nordic" onclick="aplicarTema('nordic')" title="Nordic Slate"></div>
-                <div class="theme-btn btn-cyber" onclick="aplicarTema('cyber')" title="Cyberpunk Tech"></div>
-                <div class="theme-btn btn-titanium" onclick="aplicarTema('titanium')" title="Titanium Gold"></div>
-                <div class="theme-btn btn-sunset" onclick="aplicarTema('sunset')" title="Sunset Warm"></div>
+            <span class="theme-label">🎨 APARÊNCIA DO SISTEMA</span>
+            <div class="theme-selector-grid">
+                <button class="theme-chip" onclick="aplicarTema('blue')">
+                    <span class="theme-dot dot-blue"></span>
+                    <span>Azul JBS</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('red')">
+                    <span class="theme-dot dot-red"></span>
+                    <span>Seara</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('dark')">
+                    <span class="theme-dot dot-dark"></span>
+                    <span>Noturno</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('apple')">
+                    <span class="theme-dot dot-apple"></span>
+                    <span>Apple Glass</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('emerald')">
+                    <span class="theme-dot dot-emerald"></span>
+                    <span>Emerald</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('nordic')">
+                    <span class="theme-dot dot-nordic"></span>
+                    <span>Nordic</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('cyber')">
+                    <span class="theme-dot dot-cyber"></span>
+                    <span>Cyber Tech</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('titanium')">
+                    <span class="theme-dot dot-titanium"></span>
+                    <span>Titanium</span>
+                </button>
+                <button class="theme-chip" onclick="aplicarTema('sunset')">
+                    <span class="theme-dot dot-sunset"></span>
+                    <span>Sunset</span>
+                </button>
             </div>
         </div>
 
@@ -173,11 +201,16 @@
             document.documentElement.setAttribute('data-theme', tema);
         }
         localStorage.setItem('jbs_theme_preference', tema);
+        
+        // Destaca visualmente o chip do tema ativo
+        document.querySelectorAll('.theme-chip').forEach(chip => chip.classList.remove('active'));
+        const chipAtivo = document.querySelector(`.theme-chip[onclick="aplicarTema('${tema}')"]`);
+        if (chipAtivo) chipAtivo.classList.add('active');
     }
 
     function carregarTemaSalvo() {
-        const temaSalvo = localStorage.getItem('jbs_theme_preference');
-        if (temaSalvo) aplicarTema(temaSalvo);
+        const temaSalvo = localStorage.getItem('jbs_theme_preference') || 'blue';
+        aplicarTema(temaSalvo);
     }
 
     function detectarDispositivo() {

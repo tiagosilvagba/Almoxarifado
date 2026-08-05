@@ -1,5 +1,5 @@
 ﻿/* ==========================================================================
-   1. VARIÁVEIS DE CORES & TEMAS (Troca Dinâmica em Tempo Real)
+   1. VARIÁVEIS DE CORES & TEMAS
    ========================================================================== */
 :root {
     /* Tema 1: Azul JBS (Padrão) */
@@ -265,37 +265,62 @@ a:hover {
     letter-spacing: 0.05em; 
 }
 
-.theme-selector-box { 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-    background: var(--bg-subcard); 
-    padding: 8px 10px; 
-    border-radius: 20px; 
-    border: 1px solid var(--border-color); 
-    width: fit-content; 
-    flex-wrap: wrap;
+/* NOVO SELETOR DE TEMAS ESTILIZADO (CHIPS / CARDS COM NOMES) */
+.theme-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-top: 4px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
-.theme-btn { 
-    width: 18px; 
-    height: 18px; 
-    border-radius: 50%; 
-    border: 2px solid #ffffff; 
-    cursor: pointer; 
-    transition: transform 0.2s ease; 
+.theme-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-subcard);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.theme-btn:hover { transform: scale(1.25); }
-.theme-btn.btn-blue { background-color: #0A3D78; }
-.theme-btn.btn-red { background-color: #D32F2F; }
-.theme-btn.btn-dark { background-color: #0f172a; }
-.theme-btn.btn-apple { background-color: #0066cc; }
-.theme-btn.btn-emerald { background-color: #10b981; }
-.theme-btn.btn-nordic { background-color: #475569; }
-.theme-btn.btn-cyber { background-color: #00f0ff; }
-.theme-btn.btn-titanium { background-color: #eab308; }
-.theme-btn.btn-sunset { background-color: #ea580c; }
+.theme-chip:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.theme-chip.active {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+}
+
+.theme-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.dot-blue { background-color: #0A3D78; }
+.dot-red { background-color: #D32F2F; }
+.dot-dark { background-color: #38bdf8; }
+.dot-apple { background-color: #0066cc; }
+.dot-emerald { background-color: #10b981; }
+.dot-nordic { background-color: #475569; }
+.dot-cyber { background-color: #00f0ff; }
+.dot-titanium { background-color: #eab308; }
+.dot-sunset { background-color: #ea580c; }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 6px; }
 .nav-section-title { 
@@ -334,7 +359,7 @@ a:hover {
     gap: 10px;
 }
 
-/* TODOS OS BOTÕES DA BARRA LATERAL SEGUEM A COR PADRÃO DO TEMA */
+/* TODOS OS BOTÕES DA SIDEBAR SEGUEM A MESMA IDENTIDADE DO TEMA */
 .btn-sidebar-action {
     background: var(--primary-color); 
     color: #ffffff; 
