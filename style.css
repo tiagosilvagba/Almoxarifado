@@ -334,6 +334,7 @@ a:hover {
     gap: 10px;
 }
 
+/* TODOS OS BOTÕES DA BARRA LATERAL SEGUEM A COR PADRÃO DO TEMA */
 .btn-sidebar-action {
     background: var(--primary-color); 
     color: #ffffff; 
@@ -349,15 +350,6 @@ a:hover {
 
 .btn-sidebar-action:hover { 
     background: var(--primary-hover); 
-}
-
-/* BOTÃO DE CARREGAR IMAGENS INTEGRA-SE AO ACENTO DO TEMA ATIVO */
-.btn-sidebar-action.btn-theme-accent {
-    background: var(--accent-color);
-}
-
-.btn-sidebar-action.btn-theme-accent:hover {
-    background: var(--accent-hover);
 }
 
 /* ==========================================================================
