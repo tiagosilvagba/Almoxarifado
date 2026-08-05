@@ -64,7 +64,7 @@
         </div>
     </aside>
 
-    <!-- Painel de Segmentação -->
+    <!-- Painel de Filtros -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title" data-i18n="filter_segmentation">⚡ Filtros / Segmentação</span>
@@ -111,7 +111,7 @@
                 </select>
             </div>
 
-            <div class="filter-group" id="group-dash-cat">
+            <div class="filter-group" id="group-dash-cat" style="display:none;">
                 <label class="filter-label" data-i18n="label_audit_category">📋 Categoria de Auditoria:</label>
                 <select id="dash-select-filtro" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="todos" data-i18n="opt_all_active">🔍 Todos os Itens Ativos</option>
@@ -301,7 +301,7 @@
     let idiomaAtual = 'PT';
     let vistaAtual = 'dashboard';
     let pastaImagensHandle = null;
-    
+
     const itensComFoto = new Set();
     const cacheCaminhoFoto = new Map();
     const cachePDFs = new Map();
@@ -317,7 +317,6 @@
             btn_load_imgs: "🖼️ Carregar Imagens",
             btn_select_sheet: "📂 Selecionar Planilha",
             btn_sync_base: "🔄 Sincronizar Base",
-            filter_segmentation: "⚡ Filtros / Segmentação",
             label_balance_status: "📦 Status do Saldo:",
             opt_all_items: "Todos os Itens",
             opt_with_balance: "✅ Com Saldo (> 0)",
@@ -373,7 +372,6 @@
             btn_load_imgs: "🖼️ Load Images",
             btn_select_sheet: "📂 Select Spreadsheet",
             btn_sync_base: "🔄 Sync Database",
-            filter_segmentation: "⚡ Filters / Segmentation",
             label_balance_status: "📦 Balance Status:",
             opt_all_items: "All Items",
             opt_with_balance: "✅ With Balance (> 0)",
@@ -429,7 +427,6 @@
             btn_load_imgs: "🖼️ Carica Immagini",
             btn_select_sheet: "📂 Seleziona Foglio",
             btn_sync_base: "🔄 Sincronizza Database",
-            filter_segmentation: "⚡ Filtri / Segmentazione",
             label_balance_status: "📦 Stato Saldo:",
             opt_all_items: "Tutti gli Articoli",
             opt_with_balance: "✅ Con Saldo (> 0)",
@@ -485,7 +482,6 @@
             btn_load_imgs: "🖼️ Charger Images",
             btn_select_sheet: "📂 Sélectionner Fichier",
             btn_sync_base: "🔄 Synchroniser",
-            filter_segmentation: "⚡ Filtres / Segmentation",
             label_balance_status: "📦 Statut du Solde:",
             opt_all_items: "Tous les Articles",
             opt_with_balance: "✅ Avec Solde (> 0)",
@@ -541,7 +537,6 @@
             btn_load_imgs: "🖼️ Bilder Laden",
             btn_select_sheet: "📂 Tabelle Auswählen",
             btn_sync_base: "🔄 Datenbank Synchronisieren",
-            filter_segmentation: "⚡ Filter / Segmentierung",
             label_balance_status: "📦 Saldenstatus:",
             opt_all_items: "Alle Artikel",
             opt_with_balance: "✅ Mit Saldo (> 0)",
@@ -597,7 +592,6 @@
             btn_load_imgs: "🖼️ Afbeeldingen Laden",
             btn_select_sheet: "📂 Selecteer Spreadsheet",
             btn_sync_base: "🔄 Database Synchroniseren",
-            filter_segmentation: "⚡ Filters / Segmentatie",
             label_balance_status: "📦 Saldo Status:",
             opt_all_items: "Alle Artikelen",
             opt_with_balance: "✅ Met Saldo (> 0)",
@@ -679,7 +673,6 @@
         const viewDashboard = document.getElementById('view-dashboard');
         const navPesquisa = document.getElementById('nav-pesquisa');
         const navDashboard = document.getElementById('nav-dashboard');
-        const btnReopenFilter = document.getElementById('btn-reopen-filter');
         const layout = document.getElementById('app-layout');
 
         if (view === 'pesquisa') {
@@ -687,11 +680,8 @@
             viewDashboard.style.display = 'none';
             navPesquisa.classList.add('active');
             navDashboard.classList.remove('active');
-            
-            // Garante que o botão de abrir filtro reapareça corretamente se o painel estiver oculto
-            if (layout.classList.contains('segmentation-hidden')) {
-                if (btnReopenFilter) btnReopenFilter.style.display = 'block';
-            }
+
+            layout.classList.remove('segmentation-hidden');
             filtrar();
         } else if (view === 'dashboard') {
             viewPesquisa.style.display = 'none';
@@ -699,11 +689,7 @@
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
 
-            // OCULTA TOTALMENTE O BOTÃO FLUTUANTE DE FILTRO QUANDO O DASHBOARD ESTIVER ATIVO
-            if (btnReopenFilter) btnReopenFilter.style.display = 'none';
-            // Garante também que o painel lateral de filtros feche/recolha ao entrar no dashboard
-            layout.classList.add('segmentation-hidden');
-
+            layout.classList.remove('segmentation-hidden');
             atualizarMétricasDashboard();
         }
     }
@@ -712,14 +698,11 @@
         if (vistaAtual === 'pesquisa') {
             filtrar();
         } else {
-            atualizarMétricasDashboard();
+            filtrarTabelaDashboard();
         }
     }
 
     function toggleSegmentacao() {
-        // Bloqueia a abertura do painel de filtros se estiver no dashboard
-        if (vistaAtual === 'dashboard') return;
-
         const layout = document.getElementById('app-layout');
         layout.classList.toggle('segmentation-hidden');
         const oculto = layout.classList.contains('segmentation-hidden');
@@ -1075,15 +1058,19 @@
             if (filialStr.trim() !== '-') filiaisUnicas.add(filialStr.trim());
         });
 
-        selectForn.innerHTML = '<option value="">Todos os Fornecedores</option>';
-        Array.from(fornecedoresUnicos).sort().forEach(f => {
-            selectForn.innerHTML += `<option value="${f}">${f}</option>`;
-        });
+        if (selectForn) {
+            selectForn.innerHTML = '<option value="">Todos os Fornecedores</option>';
+            Array.from(fornecedoresUnicos).sort().forEach(f => {
+                selectForn.innerHTML += `<option value="${f}">${f}</option>`;
+            });
+        }
 
-        selectLocal.innerHTML = '<option value="">Todos os Locais</option>';
-        Array.from(locaisUnicos).sort().forEach(l => {
-            selectLocal.innerHTML += `<option value="${l}">${l}</option>`;
-        });
+        if (selectLocal) {
+            selectLocal.innerHTML = '<option value="">Todos os Locais</option>';
+            Array.from(locaisUnicos).sort().forEach(l => {
+                selectLocal.innerHTML += `<option value="${l}">${l}</option>`;
+            });
+        }
 
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
@@ -1101,6 +1088,7 @@
         document.getElementById('select-local-estoque').value = "";
         document.getElementById('busca').value = "";
         document.getElementById('dash-busca-dinamica').value = "";
+        document.getElementById('dash-select-filtro').value = "todos";
         dispararFiltrosGerais();
     }
 
@@ -1205,6 +1193,7 @@
     }
 
     function filtrarTabelaDashboard() {
+        const filtroTipo = document.getElementById('dash-select-filtro').value;
         const termoBusca = document.getElementById('dash-busca-dinamica').value.toLowerCase().trim();
         const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
@@ -1218,13 +1207,13 @@
         const itensFiltrados = cacheItensCriticos.filter(obj => {
             const cod = getVal(obj.item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
-            const codNorm = normalizarCod(cod);
 
             const linhaCompleta = Object.values(obj.item).join(' ').toLowerCase();
             const fornItem = getVal(obj.item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
             const localEstoqueItem = String(obj.localEstoque).toLowerCase();
             const filialItem = String(obj.filialExibir).toLowerCase();
 
+            const bateTipo = (filtroTipo === 'todos' || obj.statusTipo === filtroTipo);
             const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
             const bateFilial = (!filialSel || filialItem.includes(filialSel));
             const bateForn = (!fornSel || fornItem === fornSel);
@@ -1243,7 +1232,7 @@
                 else if (saldoStatusSel === 'zerado_com_minmax') bateSaldoStatus = obj.saldo <= 0 && obj.estMin > 0 && obj.estMax > 0;
             }
 
-            return bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
+            return bateTipo && bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
         });
 
         const subtotalInfo = document.getElementById('dash-subtotal-info');
@@ -1300,7 +1289,11 @@
         const cardHover = document.getElementById('hover-card');
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const prateleira = getVal(item, ['endereco', 'prateleira', 'rua', 'prat']);
+        const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
+        const divi = getVal(item, ['divisao', 'div', 'gaveta']);
+        const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
+        let enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
+
         const estMin = getVal(item, ['est_min', 'minimo']);
         const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
@@ -1318,7 +1311,7 @@
             <div class="hover-card-title">[${cod}] ${nome}</div>
             <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
             <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldoAtual} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoque}</div>
-            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${prateleira}</div>
+            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${enderecoCompleto}</div>
             <div class="hover-card-section"><strong>📈 Mín / Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; <strong>Lead:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
             <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
@@ -1407,7 +1400,12 @@
             const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
             const equipamento = getVal(item, ['equipamento', 'equip']);
             const especificacao = getVal(item, ['especificacao', 'espec']);
-            const prateleira = getVal(item, ['endereco', 'prateleira', 'rua', 'prat']);
+            
+            const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
+            const divi = getVal(item, ['divisao', 'div', 'gaveta']);
+            const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
+            const enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
+
             const estMin = getVal(item, ['est_min', 'minimo']);
             const estMax = getVal(item, ['est_max', 'maximo']);
             const leadTime = getVal(item, ['lead_time', 'lead']);
@@ -1430,7 +1428,7 @@
             row.onclick = () => abrirModal(indexReal);
 
             if (!isMobile) {
-                row.onmousemove = (e) => mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir);
+                row.onmousemove = (e) => mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir, enderecoCompleto);
                 row.onmouseleave = esconderHoverCard;
             }
 
@@ -1448,7 +1446,7 @@
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
                         <span class="row-location" style="background:var(--primary-color); color:#fff;">🏢 ${filialExibir}</span>
-                        <span class="row-location">📍 Local: ${localEstoqueExibir} | End: ${prateleira}</span>
+                        <span class="row-location">📍 Local: ${localEstoqueExibir} | End: ${enderecoCompleto}</span>
                         <span class="row-stock-badge" style="${estiloBadgeEstoque}">
                             📊 Saldo: ${saldoExibir} un.
                         </span>
@@ -1550,7 +1548,7 @@
         return null;
     }
 
-    function mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir) {
+    function mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir, enderecoCompleto) {
         if (isMobile) return;
 
         const item = dadosCSV[indexReal];
@@ -1559,7 +1557,6 @@
         
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const prateleira = getVal(item, ['endereco', 'prateleira', 'rua', 'prat']);
         const estMin = getVal(item, ['est_min', 'minimo']);
         const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
@@ -1577,7 +1574,7 @@
             <div class="hover-card-title">[${cod}] ${nome}</div>
             <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
             <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldoAtual} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoqueExibir}</div>
-            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${prateleira}</div>
+            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${enderecoCompleto}</div>
             <div class="hover-card-section"><strong>📈 Mín / Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; <strong>Lead:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
             <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
@@ -1593,10 +1590,6 @@
         cardHover.style.display = 'block';
     }
 
-    function esconderHoverCard() {
-        document.getElementById('hover-card').style.display = 'none';
-    }
-
     async function abrirModal(indexReal) {
         esconderHoverCard();
         
@@ -1606,9 +1599,12 @@
         const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
         const equipamento = getVal(item, ['equipamento', 'equip']);
         const especificacao = getVal(item, ['especificacao', 'espec']);
-        const prateleira = getVal(item, ['endereco', 'prateleira', 'rua', 'prat']);
-        const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
-        const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
+        
+        const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
+        const divi = getVal(item, ['divisao', 'div', 'gaveta']);
+        const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
+        const enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
+
         const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
         const estMin = getVal(item, ['est_min', 'minimo']);
         const estMax = getVal(item, ['est_max', 'maximo']);
@@ -1649,8 +1645,7 @@
                 <div class="modal-info">
                     <div style="background:var(--bg-subcard); border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; margin-bottom:10px; color:var(--text-primary);">
                         <p style="margin:2px 0;">🏢 <strong>Filial:</strong> ${filialExibir}</p>
-                        <p style="margin:4px 0 0 0;">📍 <strong>Local de Estoque:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 🏠 <strong>Endereço:</strong> ${prateleira}</p>
-                        <p style="margin:4px 0 0 0;">📂 <strong>Divisão:</strong> ${divisao} &nbsp;|&nbsp; 📦 <strong>Repartição:</strong> ${reparticao}</p>
+                        <p style="margin:4px 0 0 0;">📍 <strong>Local de Estoque:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 🏠 <strong>Endereço:</strong> ${enderecoCompleto}</p>
                     </div>
 
                     <div style="background:var(--bg-subcard); color:var(--text-primary); padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
@@ -1850,7 +1845,7 @@
     }
 
     function filtrar() {
-        const termo = (vistaAtual === 'pesquisa' ? document.getElementById('busca').value : document.getElementById('dash-busca-dinamica').value).toLowerCase().trim();
+        const termo = document.getElementById('busca').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
         const localSel = document.getElementById('select-local-estoque').value.toLowerCase().trim();
         const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
@@ -1899,19 +1894,6 @@
         paginaAtual = 1;
         renderizarPagina();
     }
-
-    window.addEventListener('resize', detectarDispositivo);
-
-    window.onload = () => {
-        carregarTemaSalvo();
-        carregarEstadoSegmentacao();
-        detectarDispositivo();
-        carregarLogoUniversal();
-        mudarIdioma('PT');
-        
-        navegarPara('dashboard');
-        carregarCSV();
-    };
 </script>
 
 </body>
