@@ -664,7 +664,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 }
 
 .kpi-value {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--text-primary);
 }
@@ -704,12 +704,6 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     font-size: 15px;
     font-weight: 700;
     color: var(--primary-color);
-}
-
-.dash-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .dash-table-container {

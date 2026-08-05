@@ -117,12 +117,13 @@
 
         <div class="filter-panel-body">
             <div class="filter-group">
-                <label class="filter-label">📋 Categoria de Desvio:</label>
+                <label class="filter-label">📋 Categoria de Auditoria:</label>
                 <select id="dash-select-filtro" class="segmentation-select" onchange="filtrarTabelaDashboard()">
-                    <option value="todos">🔍 Todos os Desvios</option>
-                    <option value="ruptura">⚠️ Ruptura Total (Zerados)</option>
-                    <option value="abaixo">📉 Abaixo do Mínimo</option>
-                    <option value="acima">🚨 Acima do Máximo</option>
+                    <option value="todos">🔍 Todos os Itens Ativos</option>
+                    <option value="ruptura">⚠️ Apenas Ruptura Total (Zerados)</option>
+                    <option value="abaixo">📉 Apenas Abaixo do Mínimo</option>
+                    <option value="acima">🚨 Apenas Acima do Máximo</option>
+                    <option value="normal">✅ Estoque Normal/Regular</option>
                 </select>
             </div>
         </div>
@@ -172,7 +173,7 @@
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <span class="kpi-title">Valor Total em Estoque</span>
-                        <span class="kpi-value color-accent" id="dash-kpi-valor-total">R$ 0,00</span>
+                        <span class="kpi-value color-accent" id="dash-kpi-valor-total">R$ 0,00 Milhões</span>
                         <span class="kpi-sub">Capital imobilizado</span>
                     </div>
 
@@ -207,19 +208,10 @@
                     </div>
                 </div>
 
-                <!-- SEÇÃO DE ITENS CRÍTICOS COM VALOR TOTAL E CUSTO -->
+                <!-- SEÇÃO DE ITENS / AUDITORIA -->
                 <div class="dash-section-box">
                     <div class="dash-section-header">
-                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria Financeira de Desvios de Estoque</div>
-                        <div class="dash-filter-bar">
-                            <label style="font-size: 12px; font-weight: bold; color: var(--text-secondary);">Filtrar Visão:</label>
-                            <select id="dash-select-filtro" class="segmentation-select" style="width: 240px; padding: 6px 10px;" onchange="filtrarTabelaDashboard()">
-                                <option value="todos">🔍 Todos os Desvios</option>
-                                <option value="ruptura">⚠️ Apenas Ruptura Total (Zerados)</option>
-                                <option value="abaixo">📉 Apenas Abaixo do Mínimo</option>
-                                <option value="acima">🚨 Apenas Acima do Máximo</option>
-                            </select>
-                        </div>
+                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria Financeira e de Estoque (Passe o mouse para visualizar a foto)</div>
                     </div>
 
                     <div class="dash-table-container" style="margin-top: 14px;">
@@ -298,6 +290,13 @@
     function formatarMoeda(val) {
         const num = parseNum(val);
         return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // FORMATAÇÃO EM MILHÕES
+    function formatarMilhoes(val) {
+        const num = parseNum(val);
+        const emMilhoes = num / 1000000;
+        return `R$ ${emMilhoes.toFixed(2)} Milhões`;
     }
 
     function navegarPara(view) {
@@ -511,7 +510,6 @@
         return '-';
     }
 
-    // LEITURA OTIMIZADA DO SALDO, CUSTO E VALOR TOTAL NO SALDO.CSV
     async function carregarSaldos() {
         mapaSaldos.clear();
         mapaCustosUnitarios.clear();
@@ -729,17 +727,17 @@
                 if (estMin > 0 && saldo < estMin) {
                     abaixoMin++;
                     statusTipo = 'abaixo';
-                    cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
                 } else if (estMax > 0 && saldo > estMax) {
                     acimaMax++;
                     statusTipo = 'acima';
-                    cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
                 }
             } else if (estMin > 0 && estMax > 0) {
                 rupturaTotal++;
                 statusTipo = 'ruptura';
-                cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
             }
+
+            // Armazena todos no cache para que o filtro do dashboard exiba corretamente
+            cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
 
             if (forn && forn !== '-') {
                 if (!mapaFornecedores.has(forn)) {
@@ -752,7 +750,7 @@
             }
         });
 
-        document.getElementById('dash-kpi-valor-total').innerText = formatarMoeda(valorTotalEstoqueGeral);
+        document.getElementById('dash-kpi-valor-total').innerText = formatarMilhoes(valorTotalEstoqueGeral);
         document.getElementById('dash-kpi-total').innerText = total;
         document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
         document.getElementById('dash-kpi-com-saldo-perc').innerText = total > 0 ? `${((comSaldo / total) * 100).toFixed(1)}% da Base` : '0%';
@@ -802,7 +800,7 @@
         });
 
         if (itensFiltrados.length === 0) {
-            tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item nesta categoria de desvio.</td></tr>';
+            tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item nesta categoria.</td></tr>';
             return;
         }
 
@@ -818,9 +816,11 @@
             if (statusTipo === 'ruptura') {
                 badgeHtml = '<span class="badge-status badge-ruptura">⚠️ Ruptura Total</span>';
             } else if (statusTipo === 'abaixo') {
-                badgeHtml = '<span class="badge-status badge-abaixo">📉 Abaixo do Mínimo</span>';
+                badgeHtml = '<span class="badge-status badge-abaixo">📉 Abaixo Mín.</span>';
             } else if (statusTipo === 'acima') {
-                badgeHtml = '<span class="badge-status badge-acima">🚨 Acima do Máximo</span>';
+                badgeHtml = '<span class="badge-status badge-acima">🚨 Acima Máx.</span>';
+            } else {
+                badgeHtml = '<span class="badge-status" style="background:#eef2f7; color:#1e293b;">✅ Normal</span>';
             }
 
             const tr = document.createElement('tr');
@@ -865,7 +865,7 @@
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
             <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual:</strong> ${saldo} un.</div>
-            <div class="hover-card-section"><strong>💰 Custo Unitário:</strong> ${formatarMoeda(custoUnit)} &nbsp;|&nbsp; <strong>Total:</strong> ${formatarMoeda(valorTotalItem)}</div>
+            <div class="hover-card-section"><strong>💰 Custo Unit.:</strong> ${formatarMoeda(custoUnit)} &nbsp;|&nbsp; <strong>Total:</strong> ${formatarMoeda(valorTotalItem)}</div>
             <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
             <div class="hover-card-section"><strong>⏱️ Lead Time:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
@@ -995,7 +995,7 @@
                     <div class="row-details">
                         <span class="row-location">📍 P: ${prateleira} | D: ${divisao} | R: ${reparticao}</span>
                         <span class="row-stock-badge" style="${estiloBadgeEstoque}">
-                            📊 Saldo: ${saldoExibir} un. | Custo: ${formatarMoeda(custoUnitExibir)} | Total: ${formatarMoeda(valorTotalExibir)}
+                            📊 Saldo: ${saldoExibir} | Custo: ${formatarMoeda(custoUnitExibir)} | Total: ${formatarMoeda(valorTotalExibir)}
                         </span>
                         <span class="row-lead-badge">⏱️ Lead Time: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
