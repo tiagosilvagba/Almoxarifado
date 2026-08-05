@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <!-- Seletor de Temas (Na posição anterior) -->
+        <!-- Seletor de Temas -->
         <div class="sidebar-theme-container">
             <span class="theme-label">🎨 APARÊNCIA DO SISTEMA</span>
             <div class="theme-selector-grid">
@@ -64,7 +64,7 @@
         </div>
     </aside>
 
-    <!-- Painel de Segmentação Compartilhado (Dashboard e Pesquisa com os mesmos filtros) -->
+    <!-- Painel de Segmentação -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title" data-i18n="filter_segmentation">⚡ Filtros / Segmentação</span>
@@ -79,7 +79,7 @@
                 </select>
             </div>
 
-            <div class="filter-group">
+            <div class="filter-group" id="group-saldo-status">
                 <label class="filter-label" data-i18n="label_balance_status">📦 Status do Saldo:</label>
                 <select id="select-saldo-status" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_items">Todos os Itens</option>
@@ -88,7 +88,7 @@
                 </select>
             </div>
 
-            <div class="filter-group">
+            <div class="filter-group" id="group-select-imagem">
                 <label class="filter-label" data-i18n="label_item_image">🖼️ Imagem do Item:</label>
                 <select id="select-imagem" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_photos">Todas as Fotos</option>
@@ -132,7 +132,6 @@
     <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
-                <!-- SELETOR DE IDIOMAS NO TOPO DIREITO -->
                 <div class="top-controls-bar">
                     <div></div>
                     <div class="top-lang-selector">
@@ -173,7 +172,6 @@
     <main class="main-content" id="view-dashboard">
         <div class="container">
             <div class="fixed-top-section">
-                <!-- SELETOR DE IDIOMAS NO TOPO DIREITO -->
                 <div class="top-controls-bar">
                     <div></div>
                     <div class="top-lang-selector">
@@ -598,7 +596,7 @@
             btn_conn_folder: "📂 Afbeeldingenmap Koppelen",
             btn_load_imgs: "🖼️ Afbeeldingen Laden",
             btn_select_sheet: "📂 Selecteer Spreadsheet",
-            btn_sync_base: "🔄 Database Synchronisieren",
+            btn_sync_base: "🔄 Database Synchroniseren",
             filter_segmentation: "⚡ Filters / Segmentatie",
             label_balance_status: "📦 Saldo Status:",
             opt_all_items: "Alle Artikelen",
@@ -681,18 +679,31 @@
         const viewDashboard = document.getElementById('view-dashboard');
         const navPesquisa = document.getElementById('nav-pesquisa');
         const navDashboard = document.getElementById('nav-dashboard');
+        const btnReopenFilter = document.getElementById('btn-reopen-filter');
+        const layout = document.getElementById('app-layout');
 
         if (view === 'pesquisa') {
             viewPesquisa.style.display = 'flex';
             viewDashboard.style.display = 'none';
             navPesquisa.classList.add('active');
             navDashboard.classList.remove('active');
+            
+            // Garante que o botão de abrir filtro reapareça corretamente se o painel estiver oculto
+            if (layout.classList.contains('segmentation-hidden')) {
+                if (btnReopenFilter) btnReopenFilter.style.display = 'block';
+            }
             filtrar();
         } else if (view === 'dashboard') {
             viewPesquisa.style.display = 'none';
             viewDashboard.style.display = 'flex';
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
+
+            // OCULTA TOTALMENTE O BOTÃO FLUTUANTE DE FILTRO QUANDO O DASHBOARD ESTIVER ATIVO
+            if (btnReopenFilter) btnReopenFilter.style.display = 'none';
+            // Garante também que o painel lateral de filtros feche/recolha ao entrar no dashboard
+            layout.classList.add('segmentation-hidden');
+
             atualizarMétricasDashboard();
         }
     }
@@ -706,6 +717,9 @@
     }
 
     function toggleSegmentacao() {
+        // Bloqueia a abertura do painel de filtros se estiver no dashboard
+        if (vistaAtual === 'dashboard') return;
+
         const layout = document.getElementById('app-layout');
         layout.classList.toggle('segmentation-hidden');
         const oculto = layout.classList.contains('segmentation-hidden');
@@ -1191,7 +1205,6 @@
     }
 
     function filtrarTabelaDashboard() {
-        const filtroTipo = document.getElementById('dash-select-filtro').value;
         const termoBusca = document.getElementById('dash-busca-dinamica').value.toLowerCase().trim();
         const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
@@ -1212,7 +1225,6 @@
             const localEstoqueItem = String(obj.localEstoque).toLowerCase();
             const filialItem = String(obj.filialExibir).toLowerCase();
 
-            const bateTipo = (filtroTipo === 'todos' || obj.statusTipo === filtroTipo);
             const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
             const bateFilial = (!filialSel || filialItem.includes(filialSel));
             const bateForn = (!fornSel || fornItem === fornSel);
@@ -1231,7 +1243,7 @@
                 else if (saldoStatusSel === 'zerado_com_minmax') bateSaldoStatus = obj.saldo <= 0 && obj.estMin > 0 && obj.estMax > 0;
             }
 
-            return bateTipo && bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
+            return bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
         });
 
         const subtotalInfo = document.getElementById('dash-subtotal-info');
