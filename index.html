@@ -78,7 +78,6 @@
                     <option value="">Todos os Itens</option>
                     <option value="com_saldo">✅ Com Saldo (> 0)</option>
                     <option value="zerado_com_minmax">⚠️ Zerado com Mín/Máx (> 0)</option>
-                    <option value="zerado_sem_minmax">⚪ Saldo e Mín/Máx Zerados</option>
                 </select>
             </div>
 
@@ -116,6 +115,11 @@
         </div>
 
         <div class="filter-panel-body">
+            <div class="filter-group">
+                <label class="filter-label">🔍 Pesquisa Dinâmica:</label>
+                <input type="text" id="dash-busca-dinamica" class="search-box" style="margin-bottom:0; padding:10px 12px; font-size:13px;" placeholder="Filtrar por código, nome, fornecedor..." oninput="filtrarTabelaDashboard()">
+            </div>
+
             <div class="filter-group">
                 <label class="filter-label">📋 Categoria de Auditoria:</label>
                 <select id="dash-select-filtro" class="segmentation-select" onchange="filtrarTabelaDashboard()">
@@ -298,7 +302,6 @@
         return `R$ ${emMilhoes.toFixed(2)} Milhões`;
     }
 
-    // CORREÇÃO INTELIGENTE DE CASAS DECIMAIS E ESCALAS (Reais, Mil, Milhões, Bilhões)
     function parseNum(val) {
         if (val === undefined || val === null) return 0;
         if (typeof val === 'number') return val;
@@ -306,36 +309,23 @@
         let str = String(val).trim().replace('R$', '').trim();
         if (!str || str === '-') return 0;
 
-        // Trata separadores de milhar e decimal com segurança robusta
-        // Se houver vírgula e ponto, identifica qual é o decimal pela posição final
         let temVirgula = str.includes(',');
         let temPonto = str.includes('.');
 
         if (temVirgula && temPonto) {
-            // Descobre qual deles é o último (o último é o separador decimal)
             const ultimaVirgula = str.lastIndexOf(',');
             const ultimoPonto = str.lastIndexOf('.');
             if (ultimaVirgula > ultimoPonto) {
-                // Vírgula é decimal, ponto é milhar
                 str = str.replace(/\./g, '').replace(',', '.');
             } else {
-                // Ponto é decimal, vírgula é milhar
                 str = str.replace(/,/g, '');
             }
         } else if (temVirgula) {
-            // Apenas vírgula: substitui por ponto para o parseFloat entender
             str = str.replace(/\./g, '').replace(',', '.');
         } else if (temPonto) {
-            // Apenas ponto: se houver múltiplos pontos (ex: 4.919.522), remove os intermediários e mantém o último como decimal, 
-            // ou se for decimal direto (ex: 491.95), trata corretamente.
             const partes = str.split('.');
             if (partes.length > 2) {
-                // Formato milhar brasileiro com ponto e sem vírgula (ex: 4.919.522)
                 str = str.replace(/\./g, '');
-            } else if (partes.length === 2) {
-                // Pode ser milhar ou decimal. Se a parte decimal tem mais de 2 dígitos e parece número inteiro formatado, ou decimal real.
-                // No caso do exemplo: "491,9522222" ou "491.9522222", tratamos com precisão decimal padrão.
-                // Se o número for pequeno (< 1000000) com ponto único, mantemos como decimal.
             }
         }
 
@@ -602,7 +592,6 @@
                             const totalAcumulado = mapaValoresTotais.get(codNorm) || 0;
 
                             mapaSaldos.set(codNorm, saldoAcumulado + numSaldo);
-                            mapaCustosUnitarios.set(codNorm, numCusto);
                             mapaValoresTotais.set(codNorm, totalAcumulado + numTotal);
                         }
                     }
@@ -673,11 +662,11 @@
                 const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
                 const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
 
-                const temSaldoValido = saldoAtual > 0;
-                const temMinMaxValido = estMin > 0 && estMax > 0;
-                const zeradoSemMinMax = saldoAtual <= 0 && estMin <= 0 && estMax <= 0;
+                // REGRA SOLICITADA: Itens com min/max zerados e saldo <= 0 NÃO devem aparecer na visualização
+                const temMinMaxMonitorado = estMin > 0 && estMax > 0;
+                const temSaldoMonitorado = saldoAtual > 0 && estMin <= 0 && estMax <= 0;
 
-                return temSaldoValido || temMinMaxValido || zeradoSemMinMax;
+                return temMinMaxMonitorado || temSaldoMonitorado;
             });
 
             dadosFiltrados = dadosCSV;
@@ -685,7 +674,7 @@
 
             popularSegmentacaoDados();
 
-            statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens ativos.`;
+            statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens monitorados.`;
             renderizarPagina();
             atualizarMétricasDashboard();
         } catch (error) {
@@ -730,7 +719,7 @@
     let cacheItensCriticos = [];
 
     function atualizarMétricasDashboard() {
-        const total = dadosCSV.length;
+        let totalMonitorados = 0;
         let comSaldo = 0;
         let rupturaTotal = 0;
         let abaixoMin = 0;
@@ -745,14 +734,24 @@
             const codNorm = normalizarCod(cod);
 
             const saldo = mapaSaldos.get(codNorm) || 0;
-            const custoUnit = mapaCustosUnitarios.get(codNorm) || 0;
-            const valorTotalItem = mapaValoresTotais.get(codNorm) || (saldo * custoUnit);
+            const valorTotalItem = mapaValoresTotais.get(codNorm) || 0;
+            
+            // REGRA SOLICITADA: Custo unitário = Valor Total / Quantidade (Saldo)
+            const custoUnit = saldo > 0 ? (valorTotalItem / saldo) : 0;
             
             valorTotalEstoqueGeral += valorTotalItem;
 
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+
+            // REGRA SOLICITADA: Total de itens monitorados = (Mín e Máx > 0) + (Saldo > 0 e Mín/Máx == 0)
+            const temMinMax = estMin > 0 && estMax > 0;
+            const saldoComMinMaxZero = saldo > 0 && estMin <= 0 && estMax <= 0;
+
+            if (temMinMax || saldoComMinMaxZero) {
+                totalMonitorados++;
+            }
 
             let statusTipo = 'normal';
 
@@ -784,12 +783,12 @@
         });
 
         document.getElementById('dash-kpi-valor-total').innerText = formatarMilhoes(valorTotalEstoqueGeral);
-        document.getElementById('dash-kpi-total').innerText = total;
+        document.getElementById('dash-kpi-total').innerText = totalMonitorados;
         document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
-        document.getElementById('dash-kpi-com-saldo-perc').innerText = total > 0 ? `${((comSaldo / total) * 100).toFixed(1)}% da Base` : '0%';
+        document.getElementById('dash-kpi-com-saldo-perc').innerText = totalMonitorados > 0 ? `${((comSaldo / totalMonitorados) * 100).toFixed(1)}% da Base` : '0%';
 
         document.getElementById('dash-kpi-ruptura').innerText = rupturaTotal;
-        document.getElementById('dash-kpi-ruptura-perc').innerText = total > 0 ? `${((rupturaTotal / total) * 100).toFixed(1)}% de Risco` : '0%';
+        document.getElementById('dash-kpi-ruptura-perc').innerText = totalMonitorados > 0 ? `${((rupturaTotal / totalMonitorados) * 100).toFixed(1)}% de Risco` : '0%';
 
         document.getElementById('dash-kpi-abaixo').innerText = abaixoMin;
         document.getElementById('dash-kpi-acima').innerText = acimaMax;
@@ -821,16 +820,19 @@
 
     function filtrarTabelaDashboard() {
         const filtroTipo = document.getElementById('dash-select-filtro').value;
+        const termoBusca = document.getElementById('dash-busca-dinamica').value.toLowerCase().trim();
         const tbodyCriticos = document.getElementById('dash-table-criticos-body');
         tbodyCriticos.innerHTML = '';
 
         const itensFiltrados = cacheItensCriticos.filter(obj => {
-            if (filtroTipo === 'todos') return true;
-            return obj.statusTipo === filtroTipo;
+            const linhaCompleta = Object.values(obj.item).join(' ').toLowerCase();
+            const bateTipo = (filtroTipo === 'todos' || obj.statusTipo === filtroTipo);
+            const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
+            return bateTipo && bateBusca;
         });
 
         if (itensFiltrados.length === 0) {
-            tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item nesta categoria.</td></tr>';
+            tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item encontrado com este filtro.</td></tr>';
             return;
         }
 
@@ -992,8 +994,8 @@
             
             const codNorm = normalizarCod(cod);
             const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-            const custoUnitExibir = mapaCustosUnitarios.has(codNorm) ? mapaCustosUnitarios.get(codNorm) : 0;
-            const valorTotalExibir = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : (saldoExibir * custoUnitExibir);
+            const valorTotalExibir = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : 0;
+            const custoUnitExibir = saldoExibir > 0 ? (valorTotalExibir / saldoExibir) : 0;
 
             const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
 
@@ -1140,8 +1142,8 @@
 
         const codNorm = normalizarCod(cod);
         const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-        const custoUnit = mapaCustosUnitarios.has(codNorm) ? mapaCustosUnitarios.get(codNorm) : 0;
-        const valorTotal = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : (saldoAtual * custoUnit);
+        const valorTotal = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : 0;
+        const custoUnit = saldoAtual > 0 ? (valorTotal / saldoAtual) : 0;
 
         const srcFoto = imgCapa ? imgCapa.src : '';
         const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
@@ -1191,8 +1193,8 @@
 
         const codNorm = normalizarCod(cod);
         const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-        const custoUnitExibir = mapaCustosUnitarios.has(codNorm) ? mapaCustosUnitarios.get(codNorm) : 0;
-        const valorTotalExibir = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : (saldoExibir * custoUnitExibir);
+        const valorTotalExibir = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : 0;
+        const custoUnitExibir = saldoExibir > 0 ? (valorTotalExibir / saldoExibir) : 0;
 
         let camposExtrasHTML = '';
         const chavesIgnorar = [
@@ -1481,8 +1483,6 @@
                     bateSaldoStatus = saldoAtual > 0;
                 } else if (saldoStatusSel === 'zerado_com_minmax') {
                     bateSaldoStatus = saldoAtual <= 0 && estMin > 0 && estMax > 0;
-                } else if (saldoStatusSel === 'zerado_sem_minmax') {
-                    bateSaldoStatus = saldoAtual <= 0 && estMin <= 0 && estMax <= 0;
                 }
             }
 
