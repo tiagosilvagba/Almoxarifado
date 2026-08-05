@@ -209,7 +209,7 @@ a:hover {
 }
 
 /* ==========================================================================
-   3. SIDEBAR LATERAL DE NAVEGAÇÃO & AÇÕES (Com Temas na posição anterior)
+   3. SIDEBAR LATERAL DE NAVEGAÇÃO & AÇÕES
    ========================================================================== */
 .sidebar {
     width: 240px;
@@ -486,7 +486,7 @@ a:hover {
     font-size: 12px; 
     font-weight: 700;
     cursor: pointer; 
-    display: block; 
+    display: none; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     transition: all 0.2s ease;
 }
