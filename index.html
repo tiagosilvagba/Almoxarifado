@@ -11,7 +11,7 @@
 <body class="desktop-mode">
 
 <div class="app-layout segmentation-hidden" id="app-layout">
-    <!-- Barra Lateral 1: Sidebar de Navegação e Ações -->
+    <!-- Sidebar de Navegação e Ações -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-placeholder" id="logo-container">
@@ -23,17 +23,22 @@
             </div>
         </div>
 
-        <!-- Seletor de Temas de Cores -->
         <div class="sidebar-theme-container">
             <span class="theme-label">TEMA DE CORES:</span>
             <div class="theme-selector-box">
                 <div class="theme-btn btn-blue" onclick="aplicarTema('blue')" title="Azul JBS (Padrão)"></div>
                 <div class="theme-btn btn-red" onclick="aplicarTema('red')" title="Seara (Vermelho)"></div>
                 <div class="theme-btn btn-dark" onclick="aplicarTema('dark')" title="Modo Noturno (Dark)"></div>
+                <div class="theme-btn btn-apple" onclick="aplicarTema('apple')" title="Apple Glass (Cupertino)"></div>
+                <div class="theme-btn btn-emerald" onclick="aplicarTema('emerald')" title="Industrial Emerald"></div>
+                <!-- 4 NOVOS TEMAS -->
+                <div class="theme-btn btn-nordic" onclick="aplicarTema('nordic')" title="Nordic Slate"></div>
+                <div class="theme-btn btn-cyber" onclick="aplicarTema('cyber')" title="Cyberpunk Tech"></div>
+                <div class="theme-btn btn-titanium" onclick="aplicarTema('titanium')" title="Titanium Gold"></div>
+                <div class="theme-btn btn-sunset" onclick="aplicarTema('sunset')" title="Sunset Warm"></div>
             </div>
         </div>
 
-        <!-- Menu de Navegação -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Navegação</span>
             <a href="#" class="nav-item active">
@@ -42,11 +47,10 @@
             </a>
         </nav>
 
-        <!-- Ações do Sistema -->
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="padding: 0 0 4px 0;">Ações do Sistema</span>
             <button class="btn-sidebar-action" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
-            <button class="btn-sidebar-action" style="background:#0066CC;" onclick="mapearPastaImagensServidor()">🖼️ Mapear Imagens GitHub</button>
+            <button class="btn-sidebar-action btn-theme-accent" onclick="mapearPastaImagensServidor()">🖼️ Carregar Imagens</button>
             <label class="btn-sidebar-action" style="cursor:pointer; display:block; text-align:center;">
                 📂 Selecionar Planilha
                 <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
@@ -55,7 +59,7 @@
         </div>
     </aside>
 
-    <!-- Coluna 2: Painel de Segmentação de Dados -->
+    <!-- Painel de Segmentação -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title">⚡ Segmentação</span>
@@ -63,7 +67,6 @@
         </div>
 
         <div class="filter-panel-body">
-            <!-- Filtro: Status da Imagem -->
             <div class="filter-group">
                 <label class="filter-label">🖼️ Imagem do Item:</label>
                 <select id="select-imagem" class="segmentation-select" onchange="filtrar()">
@@ -96,23 +99,27 @@
     <!-- Conteúdo Principal -->
     <main class="main-content" id="main-content">
         <div class="container">
-            <header>
-                <h1>Almoxarifado JBS | Seara</h1>
-            </header>
+            <div class="fixed-top-section">
+                <header>
+                    <h1>Almoxarifado JBS | Seara</h1>
+                </header>
 
-            <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
+                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
 
-            <div class="status">
-                <span id="status-texto">Procurando base de dados (dados.csv, dados.xlsx)...</span>
-                <span id="contador-itens"></span>
+                <div class="status">
+                    <span id="status-texto">Procurando base de dados e arquivo de saldos...</span>
+                    <span id="contador-itens"></span>
+                </div>
             </div>
 
-            <div id="resultados"></div>
+            <div class="scrollable-results-section" id="scrollable-results-section">
+                <div id="resultados"></div>
 
-            <div class="pagination" id="paginacao" style="display: none;">
-                <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
-                <span id="info-pagina" style="font-weight: bold;">Página 1</span>
-                <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
+                <div class="pagination" id="paginacao" style="display: none;">
+                    <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
+                    <span id="info-pagina" style="font-weight: bold;">Página 1</span>
+                    <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
+                </div>
             </div>
         </div>
     </main>
@@ -130,15 +137,16 @@
 <script>
     let dadosCSV = [];
     let dadosFiltrados = [];
+    let mapaSaldos = new Map();
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
 
     let pastaImagensHandle = null;
     
-    // Conjunto de códigos que possuem imagem
     const itensComFoto = new Set();
     const cacheCaminhoFoto = new Map();
+    const cachePDFs = new Map();
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
@@ -152,7 +160,6 @@
     function carregarEstadoSegmentacao() {
         const estadoSalvo = localStorage.getItem('jbs_segmentation_hidden');
         const layout = document.getElementById('app-layout');
-        
         if (estadoSalvo === 'false') {
             layout.classList.remove('segmentation-hidden');
         } else {
@@ -177,7 +184,6 @@
     function detectarDispositivo() {
         const telaPequena = window.innerWidth <= 900;
         const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
         isMobile = telaPequena || (eTouch && window.innerWidth <= 1024);
 
         const body = document.body;
@@ -208,14 +214,12 @@
         }
     }
 
-    // 1. MAPEIA ARQUIVOS DIRETAMENTE DA PASTA CONECTADA DO DISPOSITIVO (CELULAR/PC)
     async function mapearFotosLocaisCelular() {
         if (!pastaImagensHandle) return;
         try {
             for await (const entry of pastaImagensHandle.values()) {
                 if (entry.kind === 'file') {
                     const nome = entry.name;
-                    // Extrai o código do item antes da sequência "- 01", "- 02", etc.
                     const matchCap = nome.match(/(.+?)\s*[-_]\s*\d{2}\.[a-zA-Z0-9]+$/i);
                     if (matchCap && matchCap[1]) {
                         const cod = matchCap[1].trim();
@@ -232,13 +236,11 @@
         }
     }
 
-    // 2. MAPEIA OS ARQUIVOS DIRETAMENTE DA PASTA /IMAGENS DO REPOSITÓRIO GITHUB
     async function mapearPastaImagensServidor() {
         const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "🔄 Varrendo arquivos da pasta /imagens no GitHub...";
+        statusDiv.innerText = "🔄 Varrendo e carregando imagens da pasta /imagens no GitHub...";
 
         try {
-            // Tenta consultar a API de conteúdos do repositório GitHub
             const pathname = window.location.pathname.split('/').filter(Boolean);
             const user = window.location.hostname.split('.')[0];
             const repo = pathname[0];
@@ -258,16 +260,16 @@
                         }
                     });
 
-                    statusDiv.innerText = `✅ Mapeamento concluído! Imagens vinculadas a ${itensComFoto.size} itens.`;
+                    statusDiv.innerText = `✅ Carregamento concluído! Imagens vinculadas a ${itensComFoto.size} itens.`;
                     renderizarPagina();
                     return;
                 }
             }
         } catch (e) {
-            console.warn("Consulta via GitHub API não disponível. Alternando para varredura por lista de itens...", e);
+            console.warn("Consulta via GitHub API não disponível.", e);
         }
 
-        statusDiv.innerText = "⚠️ Mapeamento direto indisponível. Conecte a pasta local pelo botão '📂 Conectar Pasta Imagens'.";
+        statusDiv.innerText = "⚠️ Mapeamento automático indisponível. Conecte a pasta local pelo botão '📂 Conectar Pasta Imagens'.";
     }
 
     function carregarLogoUniversal() {
@@ -310,9 +312,35 @@
         return '-';
     }
 
+    async function carregarSaldos() {
+        try {
+            const resposta = await fetch('saldo.csv', { cache: 'reload' });
+            if (resposta.ok) {
+                const buffer = await resposta.arrayBuffer();
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
+                const dadosSaldo = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
+
+                mapaSaldos.clear();
+                dadosSaldo.forEach(linha => {
+                    const cod = getVal(linha, ['cod_item', 'codigo', 'cod']);
+                    const saldoVal = getVal(linha, ['saldo_atual', 'saldo', 'qtd']);
+                    if (cod && cod !== '-') {
+                        const numSaldo = parseFloat(String(saldoVal).replace(',', '.')) || 0;
+                        mapaSaldos.set(String(cod).trim(), numSaldo);
+                    }
+                });
+            }
+        } catch (e) {
+            console.log("Arquivo saldo.csv não encontrado ou sem permissão.");
+        }
+    }
+
     async function carregarCSV() {
         const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "Sincronizando dados atuais da base...";
+        statusDiv.innerText = "Sincronizando dados atuais e saldos...";
+
+        await carregarSaldos();
 
         let arquivoEncontrado = null;
         let bufferArquivo = null;
@@ -341,7 +369,8 @@
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
+            await carregarSaldos();
             processarBuffer(e.target.result, file.name);
         };
         reader.readAsArrayBuffer(file);
@@ -351,16 +380,25 @@
         const statusDiv = document.getElementById('status-texto');
         try {
             const workbook = XLSX.read(buffer, { type: 'array' });
-            const nomePrimeiraAba = workbook.SheetNames[0];
-            const primeiraAba = workbook.Sheets[nomePrimeiraAba];
+            const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
+            const dadosBrutos = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             
-            dadosCSV = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
+            dadosCSV = dadosBrutos.filter(item => {
+                const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+                const codLimpo = String(cod).trim();
+                
+                if (mapaSaldos.has(codLimpo)) {
+                    return mapaSaldos.get(codLimpo) > 0;
+                }
+                return true;
+            });
+
             dadosFiltrados = dadosCSV;
             paginaAtual = 1;
 
             popularSegmentacaoDados();
 
-            statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada com sucesso!`;
+            statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada! (${dadosCSV.length} itens ativos)`;
             renderizarPagina();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
@@ -408,7 +446,6 @@
 
         const totalItens = dadosFiltrados.length;
 
-        // Métricas de imagens
         let comFoto = 0;
         dadosFiltrados.forEach(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
@@ -423,13 +460,13 @@
         const percSemFoto = totalItens > 0 ? ((semFoto / totalItens) * 100).toFixed(1) : 0;
 
         contDiv.innerHTML = `
-            <strong>Total:</strong> ${totalItens} itens &nbsp;|&nbsp; 
-            <span style="color:#16a34a; font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
-            <span style="color:#dc2626; font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)
+            <strong>Total:</strong> ${totalItens} itens com saldo &nbsp;|&nbsp; 
+            <span style="color:var(--text-success, #16a34a); font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
+            <span style="color:var(--text-danger, #dc2626); font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)
         `;
 
         if (totalItens === 0) {
-            divContainer.innerHTML = '<p>Nenhum item encontrado com os filtros selecionados.</p>';
+            divContainer.innerHTML = '<p>Nenhum item encontrado com saldo maior que zero ou com os filtros aplicados.</p>';
             paginacaoDiv.style.display = 'none';
             return;
         }
@@ -450,6 +487,9 @@
             const estMin = getVal(item, ['est_min', 'minimo']);
             const estMax = getVal(item, ['est_max', 'maximo']);
             const leadTime = getVal(item, ['lead_time', 'lead']);
+            
+            const codLimpo = String(cod).trim();
+            const saldoExibir = mapaSaldos.has(codLimpo) ? mapaSaldos.get(codLimpo) : '-';
 
             const indexReal = inicio + index;
 
@@ -472,7 +512,7 @@
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
                         <span class="row-location">📍 P: ${prateleira} | D: ${divisao} | R: ${reparticao}</span>
-                        <span class="row-stock-badge">📊 Mín: ${estMin} | Máx: ${estMax}</span>
+                        <span class="row-stock-badge">📊 Saldo: ${saldoExibir} | Mín: ${estMin} | Máx: ${estMax}</span>
                         <span class="row-lead-badge">⏱️ Lead Time: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
                         <span><strong>Equip:</strong> ${equipamento}</span>
@@ -547,6 +587,31 @@
         testarProxima(0, 0);
     }
 
+    async function verificarPDFItem(codItem) {
+        const codLimpo = String(codItem).trim();
+        if (cachePDFs.has(codLimpo)) return cachePDFs.get(codLimpo);
+
+        const caminhosTestar = [
+            `arquivos/${codLimpo}/${codLimpo}.pdf`,
+            `arquivos/${codLimpo}/documento.pdf`,
+            `arquivos/${codLimpo}/ficha.pdf`,
+            `arquivos/${codLimpo}.pdf`
+        ];
+
+        for (const path of caminhosTestar) {
+            try {
+                const res = await fetch(path, { method: 'HEAD' });
+                if (res.ok) {
+                    cachePDFs.set(codLimpo, path);
+                    return path;
+                }
+            } catch (e) {}
+        }
+
+        cachePDFs.set(codLimpo, null);
+        return null;
+    }
+
     function mostrarHoverCard(e, indexReal) {
         if (isMobile) return;
 
@@ -589,7 +654,7 @@
         document.getElementById('hover-card').style.display = 'none';
     }
 
-    function abrirModal(indexReal) {
+    async function abrirModal(indexReal) {
         esconderHoverCard();
         
         const item = dadosFiltrados[indexReal];
@@ -606,21 +671,15 @@
         const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
 
+        const codLimpo = String(cod).trim();
+        const saldoExibir = mapaSaldos.has(codLimpo) ? mapaSaldos.get(codLimpo) : '-';
+
         let camposExtrasHTML = '';
-        
         const chavesIgnorar = [
-            'cod_item','codigo','cod',
-            'nome_item','nome','item','descricao',
-            'cod_fornecedor','fornecedor','forn',
-            'equipamento','equip',
-            'especificacao','espec',
-            'prateleira','prat','rua',
-            'divisao','div','gaveta',
-            'reparticao','rep','nicho',
-            'locais_aplicacao','aplicacao',
-            'est_min','estmin','minimo',
-            'est_max','estmax','maximo',
-            'lead_time','leadtime','lead'
+            'cod_item','codigo','cod','nome_item','nome','item','descricao',
+            'cod_fornecedor','fornecedor','forn','equipamento','equip','especificacao','espec',
+            'prateleira','prat','rua','divisao','div','gaveta','reparticao','rep','nicho',
+            'locais_aplicacao','aplicacao','est_min','estmin','minimo','est_max','estmax','maximo','lead_time','leadtime','lead'
         ];
         
         Object.keys(item).forEach(key => {
@@ -641,9 +700,9 @@
                         <p style="margin:2px 0;">📍 <strong>Prateleira:</strong> ${prateleira} &nbsp;|&nbsp; 📂 <strong>Divisão:</strong> ${divisao} &nbsp;|&nbsp; 📦 <strong>Repartição:</strong> ${reparticao}</p>
                     </div>
 
-                    <div style="background:#fffbebf1; color:#b45309; padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid #fde68a;">
-                        <p style="margin:2px 0;">📊 <strong>Estoque Mínimo:</strong> ${estMin} un. &nbsp;|&nbsp; 📈 <strong>Estoque Máximo:</strong> ${estMax} un.</p>
-                        <p style="margin:2px 0;">⏱️ <strong>Lead Time de Entrega:</strong> ${leadTime}</p>
+                    <div style="background:var(--bg-subcard); color:var(--text-primary); padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
+                        <p style="margin:2px 0;">📊 <strong>Saldo em Estoque:</strong> <strong>${saldoExibir} un.</strong></p>
+                        <p style="margin:2px 0;">📈 <strong>Estoque Mín / Máx:</strong> ${estMin} / ${estMax} un. &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
                     </div>
 
                     <p><strong>Cód. Fornecedor:</strong> ${fornecedor}</p>
@@ -652,6 +711,8 @@
                     <p><strong>Locais de Aplicação:</strong> ${locaisAplicacao}</p>
                     
                     ${camposExtrasHTML}
+
+                    <div id="pdf-container-btn" style="margin-top: 12px;"></div>
 
                     <div class="camera-section">
                         <label class="btn-camera">
@@ -675,6 +736,16 @@
 
         document.getElementById('modal-item').style.display = 'flex';
         carregarMidiasCompletas(cod);
+
+        const pathPDF = await verificarPDFItem(cod);
+        const pdfBtnContainer = document.getElementById('pdf-container-btn');
+        if (pathPDF && pdfBtnContainer) {
+            pdfBtnContainer.innerHTML = `
+                <a href="${pathPDF}" target="_blank" class="btn-pdf-link">
+                    📄 Abrir Documento Técnico (PDF)
+                </a>
+            `;
+        }
     }
 
     async function salvarFotoCapturada(event, codItem) {
@@ -842,7 +913,11 @@
     function mudarPagina(direcao) {
         paginaAtual += direcao;
         renderizarPagina();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        const areaScroll = document.getElementById('scrollable-results-section');
+        if (areaScroll) {
+            areaScroll.scrollTop = 0;
+        }
     }
 
     function filtrar() {
