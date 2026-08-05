@@ -55,7 +55,7 @@
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="padding: 0 0 4px 0;">Ações do Sistema</span>
             <button class="btn-sidebar-action" onclick="conectarPastaImagens()">📂 Conectar Pasta Imagens</button>
-            <button class="btn-sidebar-action" onclick="mapearPastaImagensServidor()">🖼️ Carregar Imagens</button>
+            <button class="btn-sidebar-action" onclick="mapearPastaImagensServidor()">🖼️ Carregar Imagens (Manual)</button>
             <label class="btn-sidebar-action" style="cursor:pointer; display:block; text-align:center;">
                 📂 Selecionar Planilha
                 <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
@@ -108,10 +108,11 @@
         </div>
     </aside>
 
-    <!-- Painel de Filtros Específico do Dashboard -->
+    <!-- Painel de Filtros Específico do Dashboard (Com Botão de Recolher/Esconder) -->
     <aside class="filter-panel-left" id="panel-segmentacao-dash">
         <div class="panel-header">
             <span class="panel-title">⚡ Filtro do Dashboard</span>
+            <button class="btn-toggle-filter" onclick="toggleSegmentacao()" title="Ocultar Filtros">◀</button>
         </div>
 
         <div class="filter-panel-body">
@@ -133,7 +134,7 @@
         </div>
     </aside>
 
-    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados" style="display: none;">⚡ Filtros ▶</button>
+    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
 
     <!-- PÁGINA 1: PESQUISA DE ITENS -->
     <main class="main-content" id="view-pesquisa" style="display: none;">
@@ -214,8 +215,12 @@
 
                 <!-- SEÇÃO DE ITENS / AUDITORIA -->
                 <div class="dash-section-box">
-                    <div class="dash-section-header">
+                    <div class="dash-section-header" style="flex-direction: column; align-items: flex-start; gap: 4px;">
                         <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria Financeira e de Estoque (Passe o mouse para visualizar a foto)</div>
+                        <!-- SUBTOTAL DOS DADOS FILTRADOS -->
+                        <div id="dash-subtotal-info" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">
+                            Subtotal: 0 itens filtrados | Valor Total: R$ 0,00
+                        </div>
                     </div>
 
                     <div class="dash-table-container" style="margin-top: 14px;">
@@ -456,10 +461,7 @@
         }
     }
 
-    async function mapearPastaImagensServidor() {
-        const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "🔄 Varrendo e carregando imagens da pasta /imagens no GitHub...";
-
+    async function carregarImagensAutomatico() {
         try {
             const pathname = window.location.pathname.split('/').filter(Boolean);
             const user = window.location.hostname.split('.')[0];
@@ -469,7 +471,6 @@
                 const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/imagens`);
                 if (response.ok) {
                     const arquivos = await response.json();
-                    
                     arquivos.forEach(arquivo => {
                         const nome = arquivo.name;
                         const matchCap = nome.match(/(.+?)\s*[-_]\s*01\.[a-zA-Z0-9]+$/i);
@@ -479,17 +480,21 @@
                             cacheCaminhoFoto.set(cod, `imagens/${nome}`);
                         }
                     });
-
-                    statusDiv.innerText = `✅ Carregamento concluído! Imagens vinculadas a ${itensComFoto.size} itens.`;
                     renderizarPagina();
                     return;
                 }
             }
         } catch (e) {
-            console.warn("Consulta via GitHub API não disponível.", e);
+            console.warn("Carregamento automático de imagens ignorado.", e);
         }
+    }
 
-        statusDiv.innerText = "⚠️ Mapeamento automático indisponível. Conecte a pasta local pelo botão '📂 Conectar Pasta Imagens'.";
+    async function mapearPastaImagensServidor() {
+        const statusDiv = document.getElementById('status-texto');
+        statusDiv.innerText = "🔄 Varrendo e carregando imagens da pasta /imagens...";
+        await carregarImagensAutomatico();
+        statusDiv.innerText = `✅ Carregamento concluído! Imagens vinculadas a ${itensComFoto.size} itens.`;
+        renderizarPagina();
     }
 
     function carregarLogoUniversal() {
@@ -662,7 +667,6 @@
                 const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
                 const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
 
-                // REGRA SOLICITADA: Itens com min/max zerados e saldo <= 0 NÃO devem aparecer na visualização
                 const temMinMaxMonitorado = estMin > 0 && estMax > 0;
                 const temSaldoMonitorado = saldoAtual > 0 && estMin <= 0 && estMax <= 0;
 
@@ -677,6 +681,7 @@
             statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens monitorados.`;
             renderizarPagina();
             atualizarMétricasDashboard();
+            carregarImagensAutomatico();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
         }
@@ -735,8 +740,6 @@
 
             const saldo = mapaSaldos.get(codNorm) || 0;
             const valorTotalItem = mapaValoresTotais.get(codNorm) || 0;
-            
-            // REGRA SOLICITADA: Custo unitário = Valor Total / Quantidade (Saldo)
             const custoUnit = saldo > 0 ? (valorTotalItem / saldo) : 0;
             
             valorTotalEstoqueGeral += valorTotalItem;
@@ -745,7 +748,6 @@
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
 
-            // REGRA SOLICITADA: Total de itens monitorados = (Mín e Máx > 0) + (Saldo > 0 e Mín/Máx == 0)
             const temMinMax = estMin > 0 && estMax > 0;
             const saldoComMinMaxZero = saldo > 0 && estMin <= 0 && estMax <= 0;
 
@@ -830,6 +832,17 @@
             const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
             return bateTipo && bateBusca;
         });
+
+        // CÁLCULO DO SUBTOTAL DOS ITENS FILTRADOS
+        let somaValorTotalFiltrado = 0;
+        itensFiltrados.forEach(obj => {
+            somaValorTotalFiltrado += obj.valorTotalItem;
+        });
+
+        const subtotalInfo = document.getElementById('dash-subtotal-info');
+        if (subtotalInfo) {
+            subtotalInfo.innerHTML = `Subtotal: <strong>${itensFiltrados.length}</strong> itens filtrados | Valor Total: <strong>${formatarMoeda(somaValorTotalFiltrado)}</strong>`;
+        }
 
         if (itensFiltrados.length === 0) {
             tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item encontrado com este filtro.</td></tr>';
