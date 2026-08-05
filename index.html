@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JBS | Seara — Consulta de Almoxarifado</title>
+    <title>JBS | Seara — Gestão de Almoxarifado</title>
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -19,7 +19,7 @@
             </div>
             <div class="logo-text">
                 <span class="brand-name">JBS | Seara</span>
-                <span class="brand-sub" id="device-badge">Catálogo de Itens</span>
+                <span class="brand-sub" id="device-badge">Catálogo & Dashboard</span>
             </div>
         </div>
 
@@ -27,50 +27,28 @@
         <div class="sidebar-theme-container">
             <span class="theme-label">🎨 APARÊNCIA DO SISTEMA</span>
             <div class="theme-selector-grid">
-                <button class="theme-chip" onclick="aplicarTema('blue')">
-                    <span class="theme-dot dot-blue"></span>
-                    <span>Azul JBS</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('red')">
-                    <span class="theme-dot dot-red"></span>
-                    <span>Seara</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('dark')">
-                    <span class="theme-dot dot-dark"></span>
-                    <span>Noturno</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('apple')">
-                    <span class="theme-dot dot-apple"></span>
-                    <span>Apple Glass</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('emerald')">
-                    <span class="theme-dot dot-emerald"></span>
-                    <span>Emerald</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('nordic')">
-                    <span class="theme-dot dot-nordic"></span>
-                    <span>Nordic</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('cyber')">
-                    <span class="theme-dot dot-cyber"></span>
-                    <span>Cyber Tech</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('titanium')">
-                    <span class="theme-dot dot-titanium"></span>
-                    <span>Titanium</span>
-                </button>
-                <button class="theme-chip" onclick="aplicarTema('sunset')">
-                    <span class="theme-dot dot-sunset"></span>
-                    <span>Sunset</span>
-                </button>
+                <button class="theme-chip" onclick="aplicarTema('blue')"><span class="theme-dot dot-blue"></span><span>Azul JBS</span></button>
+                <button class="theme-chip" onclick="aplicarTema('red')"><span class="theme-dot dot-red"></span><span>Seara</span></button>
+                <button class="theme-chip" onclick="aplicarTema('dark')"><span class="theme-dot dot-dark"></span><span>Noturno</span></button>
+                <button class="theme-chip" onclick="aplicarTema('apple')"><span class="theme-dot dot-apple"></span><span>Apple Glass</span></button>
+                <button class="theme-chip" onclick="aplicarTema('emerald')"><span class="theme-dot dot-emerald"></span><span>Emerald</span></button>
+                <button class="theme-chip" onclick="aplicarTema('nordic')"><span class="theme-dot dot-nordic"></span><span>Nordic</span></button>
+                <button class="theme-chip" onclick="aplicarTema('cyber')"><span class="theme-dot dot-cyber"></span><span>Cyber Tech</span></button>
+                <button class="theme-chip" onclick="aplicarTema('titanium')"><span class="theme-dot dot-titanium"></span><span>Titanium</span></button>
+                <button class="theme-chip" onclick="aplicarTema('sunset')"><span class="theme-dot dot-sunset"></span><span>Sunset</span></button>
             </div>
         </div>
 
+        <!-- Navegação entre Páginas -->
         <nav class="sidebar-nav">
-            <span class="nav-section-title">Navegação</span>
-            <a href="#" class="nav-item active">
+            <span class="nav-section-title">Páginas</span>
+            <a href="#" class="nav-item active" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
                 <span>🔍</span>
                 <span>Pesquisa de Itens</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-dashboard" onclick="navegarPara('dashboard')">
+                <span>📊</span>
+                <span>Dashboard Geral</span>
             </a>
         </nav>
 
@@ -86,7 +64,7 @@
         </div>
     </aside>
 
-    <!-- Painel de Segmentação -->
+    <!-- Painel de Segmentação (Apenas Visível na Página de Pesquisa) -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title">⚡ Segmentação</span>
@@ -94,7 +72,6 @@
         </div>
 
         <div class="filter-panel-body">
-            <!-- NOVO FILTRO: STATUS DO SALDO -->
             <div class="filter-group">
                 <label class="filter-label">📦 Status do Saldo:</label>
                 <select id="select-saldo-status" class="segmentation-select" onchange="filtrar()">
@@ -133,8 +110,8 @@
 
     <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
 
-    <!-- Conteúdo Principal -->
-    <main class="main-content" id="main-content">
+    <!-- PÁGINA 1: PESQUISA DE ITENS -->
+    <main class="main-content" id="view-pesquisa">
         <div class="container">
             <div class="fixed-top-section">
                 <header>
@@ -156,6 +133,89 @@
                     <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
                     <span id="info-pagina" style="font-weight: bold;">Página 1</span>
                     <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PÁGINA 2: DASHBOARD MANAGEMENT -->
+    <main class="main-content" id="view-dashboard" style="display: none;">
+        <div class="container">
+            <div class="fixed-top-section">
+                <header>
+                    <h1>Dashboard de Indicadores do Almoxarifado</h1>
+                </header>
+            </div>
+
+            <div class="scrollable-results-section">
+                <!-- GRID DE KPIS SUPERIORES -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-title">Total de Itens Monitorados</span>
+                        <span class="kpi-value" id="dash-kpi-total">0</span>
+                        <span class="kpi-sub">Cadastrados na Base</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-title">Itens Com Saldo (>0)</span>
+                        <span class="kpi-value color-success" id="dash-kpi-com-saldo">0</span>
+                        <span class="kpi-sub" id="dash-kpi-com-saldo-perc">0% da Base</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-title">Itens Ruptura (Mín/Máx > 0)</span>
+                        <span class="kpi-value color-danger" id="dash-kpi-ruptura">0</span>
+                        <span class="kpi-sub" id="dash-kpi-ruptura-perc">0% de Risco</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-title">Acuracidade Visual (Fotos)</span>
+                        <span class="kpi-value color-accent" id="dash-kpi-fotos">0</span>
+                        <span class="kpi-sub" id="dash-kpi-fotos-perc">0% Cobertura</span>
+                    </div>
+                </div>
+
+                <!-- TABELA DE RUPTURA CRÍTICA -->
+                <div class="dash-section-box">
+                    <div class="dash-section-title">⚠️ Itens Críticos em Ruptura (Saldo Zerado com Estoque Mín/Máx Cadastrado)</div>
+                    <div class="dash-table-container">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descrição do Item</th>
+                                    <th>Localização</th>
+                                    <th>Est. Mín.</th>
+                                    <th>Est. Máx.</th>
+                                    <th>Lead Time</th>
+                                    <th>Fornecedor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-table-ruptura-body">
+                                <tr><td colspan="7" style="text-align:center;">Nenhum item em ruptura identificado.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- RESUMO DE COBERTURA POR FORNECEDOR -->
+                <div class="dash-section-box">
+                    <div class="dash-section-title">🏢 Volume de Itens Ativos por Fornecedor (Top 10)</div>
+                    <div class="dash-table-container">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>Fornecedor</th>
+                                    <th>Total de Itens</th>
+                                    <th>Itens c/ Saldo</th>
+                                    <th>Itens em Ruptura</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-table-fornecedores-body">
+                                <tr><td colspan="4" style="text-align:center;">Carregando métricas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -187,6 +247,37 @@
     const cachePDFs = new Map();
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
+
+    // NAVEGAÇÃO ENTRE VISUAIZAÇÕES (PESQUISA VS DASHBOARD)
+    function navegarPara(view) {
+        const viewPesquisa = document.getElementById('view-pesquisa');
+        const viewDashboard = document.getElementById('view-dashboard');
+        const btnReopenFilter = document.getElementById('btn-reopen-filter');
+        const panelSegmentacao = document.getElementById('panel-segmentacao');
+
+        const navPesquisa = document.getElementById('nav-pesquisa');
+        const navDashboard = document.getElementById('nav-dashboard');
+
+        if (view === 'pesquisa') {
+            viewPesquisa.style.display = 'flex';
+            viewDashboard.style.display = 'none';
+            navPesquisa.classList.add('active');
+            navDashboard.classList.remove('active');
+            
+            if (btnReopenFilter) btnReopenFilter.style.display = '';
+            if (panelSegmentacao) panelSegmentacao.style.display = '';
+        } else if (view === 'dashboard') {
+            viewPesquisa.style.display = 'none';
+            viewDashboard.style.display = 'flex';
+            navPesquisa.classList.remove('active');
+            navDashboard.classList.add('active');
+
+            if (btnReopenFilter) btnReopenFilter.style.display = 'none';
+            if (panelSegmentacao) panelSegmentacao.style.display = 'none';
+
+            atualizarMétricasDashboard();
+        }
+    }
 
     function toggleSegmentacao() {
         const layout = document.getElementById('app-layout');
@@ -394,7 +485,6 @@
                         mapaSaldos.set(codNorm, saldoAtualAcumulado + numSaldo);
                     }
                 });
-                console.log(`✅ Saldo acumulado lido para ${mapaSaldos.size} itens.`);
             } else {
                 ultimaAtualizacaoSaldo = 'Arquivo saldo.csv não encontrado no servidor';
             }
@@ -453,8 +543,6 @@
             const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
             const dadosBrutos = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             
-            // FILTRAGEM INICIAL DA BASE PRINCIPAL:
-            // Inclui se (Saldo > 0) OU (Estoque Mínimo > 0 AND Estoque Máximo > 0)
             dadosCSV = dadosBrutos.filter(item => {
                 const codBruto = getVal(item, ['cod_item', 'codigo', 'cod']);
                 const codNorm = normalizarCod(codBruto);
@@ -513,6 +601,114 @@
         document.getElementById('select-fornecedor').value = "";
         document.getElementById('select-aplicacao').value = "";
         filtrar();
+    }
+
+    // PROCESSAMENTO DO DASHBOARD MANAGEMENT
+    function atualizarMétricasDashboard() {
+        const total = dadosCSV.length;
+        let comSaldo = 0;
+        let emRuptura = 0;
+        let comFoto = 0;
+
+        const itensRuptura = [];
+        const mapaFornecedores = new Map();
+
+        dadosCSV.forEach(item => {
+            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            const codLimpo = String(cod).trim();
+            const codNorm = normalizarCod(cod);
+
+            const saldo = mapaSaldos.get(codNorm) || 0;
+            const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
+            const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
+            const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+
+            if (itensComFoto.has(codLimpo)) comFoto++;
+
+            if (saldo > 0) {
+                comSaldo++;
+            } else if (estMin > 0 && estMax > 0) {
+                emRuptura++;
+                itensRuptura.push(item);
+            }
+
+            // Agrupa por Fornecedor
+            if (forn && forn !== '-') {
+                if (!mapaFornecedores.has(forn)) {
+                    mapaFornecedores.set(forn, { total: 0, comSaldo: 0, emRuptura: 0 });
+                }
+                const dadosForn = mapaFornecedores.get(forn);
+                dadosForn.total++;
+                if (saldo > 0) dadosForn.comSaldo++;
+                if (saldo <= 0 && estMin > 0 && estMax > 0) dadosForn.emRuptura++;
+            }
+        });
+
+        // Atualiza KPIs Superiores
+        document.getElementById('dash-kpi-total').innerText = total;
+        document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
+        document.getElementById('dash-kpi-com-saldo-perc').innerText = total > 0 ? `${((comSaldo / total) * 100).toFixed(1)}% da Base` : '0%';
+
+        document.getElementById('dash-kpi-ruptura').innerText = emRuptura;
+        document.getElementById('dash-kpi-ruptura-perc').innerText = total > 0 ? `${((emRuptura / total) * 100).toFixed(1)}% em Risco` : '0%';
+
+        document.getElementById('dash-kpi-fotos').innerText = comFoto;
+        document.getElementById('dash-kpi-fotos-perc').innerText = total > 0 ? `${((comFoto / total) * 100).toFixed(1)}% Cobertura` : '0%';
+
+        // Preenche Tabela de Ruptura
+        const tbodyRuptura = document.getElementById('dash-table-ruptura-body');
+        tbodyRuptura.innerHTML = '';
+
+        if (itensRuptura.length === 0) {
+            tbodyRuptura.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">✅ Nenhum item crítico em ruptura encontrado.</td></tr>';
+        } else {
+            itensRuptura.slice(0, 50).forEach(item => {
+                const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+                const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
+                const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
+                const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
+                const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
+                const estMin = getVal(item, ['est_min', 'minimo']);
+                const estMax = getVal(item, ['est_max', 'maximo']);
+                const leadTime = getVal(item, ['lead_time', 'lead']);
+                const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+
+                tbodyRuptura.innerHTML += `
+                    <tr>
+                        <td><strong>${cod}</strong></td>
+                        <td>${nome}</td>
+                        <td>P: ${prateleira} | D: ${divisao} | R: ${reparticao}</td>
+                        <td><span class="color-danger" style="font-weight:bold;">${estMin}</span></td>
+                        <td>${estMax}</td>
+                        <td>${leadTime}</td>
+                        <td>${forn}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Preenche Tabela de Fornecedores
+        const tbodyForn = document.getElementById('dash-table-fornecedores-body');
+        tbodyForn.innerHTML = '';
+
+        const topFornecedores = Array.from(mapaFornecedores.entries())
+            .sort((a, b) => b[1].total - a[1].total)
+            .slice(0, 10);
+
+        if (topFornecedores.length === 0) {
+            tbodyForn.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Sem dados de fornecedores disponíveis.</td></tr>';
+        } else {
+            topFornecedores.forEach(([forn, dados]) => {
+                tbodyForn.innerHTML += `
+                    <tr>
+                        <td><strong>${forn}</strong></td>
+                        <td>${dados.total}</td>
+                        <td><span class="color-success" style="font-weight:bold;">${dados.comSaldo}</span></td>
+                        <td><span class="color-danger" style="font-weight:bold;">${dados.emRuptura}</span></td>
+                    </tr>
+                `;
+            });
+        }
     }
 
     function renderizarPagina() {
@@ -599,7 +795,6 @@
                 row.onmouseleave = esconderHoverCard;
             }
 
-            // Destaca visualmente a etiqueta do estoque se o item estiver zerado mas tiver Mín/Máx
             const eZeradoAlerta = saldoExibir <= 0 && parseNum(estMin) > 0 && parseNum(estMax) > 0;
             const estiloBadgeEstoque = eZeradoAlerta 
                 ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:bold;' 
@@ -1054,7 +1249,6 @@
                 }
             }
 
-            // Lógica do Filtro Dinâmico de Saldo
             let bateSaldoStatus = true;
             if (saldoStatusSel) {
                 const saldoAtual = mapaSaldos.get(codNorm) || 0;

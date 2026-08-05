@@ -18,7 +18,6 @@
 }
 
 [data-theme="red"] {
-    /* Tema 2: Seara / Vermelho JBS */
     --bg-body: #fdf2f2;
     --bg-card: #ffffff;
     --bg-subcard: #fef2f2;
@@ -34,7 +33,6 @@
 }
 
 [data-theme="dark"] {
-    /* Tema 3: Dark / Modo Noturno Geral */
     --bg-body: #0f172a;
     --bg-card: #1e293b;
     --bg-subcard: #334155;
@@ -50,7 +48,6 @@
 }
 
 [data-theme="apple"] {
-    /* Tema 4: Apple Glass (Minimalista Cupertino) */
     --bg-body: #f5f5f7;
     --bg-card: #ffffff;
     --bg-subcard: #f2f2f7;
@@ -66,7 +63,6 @@
 }
 
 [data-theme="emerald"] {
-    /* Tema 5: Industrial Emerald (Dark Luxo) */
     --bg-body: #0b1311;
     --bg-card: #121e1a;
     --bg-subcard: #1a2b25;
@@ -82,7 +78,6 @@
 }
 
 [data-theme="nordic"] {
-    /* Tema 6: Nordic Slate (Escandinavo Clean) */
     --bg-body: #e2e8f0;
     --bg-card: #f8fafc;
     --bg-subcard: #cbd5e1;
@@ -98,7 +93,6 @@
 }
 
 [data-theme="cyber"] {
-    /* Tema 7: Cyberpunk Tech (Dark Neon) */
     --bg-body: #05050a;
     --bg-card: #0d0e15;
     --bg-subcard: #161824;
@@ -114,7 +108,6 @@
 }
 
 [data-theme="titanium"] {
-    /* Tema 8: Titanium Gold (Dark Premium Executivo) */
     --bg-body: #141416;
     --bg-card: #1c1c1f;
     --bg-subcard: #28282d;
@@ -130,7 +123,6 @@
 }
 
 [data-theme="sunset"] {
-    /* Tema 9: Sunset Warm (Terracota Agro) */
     --bg-body: #fff7ed;
     --bg-card: #ffffff;
     --bg-subcard: #ffedd5;
@@ -505,7 +497,7 @@ a:hover {
 }
 
 /* ==========================================================================
-   5. ÁREA PRINCIPAL COM CABEÇALHO FIXO E ROLAGEM INTERNA NOS ITENS
+   5. ÁREA PRINCIPAL COM ROLAGEM INTERNA
    ========================================================================== */
 .main-content {
     margin-left: 520px;
@@ -626,7 +618,102 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 .row-lead-badge { background: var(--bg-subcard); color: var(--text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 
 /* ==========================================================================
-   6. MODAL, PREVISUALIZAÇÃO & BOTÃO DO PDF
+   6. COMPONENTES E GRID DO DASHBOARD (PÁGINA 2)
+   ========================================================================== */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.kpi-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.kpi-value.color-success { color: var(--text-success); }
+.kpi-value.color-danger { color: var(--text-danger); }
+.kpi-value.color-accent { color: var(--primary-color); }
+
+.kpi-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.dash-section-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.dash-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.dash-table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.dash-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.dash-table th {
+    background: var(--bg-subcard);
+    color: var(--text-primary);
+    font-weight: 700;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.dash-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.dash-table tr:hover td {
+    background: var(--bg-subcard);
+}
+
+.color-danger { color: var(--text-danger) !important; }
+.color-success { color: var(--text-success) !important; }
+
+/* ==========================================================================
+   7. MODAL, PREVISUALIZAÇÃO & BOTÃO DO PDF
    ========================================================================== */
 .modal-overlay {
     position: fixed; 
@@ -704,7 +791,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 .hover-card-title { font-size: 15px; font-weight: 700; color: var(--primary-color); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
 
 /* ==========================================================================
-   7. PAGINAÇÃO E BOTOES ADICIONAIS
+   8. PAGINAÇÃO E BOTOES ADICIONAIS
    ========================================================================== */
 .pagination { 
     display: flex; 
@@ -737,7 +824,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 }
 
 /* ==========================================================================
-   8. RESPONSIVIDADE E MODO MOBILE (TELAS <= 900px)
+   9. RESPONSIVIDADE E MODO MOBILE (TELAS <= 900px)
    ========================================================================== */
 @media (max-width: 900px) {
     html, body {
