@@ -64,7 +64,7 @@
         </div>
     </aside>
 
-    <!-- Painel de Filtros -->
+    <!-- Painel de Segmentação Lateral -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title" data-i18n="filter_segmentation">⚡ Filtros / Segmentação</span>
@@ -673,7 +673,7 @@
         const viewDashboard = document.getElementById('view-dashboard');
         const navPesquisa = document.getElementById('nav-pesquisa');
         const navDashboard = document.getElementById('nav-dashboard');
-        const layout = document.getElementById('app-layout');
+        const groupDashCat = document.getElementById('group-dash-cat');
 
         if (view === 'pesquisa') {
             viewPesquisa.style.display = 'flex';
@@ -681,7 +681,7 @@
             navPesquisa.classList.add('active');
             navDashboard.classList.remove('active');
 
-            layout.classList.remove('segmentation-hidden');
+            if (groupDashCat) groupDashCat.style.display = 'none';
             filtrar();
         } else if (view === 'dashboard') {
             viewPesquisa.style.display = 'none';
@@ -689,7 +689,7 @@
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
 
-            layout.classList.remove('segmentation-hidden');
+            if (groupDashCat) groupDashCat.style.display = 'flex';
             atualizarMétricasDashboard();
         }
     }
@@ -963,7 +963,7 @@
         statusDiv.innerText = "🔄 [1/2] Sincronizando saldo.csv...";
         await carregarSaldos();
 
-        statusDiv.innerText = "🔄 [2/2] Sincronizando base de dados principal (dados.csv)...";
+        statusDiv.innerText = "🔄 [2/2] Sincronizando base de dados principal...";
 
         let arquivoEncontrado = null;
         let bufferArquivo = null;
@@ -1894,6 +1894,19 @@
         paginaAtual = 1;
         renderizarPagina();
     }
+
+    window.addEventListener('resize', detectarDispositivo);
+
+    window.onload = () => {
+        carregarTemaSalvo();
+        carregarEstadoSegmentacao();
+        detectarDispositivo();
+        carregarLogoUniversal();
+        mudarIdioma('PT');
+        
+        navegarPara('dashboard');
+        carregarCSV();
+    };
 </script>
 
 </body>
