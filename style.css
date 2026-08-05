@@ -689,27 +689,13 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     margin-bottom: 24px;
 }
 
-.dash-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 16px;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 8px;
-}
-
 .dash-section-title {
     font-size: 15px;
     font-weight: 700;
     color: var(--primary-color);
-}
-
-.dash-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
 }
 
 .dash-table-container {
@@ -736,6 +722,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     padding: 12px 14px;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-primary);
+    cursor: pointer;
 }
 
 .dash-table tr:hover td {

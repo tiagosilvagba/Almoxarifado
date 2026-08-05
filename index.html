@@ -78,6 +78,7 @@
                     <option value="">Todos os Itens</option>
                     <option value="com_saldo">✅ Com Saldo (> 0)</option>
                     <option value="zerado_com_minmax">⚠️ Zerado com Mín/Máx (> 0)</option>
+                    <option value="zerado_sem_minmax">⚪ Saldo e Mín/Máx Zerados</option>
                 </select>
             </div>
 
@@ -105,6 +106,25 @@
             </div>
 
             <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()">🧹 Limpar Filtros</button>
+        </div>
+    </aside>
+
+    <!-- Painel de Filtros Específico do Dashboard (Lateral Esquerda Padronizada) -->
+    <aside class="filter-panel-left" id="panel-segmentacao-dash" style="display: none;">
+        <div class="panel-header">
+            <span class="panel-title">⚡ Filtro do Dashboard</span>
+        </div>
+
+        <div class="filter-panel-body">
+            <div class="filter-group">
+                <label class="filter-label">📋 Categoria de Desvio:</label>
+                <select id="dash-select-filtro" class="segmentation-select" onchange="filtrarTabelaDashboard()">
+                    <option value="todos">🔍 Todos os Desvios</option>
+                    <option value="ruptura">⚠️ Ruptura Total (Zerados)</option>
+                    <option value="abaixo">📉 Abaixo do Mínimo</option>
+                    <option value="acima">🚨 Acima do Máximo</option>
+                </select>
+            </div>
         </div>
     </aside>
 
@@ -187,20 +207,9 @@
                     </div>
                 </div>
 
-                <!-- SEÇÃO DE ITENS CRÍTICOS COM SALDO ATUAL NA TABELA -->
+                <!-- SEÇÃO DE ITENS CRÍTICOS COM HOVER CARD -->
                 <div class="dash-section-box">
-                    <div class="dash-section-header">
-                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria de Divergências e Saldo Atual</div>
-                        <div class="dash-filter-bar">
-                            <label style="font-size: 12px; font-weight: bold; color: var(--text-secondary);">Filtrar Visão:</label>
-                            <select id="dash-select-filtro" class="segmentation-select" style="width: 240px; padding: 6px 10px;" onchange="filtrarTabelaDashboard()">
-                                <option value="todos">🔍 Todos os Desvios (Ruptura, Baixo, Excesso)</option>
-                                <option value="ruptura">⚠️ Apenas Ruptura Total (Zerados)</option>
-                                <option value="abaixo">📉 Apenas Abaixo do Mínimo</option>
-                                <option value="acima">🚨 Apenas Acima do Máximo</option>
-                            </select>
-                        </div>
-                    </div>
+                    <div class="dash-section-title">📋 Auditoria de Divergências e Saldo Atual (Passe o mouse para visualizar a foto)</div>
 
                     <div class="dash-table-container" style="margin-top: 14px;">
                         <table class="dash-table">
@@ -278,6 +287,7 @@
         const viewDashboard = document.getElementById('view-dashboard');
         const btnReopenFilter = document.getElementById('btn-reopen-filter');
         const panelSegmentacao = document.getElementById('panel-segmentacao');
+        const panelSegmentacaoDash = document.getElementById('panel-segmentacao-dash');
 
         const navPesquisa = document.getElementById('nav-pesquisa');
         const navDashboard = document.getElementById('nav-dashboard');
@@ -290,6 +300,7 @@
             
             if (btnReopenFilter) btnReopenFilter.style.display = '';
             if (panelSegmentacao) panelSegmentacao.style.display = '';
+            if (panelSegmentacaoDash) panelSegmentacaoDash.style.display = 'none';
         } else if (view === 'dashboard') {
             viewPesquisa.style.display = 'none';
             viewDashboard.style.display = 'flex';
@@ -298,6 +309,7 @@
 
             if (btnReopenFilter) btnReopenFilter.style.display = 'none';
             if (panelSegmentacao) panelSegmentacao.style.display = 'none';
+            if (panelSegmentacaoDash) panelSegmentacaoDash.style.display = 'flex';
 
             atualizarMétricasDashboard();
         }
@@ -590,8 +602,9 @@
 
                 const temSaldoValido = saldoAtual > 0;
                 const temMinMaxValido = estMin > 0 && estMax > 0;
+                const zeradoSemMinMax = saldoAtual <= 0 && estMin <= 0 && estMax <= 0;
 
-                return temSaldoValido || temMinMaxValido;
+                return temSaldoValido || temMinMaxValido || zeradoSemMinMax;
             });
 
             dadosFiltrados = dadosCSV;
@@ -748,7 +761,7 @@
             return;
         }
 
-        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax }) => {
+        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax }, index) => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
@@ -765,19 +778,71 @@
                 badgeHtml = '<span class="badge-status badge-acima">🚨 Acima do Máximo</span>';
             }
 
-            tbodyCriticos.innerHTML += `
-                <tr>
-                    <td><strong>${cod}</strong></td>
-                    <td>${nome}</td>
-                    <td>P: ${prateleira} | D: ${divisao} | R: ${reparticao}</td>
-                    <td><strong style="color: ${saldo <= 0 ? 'var(--text-danger)' : 'var(--text-success)'}; font-size:14px;">${saldo} un.</strong></td>
-                    <td>${estMin}</td>
-                    <td>${estMax}</td>
-                    <td>${badgeHtml}</td>
-                    <td>${forn}</td>
-                </tr>
+            const tr = document.createElement('tr');
+            tr.onclick = () => abrirModalDadosItem(item);
+
+            if (!isMobile) {
+                tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo);
+                tr.onmouseleave = esconderHoverCard;
+            }
+
+            tr.innerHTML = `
+                <td><strong>${cod}</strong></td>
+                <td>${nome}</td>
+                <td>P: ${prateleira} | D: ${divisao} | R: ${reparticao}</td>
+                <td><strong style="color: ${saldo <= 0 ? 'var(--text-danger)' : 'var(--text-success)'}; font-size:14px;">${saldo} un.</strong></td>
+                <td>${estMin}</td>
+                <td>${estMax}</td>
+                <td>${badgeHtml}</td>
+                <td>${forn}</td>
             `;
+            tbodyCriticos.appendChild(tr);
         });
+    }
+
+    function mostrarHoverCardDashboard(e, item, saldo) {
+        if (isMobile) return;
+
+        const cardHover = document.getElementById('hover-card');
+        const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+        const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
+        const estMin = getVal(item, ['est_min', 'minimo']);
+        const estMax = getVal(item, ['est_max', 'maximo']);
+        const leadTime = getVal(item, ['lead_time', 'lead']);
+        const especificacao = getVal(item, ['especificacao', 'espec']);
+        const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
+
+        const codLimpo = String(cod).trim();
+        const srcFoto = cacheCaminhoFoto.get(codLimpo) || '';
+        const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
+
+        cardHover.innerHTML = `
+            ${tagFoto}
+            <div class="hover-card-title">[${cod}] ${nome}</div>
+            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual em Estoque:</strong> ${saldo} un.</div>
+            <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
+            <div class="hover-card-section"><strong>⏱️ Lead Time de Entrega:</strong> ${leadTime}</div>
+            <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
+            <div class="hover-card-section"><strong>⚙️ Locais de Aplicação:</strong><br>${locaisAplicacao}</div>
+        `;
+
+        let posX = e.clientX + 20;
+        let posY = e.clientY + 10;
+
+        if (posX + 350 > window.innerWidth) posX = e.clientX - 350;
+        if (posY + 370 > window.innerHeight) posY = window.innerHeight - 380;
+
+        cardHover.style.left = posX + 'px';
+        cardHover.style.top = posY + 'px';
+        cardHover.style.display = 'block';
+    }
+
+    function abrirModalDadosItem(item) {
+        // Encontra o index real no dadosCSV para abrir o modal completo
+        const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === getVal(item, ['cod_item', 'codigo', 'cod']));
+        if (indexReal !== -1) {
+            abrirModal(indexReal);
+        }
     }
 
     function renderizarPagina() {
@@ -791,8 +856,9 @@
         let comFoto = 0;
         let qtdComSaldo = 0;
         let qtdZeradoMinMax = 0;
+        let qtdZeradoSemMinMax = 0;
 
-        dadosFiltrados.forEach(item => {
+        dadosCSV.forEach(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
             const codNorm = normalizarCod(cod);
@@ -807,6 +873,8 @@
                 qtdComSaldo++;
             } else if (estMin > 0 && estMax > 0) {
                 qtdZeradoMinMax++;
+            } else {
+                qtdZeradoSemMinMax++;
             }
         });
 
@@ -818,7 +886,8 @@
             <div style="text-align: right; line-height: 1.4;">
                 <div><strong>Total:</strong> ${totalItens} itens &nbsp;|&nbsp; 
                 <span style="color:var(--text-success, #16a34a); font-weight:700;">✅ Saldo > 0:</span> ${qtdComSaldo} &nbsp;|&nbsp; 
-                <span style="color:#eab308; font-weight:700;">⚠️ Zerados (Mín/Máx > 0):</span> ${qtdZeradoMinMax}</div>
+                <span style="color:#eab308; font-weight:700;">⚠️ Zerados (Mín/Máx > 0):</span> ${qtdZeradoMinMax} &nbsp;|&nbsp;
+                <span style="color:var(--text-secondary); font-weight:700;">⚪ Zerados (Sem Mín/Máx):</span> ${qtdZeradoSemMinMax}</div>
                 <div style="margin-top:2px;">
                 <span style="color:var(--text-success, #16a34a); font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
                 <span style="color:var(--text-danger, #dc2626); font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)</div>
@@ -852,7 +921,7 @@
             const codNorm = normalizarCod(cod);
             const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
 
-            const indexReal = inicio + index;
+            const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
 
             const row = document.createElement('div');
             row.className = 'item-row';
@@ -983,7 +1052,7 @@
     function mostrarHoverCard(e, indexReal) {
         if (isMobile) return;
 
-        const item = dadosFiltrados[indexReal];
+        const item = dadosCSV[indexReal];
         const cardHover = document.getElementById('hover-card');
         const imgCapa = document.getElementById(`img-capa-${indexReal}`);
         
@@ -1029,7 +1098,7 @@
     async function abrirModal(indexReal) {
         esconderHoverCard();
         
-        const item = dadosFiltrados[indexReal];
+        const item = dadosCSV[indexReal];
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
         const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
@@ -1332,6 +1401,8 @@
                     bateSaldoStatus = saldoAtual > 0;
                 } else if (saldoStatusSel === 'zerado_com_minmax') {
                     bateSaldoStatus = saldoAtual <= 0 && estMin > 0 && estMax > 0;
+                } else if (saldoStatusSel === 'zerado_sem_minmax') {
+                    bateSaldoStatus = saldoAtual <= 0 && estMin <= 0 && estMax <= 0;
                 }
             }
 
