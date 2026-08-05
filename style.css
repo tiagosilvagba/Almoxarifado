@@ -258,79 +258,7 @@ a:hover {
     font-weight: 600; 
 }
 
-.sidebar-theme-container {
-    padding: 8px 12px 16px 12px; 
-    border-bottom: 2px solid var(--border-color);
-    margin-bottom: 16px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 8px;
-}
-
-.theme-label { 
-    font-size: 11px; 
-    font-weight: 700; 
-    color: var(--text-secondary); 
-    letter-spacing: 0.05em; 
-}
-
-.theme-selector-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-    margin-top: 4px;
-    max-height: 140px;
-    overflow-y: auto;
-    padding-right: 2px;
-}
-
-.theme-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--bg-subcard);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 6px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.theme-chip:hover {
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
-}
-
-.theme-chip.active {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-color: var(--primary-color);
-}
-
-.theme-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-.dot-blue { background-color: #0A3D78; }
-.dot-red { background-color: #D32F2F; }
-.dot-dark { background-color: #38bdf8; }
-.dot-apple { background-color: #0066cc; }
-.dot-emerald { background-color: #10b981; }
-.dot-nordic { background-color: #475569; }
-.dot-cyber { background-color: #00f0ff; }
-.dot-titanium { background-color: #eab308; }
-.dot-sunset { background-color: #ea580c; }
-
-.sidebar-nav { display: flex; flex-direction: column; gap: 6px; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .nav-section-title { 
     font-size: 11px; 
     font-weight: 700; 
@@ -514,7 +442,95 @@ a:hover {
 }
 
 /* ==========================================================================
-   5. ÁREA PRINCIPAL COM ROLAGEM INTERNA
+   5. CONTROLES DE TOPO (TEMAS E IDIOMAS)
+   ========================================================================== */
+.top-controls-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.top-theme-selector {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    max-width: 75%;
+    padding-bottom: 2px;
+}
+
+.theme-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-subcard);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.theme-chip:hover {
+    border-color: var(--primary-color);
+}
+
+.theme-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.dot-blue { background-color: #0A3D78; }
+.dot-red { background-color: #D32F2F; }
+.dot-dark { background-color: #38bdf8; }
+.dot-apple { background-color: #0066cc; }
+.dot-emerald { background-color: #10b981; }
+.dot-nordic { background-color: #475569; }
+.dot-cyber { background-color: #00f0ff; }
+.dot-titanium { background-color: #eab308; }
+.dot-sunset { background-color: #ea580c; }
+
+.top-lang-selector {
+    display: flex;
+    gap: 5px;
+}
+
+.lang-btn {
+    background: var(--bg-subcard);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.lang-btn:hover {
+    border-color: var(--primary-color);
+}
+
+.lang-btn.active {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+}
+
+/* ==========================================================================
+   6. ÁREA PRINCIPAL COM ROLAGEM INTERNA
    ========================================================================== */
 .main-content {
     margin-left: 520px;
@@ -544,19 +560,17 @@ a:hover {
 
 header { 
     background: var(--bg-card); 
-    padding: 18px 24px; 
+    padding: 16px 24px; 
     border-radius: 12px; 
     border-left: 6px solid var(--primary-color);
-    border-top: 1px solid var(--border-color); 
-    border-right: 1px solid var(--border-color); 
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 16px; 
+    border: 1px solid var(--border-color);
+    margin-bottom: 14px; 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
 }
 
-header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
+header h1 { font-size: 18px; font-weight: 700; color: var(--primary-color); }
 
 .search-box { 
     width: 100%; 
@@ -635,11 +649,11 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 .row-lead-badge { background: var(--bg-subcard); color: var(--text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 
 /* ==========================================================================
-   6. COMPONENTES E GRID DO DASHBOARD (PÁGINA 2)
+   7. COMPONENTES E GRID DO DASHBOARD (PÁGINA 2)
    ========================================================================== */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -673,7 +687,6 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 .kpi-value.color-danger { color: var(--text-danger); }
 .kpi-value.color-warning { color: var(--text-warning); }
 .kpi-value.color-info { color: var(--text-info); }
-.kpi-value.color-accent { color: var(--primary-color); }
 
 .kpi-sub {
     font-size: 11px;
@@ -754,7 +767,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 .color-warning { color: var(--text-warning) !important; }
 
 /* ==========================================================================
-   7. MODAL, PREVISUALIZAÇÃO & BOTÃO DO PDF
+   8. MODAL, PREVISUALIZAÇÃO & BOTÃO DO PDF
    ========================================================================== */
 .modal-overlay {
     position: fixed; 
@@ -832,7 +845,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 .hover-card-title { font-size: 15px; font-weight: 700; color: var(--primary-color); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
 
 /* ==========================================================================
-   8. PAGINAÇÃO E BOTOES ADICIONAIS
+   9. PAGINAÇÃO E BOTOES ADICIONAIS
    ========================================================================== */
 .pagination { 
     display: flex; 
@@ -865,7 +878,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 }
 
 /* ==========================================================================
-   9. RESPONSIVIDADE E MODO MOBILE (TELAS <= 900px)
+   10. RESPONSIVIDADE E MODO MOBILE (TELAS <= 900px)
    ========================================================================== */
 @media (max-width: 900px) {
     html, body {
