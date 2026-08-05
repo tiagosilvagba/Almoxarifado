@@ -39,7 +39,7 @@
             </div>
         </div>
 
-        <!-- Navegação entre Páginas (Ordem ajustada: Dashboard primeiro) -->
+        <!-- Navegação entre Páginas -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Páginas</span>
             <a href="#" class="nav-item active" id="nav-dashboard" onclick="navegarPara('dashboard')">
@@ -298,6 +298,51 @@
         return `R$ ${emMilhoes.toFixed(2)} Milhões`;
     }
 
+    // CORREÇÃO INTELIGENTE DE CASAS DECIMAIS E ESCALAS (Reais, Mil, Milhões, Bilhões)
+    function parseNum(val) {
+        if (val === undefined || val === null) return 0;
+        if (typeof val === 'number') return val;
+
+        let str = String(val).trim().replace('R$', '').trim();
+        if (!str || str === '-') return 0;
+
+        // Trata separadores de milhar e decimal com segurança robusta
+        // Se houver vírgula e ponto, identifica qual é o decimal pela posição final
+        let temVirgula = str.includes(',');
+        let temPonto = str.includes('.');
+
+        if (temVirgula && temPonto) {
+            // Descobre qual deles é o último (o último é o separador decimal)
+            const ultimaVirgula = str.lastIndexOf(',');
+            const ultimoPonto = str.lastIndexOf('.');
+            if (ultimaVirgula > ultimoPonto) {
+                // Vírgula é decimal, ponto é milhar
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Ponto é decimal, vírgula é milhar
+                str = str.replace(/,/g, '');
+            }
+        } else if (temVirgula) {
+            // Apenas vírgula: substitui por ponto para o parseFloat entender
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else if (temPonto) {
+            // Apenas ponto: se houver múltiplos pontos (ex: 4.919.522), remove os intermediários e mantém o último como decimal, 
+            // ou se for decimal direto (ex: 491.95), trata corretamente.
+            const partes = str.split('.');
+            if (partes.length > 2) {
+                // Formato milhar brasileiro com ponto e sem vírgula (ex: 4.919.522)
+                str = str.replace(/\./g, '');
+            } else if (partes.length === 2) {
+                // Pode ser milhar ou decimal. Se a parte decimal tem mais de 2 dígitos e parece número inteiro formatado, ou decimal real.
+                // No caso do exemplo: "491,9522222" ou "491.9522222", tratamos com precisão decimal padrão.
+                // Se o número for pequeno (< 1000000) com ponto único, mantemos como decimal.
+            }
+        }
+
+        const num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
+    }
+
     function navegarPara(view) {
         const viewPesquisa = document.getElementById('view-pesquisa');
         const viewDashboard = document.getElementById('view-dashboard');
@@ -482,13 +527,6 @@
     function normalizarCod(val) {
         if (val === undefined || val === null) return '';
         return String(val).toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, '').trim();
-    }
-
-    function parseNum(val) {
-        if (val === undefined || val === null) return 0;
-        const limpo = String(val).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
-        const num = parseFloat(limpo);
-        return isNaN(num) ? 0 : num;
     }
 
     function getVal(item, termosChave) {
@@ -1463,7 +1501,6 @@
         detectarDispositivo();
         carregarLogoUniversal();
         
-        // Abre por padrão no Dashboard e ajusta estado inicial dos painéis
         navegarPara('dashboard');
         carregarCSV();
     };
