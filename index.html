@@ -165,6 +165,7 @@
     let dadosCSV = [];
     let dadosFiltrados = [];
     let mapaSaldos = new Map();
+    let ultimaAtualizacaoSaldo = 'Não carregado';
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
     let isMobile = false;
@@ -202,7 +203,6 @@
         }
         localStorage.setItem('jbs_theme_preference', tema);
         
-        // Destaca visualmente o chip do tema ativo
         document.querySelectorAll('.theme-chip').forEach(chip => chip.classList.remove('active'));
         const chipAtivo = document.querySelector(`.theme-chip[onclick="aplicarTema('${tema}')"]`);
         if (chipAtivo) chipAtivo.classList.add('active');
@@ -326,6 +326,11 @@
         });
     }
 
+    function normalizarCod(val) {
+        if (val === undefined || val === null) return '';
+        return String(val).toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, '').trim();
+    }
+
     function getVal(item, termosChave) {
         if (!item || typeof item !== 'object') return '-';
         const keys = Object.keys(item);
@@ -344,33 +349,44 @@
         return '-';
     }
 
+    // SINCRONIZAÇÃO AUTOMÁTICA DO SALDO.CSV COM BYPASS DE CACHE
     async function carregarSaldos() {
+        mapaSaldos.clear();
         try {
-            const resposta = await fetch('saldo.csv', { cache: 'reload' });
+            const resposta = await fetch('saldo.csv?t=' + new Date().getTime(), { cache: 'no-cache' });
             if (resposta.ok) {
+                const headerData = resposta.headers.get('Last-Modified');
+                if (headerData) {
+                    const dataObj = new Date(headerData);
+                    ultimaAtualizacaoSaldo = dataObj.toLocaleString('pt-BR');
+                } else {
+                    ultimaAtualizacaoSaldo = new Date().toLocaleString('pt-BR');
+                }
+
                 const buffer = await resposta.arrayBuffer();
                 const workbook = XLSX.read(buffer, { type: 'array' });
                 const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
                 const dadosSaldo = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
 
-                mapaSaldos.clear();
                 dadosSaldo.forEach(linha => {
-                    const cod = getVal(linha, ['cod_item', 'codigo', 'cod']);
-                    const saldoVal = getVal(linha, ['saldo_atual', 'saldo', 'qtd']);
-                    if (cod && cod !== '-') {
+                    const codBruto = getVal(linha, ['cod_item', 'codigo', 'cod', 'item']);
+                    const saldoVal = getVal(linha, ['saldo_atual', 'saldo', 'qtd', 'quantidade', 'est_atual', 'estoque']);
+                    
+                    const codNorm = normalizarCod(codBruto);
+                    if (codNorm) {
                         const numSaldo = parseFloat(String(saldoVal).replace(',', '.')) || 0;
-                        mapaSaldos.set(String(cod).trim(), numSaldo);
+                        mapaSaldos.set(codNorm, numSaldo);
                     }
                 });
             }
         } catch (e) {
-            console.log("Arquivo saldo.csv não encontrado ou sem permissão.");
+            console.warn("Arquivo saldo.csv não encontrado no servidor.", e);
         }
     }
 
     async function carregarCSV() {
         const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "Sincronizando dados atuais e saldos...";
+        statusDiv.innerText = "Sincronizando dados e arquivo de saldos...";
 
         await carregarSaldos();
 
@@ -379,7 +395,7 @@
 
         for (const arquivo of FORMATOS_SUPORTADOS) {
             try {
-                const resposta = await fetch(`${arquivo}`, { cache: 'reload' });
+                const resposta = await fetch(`${arquivo}?t=` + new Date().getTime(), { cache: 'no-cache' });
                 if (resposta.ok) {
                     arquivoEncontrado = arquivo;
                     bufferArquivo = await resposta.arrayBuffer();
@@ -416,11 +432,11 @@
             const dadosBrutos = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             
             dadosCSV = dadosBrutos.filter(item => {
-                const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-                const codLimpo = String(cod).trim();
+                const codBruto = getVal(item, ['cod_item', 'codigo', 'cod']);
+                const codNorm = normalizarCod(codBruto);
                 
-                if (mapaSaldos.has(codLimpo)) {
-                    return mapaSaldos.get(codLimpo) > 0;
+                if (mapaSaldos.has(codNorm)) {
+                    return mapaSaldos.get(codNorm) > 0;
                 }
                 return true;
             });
@@ -430,7 +446,7 @@
 
             popularSegmentacaoDados();
 
-            statusDiv.innerText = `✅ Base de dados (${nomeArquivo}) carregada! (${dadosCSV.length} itens ativos)`;
+            statusDiv.innerText = `✅ Base (${nomeArquivo}) carregada! (${dadosCSV.length} itens com saldo)`;
             renderizarPagina();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
@@ -492,9 +508,12 @@
         const percSemFoto = totalItens > 0 ? ((semFoto / totalItens) * 100).toFixed(1) : 0;
 
         contDiv.innerHTML = `
-            <strong>Total:</strong> ${totalItens} itens com saldo &nbsp;|&nbsp; 
-            <span style="color:var(--text-success, #16a34a); font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
-            <span style="color:var(--text-danger, #dc2626); font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)
+            <div style="text-align: right; line-height: 1.4;">
+                <div><strong>Total:</strong> ${totalItens} itens com saldo &nbsp;|&nbsp; 
+                <span style="color:var(--text-success, #16a34a); font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
+                <span style="color:var(--text-danger, #dc2626); font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)</div>
+                <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">🕒 <strong>Última Atualização do Saldo Atual:</strong> ${ultimaAtualizacaoSaldo}</div>
+            </div>
         `;
 
         if (totalItens === 0) {
@@ -520,8 +539,8 @@
             const estMax = getVal(item, ['est_max', 'maximo']);
             const leadTime = getVal(item, ['lead_time', 'lead']);
             
-            const codLimpo = String(cod).trim();
-            const saldoExibir = mapaSaldos.has(codLimpo) ? mapaSaldos.get(codLimpo) : '-';
+            const codNorm = normalizarCod(cod);
+            const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : '-';
 
             const indexReal = inicio + index;
 
@@ -703,8 +722,8 @@
         const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
 
-        const codLimpo = String(cod).trim();
-        const saldoExibir = mapaSaldos.has(codLimpo) ? mapaSaldos.get(codLimpo) : '-';
+        const codNorm = normalizarCod(cod);
+        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : '-';
 
         let camposExtrasHTML = '';
         const chavesIgnorar = [

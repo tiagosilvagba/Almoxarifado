@@ -265,7 +265,6 @@ a:hover {
     letter-spacing: 0.05em; 
 }
 
-/* NOVO SELETOR DE TEMAS ESTILIZADO (CHIPS / CARDS COM NOMES) */
 .theme-selector-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -359,7 +358,6 @@ a:hover {
     gap: 10px;
 }
 
-/* TODOS OS BOTÕES DA SIDEBAR SEGUEM A MESMA IDENTIDADE DO TEMA */
 .btn-sidebar-action {
     background: var(--primary-color); 
     color: #ffffff; 
