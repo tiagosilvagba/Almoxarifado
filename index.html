@@ -334,7 +334,7 @@
             opt_all_active: "🔍 Todos os Itens Ativos",
             opt_total_rupture: "⚠️ Apenas Ruptura Total (Zerados)",
             opt_below_min: "📉 Apenas Abaixo do Mínimo",
-            opt_above_max: "🚨 Apenas Acima do Máximo",
+            opt_above_max: "🚨 Acima do Máximo",
             opt_normal_stock: "✅ Estoque Normal/Regular",
             header_title: "Almoxarifado JBS | Seara",
             status_searching: "Procurando base de dados...",
@@ -1325,6 +1325,13 @@
         cardHover.style.left = posX + 'px';
         cardHover.style.top = posY + 'px';
         cardHover.style.display = 'block';
+    }
+
+    function esconderHoverCard() {
+        const hoverCard = document.getElementById('hover-card');
+        if (hoverCard) {
+            hoverCard.style.display = 'none';
+        }
     }
 
     function abrirModalDadosItem(item) {
