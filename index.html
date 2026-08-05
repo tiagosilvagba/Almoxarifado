@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <!-- Seletor de Temas (Retornado à posição anterior) -->
+        <!-- Seletor de Temas (Na posição anterior) -->
         <div class="sidebar-theme-container">
             <span class="theme-label">🎨 APARÊNCIA DO SISTEMA</span>
             <div class="theme-selector-grid">
@@ -64,24 +64,24 @@
         </div>
     </aside>
 
-    <!-- Painel de Segmentação (Pesquisa) -->
-    <aside class="filter-panel-left" id="panel-segmentacao" style="display: none;">
+    <!-- Painel de Segmentação Compartilhado (Dashboard e Pesquisa com os mesmos filtros) -->
+    <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
-            <span class="panel-title" data-i18n="filter_segmentation">⚡ Segmentação</span>
+            <span class="panel-title" data-i18n="filter_segmentation">⚡ Filtros / Segmentação</span>
             <button class="btn-toggle-filter" onclick="toggleSegmentacao()" title="Ocultar Filtros">◀</button>
         </div>
 
         <div class="filter-panel-body">
             <div class="filter-group">
                 <label class="filter-label">🏢 Filial:</label>
-                <select id="select-filial" class="segmentation-select" onchange="filtrar()">
+                <select id="select-filial" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="">Todas as Filiais</option>
                 </select>
             </div>
 
             <div class="filter-group">
                 <label class="filter-label" data-i18n="label_balance_status">📦 Status do Saldo:</label>
-                <select id="select-saldo-status" class="segmentation-select" onchange="filtrar()">
+                <select id="select-saldo-status" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_items">Todos os Itens</option>
                     <option value="com_saldo" data-i18n="opt_with_balance">✅ Com Saldo (> 0)</option>
                     <option value="zerado_com_minmax" data-i18n="opt_zero_minmax">⚠️ Zerado com Mín/Máx (> 0)</option>
@@ -90,7 +90,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" data-i18n="label_item_image">🖼️ Imagem do Item:</label>
-                <select id="select-imagem" class="segmentation-select" onchange="filtrar()">
+                <select id="select-imagem" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_photos">Todas as Fotos</option>
                     <option value="com_foto" data-i18n="opt_with_photo">📸 Com Imagem</option>
                     <option value="sem_foto" data-i18n="opt_without_photo">🚫 Sem Imagem</option>
@@ -99,38 +99,21 @@
 
             <div class="filter-group">
                 <label class="filter-label" data-i18n="label_supplier">🏢 Fornecedor:</label>
-                <select id="select-fornecedor" class="segmentation-select" onchange="filtrar()">
+                <select id="select-fornecedor" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_suppliers">Todos os Fornecedores</option>
                 </select>
             </div>
 
             <div class="filter-group">
                 <label class="filter-label" data-i18n="label_stock_location">📍 Local de Estoque:</label>
-                <select id="select-local-estoque" class="segmentation-select" onchange="filtrar()">
+                <select id="select-local-estoque" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_locations">Todos os Locais</option>
                 </select>
             </div>
 
-            <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()" data-i18n="btn_clear_filters">🧹 Limpar Filtros</button>
-        </div>
-    </aside>
-
-    <!-- Painel de Filtros Específico do Dashboard -->
-    <aside class="filter-panel-left" id="panel-segmentacao-dash">
-        <div class="panel-header">
-            <span class="panel-title" data-i18n="filter_dashboard">⚡ Filtro do Dashboard</span>
-            <button class="btn-toggle-filter" onclick="toggleSegmentacao()" title="Ocultar Filtros">◀</button>
-        </div>
-
-        <div class="filter-panel-body">
-            <div class="filter-group">
-                <label class="filter-label" data-i18n="label_dynamic_search">🔍 Pesquisa Dinâmica:</label>
-                <input type="text" id="dash-busca-dinamica" class="search-box" style="margin-bottom:0; padding:10px 12px; font-size:13px;" placeholder="Filtrar..." oninput="filtrarTabelaDashboard()">
-            </div>
-
-            <div class="filter-group">
+            <div class="filter-group" id="group-dash-cat">
                 <label class="filter-label" data-i18n="label_audit_category">📋 Categoria de Auditoria:</label>
-                <select id="dash-select-filtro" class="segmentation-select" onchange="filtrarTabelaDashboard()">
+                <select id="dash-select-filtro" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="todos" data-i18n="opt_all_active">🔍 Todos os Itens Ativos</option>
                     <option value="ruptura" data-i18n="opt_total_rupture">⚠️ Apenas Ruptura Total (Zerados)</option>
                     <option value="abaixo" data-i18n="opt_below_min">📉 Apenas Abaixo do Mínimo</option>
@@ -138,10 +121,12 @@
                     <option value="normal" data-i18n="opt_normal_stock">✅ Estoque Normal/Regular</option>
                 </select>
             </div>
+
+            <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()" data-i18n="btn_clear_filters">🧹 Limpar Filtros</button>
         </div>
     </aside>
 
-    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
+    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Filtros">⚡ Filtros ▶</button>
 
     <!-- PÁGINA 1: PESQUISA DE ITENS -->
     <main class="main-content" id="view-pesquisa" style="display: none;">
@@ -164,7 +149,7 @@
                     <h1 data-i18n="header_title">Almoxarifado JBS | Seara</h1>
                 </header>
 
-                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, filial, equipamento, especificação..." oninput="filtrar()">
+                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, filial, equipamento, especificação..." oninput="dispararFiltrosGerais()">
 
                 <div class="status" style="display: flex; justify-content: flex-end; align-items: center;">
                     <span id="status-texto" style="margin-right: auto;" data-i18n="status_searching">Procurando base de dados...</span>
@@ -204,6 +189,8 @@
                 <header>
                     <h1 data-i18n="dash_header_title">Dashboard Executivo & Indicadores</h1>
                 </header>
+
+                <input type="text" id="dash-busca-dinamica" class="search-box" placeholder="Pesquisar por código, nome, filial, fornecedor..." oninput="dispararFiltrosGerais()">
             </div>
 
             <div class="scrollable-results-section">
@@ -314,6 +301,7 @@
     let isMobile = false;
 
     let idiomaAtual = 'PT';
+    let vistaAtual = 'dashboard';
     let pastaImagensHandle = null;
     
     const itensComFoto = new Set();
@@ -331,7 +319,7 @@
             btn_load_imgs: "🖼️ Carregar Imagens",
             btn_select_sheet: "📂 Selecionar Planilha",
             btn_sync_base: "🔄 Sincronizar Base",
-            filter_segmentation: "⚡ Segmentação",
+            filter_segmentation: "⚡ Filtros / Segmentação",
             label_balance_status: "📦 Status do Saldo:",
             opt_all_items: "Todos os Itens",
             opt_with_balance: "✅ Com Saldo (> 0)",
@@ -345,8 +333,6 @@
             label_stock_location: "📍 Local de Estoque:",
             opt_all_locations: "Todos os Locais",
             btn_clear_filters: "🧹 Limpar Filtros",
-            filter_dashboard: "⚡ Filtro do Dashboard",
-            label_dynamic_search: "🔍 Pesquisa Dinâmica:",
             label_audit_category: "📋 Categoria de Auditoria:",
             opt_all_active: "🔍 Todos os Itens Ativos",
             opt_total_rupture: "⚠️ Apenas Ruptura Total (Zerados)",
@@ -389,7 +375,7 @@
             btn_load_imgs: "🖼️ Load Images",
             btn_select_sheet: "📂 Select Spreadsheet",
             btn_sync_base: "🔄 Sync Database",
-            filter_segmentation: "⚡ Segmentation",
+            filter_segmentation: "⚡ Filters / Segmentation",
             label_balance_status: "📦 Balance Status:",
             opt_all_items: "All Items",
             opt_with_balance: "✅ With Balance (> 0)",
@@ -403,8 +389,6 @@
             label_stock_location: "📍 Stock Location:",
             opt_all_locations: "All Locations",
             btn_clear_filters: "🧹 Clear Filters",
-            filter_dashboard: "⚡ Dashboard Filter",
-            label_dynamic_search: "🔍 Dynamic Search:",
             label_audit_category: "📋 Audit Category:",
             opt_all_active: "🔍 All Active Items",
             opt_total_rupture: "⚠️ Total Rupture Only (Zeroed)",
@@ -447,7 +431,7 @@
             btn_load_imgs: "🖼️ Carica Immagini",
             btn_select_sheet: "📂 Seleziona Foglio",
             btn_sync_base: "🔄 Sincronizza Database",
-            filter_segmentation: "⚡ Segmentazione",
+            filter_segmentation: "⚡ Filtri / Segmentazione",
             label_balance_status: "📦 Stato Saldo:",
             opt_all_items: "Tutti gli Articoli",
             opt_with_balance: "✅ Con Saldo (> 0)",
@@ -461,8 +445,6 @@
             label_stock_location: "📍 Posizione Magazzino:",
             opt_all_locations: "Tutte le Posizioni",
             btn_clear_filters: "🧹 Pulisci Filtri",
-            filter_dashboard: "⚡ Filtro Dashboard",
-            label_dynamic_search: "🔍 Ricerca Dinamica:",
             label_audit_category: "📋 Categoria di Audit:",
             opt_all_active: "🔍 Tutti gli Articoli Attivi",
             opt_total_rupture: "⚠️ Solo Rottura Totale (A zero)",
@@ -505,7 +487,7 @@
             btn_load_imgs: "🖼️ Charger Images",
             btn_select_sheet: "📂 Sélectionner Fichier",
             btn_sync_base: "🔄 Synchroniser",
-            filter_segmentation: "⚡ Segmentation",
+            filter_segmentation: "⚡ Filtres / Segmentation",
             label_balance_status: "📦 Statut du Solde:",
             opt_all_items: "Tous les Articles",
             opt_with_balance: "✅ Avec Solde (> 0)",
@@ -519,8 +501,6 @@
             label_stock_location: "📍 Emplacement de Stock:",
             opt_all_locations: "Tous les Emplacements",
             btn_clear_filters: "🧹 Effacer Filtres",
-            filter_dashboard: "⚡ Filtre Tableau de Bord",
-            label_dynamic_search: "🔍 Recherche Dynamique:",
             label_audit_category: "📋 Catégorie d'Audit:",
             opt_all_active: "🔍 Tous les Articles Actifs",
             opt_total_rupture: "⚠️ Rupture Totale (Zéro)",
@@ -563,7 +543,7 @@
             btn_load_imgs: "🖼️ Bilder Laden",
             btn_select_sheet: "📂 Tabelle Auswählen",
             btn_sync_base: "🔄 Datenbank Synchronisieren",
-            filter_segmentation: "⚡ Segmentierung",
+            filter_segmentation: "⚡ Filter / Segmentierung",
             label_balance_status: "📦 Saldenstatus:",
             opt_all_items: "Alle Artikel",
             opt_with_balance: "✅ Mit Saldo (> 0)",
@@ -577,8 +557,6 @@
             label_stock_location: "📍 Lagerort:",
             opt_all_locations: "Alle Standorte",
             btn_clear_filters: "🧹 Filter Löschen",
-            filter_dashboard: "⚡ Dashboard Filter",
-            label_dynamic_search: "🔍 Dynamische Suche:",
             label_audit_category: "📋 Prüfkategorie:",
             opt_all_active: "🔍 Alle Aktiven Artikel",
             opt_total_rupture: "⚠️ Nur Gesamteinbruch (Null)",
@@ -620,8 +598,8 @@
             btn_conn_folder: "📂 Afbeeldingenmap Koppelen",
             btn_load_imgs: "🖼️ Afbeeldingen Laden",
             btn_select_sheet: "📂 Selecteer Spreadsheet",
-            btn_sync_base: "🔄 Database Synchroniseren",
-            filter_segmentation: "⚡ Segmentatie",
+            btn_sync_base: "🔄 Database Synchronisieren",
+            filter_segmentation: "⚡ Filters / Segmentatie",
             label_balance_status: "📦 Saldo Status:",
             opt_all_items: "Alle Artikelen",
             opt_with_balance: "✅ Met Saldo (> 0)",
@@ -635,8 +613,6 @@
             label_stock_location: "📍 Voorraadlocatie:",
             opt_all_locations: "Alle Locaties",
             btn_clear_filters: "🧹 Filters Wissen",
-            filter_dashboard: "⚡ Dashboard Filter",
-            label_dynamic_search: "🔍 Dynamisch Zoeken:",
             label_audit_category: "📋 Audit Categorie:",
             opt_all_active: "🔍 Alle Actieve Artikelen",
             opt_total_rupture: "⚠️ Alleen Totale Breuk (Nul)",
@@ -653,7 +629,7 @@
             kpi_with_balance: "Artikelen Met Saldo (>0)",
             kpi_total_rupture: "⚠️ Totale Breuk (Nul)",
             kpi_below_min: "📉 Onder Minimum",
-            kpi_sub_critical_low: "Kritisch Laage Voorraad",
+            kpi_sub_critical_low: "Kritisch Lage Voorraad",
             kpi_above_max: "🚨 Boven Maximum",
             kpi_sub_excess: "Voorraadoverschot",
             audit_section_title: "📋 Voorraad Audit (BewEeg muis om foto te zien)",
@@ -700,12 +676,9 @@
     }
 
     function navegarPara(view) {
+        vistaAtual = view;
         const viewPesquisa = document.getElementById('view-pesquisa');
         const viewDashboard = document.getElementById('view-dashboard');
-        const btnReopenFilter = document.getElementById('btn-reopen-filter');
-        const panelSegmentacao = document.getElementById('panel-segmentacao');
-        const panelSegmentacaoDash = document.getElementById('panel-segmentacao-dash');
-
         const navPesquisa = document.getElementById('nav-pesquisa');
         const navDashboard = document.getElementById('nav-dashboard');
 
@@ -714,20 +687,20 @@
             viewDashboard.style.display = 'none';
             navPesquisa.classList.add('active');
             navDashboard.classList.remove('active');
-            
-            if (btnReopenFilter) btnReopenFilter.style.display = '';
-            if (panelSegmentacao) panelSegmentacao.style.display = '';
-            if (panelSegmentacaoDash) panelSegmentacaoDash.style.display = 'none';
+            filtrar();
         } else if (view === 'dashboard') {
             viewPesquisa.style.display = 'none';
             viewDashboard.style.display = 'flex';
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
+            atualizarMétricasDashboard();
+        }
+    }
 
-            if (btnReopenFilter) btnReopenFilter.style.display = 'none';
-            if (panelSegmentacao) panelSegmentacao.style.display = 'none';
-            if (panelSegmentacaoDash) panelSegmentacaoDash.style.display = 'flex';
-
+    function dispararFiltrosGerais() {
+        if (vistaAtual === 'pesquisa') {
+            filtrar();
+        } else {
             atualizarMétricasDashboard();
         }
     }
@@ -1112,7 +1085,9 @@
         document.getElementById('select-imagem').value = "";
         document.getElementById('select-fornecedor').value = "";
         document.getElementById('select-local-estoque').value = "";
-        filtrar();
+        document.getElementById('busca').value = "";
+        document.getElementById('dash-busca-dinamica').value = "";
+        dispararFiltrosGerais();
     }
 
     let cacheItensCriticos = [];
@@ -1218,14 +1193,45 @@
     function filtrarTabelaDashboard() {
         const filtroTipo = document.getElementById('dash-select-filtro').value;
         const termoBusca = document.getElementById('dash-busca-dinamica').value.toLowerCase().trim();
+        const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
+        const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
+        const localSel = document.getElementById('select-local-estoque').value.toLowerCase().trim();
+        const imagemSel = document.getElementById('select-imagem').value;
+        const saldoStatusSel = document.getElementById('select-saldo-status').value;
+
         const tbodyCriticos = document.getElementById('dash-table-criticos-body');
         tbodyCriticos.innerHTML = '';
 
         const itensFiltrados = cacheItensCriticos.filter(obj => {
+            const cod = getVal(obj.item, ['cod_item', 'codigo', 'cod']);
+            const codLimpo = String(cod).trim();
+            const codNorm = normalizarCod(cod);
+
             const linhaCompleta = Object.values(obj.item).join(' ').toLowerCase();
+            const fornItem = getVal(obj.item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
+            const localEstoqueItem = String(obj.localEstoque).toLowerCase();
+            const filialItem = String(obj.filialExibir).toLowerCase();
+
             const bateTipo = (filtroTipo === 'todos' || obj.statusTipo === filtroTipo);
             const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
-            return bateTipo && bateBusca;
+            const bateFilial = (!filialSel || filialItem.includes(filialSel));
+            const bateForn = (!fornSel || fornItem === fornSel);
+            const bateLocal = (!localSel || localEstoqueItem === localSel);
+
+            let bateImagem = true;
+            if (imagemSel) {
+                const temFoto = itensComFoto.has(codLimpo);
+                if (imagemSel === 'com_foto') bateImagem = temFoto;
+                else if (imagemSel === 'sem_foto') bateImagem = !temFoto;
+            }
+
+            let bateSaldoStatus = true;
+            if (saldoStatusSel) {
+                if (saldoStatusSel === 'com_saldo') bateSaldoStatus = obj.saldo > 0;
+                else if (saldoStatusSel === 'zerado_com_minmax') bateSaldoStatus = obj.saldo <= 0 && obj.estMin > 0 && obj.estMax > 0;
+            }
+
+            return bateTipo && bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
         });
 
         const subtotalInfo = document.getElementById('dash-subtotal-info');
@@ -1390,8 +1396,6 @@
             const equipamento = getVal(item, ['equipamento', 'equip']);
             const especificacao = getVal(item, ['especificacao', 'espec']);
             const prateleira = getVal(item, ['endereco', 'prateleira', 'rua', 'prat']);
-            const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
-            const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
             const estMin = getVal(item, ['est_min', 'minimo']);
             const estMax = getVal(item, ['est_max', 'maximo']);
             const leadTime = getVal(item, ['lead_time', 'lead']);
@@ -1834,7 +1838,7 @@
     }
 
     function filtrar() {
-        const termo = document.getElementById('busca').value.toLowerCase().trim();
+        const termo = (vistaAtual === 'pesquisa' ? document.getElementById('busca').value : document.getElementById('dash-busca-dinamica').value).toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
         const localSel = document.getElementById('select-local-estoque').value.toLowerCase().trim();
         const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
@@ -1858,7 +1862,7 @@
             const bateTexto = !termo || linhaCompleta.includes(termo);
             const bateForn = !fornSel || fornItem === fornSel;
             const bateLocal = !localSel || localEstoqueItem === localSel;
-            const bateFilial = !filialSel || filialStr === filialSel;
+            const bateFilial = !filialSel || filialStr.includes(filialSel);
 
             let bateImagem = true;
             if (imagemSel) {
