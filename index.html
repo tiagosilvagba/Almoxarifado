@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <!-- Seletor de Temas Reformulado -->
+        <!-- Seletor de Temas -->
         <div class="sidebar-theme-container">
             <span class="theme-label">🎨 APARÊNCIA DO SISTEMA</span>
             <div class="theme-selector-grid">
@@ -349,7 +349,7 @@
         return '-';
     }
 
-    // SINCRONIZAÇÃO AUTOMÁTICA DO SALDO.CSV COM BYPASS DE CACHE
+    // CARREGAMENTO E SOMA ACUMULADA DE MÚLTIPLAS LINHAS DO MESMO CÓDIGO
     async function carregarSaldos() {
         mapaSaldos.clear();
         try {
@@ -375,12 +375,18 @@
                     const codNorm = normalizarCod(codBruto);
                     if (codNorm) {
                         const numSaldo = parseFloat(String(saldoVal).replace(',', '.')) || 0;
-                        mapaSaldos.set(codNorm, numSaldo);
+                        // Soma o saldo atual ao que já existe no Map para o mesmo código
+                        const saldoAtualAcumulado = mapaSaldos.get(codNorm) || 0;
+                        mapaSaldos.set(codNorm, saldoAtualAcumulado + numSaldo);
                     }
                 });
+                console.log(`✅ Saldo acumulado lido com sucesso para ${mapaSaldos.size} itens únicos.`);
+            } else {
+                ultimaAtualizacaoSaldo = 'Arquivo saldo.csv não encontrado no servidor';
             }
         } catch (e) {
-            console.warn("Arquivo saldo.csv não encontrado no servidor.", e);
+            console.warn("Acesso local ao saldo.csv bloqueado ou arquivo indisponível.", e);
+            ultimaAtualizacaoSaldo = 'Leitura local bloqueada (rode via Live Server/GitHub)';
         }
     }
 
@@ -431,6 +437,7 @@
             const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
             const dadosBrutos = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             
+            // EXIBE APENAS SE A SOMA TOTAL DOS SALDOS FOR MAIOR QUE ZERO
             dadosCSV = dadosBrutos.filter(item => {
                 const codBruto = getVal(item, ['cod_item', 'codigo', 'cod']);
                 const codNorm = normalizarCod(codBruto);
@@ -446,7 +453,7 @@
 
             popularSegmentacaoDados();
 
-            statusDiv.innerText = `✅ Base (${nomeArquivo}) carregada! (${dadosCSV.length} itens com saldo)`;
+            statusDiv.innerText = `✅ Base (${nomeArquivo}) carregada! (${dadosCSV.length} itens com saldo positivo)`;
             renderizarPagina();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
@@ -517,7 +524,7 @@
         `;
 
         if (totalItens === 0) {
-            divContainer.innerHTML = '<p>Nenhum item encontrado com saldo maior que zero ou com os filtros aplicados.</p>';
+            divContainer.innerHTML = '<p>Nenhum item encontrado com saldo acumulado maior que zero ou com os filtros aplicados.</p>';
             paginacaoDiv.style.display = 'none';
             return;
         }
