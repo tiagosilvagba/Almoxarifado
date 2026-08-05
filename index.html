@@ -109,7 +109,7 @@
         </div>
     </aside>
 
-    <!-- Painel de Filtros Específico do Dashboard (Lateral Esquerda Padronizada) -->
+    <!-- Painel de Filtros Específico do Dashboard -->
     <aside class="filter-panel-left" id="panel-segmentacao-dash" style="display: none;">
         <div class="panel-header">
             <span class="panel-title">⚡ Filtro do Dashboard</span>
@@ -163,13 +163,19 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header>
-                    <h1>Dashboard Executivo & Indicadores de Estoque</h1>
+                    <h1>Dashboard Executivo & Indicadores Financeiros</h1>
                 </header>
             </div>
 
             <div class="scrollable-results-section">
                 <!-- KPI CARDS -->
                 <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-title">Valor Total em Estoque</span>
+                        <span class="kpi-value color-accent" id="dash-kpi-valor-total">R$ 0,00</span>
+                        <span class="kpi-sub">Capital imobilizado</span>
+                    </div>
+
                     <div class="kpi-card">
                         <span class="kpi-title">Total Monitorado</span>
                         <span class="kpi-value" id="dash-kpi-total">0</span>
@@ -199,17 +205,22 @@
                         <span class="kpi-value color-info" id="dash-kpi-acima">0</span>
                         <span class="kpi-sub">Excesso de Estoque</span>
                     </div>
-
-                    <div class="kpi-card">
-                        <span class="kpi-title">📸 Acuracidade Visual</span>
-                        <span class="kpi-value color-accent" id="dash-kpi-fotos">0</span>
-                        <span class="kpi-sub" id="dash-kpi-fotos-perc">0% Cobertura</span>
-                    </div>
                 </div>
 
-                <!-- SEÇÃO DE ITENS CRÍTICOS COM HOVER CARD -->
+                <!-- SEÇÃO DE ITENS CRÍTICOS COM VALOR TOTAL E CUSTO -->
                 <div class="dash-section-box">
-                    <div class="dash-section-title">📋 Auditoria de Divergências e Saldo Atual (Passe o mouse para visualizar a foto)</div>
+                    <div class="dash-section-header">
+                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria Financeira de Desvios de Estoque</div>
+                        <div class="dash-filter-bar">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-secondary);">Filtrar Visão:</label>
+                            <select id="dash-select-filtro" class="segmentation-select" style="width: 240px; padding: 6px 10px;" onchange="filtrarTabelaDashboard()">
+                                <option value="todos">🔍 Todos os Desvios</option>
+                                <option value="ruptura">⚠️ Apenas Ruptura Total (Zerados)</option>
+                                <option value="abaixo">📉 Apenas Abaixo do Mínimo</option>
+                                <option value="acima">🚨 Apenas Acima do Máximo</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <div class="dash-table-container" style="margin-top: 14px;">
                         <table class="dash-table">
@@ -217,10 +228,10 @@
                                 <tr>
                                     <th>Código</th>
                                     <th>Descrição do Item</th>
-                                    <th>Localização</th>
                                     <th>Saldo Atual</th>
-                                    <th>Est. Mín.</th>
-                                    <th>Est. Máx.</th>
+                                    <th>Custo Unit.</th>
+                                    <th>Valor Total</th>
+                                    <th>Mín / Máx</th>
                                     <th>Status Crítico</th>
                                     <th>Fornecedor</th>
                                 </tr>
@@ -269,6 +280,8 @@
     let dadosCSV = [];
     let dadosFiltrados = [];
     let mapaSaldos = new Map();
+    let mapaCustosUnitarios = new Map();
+    let mapaValoresTotais = new Map();
     let ultimaAtualizacaoSaldo = 'Não carregado';
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
@@ -281,6 +294,11 @@
     const cachePDFs = new Map();
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
+
+    function formatarMoeda(val) {
+        const num = parseNum(val);
+        return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
 
     function navegarPara(view) {
         const viewPesquisa = document.getElementById('view-pesquisa');
@@ -470,7 +488,8 @@
 
     function parseNum(val) {
         if (val === undefined || val === null) return 0;
-        const num = parseFloat(String(val).replace(',', '.'));
+        const limpo = String(val).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+        const num = parseFloat(limpo);
         return isNaN(num) ? 0 : num;
     }
 
@@ -492,8 +511,12 @@
         return '-';
     }
 
+    // LEITURA OTIMIZADA DO SALDO, CUSTO E VALOR TOTAL NO SALDO.CSV
     async function carregarSaldos() {
         mapaSaldos.clear();
+        mapaCustosUnitarios.clear();
+        mapaValoresTotais.clear();
+
         try {
             const resposta = await fetch('saldo.csv?t=' + new Date().getTime(), { cache: 'no-cache' });
             if (resposta.ok) {
@@ -514,6 +537,8 @@
                     
                     let idxCod = cabecalhos.findIndex(h => h.includes('cod') || h.includes('item'));
                     let idxSaldo = cabecalhos.findIndex(h => h.includes('saldo') || h.includes('qtd') || h.includes('estoque') || h.includes('quantidade'));
+                    let idxCusto = cabecalhos.findIndex(h => h.includes('custo') || h.includes('preco') || h.includes('unit'));
+                    let idxTotal = cabecalhos.findIndex(h => h.includes('total') || h.includes('valor'));
 
                     if (idxCod === -1) idxCod = 0;
                     if (idxSaldo === -1) idxSaldo = 1;
@@ -525,12 +550,25 @@
                         const colunas = linha.split(separador).map(c => c.trim().replace(/["']/g, ''));
                         const codBruto = colunas[idxCod];
                         const saldoVal = colunas[idxSaldo];
+                        const custoVal = idxCusto !== -1 ? colunas[idxCusto] : 0;
+                        const totalVal = idxTotal !== -1 ? colunas[idxTotal] : 0;
 
                         const codNorm = normalizarCod(codBruto);
                         if (codNorm) {
                             const numSaldo = parseNum(saldoVal);
-                            const saldoAtualAcumulado = mapaSaldos.get(codNorm) || 0;
-                            mapaSaldos.set(codNorm, saldoAtualAcumulado + numSaldo);
+                            const numCusto = parseNum(custoVal);
+                            let numTotal = parseNum(totalVal);
+
+                            if (numTotal === 0 && numCusto > 0) {
+                                numTotal = numSaldo * numCusto;
+                            }
+
+                            const saldoAcumulado = mapaSaldos.get(codNorm) || 0;
+                            const totalAcumulado = mapaValoresTotais.get(codNorm) || 0;
+
+                            mapaSaldos.set(codNorm, saldoAcumulado + numSaldo);
+                            mapaCustosUnitarios.set(codNorm, numCusto);
+                            mapaValoresTotais.set(codNorm, totalAcumulado + numTotal);
                         }
                     }
                 }
@@ -662,6 +700,7 @@
         let abaixoMin = 0;
         let acimaMax = 0;
         let comFoto = 0;
+        let valorTotalEstoqueGeral = 0;
 
         cacheItensCriticos = [];
         const mapaFornecedores = new Map();
@@ -672,6 +711,11 @@
             const codNorm = normalizarCod(cod);
 
             const saldo = mapaSaldos.get(codNorm) || 0;
+            const custoUnit = mapaCustosUnitarios.get(codNorm) || 0;
+            const valorTotalItem = mapaValoresTotais.get(codNorm) || (saldo * custoUnit);
+            
+            valorTotalEstoqueGeral += valorTotalItem;
+
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
@@ -685,16 +729,16 @@
                 if (estMin > 0 && saldo < estMin) {
                     abaixoMin++;
                     statusTipo = 'abaixo';
-                    cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax });
+                    cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
                 } else if (estMax > 0 && saldo > estMax) {
                     acimaMax++;
                     statusTipo = 'acima';
-                    cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax });
+                    cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
                 }
             } else if (estMin > 0 && estMax > 0) {
                 rupturaTotal++;
                 statusTipo = 'ruptura';
-                cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax });
+                cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
             }
 
             if (forn && forn !== '-') {
@@ -708,6 +752,7 @@
             }
         });
 
+        document.getElementById('dash-kpi-valor-total').innerText = formatarMoeda(valorTotalEstoqueGeral);
         document.getElementById('dash-kpi-total').innerText = total;
         document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
         document.getElementById('dash-kpi-com-saldo-perc').innerText = total > 0 ? `${((comSaldo / total) * 100).toFixed(1)}% da Base` : '0%';
@@ -761,7 +806,7 @@
             return;
         }
 
-        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax }, index) => {
+        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax }) => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
@@ -782,17 +827,17 @@
             tr.onclick = () => abrirModalDadosItem(item);
 
             if (!isMobile) {
-                tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo);
+                tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo, custoUnit, valorTotalItem);
                 tr.onmouseleave = esconderHoverCard;
             }
 
             tr.innerHTML = `
                 <td><strong>${cod}</strong></td>
                 <td>${nome}</td>
-                <td>P: ${prateleira} | D: ${divisao} | R: ${reparticao}</td>
-                <td><strong style="color: ${saldo <= 0 ? 'var(--text-danger)' : 'var(--text-success)'}; font-size:14px;">${saldo} un.</strong></td>
-                <td>${estMin}</td>
-                <td>${estMax}</td>
+                <td><strong style="color: ${saldo <= 0 ? 'var(--text-danger)' : 'var(--text-success)'};">${saldo} un.</strong></td>
+                <td>${formatarMoeda(custoUnit)}</td>
+                <td><strong style="color:var(--primary-color);">${formatarMoeda(valorTotalItem)}</strong></td>
+                <td>Mín: ${estMin} / Máx: ${estMax}</td>
                 <td>${badgeHtml}</td>
                 <td>${forn}</td>
             `;
@@ -800,7 +845,7 @@
         });
     }
 
-    function mostrarHoverCardDashboard(e, item, saldo) {
+    function mostrarHoverCardDashboard(e, item, saldo, custoUnit, valorTotalItem) {
         if (isMobile) return;
 
         const cardHover = document.getElementById('hover-card');
@@ -819,11 +864,12 @@
         cardHover.innerHTML = `
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual em Estoque:</strong> ${saldo} un.</div>
+            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual:</strong> ${saldo} un.</div>
+            <div class="hover-card-section"><strong>💰 Custo Unitário:</strong> ${formatarMoeda(custoUnit)} &nbsp;|&nbsp; <strong>Total:</strong> ${formatarMoeda(valorTotalItem)}</div>
             <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
-            <div class="hover-card-section"><strong>⏱️ Lead Time de Entrega:</strong> ${leadTime}</div>
+            <div class="hover-card-section"><strong>⏱️ Lead Time:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
-            <div class="hover-card-section"><strong>⚙️ Locais de Aplicação:</strong><br>${locaisAplicacao}</div>
+            <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
         `;
 
         let posX = e.clientX + 20;
@@ -838,7 +884,6 @@
     }
 
     function abrirModalDadosItem(item) {
-        // Encontra o index real no dadosCSV para abrir o modal completo
         const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === getVal(item, ['cod_item', 'codigo', 'cod']));
         if (indexReal !== -1) {
             abrirModal(indexReal);
@@ -920,6 +965,8 @@
             
             const codNorm = normalizarCod(cod);
             const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+            const custoUnitExibir = mapaCustosUnitarios.has(codNorm) ? mapaCustosUnitarios.get(codNorm) : 0;
+            const valorTotalExibir = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : (saldoExibir * custoUnitExibir);
 
             const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
 
@@ -948,7 +995,7 @@
                     <div class="row-details">
                         <span class="row-location">📍 P: ${prateleira} | D: ${divisao} | R: ${reparticao}</span>
                         <span class="row-stock-badge" style="${estiloBadgeEstoque}">
-                            📊 Saldo Atual: ${saldoExibir} un. | Mín: ${estMin} | Máx: ${estMax}
+                            📊 Saldo: ${saldoExibir} un. | Custo: ${formatarMoeda(custoUnitExibir)} | Total: ${formatarMoeda(valorTotalExibir)}
                         </span>
                         <span class="row-lead-badge">⏱️ Lead Time: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
@@ -1066,6 +1113,8 @@
 
         const codNorm = normalizarCod(cod);
         const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+        const custoUnit = mapaCustosUnitarios.has(codNorm) ? mapaCustosUnitarios.get(codNorm) : 0;
+        const valorTotal = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : (saldoAtual * custoUnit);
 
         const srcFoto = imgCapa ? imgCapa.src : '';
         const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
@@ -1073,11 +1122,12 @@
         cardHover.innerHTML = `
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual em Estoque:</strong> ${saldoAtual} un.</div>
+            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual:</strong> ${saldoAtual} un.</div>
+            <div class="hover-card-section"><strong>💰 Custo Unit.:</strong> ${formatarMoeda(custoUnit)} &nbsp;|&nbsp; <strong>Total:</strong> ${formatarMoeda(valorTotal)}</div>
             <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
-            <div class="hover-card-section"><strong>⏱️ Lead Time de Entrega:</strong> ${leadTime}</div>
+            <div class="hover-card-section"><strong>⏱️ Lead Time:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
-            <div class="hover-card-section"><strong>⚙️ Locais de Aplicação:</strong><br>${locaisAplicacao}</div>
+            <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
         `;
 
         let posX = e.clientX + 20;
@@ -1114,6 +1164,8 @@
 
         const codNorm = normalizarCod(cod);
         const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+        const custoUnitExibir = mapaCustosUnitarios.has(codNorm) ? mapaCustosUnitarios.get(codNorm) : 0;
+        const valorTotalExibir = mapaValoresTotais.has(codNorm) ? mapaValoresTotais.get(codNorm) : (saldoExibir * custoUnitExibir);
 
         let camposExtrasHTML = '';
         const chavesIgnorar = [
@@ -1142,8 +1194,9 @@
                     </div>
 
                     <div style="background:var(--bg-subcard); color:var(--text-primary); padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
-                        <p style="margin:2px 0;">📊 <strong>Saldo Atual em Estoque:</strong> <strong>${saldoExibir} un.</strong></p>
-                        <p style="margin:2px 0;">📈 <strong>Estoque Mín / Máx:</strong> ${estMin} / ${estMax} un. &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
+                        <p style="margin:2px 0;">📊 <strong>Saldo Atual:</strong> <strong>${saldoExibir} un.</strong> &nbsp;|&nbsp; 💰 <strong>Custo Unit.:</strong> ${formatarMoeda(custoUnitExibir)}</p>
+                        <p style="margin:2px 0; margin-top:4px;">💎 <strong>Valor Total:</strong> <strong style="color:var(--primary-color);">${formatarMoeda(valorTotalExibir)}</strong></p>
+                        <p style="margin:2px 0; margin-top:4px;">📈 <strong>Estoque Mín / Máx:</strong> ${estMin} / ${estMax} un. &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
                     </div>
 
                     <p><strong>Cód. Fornecedor:</strong> ${fornecedor}</p>

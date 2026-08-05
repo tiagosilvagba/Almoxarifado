@@ -664,7 +664,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 }
 
 .kpi-value {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     color: var(--text-primary);
 }
@@ -689,13 +689,27 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     margin-bottom: 24px;
 }
 
+.dash-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
 .dash-section-title {
     font-size: 15px;
     font-weight: 700;
     color: var(--primary-color);
-    margin-bottom: 16px;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 8px;
+}
+
+.dash-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .dash-table-container {
