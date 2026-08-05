@@ -39,16 +39,16 @@
             </div>
         </div>
 
-        <!-- Navegação entre Páginas -->
+        <!-- Navegação entre Páginas (Ordem ajustada: Dashboard primeiro) -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Páginas</span>
-            <a href="#" class="nav-item active" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
-                <span>🔍</span>
-                <span>Pesquisa de Itens</span>
-            </a>
-            <a href="#" class="nav-item" id="nav-dashboard" onclick="navegarPara('dashboard')">
+            <a href="#" class="nav-item active" id="nav-dashboard" onclick="navegarPara('dashboard')">
                 <span>📊</span>
                 <span>Dashboard Geral</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
+                <span>🔍</span>
+                <span>Pesquisa de Itens</span>
             </a>
         </nav>
 
@@ -65,7 +65,7 @@
     </aside>
 
     <!-- Painel de Segmentação (Pesquisa) -->
-    <aside class="filter-panel-left" id="panel-segmentacao">
+    <aside class="filter-panel-left" id="panel-segmentacao" style="display: none;">
         <div class="panel-header">
             <span class="panel-title">⚡ Segmentação</span>
             <button class="btn-toggle-filter" onclick="toggleSegmentacao()" title="Ocultar Filtros">◀</button>
@@ -110,7 +110,7 @@
     </aside>
 
     <!-- Painel de Filtros Específico do Dashboard -->
-    <aside class="filter-panel-left" id="panel-segmentacao-dash" style="display: none;">
+    <aside class="filter-panel-left" id="panel-segmentacao-dash">
         <div class="panel-header">
             <span class="panel-title">⚡ Filtro do Dashboard</span>
         </div>
@@ -129,10 +129,10 @@
         </div>
     </aside>
 
-    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados">⚡ Filtros ▶</button>
+    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Segmentação de Dados" style="display: none;">⚡ Filtros ▶</button>
 
     <!-- PÁGINA 1: PESQUISA DE ITENS -->
-    <main class="main-content" id="view-pesquisa">
+    <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
                 <header>
@@ -141,9 +141,9 @@
 
                 <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação, aplicação, fornecedor..." oninput="filtrar()">
 
-                <div class="status">
-                    <span id="status-texto">Procurando base de dados e arquivo de saldos...</span>
-                    <span id="contador-itens"></span>
+                <div class="status" style="display: flex; justify-content: flex-end; align-items: center;">
+                    <span id="status-texto" style="margin-right: auto;">Procurando base de dados e arquivo de saldos...</span>
+                    <span id="contador-itens" style="text-align: right;"></span>
                 </div>
             </div>
 
@@ -160,7 +160,7 @@
     </main>
 
     <!-- PÁGINA 2: DASHBOARD MANAGEMENT -->
-    <main class="main-content" id="view-dashboard" style="display: none;">
+    <main class="main-content" id="view-dashboard">
         <div class="container">
             <div class="fixed-top-section">
                 <header>
@@ -292,7 +292,6 @@
         return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
-    // FORMATAÇÃO EM MILHÕES
     function formatarMilhoes(val) {
         const num = parseNum(val);
         const emMilhoes = num / 1000000;
@@ -650,6 +649,7 @@
 
             statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens ativos.`;
             renderizarPagina();
+            atualizarMétricasDashboard();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
         }
@@ -697,7 +697,6 @@
         let rupturaTotal = 0;
         let abaixoMin = 0;
         let acimaMax = 0;
-        let comFoto = 0;
         let valorTotalEstoqueGeral = 0;
 
         cacheItensCriticos = [];
@@ -705,7 +704,6 @@
 
         dadosCSV.forEach(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-            const codLimpo = String(cod).trim();
             const codNorm = normalizarCod(cod);
 
             const saldo = mapaSaldos.get(codNorm) || 0;
@@ -717,8 +715,6 @@
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-
-            if (itensComFoto.has(codLimpo)) comFoto++;
 
             let statusTipo = 'normal';
 
@@ -736,7 +732,6 @@
                 statusTipo = 'ruptura';
             }
 
-            // Armazena todos no cache para que o filtro do dashboard exiba corretamente
             cacheItensCriticos.push({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax });
 
             if (forn && forn !== '-') {
@@ -760,9 +755,6 @@
 
         document.getElementById('dash-kpi-abaixo').innerText = abaixoMin;
         document.getElementById('dash-kpi-acima').innerText = acimaMax;
-
-        document.getElementById('dash-kpi-fotos').innerText = comFoto;
-        document.getElementById('dash-kpi-fotos-perc').innerText = total > 0 ? `${((comFoto / total) * 100).toFixed(1)}% Cobertura` : '0%';
 
         filtrarTabelaDashboard();
 
@@ -807,9 +799,6 @@
         itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, custoUnit, valorTotalItem, estMin, estMax }) => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-            const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
-            const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
-            const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
 
             let badgeHtml = '';
@@ -1473,6 +1462,9 @@
         carregarEstadoSegmentacao();
         detectarDispositivo();
         carregarLogoUniversal();
+        
+        // Abre por padrão no Dashboard e ajusta estado inicial dos painéis
+        navegarPara('dashboard');
         carregarCSV();
     };
 </script>
