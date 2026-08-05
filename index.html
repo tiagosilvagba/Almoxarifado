@@ -94,6 +94,16 @@
         </div>
 
         <div class="filter-panel-body">
+            <!-- NOVO FILTRO: STATUS DO SALDO -->
+            <div class="filter-group">
+                <label class="filter-label">📦 Status do Saldo:</label>
+                <select id="select-saldo-status" class="segmentation-select" onchange="filtrar()">
+                    <option value="">Todos os Itens</option>
+                    <option value="com_saldo">✅ Com Saldo (> 0)</option>
+                    <option value="zerado_com_minmax">⚠️ Zerado com Mín/Máx (> 0)</option>
+                </select>
+            </div>
+
             <div class="filter-group">
                 <label class="filter-label">🖼️ Imagem do Item:</label>
                 <select id="select-imagem" class="segmentation-select" onchange="filtrar()">
@@ -331,6 +341,12 @@
         return String(val).toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, '').trim();
     }
 
+    function parseNum(val) {
+        if (val === undefined || val === null) return 0;
+        const num = parseFloat(String(val).replace(',', '.'));
+        return isNaN(num) ? 0 : num;
+    }
+
     function getVal(item, termosChave) {
         if (!item || typeof item !== 'object') return '-';
         const keys = Object.keys(item);
@@ -349,7 +365,6 @@
         return '-';
     }
 
-    // CARREGAMENTO E SOMA ACUMULADA DE MÚLTIPLAS LINHAS DO MESMO CÓDIGO
     async function carregarSaldos() {
         mapaSaldos.clear();
         try {
@@ -374,27 +389,28 @@
                     
                     const codNorm = normalizarCod(codBruto);
                     if (codNorm) {
-                        const numSaldo = parseFloat(String(saldoVal).replace(',', '.')) || 0;
-                        // Soma o saldo atual ao que já existe no Map para o mesmo código
+                        const numSaldo = parseNum(saldoVal);
                         const saldoAtualAcumulado = mapaSaldos.get(codNorm) || 0;
                         mapaSaldos.set(codNorm, saldoAtualAcumulado + numSaldo);
                     }
                 });
-                console.log(`✅ Saldo acumulado lido com sucesso para ${mapaSaldos.size} itens únicos.`);
+                console.log(`✅ Saldo acumulado lido para ${mapaSaldos.size} itens.`);
             } else {
                 ultimaAtualizacaoSaldo = 'Arquivo saldo.csv não encontrado no servidor';
             }
         } catch (e) {
-            console.warn("Acesso local ao saldo.csv bloqueado ou arquivo indisponível.", e);
+            console.warn("Acesso ao saldo.csv indisponível.", e);
             ultimaAtualizacaoSaldo = 'Leitura local bloqueada (rode via Live Server/GitHub)';
         }
     }
 
     async function carregarCSV() {
         const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "Sincronizando dados e arquivo de saldos...";
-
+        
+        statusDiv.innerText = "🔄 [1/2] Sincronizando saldo.csv...";
         await carregarSaldos();
+
+        statusDiv.innerText = "🔄 [2/2] Sincronizando base de dados principal (dados.csv)...";
 
         let arquivoEncontrado = null;
         let bufferArquivo = null;
@@ -437,15 +453,20 @@
             const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
             const dadosBrutos = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             
-            // EXIBE APENAS SE A SOMA TOTAL DOS SALDOS FOR MAIOR QUE ZERO
+            // FILTRAGEM INICIAL DA BASE PRINCIPAL:
+            // Inclui se (Saldo > 0) OU (Estoque Mínimo > 0 AND Estoque Máximo > 0)
             dadosCSV = dadosBrutos.filter(item => {
                 const codBruto = getVal(item, ['cod_item', 'codigo', 'cod']);
                 const codNorm = normalizarCod(codBruto);
                 
-                if (mapaSaldos.has(codNorm)) {
-                    return mapaSaldos.get(codNorm) > 0;
-                }
-                return true;
+                const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+                const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
+                const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
+
+                const temSaldoValido = saldoAtual > 0;
+                const temMinMaxValido = estMin > 0 && estMax > 0;
+
+                return temSaldoValido || temMinMaxValido;
             });
 
             dadosFiltrados = dadosCSV;
@@ -453,7 +474,7 @@
 
             popularSegmentacaoDados();
 
-            statusDiv.innerText = `✅ Base (${nomeArquivo}) carregada! (${dadosCSV.length} itens com saldo positivo)`;
+            statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens ativos.`;
             renderizarPagina();
         } catch (error) {
             statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
@@ -487,6 +508,7 @@
     }
 
     function limparFiltrosSegmentacao() {
+        document.getElementById('select-saldo-status').value = "";
         document.getElementById('select-imagem').value = "";
         document.getElementById('select-fornecedor').value = "";
         document.getElementById('select-aplicacao').value = "";
@@ -502,11 +524,24 @@
         const totalItens = dadosFiltrados.length;
 
         let comFoto = 0;
+        let qtdComSaldo = 0;
+        let qtdZeradoMinMax = 0;
+
         dadosFiltrados.forEach(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
-            if (itensComFoto.has(codLimpo)) {
-                comFoto++;
+            const codNorm = normalizarCod(cod);
+
+            if (itensComFoto.has(codLimpo)) comFoto++;
+
+            const saldo = mapaSaldos.get(codNorm) || 0;
+            const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
+            const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
+
+            if (saldo > 0) {
+                qtdComSaldo++;
+            } else if (estMin > 0 && estMax > 0) {
+                qtdZeradoMinMax++;
             }
         });
 
@@ -516,7 +551,10 @@
 
         contDiv.innerHTML = `
             <div style="text-align: right; line-height: 1.4;">
-                <div><strong>Total:</strong> ${totalItens} itens com saldo &nbsp;|&nbsp; 
+                <div><strong>Total:</strong> ${totalItens} itens &nbsp;|&nbsp; 
+                <span style="color:var(--text-success, #16a34a); font-weight:700;">✅ Saldo > 0:</span> ${qtdComSaldo} &nbsp;|&nbsp; 
+                <span style="color:#eab308; font-weight:700;">⚠️ Zerados (Mín/Máx > 0):</span> ${qtdZeradoMinMax}</div>
+                <div style="margin-top:2px;">
                 <span style="color:var(--text-success, #16a34a); font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
                 <span style="color:var(--text-danger, #dc2626); font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)</div>
                 <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">🕒 <strong>Última Atualização do Saldo Atual:</strong> ${ultimaAtualizacaoSaldo}</div>
@@ -524,7 +562,7 @@
         `;
 
         if (totalItens === 0) {
-            divContainer.innerHTML = '<p>Nenhum item encontrado com saldo acumulado maior que zero ou com os filtros aplicados.</p>';
+            divContainer.innerHTML = '<p>Nenhum item encontrado com os filtros selecionados.</p>';
             paginacaoDiv.style.display = 'none';
             return;
         }
@@ -547,7 +585,7 @@
             const leadTime = getVal(item, ['lead_time', 'lead']);
             
             const codNorm = normalizarCod(cod);
-            const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : '-';
+            const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
 
             const indexReal = inicio + index;
 
@@ -561,6 +599,12 @@
                 row.onmouseleave = esconderHoverCard;
             }
 
+            // Destaca visualmente a etiqueta do estoque se o item estiver zerado mas tiver Mín/Máx
+            const eZeradoAlerta = saldoExibir <= 0 && parseNum(estMin) > 0 && parseNum(estMax) > 0;
+            const estiloBadgeEstoque = eZeradoAlerta 
+                ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:bold;' 
+                : 'background:var(--bg-subcard); color:var(--text-primary); border:1px solid var(--border-color);';
+
             row.innerHTML = `
                 <div class="row-thumb" id="row-thumb-${indexReal}">
                     <span>Sem foto</span>
@@ -570,7 +614,9 @@
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
                         <span class="row-location">📍 P: ${prateleira} | D: ${divisao} | R: ${reparticao}</span>
-                        <span class="row-stock-badge">📊 Saldo: ${saldoExibir} | Mín: ${estMin} | Máx: ${estMax}</span>
+                        <span class="row-stock-badge" style="${estiloBadgeEstoque}">
+                            ${eZeradoAlerta ? '⚠️ ZERADO' : '📊 Saldo'}: ${saldoExibir} | Mín: ${estMin} | Máx: ${estMax}
+                        </span>
                         <span class="row-lead-badge">⏱️ Lead Time: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
                         <span><strong>Equip:</strong> ${equipamento}</span>
@@ -730,7 +776,7 @@
         const leadTime = getVal(item, ['lead_time', 'lead']);
 
         const codNorm = normalizarCod(cod);
-        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : '-';
+        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
 
         let camposExtrasHTML = '';
         const chavesIgnorar = [
@@ -983,10 +1029,12 @@
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
         const aplicSel = document.getElementById('select-aplicacao').value.toLowerCase().trim();
         const imagemSel = document.getElementById('select-imagem').value;
+        const saldoStatusSel = document.getElementById('select-saldo-status').value;
 
         dadosFiltrados = dadosCSV.filter(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
+            const codNorm = normalizarCod(cod);
 
             const linhaCompleta = Object.values(item).join(' ').toLowerCase();
             const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
@@ -1006,7 +1054,21 @@
                 }
             }
 
-            return bateTexto && bateForn && bateAplic && bateImagem;
+            // Lógica do Filtro Dinâmico de Saldo
+            let bateSaldoStatus = true;
+            if (saldoStatusSel) {
+                const saldoAtual = mapaSaldos.get(codNorm) || 0;
+                const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
+                const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
+
+                if (saldoStatusSel === 'com_saldo') {
+                    bateSaldoStatus = saldoAtual > 0;
+                } else if (saldoStatusSel === 'zerado_com_minmax') {
+                    bateSaldoStatus = saldoAtual <= 0 && estMin > 0 && estMax > 0;
+                }
+            }
+
+            return bateTexto && bateForn && bateAplic && bateImagem && bateSaldoStatus;
         });
 
         paginaAtual = 1;
