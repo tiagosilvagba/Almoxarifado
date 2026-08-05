@@ -54,6 +54,7 @@
 
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="padding: 0 0 4px 0;" data-i18n="nav_actions">Ações do Sistema</span>
+            <button class="btn-sidebar-action" onclick="toggleSegmentacao()">⚡ Exibir / Ocultar Filtros</button>
             <button class="btn-sidebar-action" onclick="conectarPastaImagens()" data-i18n="btn_conn_folder">📂 Conectar Pasta Imagens</button>
             <button class="btn-sidebar-action" onclick="mapearPastaImagensServidor()" data-i18n="btn_load_imgs">🖼️ Carregar Imagens</button>
             <label class="btn-sidebar-action" style="cursor:pointer; display:block; text-align:center;">
@@ -125,8 +126,6 @@
             <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()" data-i18n="btn_clear_filters">🧹 Limpar Filtros</button>
         </div>
     </aside>
-
-    <button class="btn-reopen-filter" id="btn-reopen-filter" onclick="toggleSegmentacao()" title="Exibir Filtros">⚡ Filtros ▶</button>
 
     <!-- PÁGINA 1: PESQUISA DE ITENS -->
     <main class="main-content" id="view-pesquisa" style="display: none;">
