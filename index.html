@@ -23,6 +23,22 @@
             </div>
         </div>
 
+        <!-- Seletor de Temas (Retornado à posição anterior) -->
+        <div class="sidebar-theme-container">
+            <span class="theme-label">🎨 APARÊNCIA DO SISTEMA</span>
+            <div class="theme-selector-grid">
+                <button class="theme-chip" onclick="aplicarTema('blue')"><span class="theme-dot dot-blue"></span><span>Azul JBS</span></button>
+                <button class="theme-chip" onclick="aplicarTema('red')"><span class="theme-dot dot-red"></span><span>Seara</span></button>
+                <button class="theme-chip" onclick="aplicarTema('dark')"><span class="theme-dot dot-dark"></span><span>Noturno</span></button>
+                <button class="theme-chip" onclick="aplicarTema('apple')"><span class="theme-dot dot-apple"></span><span>Apple Glass</span></button>
+                <button class="theme-chip" onclick="aplicarTema('emerald')"><span class="theme-dot dot-emerald"></span><span>Emerald</span></button>
+                <button class="theme-chip" onclick="aplicarTema('nordic')"><span class="theme-dot dot-nordic"></span><span>Nordic</span></button>
+                <button class="theme-chip" onclick="aplicarTema('cyber')"><span class="theme-dot dot-cyber"></span><span>Cyber Tech</span></button>
+                <button class="theme-chip" onclick="aplicarTema('titanium')"><span class="theme-dot dot-titanium"></span><span>Titanium</span></button>
+                <button class="theme-chip" onclick="aplicarTema('sunset')"><span class="theme-dot dot-sunset"></span><span>Sunset</span></button>
+            </div>
+        </div>
+
         <!-- Navegação entre Páginas -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Páginas</span>
@@ -56,6 +72,13 @@
         </div>
 
         <div class="filter-panel-body">
+            <div class="filter-group">
+                <label class="filter-label">🏢 Filial:</label>
+                <select id="select-filial" class="segmentation-select" onchange="filtrar()">
+                    <option value="">Todas as Filiais</option>
+                </select>
+            </div>
+
             <div class="filter-group">
                 <label class="filter-label" data-i18n="label_balance_status">📦 Status do Saldo:</label>
                 <select id="select-saldo-status" class="segmentation-select" onchange="filtrar()">
@@ -124,19 +147,9 @@
     <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
-                <!-- TOP HEADER CONTROLS (THEMES & LANGUAGES) -->
+                <!-- SELETOR DE IDIOMAS NO TOPO DIREITO -->
                 <div class="top-controls-bar">
-                    <div class="top-theme-selector">
-                        <button class="theme-chip" onclick="aplicarTema('blue')"><span class="theme-dot dot-blue"></span><span>Azul</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('red')"><span class="theme-dot dot-red"></span><span>Seara</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('dark')"><span class="theme-dot dot-dark"></span><span>Dark</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('apple')"><span class="theme-dot dot-apple"></span><span>Apple</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('emerald')"><span class="theme-dot dot-emerald"></span><span>Emerald</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('nordic')"><span class="theme-dot dot-nordic"></span><span>Nordic</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('cyber')"><span class="theme-dot dot-cyber"></span><span>Cyber</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('titanium')"><span class="theme-dot dot-titanium"></span><span>Titanium</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('sunset')"><span class="theme-dot dot-sunset"></span><span>Sunset</span></button>
-                    </div>
+                    <div></div>
                     <div class="top-lang-selector">
                         <button class="lang-btn" onclick="mudarIdioma('PT')">PT</button>
                         <button class="lang-btn" onclick="mudarIdioma('EN')">EN</button>
@@ -151,7 +164,7 @@
                     <h1 data-i18n="header_title">Almoxarifado JBS | Seara</h1>
                 </header>
 
-                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, equipamento, localização, especificação..." oninput="filtrar()">
+                <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, filial, equipamento, especificação..." oninput="filtrar()">
 
                 <div class="status" style="display: flex; justify-content: flex-end; align-items: center;">
                     <span id="status-texto" style="margin-right: auto;" data-i18n="status_searching">Procurando base de dados...</span>
@@ -175,19 +188,9 @@
     <main class="main-content" id="view-dashboard">
         <div class="container">
             <div class="fixed-top-section">
-                <!-- TOP HEADER CONTROLS (THEMES & LANGUAGES) -->
+                <!-- SELETOR DE IDIOMAS NO TOPO DIREITO -->
                 <div class="top-controls-bar">
-                    <div class="top-theme-selector">
-                        <button class="theme-chip" onclick="aplicarTema('blue')"><span class="theme-dot dot-blue"></span><span>Azul</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('red')"><span class="theme-dot dot-red"></span><span>Seara</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('dark')"><span class="theme-dot dot-dark"></span><span>Dark</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('apple')"><span class="theme-dot dot-apple"></span><span>Apple</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('emerald')"><span class="theme-dot dot-emerald"></span><span>Emerald</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('nordic')"><span class="theme-dot dot-nordic"></span><span>Nordic</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('cyber')"><span class="theme-dot dot-cyber"></span><span>Cyber</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('titanium')"><span class="theme-dot dot-titanium"></span><span>Titanium</span></button>
-                        <button class="theme-chip" onclick="aplicarTema('sunset')"><span class="theme-dot dot-sunset"></span><span>Sunset</span></button>
-                    </div>
+                    <div></div>
                     <div class="top-lang-selector">
                         <button class="lang-btn" onclick="mudarIdioma('PT')">PT</button>
                         <button class="lang-btn" onclick="mudarIdioma('EN')">EN</button>
@@ -250,6 +253,7 @@
                         <table class="dash-table">
                             <thead>
                                 <tr>
+                                    <th>Filial</th>
                                     <th data-i18n="th_code">Código</th>
                                     <th data-i18n="th_description">Descrição do Item</th>
                                     <th data-i18n="th_balance">Saldo Atual</th>
@@ -260,7 +264,7 @@
                                 </tr>
                             </thead>
                             <tbody id="dash-table-criticos-body">
-                                <tr><td colspan="7" style="text-align:center;" data-i18n="msg_no_items">Nenhum item encontrado.</td></tr>
+                                <tr><td colspan="8" style="text-align:center;" data-i18n="msg_no_items">Nenhum item encontrado.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -649,7 +653,7 @@
             kpi_with_balance: "Artikelen Met Saldo (>0)",
             kpi_total_rupture: "⚠️ Totale Breuk (Nul)",
             kpi_below_min: "📉 Onder Minimum",
-            kpi_sub_critical_low: "Kritisch Laగే Forraad",
+            kpi_sub_critical_low: "Kritisch Laage Voorraad",
             kpi_above_max: "🚨 Boven Maximum",
             kpi_sub_excess: "Voorraadoverschot",
             audit_section_title: "📋 Voorraad Audit (BewEeg muis om foto te zien)",
@@ -684,11 +688,11 @@
 
         const inputBusca = document.getElementById('busca');
         if (inputBusca) {
-            inputBusca.placeholder = sigla === 'EN' ? "Type code, name, equipment, specification..." : "Digite código, nome, equipamento, localização, especificação...";
+            inputBusca.placeholder = sigla === 'EN' ? "Type code, name, branch, equipment..." : "Digite código, nome, filial, equipamento, especificação...";
         }
         const dashBusca = document.getElementById('dash-busca-dinamica');
         if (dashBusca) {
-            dashBusca.placeholder = sigla === 'EN' ? "Filter by code, name, supplier..." : "Filtrar por código, nome, fornecedor...";
+            dashBusca.placeholder = sigla === 'EN' ? "Filter by code, name, branch..." : "Filtrar por código, nome, filial...";
         }
 
         renderizarPagina();
@@ -752,6 +756,10 @@
             document.documentElement.setAttribute('data-theme', tema);
         }
         localStorage.setItem('jbs_theme_preference', tema);
+        
+        document.querySelectorAll('.theme-chip').forEach(chip => chip.classList.remove('active'));
+        const chipAtivo = document.querySelector(`.theme-chip[onclick="aplicarTema('${tema}')"]`);
+        if (chipAtivo) chipAtivo.classList.add('active');
     }
 
     function carregarTemaSalvo() {
@@ -1059,18 +1067,25 @@
     function popularSegmentacaoDados() {
         const selectForn = document.getElementById('select-fornecedor');
         const selectLocal = document.getElementById('select-local-estoque');
+        const selectFilial = document.getElementById('select-filial');
 
         const fornecedoresUnicos = new Set();
         const locaisUnicos = new Set();
+        const filiaisUnicas = new Set();
 
         dadosCSV.forEach(item => {
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
             const codNorm = normalizarCod(getVal(item, ['cod_item', 'codigo', 'cod']));
             const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
+            
+            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
 
             if (forn && forn !== '-') fornecedoresUnicos.add(forn);
             if (localEstoque && localEstoque !== '-') locaisUnicos.add(localEstoque);
+            if (filialStr.trim() !== '-') filiaisUnicas.add(filialStr.trim());
         });
 
         selectForn.innerHTML = '<option value="">Todos os Fornecedores</option>';
@@ -1082,9 +1097,17 @@
         Array.from(locaisUnicos).sort().forEach(l => {
             selectLocal.innerHTML += `<option value="${l}">${l}</option>`;
         });
+
+        if (selectFilial) {
+            selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
+            Array.from(filiaisUnicas).sort().forEach(fi => {
+                selectFilial.innerHTML += `<option value="${fi}">${fi}</option>`;
+            });
+        }
     }
 
     function limparFiltrosSegmentacao() {
+        document.getElementById('select-filial').value = "";
         document.getElementById('select-saldo-status').value = "";
         document.getElementById('select-imagem').value = "";
         document.getElementById('select-fornecedor').value = "";
@@ -1113,9 +1136,13 @@
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
             
-            // Puxa o local de estoque da planilha de cadastro de itens ou do saldo.csv
             const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
+
+            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
+            const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
 
             const temMinMax = estMin > 0 && estMax > 0;
             const saldoComMinMaxZero = saldo > 0 && estMin <= 0 && estMax <= 0;
@@ -1140,7 +1167,7 @@
                 statusTipo = 'ruptura';
             }
 
-            cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax, localEstoque });
+            cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir });
 
             if (forn && forn !== '-') {
                 if (!mapaFornecedores.has(forn)) {
@@ -1207,11 +1234,11 @@
         }
 
         if (itensFiltrados.length === 0) {
-            tbodyCriticos.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">✅ Nenhum item encontrado.</td></tr>';
+            tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item encontrado.</td></tr>';
             return;
         }
 
-        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax, localEstoque }) => {
+        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir }) => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
@@ -1231,11 +1258,12 @@
             tr.onclick = () => abrirModalDadosItem(item);
 
             if (!isMobile) {
-                tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo, localEstoque);
+                tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo, localEstoque, filialExibir);
                 tr.onmouseleave = esconderHoverCard;
             }
 
             tr.innerHTML = `
+                <td><span class="row-location" style="background:var(--primary-color); color:#fff;">🏢 ${filialExibir}</span></td>
                 <td><strong>${cod}</strong></td>
                 <td>${nome}</td>
                 <td><strong style="color: ${saldo <= 0 ? 'var(--text-danger)' : 'var(--text-success)'};">${saldo} un.</strong></td>
@@ -1248,7 +1276,7 @@
         });
     }
 
-    function mostrarHoverCardDashboard(e, item, saldo, localEstoque) {
+    function mostrarHoverCardDashboard(e, item, saldo, localEstoque, filialExibir) {
         if (isMobile) return;
 
         const cardHover = document.getElementById('hover-card');
@@ -1261,17 +1289,19 @@
         const especificacao = getVal(item, ['especificacao', 'espec']);
         const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
 
-        const codLimpo = String(cod).trim();
-        const srcFoto = cacheCaminhoFoto.get(codLimpo) || '';
+        const codNorm = normalizarCod(cod);
+        const saldoAtual = mapaSaldos.get(codNorm) || 0;
+
+        const srcFoto = cacheCaminhoFoto.get(String(cod).trim()) || '';
         const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
 
         cardHover.innerHTML = `
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual:</strong> ${saldo} un.</div>
-            <div class="hover-card-section"><strong>📍 Local:</strong> ${localEstoque} &nbsp;|&nbsp; <strong>Endereço:</strong> ${prateleira}</div>
-            <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
-            <div class="hover-card-section"><strong>⏱️ Lead Time:</strong> ${leadTime}</div>
+            <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
+            <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldoAtual} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoque}</div>
+            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${prateleira}</div>
+            <div class="hover-card-section"><strong>📈 Mín / Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; <strong>Lead:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
             <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
         `;
@@ -1371,6 +1401,11 @@
             const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
 
+            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
+            const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
+
             const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
 
             const row = document.createElement('div');
@@ -1379,7 +1414,7 @@
             row.onclick = () => abrirModal(indexReal);
 
             if (!isMobile) {
-                row.onmousemove = (e) => mostrarHoverCard(e, indexReal, localEstoqueExibir);
+                row.onmousemove = (e) => mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir);
                 row.onmouseleave = esconderHoverCard;
             }
 
@@ -1396,13 +1431,13 @@
                 <div class="row-content">
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
+                        <span class="row-location" style="background:var(--primary-color); color:#fff;">🏢 ${filialExibir}</span>
                         <span class="row-location">📍 Local: ${localEstoqueExibir} | End: ${prateleira}</span>
                         <span class="row-stock-badge" style="${estiloBadgeEstoque}">
                             📊 Saldo: ${saldoExibir} un.
                         </span>
-                        <span class="row-lead-badge">⏱️ Lead Time: ${leadTime}</span>
+                        <span class="row-lead-badge">⏱️ Lead: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
-                        <span><strong>Equip:</strong> ${equipamento}</span>
                     </div>
                     <div style="font-size: 12px; color: var(--text-secondary); margin-top:2px;">
                         <strong>Espec:</strong> ${especificacao}
@@ -1499,7 +1534,7 @@
         return null;
     }
 
-    function mostrarHoverCard(e, indexReal, localEstoqueExibir) {
+    function mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir) {
         if (isMobile) return;
 
         const item = dadosCSV[indexReal];
@@ -1516,7 +1551,7 @@
         const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
 
         const codNorm = normalizarCod(cod);
-        const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+        const saldoAtual = mapaSaldos.get(codNorm) || 0;
 
         const srcFoto = imgCapa ? imgCapa.src : '';
         const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
@@ -1524,10 +1559,10 @@
         cardHover.innerHTML = `
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual:</strong> ${saldoAtual} un.</div>
-            <div class="hover-card-section"><strong>📍 Local:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; <strong>Endereço:</strong> ${prateleira}</div>
-            <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
-            <div class="hover-card-section"><strong>⏱️ Lead Time:</strong> ${leadTime}</div>
+            <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
+            <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldoAtual} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoqueExibir}</div>
+            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${prateleira}</div>
+            <div class="hover-card-section"><strong>📈 Mín / Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; <strong>Lead:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
             <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
         `;
@@ -1568,12 +1603,18 @@
         const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
         const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
 
+        const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+        const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+        const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
+        const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
+
         let camposExtrasHTML = '';
         const chavesIgnorar = [
             'cod_item','codigo','cod','nome_item','nome','item','descricao',
             'cod_fornecedor','fornecedor','forn','equipamento','equip','especificacao','espec',
             'endereco','prateleira','rua','prat','divisao','div','gaveta','reparticao','rep','nicho',
-            'locais_aplicacao','aplicacao','est_min','estmin','minimo','est_max','estmax','maximo','lead_time','leadtime','lead','local_estoque','local','armazem','deposito'
+            'locais_aplicacao','aplicacao','est_min','estmin','minimo','est_max','estmax','maximo','lead_time','leadtime','lead','local_estoque','local','armazem','deposito',
+            'cod_filial','nome_filial','filial_cod','filial_nome','filial'
         ];
         
         Object.keys(item).forEach(key => {
@@ -1591,7 +1632,8 @@
             <div class="modal-body">
                 <div class="modal-info">
                     <div style="background:var(--bg-subcard); border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; margin-bottom:10px; color:var(--text-primary);">
-                        <p style="margin:2px 0;">📍 <strong>Local de Estoque:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 🏠 <strong>Endereço:</strong> ${prateleira}</p>
+                        <p style="margin:2px 0;">🏢 <strong>Filial:</strong> ${filialExibir}</p>
+                        <p style="margin:4px 0 0 0;">📍 <strong>Local de Estoque:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 🏠 <strong>Endereço:</strong> ${prateleira}</p>
                         <p style="margin:4px 0 0 0;">📂 <strong>Divisão:</strong> ${divisao} &nbsp;|&nbsp; 📦 <strong>Repartição:</strong> ${reparticao}</p>
                     </div>
 
@@ -1795,6 +1837,7 @@
         const termo = document.getElementById('busca').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
         const localSel = document.getElementById('select-local-estoque').value.toLowerCase().trim();
+        const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
         const imagemSel = document.getElementById('select-imagem').value;
         const saldoStatusSel = document.getElementById('select-saldo-status').value;
 
@@ -1808,9 +1851,14 @@
             const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']).toLowerCase();
             const localEstoqueItem = (localPlanilha && localPlanilha !== '-') ? localPlanilha : String(mapaLocalEstoqueSaldo.get(codNorm) || 'geral').toLowerCase();
 
+            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+            const filialStr = ((codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '')).trim().toLowerCase();
+
             const bateTexto = !termo || linhaCompleta.includes(termo);
             const bateForn = !fornSel || fornItem === fornSel;
             const bateLocal = !localSel || localEstoqueItem === localSel;
+            const bateFilial = !filialSel || filialStr === filialSel;
 
             let bateImagem = true;
             if (imagemSel) {
@@ -1829,7 +1877,7 @@
                 else if (saldoStatusSel === 'zerado_com_minmax') bateSaldoStatus = saldoAtual <= 0 && estMin > 0 && estMax > 0;
             }
 
-            return bateTexto && bateForn && bateLocal && bateImagem && bateSaldoStatus;
+            return bateTexto && bateForn && bateLocal && bateFilial && bateImagem && bateSaldoStatus;
         });
 
         paginaAtual = 1;
