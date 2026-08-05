@@ -64,7 +64,7 @@
         </div>
     </aside>
 
-    <!-- Painel de Segmentação (Apenas Visível na Página de Pesquisa) -->
+    <!-- Painel de Segmentação (Pesquisa) -->
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
             <span class="panel-title">⚡ Segmentação</span>
@@ -143,15 +143,15 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header>
-                    <h1>Dashboard de Indicadores do Almoxarifado</h1>
+                    <h1>Dashboard Executivo & Indicadores de Estoque</h1>
                 </header>
             </div>
 
             <div class="scrollable-results-section">
-                <!-- GRID DE KPIS SUPERIORES -->
+                <!-- KPI CARDS -->
                 <div class="kpi-grid">
                     <div class="kpi-card">
-                        <span class="kpi-title">Total de Itens Monitorados</span>
+                        <span class="kpi-title">Total Monitorado</span>
                         <span class="kpi-value" id="dash-kpi-total">0</span>
                         <span class="kpi-sub">Cadastrados na Base</span>
                     </div>
@@ -163,44 +163,69 @@
                     </div>
 
                     <div class="kpi-card">
-                        <span class="kpi-title">Itens Ruptura (Mín/Máx > 0)</span>
+                        <span class="kpi-title">⚠️ Ruptura Total (Zerados)</span>
                         <span class="kpi-value color-danger" id="dash-kpi-ruptura">0</span>
                         <span class="kpi-sub" id="dash-kpi-ruptura-perc">0% de Risco</span>
                     </div>
 
                     <div class="kpi-card">
-                        <span class="kpi-title">Acuracidade Visual (Fotos)</span>
+                        <span class="kpi-title">📉 Abaixo do Mínimo</span>
+                        <span class="kpi-value color-warning" id="dash-kpi-abaixo">0</span>
+                        <span class="kpi-sub">Estoque Crítico Baixo</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-title">🚨 Acima do Máximo</span>
+                        <span class="kpi-value color-info" id="dash-kpi-acima">0</span>
+                        <span class="kpi-sub">Excesso de Estoque</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-title">📸 Acuracidade Visual</span>
                         <span class="kpi-value color-accent" id="dash-kpi-fotos">0</span>
                         <span class="kpi-sub" id="dash-kpi-fotos-perc">0% Cobertura</span>
                     </div>
                 </div>
 
-                <!-- TABELA DE RUPTURA CRÍTICA -->
+                <!-- SEÇÃO DE ITENS CRÍTICOS COM SALDO ATUAL NA TABELA -->
                 <div class="dash-section-box">
-                    <div class="dash-section-title">⚠️ Itens Críticos em Ruptura (Saldo Zerado com Estoque Mín/Máx Cadastrado)</div>
-                    <div class="dash-table-container">
+                    <div class="dash-section-header">
+                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria de Divergências e Saldo Atual</div>
+                        <div class="dash-filter-bar">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-secondary);">Filtrar Visão:</label>
+                            <select id="dash-select-filtro" class="segmentation-select" style="width: 240px; padding: 6px 10px;" onchange="filtrarTabelaDashboard()">
+                                <option value="todos">🔍 Todos os Desvios (Ruptura, Baixo, Excesso)</option>
+                                <option value="ruptura">⚠️ Apenas Ruptura Total (Zerados)</option>
+                                <option value="abaixo">📉 Apenas Abaixo do Mínimo</option>
+                                <option value="acima">🚨 Apenas Acima do Máximo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="dash-table-container" style="margin-top: 14px;">
                         <table class="dash-table">
                             <thead>
                                 <tr>
                                     <th>Código</th>
                                     <th>Descrição do Item</th>
                                     <th>Localização</th>
+                                    <th>Saldo Atual</th>
                                     <th>Est. Mín.</th>
                                     <th>Est. Máx.</th>
-                                    <th>Lead Time</th>
+                                    <th>Status Crítico</th>
                                     <th>Fornecedor</th>
                                 </tr>
                             </thead>
-                            <tbody id="dash-table-ruptura-body">
-                                <tr><td colspan="7" style="text-align:center;">Nenhum item em ruptura identificado.</td></tr>
+                            <tbody id="dash-table-criticos-body">
+                                <tr><td colspan="8" style="text-align:center;">Nenhum item encontrado.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- RESUMO DE COBERTURA POR FORNECEDOR -->
+                <!-- RESUMO DE FORNECEDORES -->
                 <div class="dash-section-box">
-                    <div class="dash-section-title">🏢 Volume de Itens Ativos por Fornecedor (Top 10)</div>
+                    <div class="dash-section-title">🏢 Volume de Itens por Fornecedor (Top 10)</div>
                     <div class="dash-table-container">
                         <table class="dash-table">
                             <thead>
@@ -208,7 +233,7 @@
                                     <th>Fornecedor</th>
                                     <th>Total de Itens</th>
                                     <th>Itens c/ Saldo</th>
-                                    <th>Itens em Ruptura</th>
+                                    <th>Em Desvio Crítico</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-table-fornecedores-body">
@@ -248,7 +273,6 @@
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
 
-    // NAVEGAÇÃO ENTRE VISUAIZAÇÕES (PESQUISA VS DASHBOARD)
     function navegarPara(view) {
         const viewPesquisa = document.getElementById('view-pesquisa');
         const viewDashboard = document.getElementById('view-dashboard');
@@ -469,28 +493,41 @@
                     ultimaAtualizacaoSaldo = new Date().toLocaleString('pt-BR');
                 }
 
-                const buffer = await resposta.arrayBuffer();
-                const workbook = XLSX.read(buffer, { type: 'array' });
-                const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
-                const dadosSaldo = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
-
-                dadosSaldo.forEach(linha => {
-                    const codBruto = getVal(linha, ['cod_item', 'codigo', 'cod', 'item']);
-                    const saldoVal = getVal(linha, ['saldo_atual', 'saldo', 'qtd', 'quantidade', 'est_atual', 'estoque']);
+                const textoCSV = await resposta.text();
+                const linhas = textoCSV.split(/\r?\n/);
+                
+                if (linhas.length > 0) {
+                    const separador = linhas[0].includes(';') ? ';' : ',';
+                    const cabecalhos = linhas[0].toLowerCase().split(separador).map(h => h.trim().replace(/["']/g, ''));
                     
-                    const codNorm = normalizarCod(codBruto);
-                    if (codNorm) {
-                        const numSaldo = parseNum(saldoVal);
-                        const saldoAtualAcumulado = mapaSaldos.get(codNorm) || 0;
-                        mapaSaldos.set(codNorm, saldoAtualAcumulado + numSaldo);
+                    let idxCod = cabecalhos.findIndex(h => h.includes('cod') || h.includes('item'));
+                    let idxSaldo = cabecalhos.findIndex(h => h.includes('saldo') || h.includes('qtd') || h.includes('estoque') || h.includes('quantidade'));
+
+                    if (idxCod === -1) idxCod = 0;
+                    if (idxSaldo === -1) idxSaldo = 1;
+
+                    for (let i = 1; i < linhas.length; i++) {
+                        const linha = linhas[i].trim();
+                        if (!linha) continue;
+
+                        const colunas = linha.split(separador).map(c => c.trim().replace(/["']/g, ''));
+                        const codBruto = colunas[idxCod];
+                        const saldoVal = colunas[idxSaldo];
+
+                        const codNorm = normalizarCod(codBruto);
+                        if (codNorm) {
+                            const numSaldo = parseNum(saldoVal);
+                            const saldoAtualAcumulado = mapaSaldos.get(codNorm) || 0;
+                            mapaSaldos.set(codNorm, saldoAtualAcumulado + numSaldo);
+                        }
                     }
-                });
+                }
             } else {
                 ultimaAtualizacaoSaldo = 'Arquivo saldo.csv não encontrado no servidor';
             }
         } catch (e) {
             console.warn("Acesso ao saldo.csv indisponível.", e);
-            ultimaAtualizacaoSaldo = 'Leitura local bloqueada (rode via Live Server/GitHub)';
+            ultimaAtualizacaoSaldo = 'Leitura local bloqueada';
         }
     }
 
@@ -603,14 +640,17 @@
         filtrar();
     }
 
-    // PROCESSAMENTO DO DASHBOARD MANAGEMENT
+    let cacheItensCriticos = [];
+
     function atualizarMétricasDashboard() {
         const total = dadosCSV.length;
         let comSaldo = 0;
-        let emRuptura = 0;
+        let rupturaTotal = 0;
+        let abaixoMin = 0;
+        let acimaMax = 0;
         let comFoto = 0;
 
-        const itensRuptura = [];
+        cacheItensCriticos = [];
         const mapaFornecedores = new Map();
 
         dadosCSV.forEach(item => {
@@ -625,69 +665,51 @@
 
             if (itensComFoto.has(codLimpo)) comFoto++;
 
+            let statusTipo = 'normal';
+
             if (saldo > 0) {
                 comSaldo++;
+                if (estMin > 0 && saldo < estMin) {
+                    abaixoMin++;
+                    statusTipo = 'abaixo';
+                    cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax });
+                } else if (estMax > 0 && saldo > estMax) {
+                    acimaMax++;
+                    statusTipo = 'acima';
+                    cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax });
+                }
             } else if (estMin > 0 && estMax > 0) {
-                emRuptura++;
-                itensRuptura.push(item);
+                rupturaTotal++;
+                statusTipo = 'ruptura';
+                cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax });
             }
 
-            // Agrupa por Fornecedor
             if (forn && forn !== '-') {
                 if (!mapaFornecedores.has(forn)) {
-                    mapaFornecedores.set(forn, { total: 0, comSaldo: 0, emRuptura: 0 });
+                    mapaFornecedores.set(forn, { total: 0, comSaldo: 0, emDesvio: 0 });
                 }
                 const dadosForn = mapaFornecedores.get(forn);
                 dadosForn.total++;
                 if (saldo > 0) dadosForn.comSaldo++;
-                if (saldo <= 0 && estMin > 0 && estMax > 0) dadosForn.emRuptura++;
+                if (statusTipo !== 'normal') dadosForn.emDesvio++;
             }
         });
 
-        // Atualiza KPIs Superiores
         document.getElementById('dash-kpi-total').innerText = total;
         document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
         document.getElementById('dash-kpi-com-saldo-perc').innerText = total > 0 ? `${((comSaldo / total) * 100).toFixed(1)}% da Base` : '0%';
 
-        document.getElementById('dash-kpi-ruptura').innerText = emRuptura;
-        document.getElementById('dash-kpi-ruptura-perc').innerText = total > 0 ? `${((emRuptura / total) * 100).toFixed(1)}% em Risco` : '0%';
+        document.getElementById('dash-kpi-ruptura').innerText = rupturaTotal;
+        document.getElementById('dash-kpi-ruptura-perc').innerText = total > 0 ? `${((rupturaTotal / total) * 100).toFixed(1)}% de Risco` : '0%';
+
+        document.getElementById('dash-kpi-abaixo').innerText = abaixoMin;
+        document.getElementById('dash-kpi-acima').innerText = acimaMax;
 
         document.getElementById('dash-kpi-fotos').innerText = comFoto;
         document.getElementById('dash-kpi-fotos-perc').innerText = total > 0 ? `${((comFoto / total) * 100).toFixed(1)}% Cobertura` : '0%';
 
-        // Preenche Tabela de Ruptura
-        const tbodyRuptura = document.getElementById('dash-table-ruptura-body');
-        tbodyRuptura.innerHTML = '';
+        filtrarTabelaDashboard();
 
-        if (itensRuptura.length === 0) {
-            tbodyRuptura.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">✅ Nenhum item crítico em ruptura encontrado.</td></tr>';
-        } else {
-            itensRuptura.slice(0, 50).forEach(item => {
-                const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-                const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-                const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
-                const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
-                const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
-                const estMin = getVal(item, ['est_min', 'minimo']);
-                const estMax = getVal(item, ['est_max', 'maximo']);
-                const leadTime = getVal(item, ['lead_time', 'lead']);
-                const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-
-                tbodyRuptura.innerHTML += `
-                    <tr>
-                        <td><strong>${cod}</strong></td>
-                        <td>${nome}</td>
-                        <td>P: ${prateleira} | D: ${divisao} | R: ${reparticao}</td>
-                        <td><span class="color-danger" style="font-weight:bold;">${estMin}</span></td>
-                        <td>${estMax}</td>
-                        <td>${leadTime}</td>
-                        <td>${forn}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        // Preenche Tabela de Fornecedores
         const tbodyForn = document.getElementById('dash-table-fornecedores-body');
         tbodyForn.innerHTML = '';
 
@@ -704,11 +726,58 @@
                         <td><strong>${forn}</strong></td>
                         <td>${dados.total}</td>
                         <td><span class="color-success" style="font-weight:bold;">${dados.comSaldo}</span></td>
-                        <td><span class="color-danger" style="font-weight:bold;">${dados.emRuptura}</span></td>
+                        <td><span class="color-danger" style="font-weight:bold;">${dados.emDesvio}</span></td>
                     </tr>
                 `;
             });
         }
+    }
+
+    function filtrarTabelaDashboard() {
+        const filtroTipo = document.getElementById('dash-select-filtro').value;
+        const tbodyCriticos = document.getElementById('dash-table-criticos-body');
+        tbodyCriticos.innerHTML = '';
+
+        const itensFiltrados = cacheItensCriticos.filter(obj => {
+            if (filtroTipo === 'todos') return true;
+            return obj.statusTipo === filtroTipo;
+        });
+
+        if (itensFiltrados.length === 0) {
+            tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item nesta categoria de desvio.</td></tr>';
+            return;
+        }
+
+        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax }) => {
+            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
+            const prateleira = getVal(item, ['prateleira', 'prat', 'rua']);
+            const divisao = getVal(item, ['divisao', 'div', 'gaveta']);
+            const reparticao = getVal(item, ['reparticao', 'rep', 'nicho']);
+            const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+
+            let badgeHtml = '';
+            if (statusTipo === 'ruptura') {
+                badgeHtml = '<span class="badge-status badge-ruptura">⚠️ Ruptura Total</span>';
+            } else if (statusTipo === 'abaixo') {
+                badgeHtml = '<span class="badge-status badge-abaixo">📉 Abaixo do Mínimo</span>';
+            } else if (statusTipo === 'acima') {
+                badgeHtml = '<span class="badge-status badge-acima">🚨 Acima do Máximo</span>';
+            }
+
+            tbodyCriticos.innerHTML += `
+                <tr>
+                    <td><strong>${cod}</strong></td>
+                    <td>${nome}</td>
+                    <td>P: ${prateleira} | D: ${divisao} | R: ${reparticao}</td>
+                    <td><strong style="color: ${saldo <= 0 ? 'var(--text-danger)' : 'var(--text-success)'}; font-size:14px;">${saldo} un.</strong></td>
+                    <td>${estMin}</td>
+                    <td>${estMax}</td>
+                    <td>${badgeHtml}</td>
+                    <td>${forn}</td>
+                </tr>
+            `;
+        });
     }
 
     function renderizarPagina() {
@@ -810,7 +879,7 @@
                     <div class="row-details">
                         <span class="row-location">📍 P: ${prateleira} | D: ${divisao} | R: ${reparticao}</span>
                         <span class="row-stock-badge" style="${estiloBadgeEstoque}">
-                            ${eZeradoAlerta ? '⚠️ ZERADO' : '📊 Saldo'}: ${saldoExibir} | Mín: ${estMin} | Máx: ${estMax}
+                            📊 Saldo Atual: ${saldoExibir} un. | Mín: ${estMin} | Máx: ${estMax}
                         </span>
                         <span class="row-lead-badge">⏱️ Lead Time: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
@@ -926,13 +995,17 @@
         const especificacao = getVal(item, ['especificacao', 'espec']);
         const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
 
+        const codNorm = normalizarCod(cod);
+        const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+
         const srcFoto = imgCapa ? imgCapa.src : '';
         const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
 
         cardHover.innerHTML = `
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section"><strong>📊 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
+            <div class="hover-card-section" style="color:var(--primary-color);"><strong>📊 Saldo Atual em Estoque:</strong> ${saldoAtual} un.</div>
+            <div class="hover-card-section"><strong>📈 Estoque Mín / Máx:</strong> ${estMin} / ${estMax}</div>
             <div class="hover-card-section"><strong>⏱️ Lead Time de Entrega:</strong> ${leadTime}</div>
             <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
             <div class="hover-card-section"><strong>⚙️ Locais de Aplicação:</strong><br>${locaisAplicacao}</div>
@@ -1000,7 +1073,7 @@
                     </div>
 
                     <div style="background:var(--bg-subcard); color:var(--text-primary); padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
-                        <p style="margin:2px 0;">📊 <strong>Saldo em Estoque:</strong> <strong>${saldoExibir} un.</strong></p>
+                        <p style="margin:2px 0;">📊 <strong>Saldo Atual em Estoque:</strong> <strong>${saldoExibir} un.</strong></p>
                         <p style="margin:2px 0;">📈 <strong>Estoque Mín / Máx:</strong> ${estMin} / ${estMax} un. &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
                     </div>
 

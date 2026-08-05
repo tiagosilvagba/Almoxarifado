@@ -2,7 +2,6 @@
    1. VARIÁVEIS DE CORES & TEMAS
    ========================================================================== */
 :root {
-    /* Tema 1: Azul JBS (Padrão) */
     --bg-body: #f4f6f9;
     --bg-card: #ffffff;
     --bg-subcard: #eef2f7;
@@ -15,6 +14,8 @@
     --accent-hover: #004C99;
     --text-success: #16a34a;
     --text-danger: #dc2626;
+    --text-warning: #d97706;
+    --text-info: #0284c7;
 }
 
 [data-theme="red"] {
@@ -30,6 +31,8 @@
     --accent-hover: #B71C1C;
     --text-success: #16a34a;
     --text-danger: #dc2626;
+    --text-warning: #d97706;
+    --text-info: #0284c7;
 }
 
 [data-theme="dark"] {
@@ -45,6 +48,8 @@
     --accent-hover: #0369a1;
     --text-success: #4ade80;
     --text-danger: #f87171;
+    --text-warning: #fbbf24;
+    --text-info: #38bdf8;
 }
 
 [data-theme="apple"] {
@@ -60,6 +65,8 @@
     --accent-hover: #28a745;
     --text-success: #34c759;
     --text-danger: #ff3b30;
+    --text-warning: #ff9500;
+    --text-info: #007aff;
 }
 
 [data-theme="emerald"] {
@@ -75,6 +82,8 @@
     --accent-hover: #047857;
     --text-success: #34d399;
     --text-danger: #f87171;
+    --text-warning: #fbbf24;
+    --text-info: #38bdf8;
 }
 
 [data-theme="nordic"] {
@@ -90,6 +99,8 @@
     --accent-hover: #1d4ed8;
     --text-success: #059669;
     --text-danger: #e11d48;
+    --text-warning: #d97706;
+    --text-info: #0284c7;
 }
 
 [data-theme="cyber"] {
@@ -105,6 +116,8 @@
     --accent-hover: #5200cc;
     --text-success: #00ff66;
     --text-danger: #ff0055;
+    --text-warning: #ffcc00;
+    --text-info: #00f0ff;
 }
 
 [data-theme="titanium"] {
@@ -120,6 +133,8 @@
     --accent-hover: #b45309;
     --text-success: #22c55e;
     --text-danger: #ef4444;
+    --text-warning: #f59e0b;
+    --text-info: #38bdf8;
 }
 
 [data-theme="sunset"] {
@@ -135,6 +150,8 @@
     --accent-hover: #b45309;
     --text-success: #15803d;
     --text-danger: #b91c1c;
+    --text-warning: #c2410c;
+    --text-info: #0284c7;
 }
 
 /* ==========================================================================
@@ -622,7 +639,7 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
    ========================================================================== */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -631,15 +648,15 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 20px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
 .kpi-title {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -647,17 +664,19 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
 }
 
 .kpi-value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 800;
     color: var(--text-primary);
 }
 
 .kpi-value.color-success { color: var(--text-success); }
 .kpi-value.color-danger { color: var(--text-danger); }
+.kpi-value.color-warning { color: var(--text-warning); }
+.kpi-value.color-info { color: var(--text-info); }
 .kpi-value.color-accent { color: var(--primary-color); }
 
 .kpi-sub {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
     font-weight: 600;
 }
@@ -670,13 +689,27 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     margin-bottom: 24px;
 }
 
+.dash-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
 .dash-section-title {
     font-size: 15px;
     font-weight: 700;
     color: var(--primary-color);
-    margin-bottom: 16px;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 8px;
+}
+
+.dash-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .dash-table-container {
@@ -709,8 +742,21 @@ header h1 { font-size: 19px; font-weight: 700; color: var(--primary-color); }
     background: var(--bg-subcard);
 }
 
+.badge-status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.badge-ruptura { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-abaixo { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.badge-acima { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+
 .color-danger { color: var(--text-danger) !important; }
 .color-success { color: var(--text-success) !important; }
+.color-warning { color: var(--text-warning) !important; }
 
 /* ==========================================================================
    7. MODAL, PREVISUALIZAÇÃO & BOTÃO DO PDF
