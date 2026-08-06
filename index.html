@@ -43,11 +43,11 @@
         <!-- Navegação entre Páginas -->
         <nav class="sidebar-nav">
             <span class="nav-section-title">Páginas</span>
-            <a href="#" class="nav-item active" id="nav-dashboard" onclick="navegarPara('dashboard')">
+            <a href="#" class="nav-item" id="nav-dashboard" onclick="navegarPara('dashboard')">
                 <span>📊</span>
                 <span data-i18n="nav_dashboard">Dashboard Geral</span>
             </a>
-            <a href="#" class="nav-item" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
+            <a href="#" class="nav-item active" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
                 <span>🔍</span>
                 <span data-i18n="nav_pesquisa">Pesquisa de Itens</span>
             </a>
@@ -118,11 +118,11 @@
     </aside>
 
     <!-- PÁGINA 1: PESQUISA DE ITENS -->
-    <main class="main-content" id="view-pesquisa" style="display: none;">
+    <main class="main-content" id="view-pesquisa" style="display: flex;">
         <div class="container">
             <div class="fixed-top-section">
                 <header>
-                    <h1 data-i18n="header_title">Almoxarifado JBS | Seara</h1>
+                    <h1>Almoxarifado JBS | Seara</h1>
                 </header>
 
                 <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, filial, equipamento, especificação..." oninput="dispararFiltrosGerais()">
@@ -146,7 +146,7 @@
     </main>
 
     <!-- PÁGINA 2: DASHBOARD MANAGEMENT -->
-    <main class="main-content" id="view-dashboard">
+    <main class="main-content" id="view-dashboard" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
                 <header>
@@ -246,9 +246,9 @@
     let mapaSaldos = new Map();
     let paginaAtual = 1;
     let dashPaginaAtual = 1;
-    const ITENS_POR_PAGINA = 25;
+    const ITENS_POR_PAGINA = 20;
 
-    let vistaAtual = 'dashboard';
+    let vistaAtual = 'pesquisa';
     const itensComFoto = new Set();
     const cacheCaminhoFoto = new Map();
     let cacheItensCriticos = [];
@@ -366,7 +366,6 @@
         return n !== '-' ? n : (c !== '-' ? c : 'Geral');
     }
 
-    // saldo.csv auxiliar
     async function carregarSaldos() {
         mapaSaldos.clear();
         try {
@@ -552,6 +551,7 @@
                 if (achou) break;
             }
         }
+        renderizarPagina();
     }
 
     function atualizarMétricasDashboard() {
@@ -686,6 +686,7 @@
         if (indexReal !== -1) abrirModal(indexReal);
     }
 
+    // RESTAURADO O PADRÃO ORIGINAL VISÍVEL DE PESQUISA DE ITENS (Com foto, miniaturas, especificações e detalhes completos)
     function renderizarPagina() {
         const divContainer = document.getElementById('resultados');
         const contadorEl = document.getElementById('contador-itens');
@@ -709,20 +710,45 @@
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+            const equipamento = getVal(item, ['equipamento', 'equip']);
+            const especificacao = getVal(item, ['especificacao', 'espec']);
+            
+            const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
+            const divi = getVal(item, ['divisao', 'div', 'gaveta']);
+            const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
+            const enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
+
+            const estMin = getVal(item, ['est_min', 'minimo']);
+            const estMax = getVal(item, ['est_max', 'maximo']);
+            const leadTime = getVal(item, ['lead_time', 'lead']);
+            
             const codNorm = normalizarCod(cod);
-            const saldoExibir = mapaSaldos.get(codNorm) || 0;
+            const codLimpo = String(cod).trim();
+            const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+            const localEstoqueExibir = formatarLocalEstoque(item);
+            const filialExibir = formatarFilial(item);
+
             const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
+            const srcFoto = cacheCaminhoFoto.get(codLimpo) || '';
+            const tagThumb = srcFoto ? `<img src="${srcFoto}" alt="Capa">` : '<span>Sem foto</span>';
 
             const row = document.createElement('div');
             row.className = 'item-row';
             row.onclick = () => abrirModal(indexReal);
 
             row.innerHTML = `
+                <div class="row-thumb">${tagThumb}</div>
                 <div class="row-content">
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
+                        <span class="row-location" style="background:var(--primary-color); color:#fff;">🏢 ${filialExibir}</span>
+                        <span class="row-location">📍 Local: ${localEstoqueExibir} | End: ${enderecoCompleto}</span>
                         <span class="row-stock-badge">📊 Saldo: ${saldoExibir} un.</span>
+                        <span class="row-lead-badge">⏱️ Lead: ${leadTime}</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top:2px;">
+                        <strong>Espec:</strong> ${especificacao}
                     </div>
                 </div>
             `;
@@ -787,13 +813,202 @@
         renderizarPagina();
     }
 
-    function abrirModal(indexReal) {
+    async function abrirModal(indexReal) {
         const item = dadosCSV[indexReal];
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
+        const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+        const especificacao = getVal(item, ['especificacao', 'espec']);
+        const estMin = getVal(item, ['est_min', 'minimo']);
+        const estMax = getVal(item, ['est_max', 'maximo']);
+        const leadTime = getVal(item, ['lead_time', 'lead']);
+
+        const codNorm = normalizarCod(cod);
+        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+        const localEstoqueExibir = formatarLocalEstoque(item);
+        const filialExibir = formatarFilial(item);
+
         const conteudoDiv = document.getElementById('modal-conteudo');
-        conteudoDiv.innerHTML = `<h2>[Código: ${cod}] — ${nome}</h2>`;
+        conteudoDiv.innerHTML = `
+            <h2 style="color:var(--primary-color); margin-top:0; font-size:18px; font-weight:700;">[Código: ${cod}] — ${nome}</h2>
+            <div class="modal-body">
+                <div class="modal-info">
+                    <p>🏢 <strong>Filial:</strong> ${filialExibir}</p>
+                    <p>📍 <strong>Local:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 📊 <strong>Saldo:</strong> ${saldoExibir} un.</p>
+                    <p>📈 <strong>Mín/Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
+                    <p><strong>Fornecedor:</strong> ${fornecedor}</p>
+                    <p><strong>Especificação:</strong> ${especificacao}</p>
+                    
+                    <div style="margin-top: 16px;">
+                        <button class="btn-pdf-link" onclick="gerarPdfFotosItemComJsPDF(${indexReal})" style="cursor:pointer; border:none;">
+                            📄 Baixar PDF do Item (Com todas as fotos em grid)
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-gallery">
+                    <div class="main-media-box" id="modal-media-box"><span>Carregando...</span></div>
+                    <div class="thumbnails-box" id="modal-thumbs-box"></div>
+                </div>
+            </div>
+        `;
         document.getElementById('modal-item').style.display = 'flex';
+        carregarMidiasCompletas(cod);
+    }
+
+    async function carregarMidiasCompletas(codItem) {
+        const mediaBox = document.getElementById('modal-media-box');
+        const thumbsBox = document.getElementById('modal-thumbs-box');
+        thumbsBox.innerHTML = '';
+        const codLimpo = String(codItem).trim();
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        let midias = [];
+
+        for (let seq = 1; seq <= 6; seq++) {
+            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
+            let achou = false;
+            for (const ext of extensoes) {
+                const src = `imagens/${codLimpo} - ${numSeq}.${ext}`;
+                const existe = await new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
+                    img.src = src;
+                });
+                if (existe) {
+                    midias.push({ src: src });
+                    achou = true;
+                    break;
+                }
+            }
+            if (!achou) break;
+        }
+
+        if (midias.length === 0) {
+            mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens</span>';
+            return;
+        }
+
+        mediaBox.innerHTML = `<img src="${midias[0].src}" alt="Foto Peça">`;
+        midias.forEach((m, i) => {
+            const thumb = document.createElement('div');
+            thumb.className = `thumb-item ${i === 0 ? 'active' : ''}`;
+            thumb.innerHTML = `<img src="${m.src}">`;
+            thumb.onclick = () => {
+                mediaBox.innerHTML = `<img src="${m.src}" alt="Foto Peça">`;
+                thumbsBox.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
+                thumb.classList.add('active');
+            };
+            thumbsBox.appendChild(thumb);
+        });
+    }
+
+    async function gerarPdfFotosItemComJsPDF(indexReal) {
+        const item = dadosCSV[indexReal];
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+        const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
+        const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+        const especificacao = getVal(item, ['especificacao', 'espec']);
+        const estMin = getVal(item, ['est_min', 'minimo']);
+        const estMax = getVal(item, ['est_max', 'maximo']);
+        const leadTime = getVal(item, ['lead_time', 'lead']);
+        
+        const codNorm = normalizarCod(cod);
+        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+        const localEstoqueExibir = formatarLocalEstoque(item);
+        const filialExibir = formatarFilial(item);
+
+        doc.setFillColor(10, 61, 120);
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.text("JBS | SEARA — FICHA TÉCNICA E AUDITORIA DE ITEM", 14, 16);
+
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(12);
+        doc.text(`Código do Item: ${cod}`, 14, 35);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Descrição: ${nome}`, 14, 42);
+        doc.text(`Filial: ${filialExibir} | Fornecedor: ${fornecedor}`, 14, 48);
+        doc.text(`Local de Estoque: ${localEstoqueExibir} | Saldo Atual: ${saldoExibir} un.`, 14, 54);
+        doc.text(`Estoque Mín/Máx: ${estMin} / ${estMax} | Lead Time: ${leadTime}`, 14, 60);
+        doc.text(`Especificações: ${especificacao}`, 14, 66, { maxWidth: 180 });
+
+        let imagensItem = [];
+        const codLimpo = String(cod).trim();
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+
+        for (let seq = 1; seq <= 6; seq++) {
+            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
+            let encontradaSeq = false;
+            for (const ext of extensoes) {
+                const src = `imagens/${codLimpo} - ${numSeq}.${ext}`;
+                const base64Img = await carregarImagemComoBase64(src);
+                if (base64Img) {
+                    imagensItem.push(base64Img);
+                    encontradaSeq = true;
+                    break;
+                }
+            }
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("Registro Fotográfico da Prateleira / Item:", 14, 82);
+
+        if (imagensItem.length > 0) {
+            let posX = 14;
+            let posY = 88;
+            let larguraImg = 54;
+            let alturaImg = 44;
+            let margemX = 12;
+
+            imagensItem.forEach((imgBase64, index) => {
+                if (index > 0 && index % 3 === 0) {
+                    posX = 14;
+                    posY += alturaImg + 16;
+                }
+                doc.setDrawColor(200, 200, 200);
+                doc.rect(posX, posY, larguraImg, alturaImg);
+                doc.addImage(imgBase64, 'JPEG', posX + 1, posY + 1, larguraImg - 2, alturaImg - 2);
+                
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Foto 0${index + 1}`, posX + (larguraImg / 2), posY + alturaImg + 5, { align: 'center' });
+
+                posX += larguraImg + margemX;
+            });
+        } else {
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(150, 150, 150);
+            doc.text("Nenhuma imagem cadastrada para este item.", 14, 92);
+        }
+
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Gerado automaticamente pelo Sistema de Almoxarifado JBS | Seara em ${new Date().toLocaleString('pt-BR')}`, 14, 285);
+
+        doc.save(`Ficha_${cod}_${nome.substring(0, 15).trim()}.pdf`);
+    }
+
+    async function carregarImagemComoBase64(url) {
+        try {
+            const resposta = await fetch(url);
+            if (!resposta.ok) return null;
+            const blob = await resposta.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
     }
 
     function fecharModal() {
@@ -811,7 +1026,7 @@
 
     window.onload = () => {
         carregarTemaSalvo();
-        navegarPara('dashboard');
+        navegarPara('pesquisa');
         carregarCSV();
     };
 </script>
