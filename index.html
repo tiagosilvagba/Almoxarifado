@@ -56,8 +56,6 @@
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="padding: 0 0 4px 0;" data-i18n="nav_actions">Ações do Sistema</span>
             <button class="btn-sidebar-action" onclick="toggleSegmentacao()">⚡ Exibir / Ocultar Filtros</button>
-            <button class="btn-sidebar-action" onclick="conectarPastaImagens()" data-i18n="btn_conn_folder">📂 Conectar Pasta Imagens</button>
-            <button class="btn-sidebar-action" onclick="mapearPastaImagensServidor()" data-i18n="btn_load_imgs">🖼️ Carregar Imagens</button>
             <label class="btn-sidebar-action" style="cursor:pointer; display:block; text-align:center;">
                 <span data-i18n="btn_select_sheet">📂 Selecionar Planilha</span>
                 <input type="file" id="input-arquivo" accept=".xlsx, .xlsb, .csv, .xls" style="display:none;" onchange="carregarArquivoManual(event)">
@@ -123,14 +121,6 @@
     <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
-                <div class="top-controls-bar">
-                    <div></div>
-                    <div class="top-lang-selector">
-                        <button class="lang-btn" onclick="mudarIdioma('PT')">PT</button>
-                        <button class="lang-btn" onclick="mudarIdioma('EN')">EN</button>
-                    </div>
-                </div>
-
                 <header>
                     <h1 data-i18n="header_title">Almoxarifado JBS | Seara</h1>
                 </header>
@@ -138,7 +128,7 @@
                 <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, filial, equipamento, especificação..." oninput="dispararFiltrosGerais()">
 
                 <div class="status" style="display: flex; justify-content: flex-end; align-items: center;">
-                    <span id="status-texto" style="margin-right: auto;" data-i18n="status_searching">Procurando base de dados...</span>
+                    <span id="status-texto" style="margin-right: auto;">Carregando base de dados...</span>
                     <span id="contador-itens" style="text-align: right;"></span>
                 </div>
             </div>
@@ -147,9 +137,9 @@
                 <div id="resultados"></div>
 
                 <div class="pagination" id="paginacao" style="display: none;">
-                    <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)" data-i18n="btn_prev">❮ Anterior</button>
+                    <button class="btn-page" id="btn-ant" onclick="mudarPagina(-1)">❮ Anterior</button>
                     <span id="info-pagina" style="font-weight: bold;">Página 1</span>
-                    <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)" data-i18n="btn_next">Próximo ❯</button>
+                    <button class="btn-page" id="btn-prox" onclick="mudarPagina(1)">Próximo ❯</button>
                 </div>
             </div>
         </div>
@@ -159,16 +149,8 @@
     <main class="main-content" id="view-dashboard">
         <div class="container">
             <div class="fixed-top-section">
-                <div class="top-controls-bar">
-                    <div></div>
-                    <div class="top-lang-selector">
-                        <button class="lang-btn" onclick="mudarIdioma('PT')">PT</button>
-                        <button class="lang-btn" onclick="mudarIdioma('EN')">EN</button>
-                    </div>
-                </div>
-
                 <header>
-                    <h1 data-i18n="dash_header_title">Dashboard Executivo & Indicadores</h1>
+                    <h1>Dashboard Executivo & Indicadores</h1>
                 </header>
 
                 <input type="text" id="dash-busca-dinamica" class="search-box" placeholder="Pesquisar por código, nome, filial, fornecedor..." oninput="dispararFiltrosGerais()">
@@ -178,40 +160,40 @@
                 <!-- KPI CARDS -->
                 <div class="kpi-grid">
                     <div class="kpi-card">
-                        <span class="kpi-title" data-i18n="kpi_total_monitored">Total Monitorado</span>
+                        <span class="kpi-title">Total Monitorado</span>
                         <span class="kpi-value" id="dash-kpi-total">0</span>
-                        <span class="kpi-sub" data-i18n="kpi_sub_registered">Cadastrados na Base</span>
+                        <span class="kpi-sub">Cadastrados na Base</span>
                     </div>
 
                     <div class="kpi-card">
-                        <span class="kpi-title" data-i18n="kpi_with_balance">Itens Com Saldo (>0)</span>
+                        <span class="kpi-title">Itens Com Saldo (>0)</span>
                         <span class="kpi-value color-success" id="dash-kpi-com-saldo">0</span>
-                        <span class="kpi-sub" id="dash-kpi-com-saldo-perc">0% da Base</span>
+                        <span class="kpi-sub">0% da Base</span>
                     </div>
 
                     <div class="kpi-card">
-                        <span class="kpi-title" data-i18n="kpi_total_rupture">⚠️ Ruptura Total (Zerados)</span>
+                        <span class="kpi-title">⚠️ Ruptura Total (Zerados)</span>
                         <span class="kpi-value color-danger" id="dash-kpi-ruptura">0</span>
-                        <span class="kpi-sub" id="dash-kpi-ruptura-perc">0% de Risco</span>
+                        <span class="kpi-sub">0% de Risco</span>
                     </div>
 
                     <div class="kpi-card">
-                        <span class="kpi-title" data-i18n="kpi_below_min">📉 Abaixo do Mínimo</span>
+                        <span class="kpi-title">📉 Abaixo do Mínimo</span>
                         <span class="kpi-value color-warning" id="dash-kpi-abaixo">0</span>
-                        <span class="kpi-sub" data-i18n="kpi_sub_critical_low">Estoque Crítico Baixo</span>
+                        <span class="kpi-sub">Estoque Crítico Baixo</span>
                     </div>
 
                     <div class="kpi-card">
-                        <span class="kpi-title" data-i18n="kpi_above_max">🚨 Acima do Máximo</span>
+                        <span class="kpi-title">🚨 Acima do Máximo</span>
                         <span class="kpi-value color-info" id="dash-kpi-acima">0</span>
-                        <span class="kpi-sub" data-i18n="kpi_sub_excess">Excesso de Estoque</span>
+                        <span class="kpi-sub">Excesso de Estoque</span>
                     </div>
                 </div>
 
                 <!-- SEÇÃO DE ITENS / AUDITORIA -->
                 <div class="dash-section-box">
                     <div class="dash-section-header" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;" data-i18n="audit_section_title">📋 Auditoria de Estoque</div>
+                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;">📋 Auditoria de Estoque</div>
                         <div id="dash-subtotal-info" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">
                             Subtotal: 0 itens filtrados
                         </div>
@@ -222,19 +204,26 @@
                             <thead>
                                 <tr>
                                     <th>Filial</th>
-                                    <th data-i18n="th_code">Código</th>
-                                    <th data-i18n="th_description">Descrição do Item</th>
-                                    <th data-i18n="th_balance">Saldo Atual</th>
-                                    <th data-i18n="th_minmax">Mín / Máx</th>
-                                    <th data-i18n="th_location">Local de Estoque</th>
-                                    <th data-i18n="th_status">Status Crítico</th>
-                                    <th data-i18n="th_supplier">Fornecedor</th>
+                                    <th>Código</th>
+                                    <th>Descrição do Item</th>
+                                    <th>Saldo Atual</th>
+                                    <th>Mín / Máx</th>
+                                    <th>Local de Estoque</th>
+                                    <th>Status Crítico</th>
+                                    <th>Fornecedor</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-table-criticos-body">
-                                <tr><td colspan="8" style="text-align:center;" data-i18n="msg_no_items">Nenhum item encontrado.</td></tr>
+                                <tr><td colspan="8" style="text-align:center;">Nenhum item encontrado.</td></tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Paginação do Dashboard -->
+                    <div class="pagination" id="dash-paginacao" style="display: flex; margin-top: 15px;">
+                        <button class="btn-page" id="dash-btn-ant" onclick="mudarPaginaDashboard(-1)">❮ Anterior</button>
+                        <span id="dash-info-pagina" style="font-weight: bold; align-self: center;">Página 1</span>
+                        <button class="btn-page" id="dash-btn-prox" onclick="mudarPaginaDashboard(1)">Próximo ❯</button>
                     </div>
                 </div>
             </div>
@@ -255,73 +244,17 @@
     let dadosCSV = [];
     let dadosFiltrados = [];
     let mapaSaldos = new Map();
-    let ultimaAtualizacaoSaldo = 'Não carregado';
     let paginaAtual = 1;
-    const ITENS_POR_PAGINA = 20;
-    let isMobile = false;
+    let dashPaginaAtual = 1;
+    const ITENS_POR_PAGINA = 25;
 
-    let idiomaAtual = 'PT';
     let vistaAtual = 'dashboard';
-    let pastaImagensHandle = null;
-
     const itensComFoto = new Set();
     const cacheCaminhoFoto = new Map();
-    const cachePDFs = new Map();
+    let cacheItensCriticos = [];
+    let itensDashboardFiltrados = [];
 
     const FORMATOS_SUPORTADOS = ['dados.csv', 'dados.xlsx', 'dados.xlsb', 'dados.xls'];
-
-    const dicionarioIdiomas = {
-        PT: {
-            nav_dashboard: "Dashboard Geral",
-            nav_pesquisa: "Pesquisa de Itens",
-            nav_actions: "Ações do Sistema",
-            btn_conn_folder: "📂 Conectar Pasta Imagens",
-            btn_load_imgs: "🖼️ Carregar Imagens",
-            btn_select_sheet: "📂 Selecionar Planilha",
-            btn_sync_base: "🔄 Sincronizar Base",
-            label_balance_status: "📦 Status do Saldo:",
-            opt_all_items: "Todos os Itens",
-            opt_with_balance: "✅ Com Saldo (> 0)",
-            opt_zero_balance: "⚠️ Zerado (Saldo = 0)",
-            opt_below_min: "📉 Abaixo do Mínimo",
-            opt_above_max: "🚨 Acima do Máximo",
-            label_item_image: "🖼️ Imagem do Item:",
-            opt_all_photos: "Todas as Fotos",
-            opt_with_photo: "📸 Com Imagem",
-            opt_without_photo: "🚫 Sem Imagem",
-            label_supplier: "🏢 Fornecedor:",
-            opt_all_suppliers: "Todos os Fornecedores",
-            label_stock_location: "📍 Local de Estoque:",
-            opt_all_locations: "Todos os Locais",
-            btn_clear_filters: "🧹 Limpar Filtros",
-            header_title: "Almoxarifado JBS | Seara",
-            status_searching: "Procurando base de dados...",
-            btn_prev: "❮ Anterior",
-            btn_next: "Próximo ❯",
-            dash_header_title: "Dashboard Executivo & Indicadores",
-            kpi_total_monitored: "Total Monitorado",
-            kpi_sub_registered: "Cadastrados na Base",
-            kpi_with_balance: "Itens Com Saldo (>0)",
-            kpi_total_rupture: "⚠️ Ruptura Total (Zerados)",
-            kpi_below_min: "📉 Abaixo do Mínimo",
-            kpi_above_max: "🚨 Acima do Máximo",
-            audit_section_title: "📋 Auditoria de Estoque",
-            th_code: "Código",
-            th_description: "Descrição do Item",
-            th_balance: "Saldo Atual",
-            th_minmax: "Mín / Máx",
-            th_location: "Local de Estoque",
-            th_status: "Status Crítico",
-            th_supplier: "Fornecedor",
-            msg_no_items: "Nenhum item encontrado."
-        }
-    };
-
-    function mudarIdioma(sigla) {
-        idiomaAtual = sigla;
-        renderizarPagina();
-        atualizarMétricasDashboard();
-    }
 
     function navegarPara(view) {
         vistaAtual = view;
@@ -341,14 +274,16 @@
             viewDashboard.style.display = 'flex';
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
-            atualizarMétricasDashboard();
+            filtrarTabelaDashboard();
         }
     }
 
     function dispararFiltrosGerais() {
         if (vistaAtual === 'pesquisa') {
+            paginaAtual = 1;
             filtrar();
         } else {
+            dashPaginaAtual = 1;
             filtrarTabelaDashboard();
         }
     }
@@ -368,10 +303,6 @@
 
     function carregarTemaSalvo() {
         aplicarTema(localStorage.getItem('jbs_theme_preference') || 'blue');
-    }
-
-    function detectarDispositivo() {
-        isMobile = window.innerWidth <= 900;
     }
 
     function normalizarCod(val) {
@@ -407,7 +338,7 @@
         return isNaN(num) ? 0 : num;
     }
 
-    // saldo.csv atua estritamente como auxiliar de saldo
+    // Leitura auxiliar do saldo.csv
     async function carregarSaldos() {
         mapaSaldos.clear();
         try {
@@ -441,18 +372,29 @@
     }
 
     async function carregarCSV() {
+        const statusEl = document.getElementById('status-texto');
+        if (statusEl) statusEl.innerText = "🔄 Sincronizando saldos e base de dados (dados.csv)...";
+        
         await carregarSaldos();
         let bufferArquivo = null;
+        let nomeArquivoEncontrado = '';
+
         for (const arquivo of FORMATOS_SUPORTADOS) {
             try {
                 const resposta = await fetch(`${arquivo}?t=` + new Date().getTime(), { cache: 'no-cache' });
                 if (resposta.ok) {
                     bufferArquivo = await resposta.arrayBuffer();
+                    nomeArquivoEncontrado = arquivo;
                     break;
                 }
             } catch (e) {}
         }
-        if (bufferArquivo) processarBuffer(bufferArquivo);
+
+        if (bufferArquivo) {
+            processarBuffer(bufferArquivo, nomeArquivoEncontrado);
+        } else {
+            if (statusEl) statusEl.innerText = "⚠️ Arquivo dados.csv não encontrado. Selecione manualmente.";
+        }
     }
 
     function carregarArquivoManual(event) {
@@ -461,22 +403,31 @@
         const reader = new FileReader();
         reader.onload = async function(e) {
             await carregarSaldos();
-            processarBuffer(e.target.result);
+            processarBuffer(e.target.result, file.name);
         };
         reader.readAsArrayBuffer(file);
     }
 
-    function processarBuffer(buffer) {
+    function processarBuffer(buffer, nomeArq) {
         try {
             const workbook = XLSX.read(buffer, { type: 'array' });
             const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
             dadosCSV = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             dadosFiltrados = dadosCSV;
+            
             popularSegmentacaoDados();
-            carregarImagensAutomatico();
+            construirCacheItens();
+            verificarFotosCapaLoteLazy();
+
+            const statusEl = document.getElementById('status-texto');
+            if (statusEl) statusEl.innerText = `✅ Base (${nomeArq}) carregada com sucesso! Total: ${dadosCSV.length} itens.`;
+            
             renderizarPagina();
             atualizarMétricasDashboard();
-        } catch (error) {}
+        } catch (error) {
+            const statusEl = document.getElementById('status-texto');
+            if (statusEl) statusEl.innerText = "⚠️ Erro ao processar o arquivo de dados.";
+        }
     }
 
     function popularSegmentacaoDados() {
@@ -490,7 +441,6 @@
         dadosCSV.forEach(item => {
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
             const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-            
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
             const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
@@ -525,20 +475,43 @@
         dispararFiltrosGerais();
     }
 
-    // Busca da foto de capa obrigatoriamente com final - 01 ou -01
-    async function carregarImagensAutomatico() {
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
-        
-        for (const item of dadosCSV) {
+    function construirCacheItens() {
+        cacheItensCriticos = dadosCSV.map(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            const codNorm = normalizarCod(cod);
+            const saldo = mapaSaldos.get(codNorm) || 0;
+            const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
+            const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
+            const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
+            
+            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
+            const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
+
+            let statusTipo = 'normal';
+            if (saldo > 0) {
+                if (estMin > 0 && saldo < estMin) statusTipo = 'abaixo';
+                else if (estMax > 0 && saldo > estMax) statusTipo = 'acima';
+            } else if (estMin > 0 && estMax > 0) {
+                statusTipo = 'ruptura';
+            }
+
+            return { item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir };
+        });
+    }
+
+    async function verificarFotosCapaLoteLazy() {
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        for (const obj of cacheItensCriticos) {
+            const cod = getVal(obj.item, ['cod_item', 'codigo', 'cod']);
             if (!cod || cod === '-') continue;
             const codLimpo = String(cod).trim();
+            if (itensComFoto.has(codLimpo)) continue;
 
             const padroesCapa = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo} -01`, `${codLimpo}- 01`];
-            let encontrada = false;
-
             for (const padrao of padroesCapa) {
-                if (encontrada) break;
+                let achou = false;
                 for (const ext of extensoes) {
                     const src = `imagens/${padrao}.${ext}`;
                     const existe = await new Promise(resolve => {
@@ -547,21 +520,17 @@
                         img.onerror = () => resolve(false);
                         img.src = src;
                     });
-
                     if (existe) {
                         itensComFoto.add(codLimpo);
                         cacheCaminhoFoto.set(codLimpo, src);
-                        encontrada = true;
+                        achou = true;
                         break;
                     }
                 }
+                if (achou) break;
             }
         }
-        renderizarPagina();
-        if (vistaAtual === 'dashboard') filtrarTabelaDashboard();
     }
-
-    let cacheItensCriticos = [];
 
     function atualizarMétricasDashboard() {
         let totalMonitorados = 0;
@@ -569,40 +538,16 @@
         let rupturaTotal = 0;
         let abaixoMin = 0;
         let acimaMax = 0;
-        cacheItensCriticos = [];
 
-        dadosCSV.forEach(item => {
-            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-            const codNorm = normalizarCod(cod);
-            const saldo = mapaSaldos.get(codNorm) || 0;
-            const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
-            const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-            
-            const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-            
-            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
-            const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
-
+        cacheItensCriticos.forEach(obj => {
             totalMonitorados++;
-            let statusTipo = 'normal';
-
-            if (saldo > 0) {
+            if (obj.saldo > 0) {
                 comSaldo++;
-                if (estMin > 0 && saldo < estMin) {
-                    abaixoMin++;
-                    statusTipo = 'abaixo';
-                } else if (estMax > 0 && saldo > estMax) {
-                    acimaMax++;
-                    statusTipo = 'acima';
-                }
-            } else if (estMin > 0 && estMax > 0) {
+                if (obj.statusTipo === 'abaixo') abaixoMin++;
+                else if (obj.statusTipo === 'acima') acimaMax++;
+            } else if (obj.statusTipo === 'ruptura') {
                 rupturaTotal++;
-                statusTipo = 'ruptura';
             }
-
-            cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir });
         });
 
         document.getElementById('dash-kpi-total').innerText = totalMonitorados;
@@ -622,10 +567,7 @@
         const imagemSel = document.getElementById('select-imagem').value;
         const saldoStatusSel = document.getElementById('select-saldo-status').value;
 
-        const tbodyCriticos = document.getElementById('dash-table-criticos-body');
-        tbodyCriticos.innerHTML = '';
-
-        const itensFiltrados = cacheItensCriticos.filter(obj => {
+        itensDashboardFiltrados = cacheItensCriticos.filter(obj => {
             const cod = getVal(obj.item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
             const linhaCompleta = Object.values(obj.item).join(' ').toLowerCase();
@@ -656,14 +598,28 @@
             return bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
         });
 
-        document.getElementById('dash-subtotal-info').innerHTML = `Subtotal: <strong>${itensFiltrados.length}</strong> itens filtrados`;
+        document.getElementById('dash-subtotal-info').innerHTML = `Subtotal: <strong>${itensDashboardFiltrados.length}</strong> itens filtrados`;
+        dashPaginaAtual = 1;
+        renderizarTabelaDashboardPagina();
+    }
 
-        if (itensFiltrados.length === 0) {
+    function renderizarTabelaDashboardPagina() {
+        const tbodyCriticos = document.getElementById('dash-table-criticos-body');
+        tbodyCriticos.innerHTML = '';
+
+        const totalItens = itensDashboardFiltrados.length;
+        if (totalItens === 0) {
             tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item encontrado.</td></tr>';
+            document.getElementById('dash-paginacao').style.display = 'none';
             return;
         }
 
-        itensFiltrados.slice(0, 60).forEach(({ item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir }) => {
+        const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA);
+        const inicio = (dashPaginaAtual - 1) * ITENS_POR_PAGINA;
+        const fim = Math.min(inicio + ITENS_POR_PAGINA, totalItens);
+        const paginaItens = itensDashboardFiltrados.slice(inicio, fim);
+
+        paginaItens.forEach(({ item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir }) => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
@@ -687,6 +643,20 @@
             `;
             tbodyCriticos.appendChild(tr);
         });
+
+        if (totalPaginas > 1) {
+            document.getElementById('dash-paginacao').style.display = 'flex';
+            document.getElementById('dash-info-pagina').innerText = `Página ${dashPaginaAtual} de ${totalPaginas}`;
+            document.getElementById('dash-btn-ant').disabled = (dashPaginaAtual === 1);
+            document.getElementById('dash-btn-prox').disabled = (dashPaginaAtual === totalPaginas);
+        } else {
+            document.getElementById('dash-paginacao').style.display = 'none';
+        }
+    }
+
+    function mudarPaginaDashboard(direcao) {
+        dashPaginaAtual += direcao;
+        renderizarTabelaDashboardPagina();
     }
 
     function abrirModalDadosItem(item) {
@@ -696,14 +666,19 @@
 
     function renderizarPagina() {
         const divContainer = document.getElementById('resultados');
+        const contadorEl = document.getElementById('contador-itens');
         divContainer.innerHTML = '';
         const totalItens = dadosFiltrados.length;
 
+        if (contadorEl) contadorEl.innerText = `${totalItens} itens encontrados`;
+
         if (totalItens === 0) {
             divContainer.innerHTML = '<p>Nenhum item encontrado com os filtros selecionados.</p>';
+            document.getElementById('paginacao').style.display = 'none';
             return;
         }
 
+        const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA);
         const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
         const fim = Math.min(inicio + ITENS_POR_PAGINA, totalItens);
         const itensPagina = dadosFiltrados.slice(inicio, fim);
@@ -731,6 +706,15 @@
             `;
             divContainer.appendChild(row);
         });
+
+        if (totalPaginas > 1) {
+            document.getElementById('paginacao').style.display = 'flex';
+            document.getElementById('info-pagina').innerText = `Página ${paginaAtual} de ${totalPaginas}`;
+            document.getElementById('btn-ant').disabled = (paginaAtual === 1);
+            document.getElementById('btn-prox').disabled = (paginaAtual === totalPaginas);
+        } else {
+            document.getElementById('paginacao').style.display = 'none';
+        }
     }
 
     function filtrar() {
@@ -808,7 +792,6 @@
 
     window.onload = () => {
         carregarTemaSalvo();
-        detectarDispositivo();
         navegarPara('dashboard');
         carregarCSV();
     };
