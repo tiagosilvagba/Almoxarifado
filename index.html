@@ -338,7 +338,37 @@
         return isNaN(num) ? 0 : num;
     }
 
-    // Leitura auxiliar do saldo.csv
+    // Função para aplicar a regra de renomeação da filial se o número for > 599
+    function formatarFilial(item) {
+        const codFilialVal = getVal(item, ['cod_filial', 'filial_cod']);
+        const nomeFilialVal = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+        
+        // Verifica se há um número no código ou nome da filial superior a 599
+        const numeroMatch = (codFilialVal + " " + nomeFilialVal).match(/\d+/g);
+        if (numeroMatch) {
+            for (let numStr of numeroMatch) {
+                if (parseInt(numStr, 10) > 599) {
+                    return "ROLANDIA - ALP. PREPARADOS";
+                }
+            }
+        }
+
+        const filialStr = (codFilialVal !== '-' ? codFilialVal : '') + (nomeFilialVal !== '-' ? ' - ' + nomeFilialVal : '');
+        return filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
+    }
+
+    // Função para formatar o Local de Estoque exibindo "Cód. - Nome"
+    function formatarLocalEstoque(item) {
+        const codLocal = getVal(item, ['cod_lc_estoque', 'lc_estoque_cod', 'cod_local', 'local_cod', 'lc_est']);
+        const nomeLocal = getVal(item, ['lc_estoque', 'local_estoque', 'local', 'armazem', 'deposito']);
+        
+        const c = (codLocal && codLocal !== '-') ? codLocal : '';
+        const n = (nomeLocal && nomeLocal !== '-') ? nomeLocal : '';
+
+        if (c && n && !n.includes(c)) return `${c} - ${n}`;
+        return n !== '-' ? n : (c !== '-' ? c : 'Geral');
+    }
+
     async function carregarSaldos() {
         mapaSaldos.clear();
         try {
@@ -440,14 +470,12 @@
 
         dadosCSV.forEach(item => {
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-            const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
+            const localEstoque = formatarLocalEstoque(item);
+            const filialExibir = formatarFilial(item);
 
             if (forn && forn !== '-') fornecedoresUnicos.add(forn);
             if (localEstoque && localEstoque !== '-') locaisUnicos.add(localEstoque);
-            if (filialStr.trim() !== '-') filiaisUnicas.add(filialStr.trim());
+            if (filialExibir.trim() !== '-') filiaisUnicas.add(filialExibir.trim());
         });
 
         if (selectForn) {
@@ -482,12 +510,8 @@
             const saldo = mapaSaldos.get(codNorm) || 0;
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-            const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-            
-            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
-            const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
+            const localEstoque = formatarLocalEstoque(item);
+            const filialExibir = formatarFilial(item);
 
             let statusTipo = 'normal';
             if (saldo > 0) {
@@ -735,11 +759,8 @@
 
             const linhaCompleta = Object.values(item).join(' ').toLowerCase();
             const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
-            const localEstoqueItem = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']).toLowerCase();
-            
-            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-            const filialStr = ((codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '')).trim().toLowerCase();
+            const localEstoqueItem = formatarLocalEstoque(item).toLowerCase();
+            const filialStr = formatarFilial(item).toLowerCase();
 
             const bateTexto = !termo || linhaCompleta.includes(termo);
             const bateFilial = (!filialSel || filialStr === filialSel || filialStr.includes(filialSel));
