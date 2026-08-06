@@ -6,7 +6,6 @@
     <title>JBS | Seara — Gestão de Almoxarifado</title>
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Biblioteca jsPDF para geração profissional de PDFs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -87,7 +86,9 @@
                 <select id="select-saldo-status" class="segmentation-select" onchange="dispararFiltrosGerais()">
                     <option value="" data-i18n="opt_all_items">Todos os Itens</option>
                     <option value="com_saldo" data-i18n="opt_with_balance">✅ Com Saldo (> 0)</option>
-                    <option value="zerado_com_minmax" data-i18n="opt_zero_minmax">⚠️ Zerado com Mín/Máx (> 0)</option>
+                    <option value="zerado" data-i18n="opt_zero_balance">⚠️ Zerado (Saldo = 0)</option>
+                    <option value="abaixo" data-i18n="opt_below_min">📉 Abaixo do Mínimo</option>
+                    <option value="acima" data-i18n="opt_above_max">🚨 Acima do Máximo</option>
                 </select>
             </div>
 
@@ -114,17 +115,6 @@
                 </select>
             </div>
 
-            <div class="filter-group" id="group-dash-cat" style="display:none;">
-                <label class="filter-label" data-i18n="label_audit_category">📋 Categoria de Auditoria:</label>
-                <select id="dash-select-filtro" class="segmentation-select" onchange="dispararFiltrosGerais()">
-                    <option value="todos" data-i18n="opt_all_active">🔍 Todos os Itens Ativos</option>
-                    <option value="ruptura" data-i18n="opt_total_rupture">⚠️ Apenas Ruptura Total (Zerados)</option>
-                    <option value="abaixo" data-i18n="opt_below_min">📉 Apenas Abaixo do Mínimo</option>
-                    <option value="acima" data-i18n="opt_above_max">🚨 Apenas Acima do Máximo</option>
-                    <option value="normal" data-i18n="opt_normal_stock">✅ Estoque Normal/Regular</option>
-                </select>
-            </div>
-
             <button class="btn-reset-filters" onclick="limparFiltrosSegmentacao()" data-i18n="btn_clear_filters">🧹 Limpar Filtros</button>
         </div>
     </aside>
@@ -138,10 +128,6 @@
                     <div class="top-lang-selector">
                         <button class="lang-btn" onclick="mudarIdioma('PT')">PT</button>
                         <button class="lang-btn" onclick="mudarIdioma('EN')">EN</button>
-                        <button class="lang-btn" onclick="mudarIdioma('IT')">IT</button>
-                        <button class="lang-btn" onclick="mudarIdioma('FR')">FR</button>
-                        <button class="lang-btn" onclick="mudarIdioma('DE')">DE</button>
-                        <button class="lang-btn" onclick="mudarIdioma('NL')">NL</button>
                     </div>
                 </div>
 
@@ -178,10 +164,6 @@
                     <div class="top-lang-selector">
                         <button class="lang-btn" onclick="mudarIdioma('PT')">PT</button>
                         <button class="lang-btn" onclick="mudarIdioma('EN')">EN</button>
-                        <button class="lang-btn" onclick="mudarIdioma('IT')">IT</button>
-                        <button class="lang-btn" onclick="mudarIdioma('FR')">FR</button>
-                        <button class="lang-btn" onclick="mudarIdioma('DE')">DE</button>
-                        <button class="lang-btn" onclick="mudarIdioma('NL')">NL</button>
                     </div>
                 </div>
 
@@ -216,20 +198,20 @@
                     <div class="kpi-card">
                         <span class="kpi-title" data-i18n="kpi_below_min">📉 Abaixo do Mínimo</span>
                         <span class="kpi-value color-warning" id="dash-kpi-abaixo">0</span>
-                        <span class="kpi-sub" data-i18n="kpi_sub_critical_low">Estoque Crítico Baixo</span>
+                        <span class="kpi-sub" id="dash-kpi-sub_critical_low">Estoque Crítico Baixo</span>
                     </div>
 
                     <div class="kpi-card">
                         <span class="kpi-title" data-i18n="kpi_above_max">🚨 Acima do Máximo</span>
                         <span class="kpi-value color-info" id="dash-kpi-acima">0</span>
-                        <span class="kpi-sub" data-i18n="kpi_sub_excess">Excesso de Estoque</span>
+                        <span class="kpi-sub" id="dash-kpi-sub_excess">Excesso de Estoque</span>
                     </div>
                 </div>
 
                 <!-- SEÇÃO DE ITENS / AUDITORIA -->
                 <div class="dash-section-box">
                     <div class="dash-section-header" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;" data-i18n="audit_section_title">📋 Auditoria de Estoque (Passe o mouse para visualizar a foto)</div>
+                        <div class="dash-section-title" style="margin-bottom:0; border-bottom:none;" data-i18n="audit_section_title">📋 Auditoria de Estoque</div>
                         <div id="dash-subtotal-info" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">
                             Subtotal: 0 itens filtrados
                         </div>
@@ -251,26 +233,6 @@
                             </thead>
                             <tbody id="dash-table-criticos-body">
                                 <tr><td colspan="8" style="text-align:center;" data-i18n="msg_no_items">Nenhum item encontrado.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- RESUMO DE FORNECEDORES -->
-                <div class="dash-section-box">
-                    <div class="dash-section-title" data-i18n="supplier_section_title">🏢 Volume de Itens por Fornecedor (Top 10)</div>
-                    <div class="dash-table-container">
-                        <table class="dash-table">
-                            <thead>
-                                <tr>
-                                    <th data-i18n="th_supplier">Fornecedor</th>
-                                    <th data-i18n="th_total_items">Total de Itens</th>
-                                    <th data-i18n="th_items_balance">Itens c/ Saldo</th>
-                                    <th data-i18n="th_critical_deviation">Em Desvio Crítico</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dash-table-fornecedores-body">
-                                <tr><td colspan="4" style="text-align:center;" data-i18n="msg_loading">Carregando métricas...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -321,7 +283,9 @@
             label_balance_status: "📦 Status do Saldo:",
             opt_all_items: "Todos os Itens",
             opt_with_balance: "✅ Com Saldo (> 0)",
-            opt_zero_minmax: "⚠️ Zerado com Mín/Máx (> 0)",
+            opt_zero_balance: "⚠️ Zerado (Saldo = 0)",
+            opt_below_min: "📉 Abaixo do Mínimo",
+            opt_above_max: "🚨 Acima do Máximo",
             label_item_image: "🖼️ Imagem do Item:",
             opt_all_photos: "Todas as Fotos",
             opt_with_photo: "📸 Com Imagem",
@@ -331,12 +295,6 @@
             label_stock_location: "📍 Local de Estoque:",
             opt_all_locations: "Todos os Locais",
             btn_clear_filters: "🧹 Limpar Filtros",
-            label_audit_category: "📋 Categoria de Auditoria:",
-            opt_all_active: "🔍 Todos os Itens Ativos",
-            opt_total_rupture: "⚠️ Apenas Ruptura Total (Zerados)",
-            opt_below_min: "📉 Apenas Abaixo do Mínimo",
-            opt_above_max: "🚨 Apenas Acima do Máximo",
-            opt_normal_stock: "✅ Estoque Normal/Regular",
             header_title: "Almoxarifado JBS | Seara",
             status_searching: "Procurando base de dados...",
             btn_prev: "❮ Anterior",
@@ -347,10 +305,8 @@
             kpi_with_balance: "Itens Com Saldo (>0)",
             kpi_total_rupture: "⚠️ Ruptura Total (Zerados)",
             kpi_below_min: "📉 Abaixo do Mínimo",
-            kpi_sub_critical_low: "Estoque Crítico Baixo",
             kpi_above_max: "🚨 Acima do Máximo",
-            kpi_sub_excess: "Excesso de Estoque",
-            audit_section_title: "📋 Auditoria de Estoque (Passe o mouse para visualizar a foto)",
+            audit_section_title: "📋 Auditoria de Estoque",
             th_code: "Código",
             th_description: "Descrição do Item",
             th_balance: "Saldo Atual",
@@ -358,83 +314,12 @@
             th_location: "Local de Estoque",
             th_status: "Status Crítico",
             th_supplier: "Fornecedor",
-            msg_no_items: "Nenhum item encontrado.",
-            supplier_section_title: "🏢 Volume de Itens por Fornecedor (Top 10)",
-            th_total_items: "Total de Itens",
-            th_items_balance: "Itens c/ Saldo",
-            th_critical_deviation: "Em Desvio Crítico",
-            msg_loading: "Carregando métricas..."
-        },
-        EN: {
-            nav_dashboard: "General Dashboard",
-            nav_pesquisa: "Item Search",
-            nav_actions: "System Actions",
-            btn_conn_folder: "📂 Connect Images Folder",
-            btn_load_imgs: "🖼️ Load Images",
-            btn_select_sheet: "📂 Select Spreadsheet",
-            btn_sync_base: "🔄 Sync Database",
-            label_balance_status: "📦 Balance Status:",
-            opt_all_items: "All Items",
-            opt_with_balance: "✅ With Balance (> 0)",
-            opt_zero_minmax: "⚠️ Zero with Min/Max (> 0)",
-            label_item_image: "🖼️ Item Image:",
-            opt_all_photos: "All Photos",
-            opt_with_photo: "📸 With Image",
-            opt_without_photo: "🚫 Without Image",
-            label_supplier: "🏢 Supplier:",
-            opt_all_suppliers: "All Suppliers",
-            label_stock_location: "📍 Stock Location:",
-            opt_all_locations: "All Locations",
-            btn_clear_filters: "🧹 Clear Filters",
-            label_audit_category: "📋 Audit Category:",
-            opt_all_active: "🔍 All Active Items",
-            opt_total_rupture: "⚠️ Total Rupture Only (Zeroed)",
-            opt_below_min: "📉 Below Minimum Only",
-            opt_above_max: "🚨 Above Maximum Only",
-            opt_normal_stock: "✅ Normal/Regular Stock",
-            header_title: "JBS | Seara Warehouse",
-            status_searching: "Searching database...",
-            btn_prev: "❮ Previous",
-            btn_next: "Next ❯",
-            dash_header_title: "Executive Dashboard & Indicators",
-            kpi_total_monitored: "Total Monitored",
-            kpi_sub_registered: "Registered in Base",
-            kpi_with_balance: "Items With Balance (>0)",
-            kpi_total_rupture: "⚠️ Total Rupture (Zeroed)",
-            kpi_below_min: "📉 Below Minimum",
-            kpi_sub_critical_low: "Critical Low Stock",
-            kpi_above_max: "🚨 Above Maximum",
-            kpi_sub_excess: "Stock Excess",
-            audit_section_title: "📋 Stock Audit (Hover to view photo)",
-            th_code: "Code",
-            th_description: "Item Description",
-            th_balance: "Current Balance",
-            th_minmax: "Min / Max",
-            th_location: "Stock Location",
-            th_status: "Critical Status",
-            th_supplier: "Supplier",
-            msg_no_items: "No items found.",
-            supplier_section_title: "🏢 Volume of Items by Supplier (Top 10)",
-            th_total_items: "Total Items",
-            th_items_balance: "Items w/ Balance",
-            th_critical_deviation: "Critical Deviation",
-            msg_loading: "Loading metrics..."
+            msg_no_items: "Nenhum item encontrado."
         }
     };
 
     function mudarIdioma(sigla) {
         idiomaAtual = sigla;
-        document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-        const btnAtivo = Array.from(document.querySelectorAll('.lang-btn')).find(b => b.innerText === sigla);
-        if (btnAtivo) btnAtivo.classList.add('active');
-
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const chave = el.getAttribute('data-i18n');
-            if (dicionarioIdiomas[sigla] && dicionarioIdiomas[sigla][chave]) {
-                el.innerText = dicionarioIdiomas[sigla][chave];
-            }
-        });
-
         renderizarPagina();
         atualizarMétricasDashboard();
     }
@@ -445,21 +330,18 @@
         const viewDashboard = document.getElementById('view-dashboard');
         const navPesquisa = document.getElementById('nav-pesquisa');
         const navDashboard = document.getElementById('nav-dashboard');
-        const groupDashCat = document.getElementById('group-dash-cat');
 
         if (view === 'pesquisa') {
             viewPesquisa.style.display = 'flex';
             viewDashboard.style.display = 'none';
             navPesquisa.classList.add('active');
             navDashboard.classList.remove('active');
-            if (groupDashCat) groupDashCat.style.display = 'none';
             filtrar();
         } else if (view === 'dashboard') {
             viewPesquisa.style.display = 'none';
             viewDashboard.style.display = 'flex';
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
-            if (groupDashCat) groupDashCat.style.display = 'flex';
             atualizarMétricasDashboard();
         }
     }
@@ -473,20 +355,7 @@
     }
 
     function toggleSegmentacao() {
-        const layout = document.getElementById('app-layout');
-        layout.classList.toggle('segmentation-hidden');
-        const oculto = layout.classList.contains('segmentation-hidden');
-        localStorage.setItem('jbs_segmentation_hidden', oculto ? 'true' : 'false');
-    }
-
-    function carregarEstadoSegmentacao() {
-        const estadoSalvo = localStorage.getItem('jbs_segmentation_hidden');
-        const layout = document.getElementById('app-layout');
-        if (estadoSalvo === 'false') {
-            layout.classList.remove('segmentation-hidden');
-        } else {
-            layout.classList.add('segmentation-hidden');
-        }
+        document.getElementById('app-layout').classList.toggle('segmentation-hidden');
     }
 
     function aplicarTema(tema) {
@@ -496,121 +365,14 @@
             document.documentElement.setAttribute('data-theme', tema);
         }
         localStorage.setItem('jbs_theme_preference', tema);
-        document.querySelectorAll('.theme-chip').forEach(chip => chip.classList.remove('active'));
-        const chipAtivo = document.querySelector(`.theme-chip[onclick="aplicarTema('${tema}')"]`);
-        if (chipAtivo) chipAtivo.classList.add('active');
     }
 
     function carregarTemaSalvo() {
-        const temaSalvo = localStorage.getItem('jbs_theme_preference') || 'blue';
-        aplicarTema(temaSalvo);
+        aplicarTema(localStorage.getItem('jbs_theme_preference') || 'blue');
     }
 
     function detectarDispositivo() {
-        const telaPequena = window.innerWidth <= 900;
-        const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        isMobile = telaPequena || (eTouch && window.innerWidth <= 1024);
-        const body = document.body;
-        const badge = document.getElementById('device-badge');
-        if (isMobile) {
-            body.classList.remove('desktop-mode');
-            body.classList.add('mobile-mode');
-            if (badge) badge.innerText = '📱 Modo Mobile';
-        } else {
-            body.classList.remove('mobile-mode');
-            body.classList.add('desktop-mode');
-            if (badge) badge.innerText = '💻 Modo Desktop';
-        }
-    }
-
-    async function conectarPastaImagens() {
-        if ('showDirectoryPicker' in window) {
-            try {
-                pastaImagensHandle = await window.showDirectoryPicker();
-                alert("✅ Pasta 'imagens' conectada com sucesso!");
-                await mapearFotosLocaisCelular();
-            } catch (err) {
-                console.log("Seleção de pasta cancelada.");
-            }
-        } else {
-            alert("⚠️ Seu navegador não suporta gravação direta de diretório.");
-        }
-    }
-
-    async function mapearFotosLocaisCelular() {
-        if (!pastaImagensHandle) return;
-        try {
-            for await (const entry of pastaImagensHandle.values()) {
-                if (entry.kind === 'file') {
-                    const nome = entry.name;
-                    const matchCap = nome.match(/(.+?)\s*[-_]\s*\d{2}\.[a-zA-Z0-9]+$/i);
-                    if (matchCap && matchCap[1]) {
-                        const cod = matchCap[1].trim();
-                        itensComFoto.add(cod);
-                        if (!cacheCaminhoFoto.has(cod)) {
-                            cacheCaminhoFoto.set(cod, `imagens/${nome}`);
-                        }
-                    }
-                }
-            }
-            renderizarPagina();
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async function carregarImagensAutomatico() {
-        try {
-            const pathname = window.location.pathname.split('/').filter(Boolean);
-            const user = window.location.hostname.split('.')[0];
-            const repo = pathname[0];
-            if (user && repo) {
-                const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/imagens`);
-                if (response.ok) {
-                    const arquivos = await response.json();
-                    arquivos.forEach(arquivo => {
-                        const nome = arquivo.name;
-                        const matchCap = nome.match(/(.+?)\s*[-_]\s*01\.[a-zA-Z0-9]+$/i);
-                        if (matchCap && matchCap[1]) {
-                            const cod = matchCap[1].trim();
-                            itensComFoto.add(cod);
-                            cacheCaminhoFoto.set(cod, `imagens/${nome}`);
-                        }
-                    });
-                    renderizarPagina();
-                    return;
-                }
-            }
-        } catch (e) {}
-    }
-
-    async function mapearPastaImagensServidor() {
-        const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "🔄 Varrendo e carregando imagens da pasta /imagens...";
-        await carregarImagensAutomatico();
-        statusDiv.innerText = `✅ Carregamento concluído! Imagens vinculadas a ${itensComFoto.size} itens.`;
-        renderizarPagina();
-    }
-
-    function carregarLogoUniversal() {
-        const logoContainer = document.getElementById('logo-container');
-        const extensoesLogo = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
-        let encontrada = false;
-        extensoesLogo.forEach(ext => {
-            if (encontrada) return;
-            const caminhosTestar = [`logo.${ext}`, `imagens/logo.${ext}`];
-            caminhosTestar.forEach(caminho => {
-                if (encontrada) return;
-                const img = new Image();
-                img.onload = () => {
-                    if (!encontrada) {
-                        encontrada = true;
-                        logoContainer.innerHTML = `<img src="${caminho}" alt="Logo JBS Seara" style="width:100%; height:100%; object-fit:contain;">`;
-                    }
-                };
-                img.src = caminho;
-            });
-        });
+        isMobile = window.innerWidth <= 900;
     }
 
     function normalizarCod(val) {
@@ -641,24 +403,7 @@
         if (typeof val === 'number') return val;
         let str = String(val).trim().replace('R$', '').trim();
         if (!str || str === '-') return 0;
-        let temVirgula = str.includes(',');
-        let temPonto = str.includes('.');
-        if (temVirgula && temPonto) {
-            const ultimaVirgula = str.lastIndexOf(',');
-            const ultimoPonto = str.lastIndexOf('.');
-            if (ultimaVirgula > ultimoPonto) {
-                str = str.replace(/\./g, '').replace(',', '.');
-            } else {
-                str = str.replace(/,/g, '');
-            }
-        } else if (temVirgula) {
-            str = str.replace(/\./g, '').replace(',', '.');
-        } else if (temPonto) {
-            const partes = str.split('.');
-            if (partes.length > 2) {
-                str = str.replace(/\./g, '');
-            }
-        }
+        str = str.replace(/\./g, '').replace(',', '.');
         const num = parseFloat(str);
         return isNaN(num) ? 0 : num;
     }
@@ -669,20 +414,14 @@
         try {
             const resposta = await fetch('saldo.csv?t=' + new Date().getTime(), { cache: 'no-cache' });
             if (resposta.ok) {
-                const headerData = resposta.headers.get('Last-Modified');
-                if (headerData) {
-                    ultimaAtualizacaoSaldo = new Date(headerData).toLocaleString('pt-BR');
-                } else {
-                    ultimaAtualizacaoSaldo = new Date().toLocaleString('pt-BR');
-                }
                 const textoCSV = await resposta.text();
                 const linhas = textoCSV.split(/\r?\n/);
                 if (linhas.length > 0) {
                     const separador = linhas[0].includes(';') ? ';' : ',';
                     const cabecalhos = linhas[0].toLowerCase().split(separador).map(h => h.trim().replace(/["']/g, ''));
                     let idxCod = cabecalhos.findIndex(h => h.includes('cod') || h.includes('item'));
-                    let idxSaldo = cabecalhos.findIndex(h => h.includes('saldo') || h.includes('qtd') || h.includes('estoque') || h.includes('quantidade'));
-                    let idxLocal = cabecalhos.findIndex(h => h.includes('local') || h.includes('armazem') || h.includes('deposito'));
+                    let idxSaldo = cabecalhos.findIndex(h => h.includes('saldo') || h.includes('qtd') || h.includes('estoque'));
+                    let idxLocal = cabecalhos.findIndex(h => h.includes('local') || h.includes('armazem'));
                     if (idxCod === -1) idxCod = 0;
                     if (idxSaldo === -1) idxSaldo = 1;
 
@@ -696,44 +435,28 @@
                         const codNorm = normalizarCod(codBruto);
                         if (codNorm) {
                             const numSaldo = parseNum(saldoVal);
-                            const saldoAcumulado = mapaSaldos.get(codNorm) || 0;
-                            mapaSaldos.set(codNorm, saldoAcumulado + numSaldo);
+                            mapaSaldos.set(codNorm, (mapaSaldos.get(codNorm) || 0) + numSaldo);
                             mapaLocalEstoqueSaldo.set(codNorm, localVal);
                         }
                     }
                 }
-            } else {
-                ultimaAtualizacaoSaldo = 'Arquivo saldo.csv não encontrado no servidor';
             }
-        } catch (e) {
-            ultimaAtualizacaoSaldo = 'Leitura local bloqueada';
-        }
+        } catch (e) {}
     }
 
     async function carregarCSV() {
-        const statusDiv = document.getElementById('status-texto');
-        statusDiv.innerText = "🔄 [1/2] Sincronizando saldo.csv...";
         await carregarSaldos();
-        statusDiv.innerText = "🔄 [2/2] Sincronizando base de dados principal...";
-
-        let arquivoEncontrado = null;
         let bufferArquivo = null;
         for (const arquivo of FORMATOS_SUPORTADOS) {
             try {
                 const resposta = await fetch(`${arquivo}?t=` + new Date().getTime(), { cache: 'no-cache' });
                 if (resposta.ok) {
-                    arquivoEncontrado = arquivo;
                     bufferArquivo = await resposta.arrayBuffer();
                     break;
                 }
             } catch (e) {}
         }
-
-        if (!arquivoEncontrado || !bufferArquivo) {
-            statusDiv.innerText = "⚠️ Clique em '📂 Selecionar Planilha' para carregar a base de dados.";
-            return;
-        }
-        processarBuffer(bufferArquivo, arquivoEncontrado);
+        if (bufferArquivo) processarBuffer(bufferArquivo);
     }
 
     function carregarArquivoManual(event) {
@@ -742,39 +465,22 @@
         const reader = new FileReader();
         reader.onload = async function(e) {
             await carregarSaldos();
-            processarBuffer(e.target.result, file.name);
+            processarBuffer(e.target.result);
         };
         reader.readAsArrayBuffer(file);
     }
 
-    function processarBuffer(buffer, nomeArquivo) {
-        const statusDiv = document.getElementById('status-texto');
+    function processarBuffer(buffer) {
         try {
             const workbook = XLSX.read(buffer, { type: 'array' });
             const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
-            const dadosBrutos = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
-            
-            dadosCSV = dadosBrutos.filter(item => {
-                const codBruto = getVal(item, ['cod_item', 'codigo', 'cod']);
-                const codNorm = normalizarCod(codBruto);
-                const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-                const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
-                const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-                const temMinMaxMonitorado = estMin > 0 && estMax > 0;
-                const temSaldoMonitorado = saldoAtual > 0 && estMin <= 0 && estMax <= 0;
-                return temMinMaxMonitorado || temSaldoMonitorado;
-            });
-
+            dadosCSV = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
             dadosFiltrados = dadosCSV;
-            paginaAtual = 1;
             popularSegmentacaoDados();
-            statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens monitorados.`;
+            carregarImagensAutomatico();
             renderizarPagina();
             atualizarMétricasDashboard();
-            carregarImagensAutomatico();
-        } catch (error) {
-            statusDiv.innerText = `⚠️ Erro ao ler o arquivo ${nomeArquivo}: ${error.message}`;
-        }
+        } catch (error) {}
     }
 
     function popularSegmentacaoDados() {
@@ -788,8 +494,9 @@
         dadosCSV.forEach(item => {
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
             const codNorm = normalizarCod(getVal(item, ['cod_item', 'codigo', 'cod']));
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
+            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem']);
             const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
+            
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
             const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
@@ -801,21 +508,15 @@
 
         if (selectForn) {
             selectForn.innerHTML = '<option value="">Todos os Fornecedores</option>';
-            Array.from(fornecedoresUnicos).sort().forEach(f => {
-                selectForn.innerHTML += `<option value="${f}">${f}</option>`;
-            });
+            Array.from(fornecedoresUnicos).sort().forEach(f => selectForn.innerHTML += `<option value="${f}">${f}</option>`);
         }
         if (selectLocal) {
             selectLocal.innerHTML = '<option value="">Todos os Locais</option>';
-            Array.from(locaisUnicos).sort().forEach(l => {
-                selectLocal.innerHTML += `<option value="${l}">${l}</option>`;
-            });
+            Array.from(locaisUnicos).sort().forEach(l => selectLocal.innerHTML += `<option value="${l}">${l}</option>`);
         }
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
-            Array.from(filiaisUnicas).sort().forEach(fi => {
-                selectFilial.innerHTML += `<option value="${fi}">${fi}</option>`;
-            });
+            Array.from(filiaisUnicas).sort().forEach(fi => selectFilial.innerHTML += `<option value="${fi}">${fi}</option>`);
         }
     }
 
@@ -827,8 +528,44 @@
         document.getElementById('select-local-estoque').value = "";
         document.getElementById('busca').value = "";
         document.getElementById('dash-busca-dinamica').value = "";
-        document.getElementById('dash-select-filtro').value = "todos";
         dispararFiltrosGerais();
+    }
+
+    // FUNÇÃO ROBUSTA DE BUSCA DA FOTO DE CAPA OBRIGATORIAMENTE COM FINAL - 01 ou -01
+    async function carregarImagensAutomatico() {
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+        
+        for (const item of dadosCSV) {
+            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            if (!cod || cod === '-') continue;
+            const codLimpo = String(cod).trim();
+
+            // Padrões estritos exigidos para a foto da capa (- 01 ou -01)
+            const padroesCapa = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo} -01`, `${codLimpo}- 01`];
+            let encontrada = false;
+
+            for (const padrao of padroesCapa) {
+                if (encontrada) break;
+                for (const ext of extensoes) {
+                    const src = `imagens/${padrao}.${ext}`;
+                    const existe = await new Promise(resolve => {
+                        const img = new Image();
+                        img.onload = () => resolve(true);
+                        img.onerror = () => resolve(false);
+                        img.src = src;
+                    });
+
+                    if (existe) {
+                        itensComFoto.add(codLimpo);
+                        cacheCaminhoFoto.set(codLimpo, src);
+                        encontrada = true;
+                        break;
+                    }
+                }
+            }
+        }
+        renderizarPagina();
+        if (vistaAtual === 'dashboard') filtrarTabelaDashboard();
     }
 
     let cacheItensCriticos = [];
@@ -840,7 +577,6 @@
         let abaixoMin = 0;
         let acimaMax = 0;
         cacheItensCriticos = [];
-        const mapaFornecedores = new Map();
 
         dadosCSV.forEach(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
@@ -848,22 +584,18 @@
             const saldo = mapaSaldos.get(codNorm) || 0;
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-            const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
+            
+            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem']);
             const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
+            
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
             const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
             const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
 
-            const temMinMax = estMin > 0 && estMax > 0;
-            const saldoComMinMaxZero = saldo > 0 && estMin <= 0 && estMax <= 0;
-
-            if (temMinMax || saldoComMinMaxZero) {
-                totalMonitorados++;
-            }
-
+            totalMonitorados++;
             let statusTipo = 'normal';
+
             if (saldo > 0) {
                 comSaldo++;
                 if (estMin > 0 && saldo < estMin) {
@@ -879,49 +611,18 @@
             }
 
             cacheItensCriticos.push({ item, statusTipo, saldo, estMin, estMax, localEstoque, filialExibir });
-
-            if (forn && forn !== '-') {
-                if (!mapaFornecedores.has(forn)) {
-                    mapaFornecedores.set(forn, { total: 0, comSaldo: 0, emDesvio: 0 });
-                }
-                const dadosForn = mapaFornecedores.get(forn);
-                dadosForn.total++;
-                if (saldo > 0) dadosForn.comSaldo++;
-                if (statusTipo !== 'normal') dadosForn.emDesvio++;
-            }
         });
 
         document.getElementById('dash-kpi-total').innerText = totalMonitorados;
         document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
-        document.getElementById('dash-kpi-com-saldo-perc').innerText = totalMonitorados > 0 ? `${((comSaldo / totalMonitorados) * 100).toFixed(1)}%` : '0%';
         document.getElementById('dash-kpi-ruptura').innerText = rupturaTotal;
-        document.getElementById('dash-kpi-ruptura-perc').innerText = totalMonitorados > 0 ? `${((rupturaTotal / totalMonitorados) * 100).toFixed(1)}%` : '0%';
         document.getElementById('dash-kpi-abaixo').innerText = abaixoMin;
         document.getElementById('dash-kpi-acima').innerText = acimaMax;
 
         filtrarTabelaDashboard();
-
-        const tbodyForn = document.getElementById('dash-table-fornecedores-body');
-        tbodyForn.innerHTML = '';
-        const topFornecedores = Array.from(mapaFornecedores.entries()).sort((a, b) => b[1].total - a[1].total).slice(0, 10);
-        if (topFornecedores.length === 0) {
-            tbodyForn.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Sem dados disponíveis.</td></tr>';
-        } else {
-            topFornecedores.forEach(([forn, dados]) => {
-                tbodyForn.innerHTML += `
-                    <tr>
-                        <td><strong>${forn}</strong></td>
-                        <td>${dados.total}</td>
-                        <td><span class="color-success" style="font-weight:bold;">${dados.comSaldo}</span></td>
-                        <td><span class="color-danger" style="font-weight:bold;">${dados.emDesvio}</span></td>
-                    </tr>
-                `;
-            });
-        }
     }
 
     function filtrarTabelaDashboard() {
-        const filtroTipo = document.getElementById('dash-select-filtro').value;
         const termoBusca = document.getElementById('dash-busca-dinamica').value.toLowerCase().trim();
         const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
         const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
@@ -940,9 +641,9 @@
             const localEstoqueItem = String(obj.localEstoque).toLowerCase();
             const filialItem = String(obj.filialExibir).toLowerCase();
 
-            const bateTipo = (filtroTipo === 'todos' || obj.statusTipo === filtroTipo);
             const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
-            const bateFilial = (!filialSel || filialItem.includes(filialSel));
+            // Filtro flexível por filial (funciona perfeitamente para qualquer filial selecionada)
+            const bateFilial = (!filialSel || filialItem === filialSel || filialItem.includes(filialSel));
             const bateForn = (!fornSel || fornItem === fornSel);
             const bateLocal = (!localSel || localEstoqueItem === localSel);
 
@@ -956,16 +657,15 @@
             let bateSaldoStatus = true;
             if (saldoStatusSel) {
                 if (saldoStatusSel === 'com_saldo') bateSaldoStatus = obj.saldo > 0;
-                else if (saldoStatusSel === 'zerado_com_minmax') bateSaldoStatus = obj.saldo <= 0 && obj.estMin > 0 && obj.estMax > 0;
+                else if (saldoStatusSel === 'zerado') bateSaldoStatus = obj.saldo === 0;
+                else if (saldoStatusSel === 'abaixo') bateSaldoStatus = obj.estMin > 0 && obj.saldo < obj.estMin;
+                else if (saldoStatusSel === 'acima') bateSaldoStatus = obj.estMax > 0 && obj.saldo > obj.estMax;
             }
 
-            return bateTipo && bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
+            return bateBusca && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
         });
 
-        const subtotalInfo = document.getElementById('dash-subtotal-info');
-        if (subtotalInfo) {
-            subtotalInfo.innerHTML = `Subtotal: <strong>${itensFiltrados.length}</strong> itens filtrados`;
-        }
+        document.getElementById('dash-subtotal-info').innerHTML = `Subtotal: <strong>${itensFiltrados.length}</strong> itens filtrados`;
 
         if (itensFiltrados.length === 0) {
             tbodyCriticos.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">✅ Nenhum item encontrado.</td></tr>';
@@ -977,19 +677,13 @@
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
 
-            let badgeHtml = '';
+            let badgeHtml = '<span class="badge-status" style="background:#eef2f7; color:#1e293b;">✅ Normal</span>';
             if (statusTipo === 'ruptura') badgeHtml = '<span class="badge-status badge-ruptura">⚠️ Ruptura Total</span>';
             else if (statusTipo === 'abaixo') badgeHtml = '<span class="badge-status badge-abaixo">📉 Abaixo Mín.</span>';
             else if (statusTipo === 'acima') badgeHtml = '<span class="badge-status badge-acima">🚨 Acima Máx.</span>';
-            else badgeHtml = '<span class="badge-status" style="background:#eef2f7; color:#1e293b;">✅ Normal</span>';
 
             const tr = document.createElement('tr');
             tr.onclick = () => abrirModalDadosItem(item);
-            if (!isMobile) {
-                tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo, localEstoque, filialExibir);
-                tr.onmouseleave = esconderHoverCard;
-            }
-
             tr.innerHTML = `
                 <td><span class="row-location" style="background:var(--primary-color); color:#fff;">🏢 ${filialExibir}</span></td>
                 <td><strong>${cod}</strong></td>
@@ -1004,34 +698,6 @@
         });
     }
 
-    function mostrarHoverCardDashboard(e, item, saldo, localEstoque, filialExibir) {
-        if (isMobile) return;
-        const cardHover = document.getElementById('hover-card');
-        const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-        const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const srcFoto = cacheCaminhoFoto.get(String(cod).trim()) || '';
-        const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
-
-        cardHover.innerHTML = `
-            ${tagFoto}
-            <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
-            <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldo} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoque}</div>
-        `;
-        let posX = e.clientX + 20;
-        let posY = e.clientY + 10;
-        if (posX + 350 > window.innerWidth) posX = e.clientX - 350;
-        if (posY + 370 > window.innerHeight) posY = window.innerHeight - 380;
-        cardHover.style.left = posX + 'px';
-        cardHover.style.top = posY + 'px';
-        cardHover.style.display = 'block';
-    }
-
-    function esconderHoverCard() {
-        const hoverCard = document.getElementById('hover-card');
-        if (hoverCard) hoverCard.style.display = 'none';
-    }
-
     function abrirModalDadosItem(item) {
         const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === getVal(item, ['cod_item', 'codigo', 'cod']));
         if (indexReal !== -1) abrirModal(indexReal);
@@ -1039,40 +705,11 @@
 
     function renderizarPagina() {
         const divContainer = document.getElementById('resultados');
-        const contDiv = document.getElementById('contador-itens');
-        const paginacaoDiv = document.getElementById('paginacao');
         divContainer.innerHTML = '';
         const totalItens = dadosFiltrados.length;
 
-        let comFoto = 0;
-        let qtdComSaldo = 0;
-        let qtdZeradoMinMax = 0;
-        let qtdZeradoSemMinMax = 0;
-
-        dadosCSV.forEach(item => {
-            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-            const codLimpo = String(cod).trim();
-            const codNorm = normalizarCod(cod);
-            if (itensComFoto.has(codLimpo)) comFoto++;
-            const saldo = mapaSaldos.get(codNorm) || 0;
-            const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
-            const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-            if (saldo > 0) qtdComSaldo++;
-            else if (estMin > 0 && estMax > 0) qtdZeradoMinMax++;
-            else qtdZeradoSemMinMax++;
-        });
-
-        const semFoto = totalItens - comFoto;
-        contDiv.innerHTML = `
-            <div style="text-align: right; line-height: 1.4;">
-                <div><strong>Total:</strong> ${totalItens} itens &nbsp;|&nbsp; <span style="color:var(--text-success); font-weight:700;">✅ Saldo > 0:</span> ${qtdComSaldo}</div>
-                <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">🕒 <strong>Última Atualização:</strong> ${ultimaAtualizacaoSaldo}</div>
-            </div>
-        `;
-
         if (totalItens === 0) {
             divContainer.innerHTML = '<p>Nenhum item encontrado com os filtros selecionados.</p>';
-            paginacaoDiv.style.display = 'none';
             return;
         }
 
@@ -1080,12 +717,12 @@
         const fim = Math.min(inicio + ITENS_POR_PAGINA, totalItens);
         const itensPagina = dadosFiltrados.slice(inicio, fim);
 
-        itensPagina.forEach((item, index) => {
+        itensPagina.forEach((item) => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
             const codNorm = normalizarCod(cod);
-            const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+            const saldoExibir = mapaSaldos.get(codNorm) || 0;
             const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
 
             const row = document.createElement('div');
@@ -1093,7 +730,6 @@
             row.onclick = () => abrirModal(indexReal);
 
             row.innerHTML = `
-                <div class="row-thumb" id="row-thumb-${indexReal}"><span>Sem foto</span></div>
                 <div class="row-content">
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
@@ -1103,240 +739,72 @@
                 </div>
             `;
             divContainer.appendChild(row);
-            carregarFotoCapaLinha(cod, indexReal);
+        });
+    }
+
+    function filtrar() {
+        const termo = document.getElementById('busca').value.toLowerCase().trim();
+        const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
+        const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
+        const localSel = document.getElementById('select-local-estoque').value.toLowerCase().trim();
+        const imagemSel = document.getElementById('select-imagem').value;
+        const saldoStatusSel = document.getElementById('select-saldo-status').value;
+
+        dadosFiltrados = dadosCSV.filter(item => {
+            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+            const codLimpo = String(cod).trim();
+            const codNorm = normalizarCod(cod);
+            const saldo = mapaSaldos.get(codNorm) || 0;
+            const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
+            const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
+
+            const linhaCompleta = Object.values(item).join(' ').toLowerCase();
+            const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
+            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem']).toLowerCase();
+            const localEstoqueItem = (localPlanilha && localPlanilha !== '-') ? localPlanilha : String(mapaLocalEstoqueSaldo.get(codNorm) || 'geral').toLowerCase();
+            
+            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
+            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
+            const filialStr = ((codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '')).trim().toLowerCase();
+
+            const bateTexto = !termo || linhaCompleta.includes(termo);
+            const bateFilial = (!filialSel || filialStr === filialSel || filialStr.includes(filialSel));
+            const bateForn = (!fornSel || fornItem === fornSel);
+            const bateLocal = (!localSel || localEstoqueItem === localSel);
+
+            let bateImagem = true;
+            if (imagemSel) {
+                const temFoto = itensComFoto.has(codLimpo);
+                if (imagemSel === 'com_foto') bateImagem = temFoto;
+                else if (imagemSel === 'sem_foto') bateImagem = !temFoto;
+            }
+
+            let bateSaldoStatus = true;
+            if (saldoStatusSel) {
+                if (saldoStatusSel === 'com_saldo') bateSaldoStatus = saldo > 0;
+                else if (saldoStatusSel === 'zerado') bateSaldoStatus = saldo === 0;
+                else if (saldoStatusSel === 'abaixo') bateSaldoStatus = estMin > 0 && saldo < estMin;
+                else if (saldoStatusSel === 'acima') bateSaldoStatus = estMax > 0 && saldo > estMax;
+            }
+
+            return bateTexto && bateFilial && bateForn && bateLocal && bateImagem && bateSaldoStatus;
         });
 
-        const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA);
-        if (totalPaginas > 1) {
-            paginacaoDiv.style.display = 'flex';
-            document.getElementById('info-pagina').innerText = `Página ${paginaAtual} de ${totalPaginas}`;
-            document.getElementById('btn-ant').disabled = (paginaAtual === 1);
-            document.getElementById('btn-prox').disabled = (paginaAtual === totalPaginas);
-        } else {
-            paginacaoDiv.style.display = 'none';
-        }
+        paginaAtual = 1;
+        renderizarPagina();
     }
 
-    function carregarFotoCapaLinha(codItem, indexReal) {
-        const thumbDiv = document.getElementById(`row-thumb-${indexReal}`);
-        if (!codItem || codItem === '-') return;
-        const codLimpo = String(codItem).trim();
-        if (cacheCaminhoFoto.has(codLimpo)) {
-            const src = cacheCaminhoFoto.get(codLimpo);
-            if (src) {
-                thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
-                return;
-            }
-        }
-    }
-
-    async function abrirModal(indexReal) {
-        esconderHoverCard();
+    function abrirModal(indexReal) {
         const item = dadosCSV[indexReal];
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-        const especificacao = getVal(item, ['especificacao', 'espec']);
-        const estMin = getVal(item, ['est_min', 'minimo']);
-        const estMax = getVal(item, ['est_max', 'maximo']);
-        const leadTime = getVal(item, ['lead_time', 'lead']);
-
-        const codNorm = normalizarCod(cod);
-        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-        const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-        const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
-
         const conteudoDiv = document.getElementById('modal-conteudo');
-        conteudoDiv.innerHTML = `
-            <h2 style="color:var(--primary-color); margin-top:0; font-size:18px; font-weight:700;">[Código: ${cod}] — ${nome}</h2>
-            <div class="modal-body">
-                <div class="modal-info">
-                    <p>📍 <strong>Local:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 📊 <strong>Saldo:</strong> ${saldoExibir} un.</p>
-                    <p>📈 <strong>Mín/Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
-                    <p><strong>Fornecedor:</strong> ${fornecedor}</p>
-                    <p><strong>Especificação:</strong> ${especificacao}</p>
-                    
-                    <div style="margin-top: 16px;">
-                        <button class="btn-pdf-link" onclick="gerarPdfFotosItemComJsPDF(${indexReal})" style="cursor:pointer; border:none;">
-                            📄 Baixar PDF do Item (Com todas as fotos em grid)
-                        </button>
-                    </div>
-                </div>
-                <div class="modal-gallery">
-                    <div class="main-media-box" id="modal-media-box"><span>Carregando...</span></div>
-                    <div class="thumbnails-box" id="modal-thumbs-box"></div>
-                </div>
-            </div>
-        `;
+        conteudoDiv.innerHTML = `<h2>[Código: ${cod}] — ${nome}</h2>`;
         document.getElementById('modal-item').style.display = 'flex';
-        carregarMidiasCompletas(cod);
-    }
-
-    // FUNÇÃO DE GERAÇÃO DO PDF COM TODAS AS FOTOS EM GRID
-    async function gerarPdfFotosItemComJsPDF(indexReal) {
-        const item = dadosCSV[indexReal];
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        
-        const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-        const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-        const especificacao = getVal(item, ['especificacao', 'espec']);
-        const estMin = getVal(item, ['est_min', 'minimo']);
-        const estMax = getVal(item, ['est_max', 'maximo']);
-        const leadTime = getVal(item, ['lead_time', 'lead']);
-        
-        const codNorm = normalizarCod(cod);
-        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-        const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-        const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
-
-        // Cabeçalho Corporativo JBS | Seara
-        doc.setFillColor(10, 61, 120);
-        doc.rect(0, 0, 210, 25, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(15);
-        doc.text("JBS | SEARA — FICHA TÉCNICA E AUDITORIA DE ITEM", 14, 16);
-
-        // Dados Técnicos do Item
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(12);
-        doc.text(`Código do Item: ${cod}`, 14, 35);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.text(`Descrição: ${nome}`, 14, 42);
-        doc.text(`Fornecedor: ${fornecedor}`, 14, 48);
-        doc.text(`Local de Estoque: ${localEstoqueExibir} | Saldo Atual: ${saldoExibir} un.`, 14, 54);
-        doc.text(`Estoque Mín/Máx: ${estMin} / ${estMax} | Lead Time: ${leadTime}`, 14, 60);
-        doc.text(`Especificações: ${especificacao}`, 14, 66, { maxWidth: 180 });
-
-        // Coletar todas as fotos disponíveis daquele item (sequência 01 a 6)
-        let imagensItem = [];
-        const codLimpo = String(cod).trim();
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
-
-        for (let seq = 1; seq <= 6; seq++) {
-            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-            let encontradaSeq = false;
-            for (const ext of extensoes) {
-                const src = `imagens/${codLimpo} - ${numSeq}.${ext}`;
-                const base64Img = await carregarImagemComoBase64(src);
-                if (base64Img) {
-                    imagensItem.push(base64Img);
-                    encontradaSeq = true;
-                    break;
-                }
-            }
-        }
-
-        // Seção de Fotos (Grid Organizado em Tamanho Menor na mesma página)
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text("Registro Fotográfico da Prateleira / Item:", 14, 82);
-
-        if (imagensItem.length > 0) {
-            let posX = 14;
-            let posY = 88;
-            let larguraImg = 54;
-            let alturaImg = 44;
-            let margemX = 12;
-
-            imagensItem.forEach((imgBase64, index) => {
-                if (index > 0 && index % 3 === 0) {
-                    posX = 14;
-                    posY += alturaImg + 16;
-                }
-                doc.setDrawColor(200, 200, 200);
-                doc.rect(posX, posY, larguraImg, alturaImg);
-                doc.addImage(imgBase64, 'JPEG', posX + 1, posY + 1, larguraImg - 2, alturaImg - 2);
-                
-                doc.setFontSize(9);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Foto 0${index + 1}`, posX + (larguraImg / 2), posY + alturaImg + 5, { align: 'center' });
-
-                posX += larguraImg + margemX;
-            });
-        } else {
-            doc.setFont("helvetica", "italic");
-            doc.setTextColor(150, 150, 150);
-            doc.text("Nenhuma imagem cadastrada para este item.", 14, 92);
-        }
-
-        // Rodapé
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Gerado automaticamente pelo Sistema de Almoxarifado JBS | Seara em ${new Date().toLocaleString('pt-BR')}`, 14, 285);
-
-        doc.save(`Ficha_${cod}_${nome.substring(0, 15).trim()}.pdf`);
-    }
-
-    async function carregarImagemComoBase64(url) {
-        try {
-            const resposta = await fetch(url);
-            if (!resposta.ok) return null;
-            const blob = await resposta.blob();
-            return await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = () => resolve(null);
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) {
-            return null;
-        }
-    }
-
-    async function carregarMidiasCompletas(codItem) {
-        const mediaBox = document.getElementById('modal-media-box');
-        const thumbsBox = document.getElementById('modal-thumbs-box');
-        thumbsBox.innerHTML = '';
-        const codLimpo = String(codItem).trim();
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
-        let midias = [];
-
-        for (let seq = 1; seq <= 6; seq++) {
-            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-            let achou = false;
-            for (const ext of extensoes) {
-                const src = `imagens/${codLimpo} - ${numSeq}.${ext}`;
-                const existe = await new Promise(resolve => {
-                    const img = new Image();
-                    img.onload = () => resolve(true);
-                    img.onerror = () => resolve(false);
-                    img.src = src;
-                });
-                if (existe) {
-                    midias.push({ src: src });
-                    achou = true;
-                    break;
-                }
-            }
-            if (!achou) break;
-        }
-
-        if (midias.length === 0) {
-            mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens</span>';
-            return;
-        }
-
-        mediaBox.innerHTML = `<img src="${midias[0].src}" alt="Foto Peça">`;
-        midias.forEach((m, i) => {
-            const thumb = document.createElement('div');
-            thumb.className = `thumb-item ${i === 0 ? 'active' : ''}`;
-            thumb.innerHTML = `<img src="${m.src}">`;
-            thumb.onclick = () => {
-                mediaBox.innerHTML = `<img src="${m.src}" alt="Foto Peça">`;
-                thumbsBox.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
-                thumb.classList.add('active');
-            };
-            thumbsBox.appendChild(thumb);
-        });
     }
 
     function fecharModal() {
         document.getElementById('modal-item').style.display = 'none';
-        document.getElementById('modal-conteudo').innerHTML = '';
     }
 
     function fecharModalFora(e) {
@@ -1348,22 +816,9 @@
         renderizarPagina();
     }
 
-    function filtrar() {
-        const termo = document.getElementById('busca').value.toLowerCase().trim();
-        dadosFiltrados = dadosCSV.filter(item => {
-            const linhaCompleta = Object.values(item).join(' ').toLowerCase();
-            return !termo || linhaCompleta.includes(termo);
-        });
-        paginaAtual = 1;
-        renderizarPagina();
-    }
-
     window.onload = () => {
         carregarTemaSalvo();
-        carregarEstadoSegmentacao();
         detectarDispositivo();
-        carregarLogoUniversal();
-        mudarIdioma('PT');
         navegarPara('dashboard');
         carregarCSV();
     };
