@@ -128,7 +128,7 @@
                 <input type="text" id="busca" class="search-box" placeholder="Digite código, nome, filial, equipamento, especificação..." oninput="dispararFiltrosGerais()">
 
                 <div class="status" style="display: flex; justify-content: flex-end; align-items: center;">
-                    <span id="status-texto" style="margin-right: auto;">Carregando base de dados...</span>
+                    <span id="status-texto" style="margin-right: auto;">Carregando base dados.csv...</span>
                     <span id="contador-itens" style="text-align: right;"></span>
                 </div>
             </div>
@@ -338,12 +338,10 @@
         return isNaN(num) ? 0 : num;
     }
 
-    // Função para aplicar a regra de renomeação da filial se o número for > 599
     function formatarFilial(item) {
         const codFilialVal = getVal(item, ['cod_filial', 'filial_cod']);
         const nomeFilialVal = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
         
-        // Verifica se há um número no código ou nome da filial superior a 599
         const numeroMatch = (codFilialVal + " " + nomeFilialVal).match(/\d+/g);
         if (numeroMatch) {
             for (let numStr of numeroMatch) {
@@ -357,7 +355,6 @@
         return filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
     }
 
-    // Função para formatar o Local de Estoque exibindo "Cód. - Nome"
     function formatarLocalEstoque(item) {
         const codLocal = getVal(item, ['cod_lc_estoque', 'lc_estoque_cod', 'cod_local', 'local_cod', 'lc_est']);
         const nomeLocal = getVal(item, ['lc_estoque', 'local_estoque', 'local', 'armazem', 'deposito']);
@@ -369,6 +366,7 @@
         return n !== '-' ? n : (c !== '-' ? c : 'Geral');
     }
 
+    // saldo.csv auxiliar
     async function carregarSaldos() {
         mapaSaldos.clear();
         try {
@@ -403,7 +401,7 @@
 
     async function carregarCSV() {
         const statusEl = document.getElementById('status-texto');
-        if (statusEl) statusEl.innerText = "🔄 Sincronizando saldos e base de dados (dados.csv)...";
+        if (statusEl) statusEl.innerText = "🔄 Sincronizando dados.csv e saldo.csv...";
         
         await carregarSaldos();
         let bufferArquivo = null;
@@ -456,7 +454,7 @@
             atualizarMétricasDashboard();
         } catch (error) {
             const statusEl = document.getElementById('status-texto');
-            if (statusEl) statusEl.innerText = "⚠️ Erro ao processar o arquivo de dados.";
+            if (statusEl) statusEl.innerText = "⚠️ Erro ao processar dados.csv.";
         }
     }
 
