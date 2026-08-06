@@ -6,6 +6,8 @@
     <title>JBS | Seara — Gestão de Almoxarifado</title>
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Biblioteca jsPDF para geração profissional de PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="desktop-mode">
@@ -333,7 +335,7 @@
             opt_all_active: "🔍 Todos os Itens Ativos",
             opt_total_rupture: "⚠️ Apenas Ruptura Total (Zerados)",
             opt_below_min: "📉 Apenas Abaixo do Mínimo",
-            opt_above_max: "🚨 Acima do Máximo",
+            opt_above_max: "🚨 Apenas Acima do Máximo",
             opt_normal_stock: "✅ Estoque Normal/Regular",
             header_title: "Almoxarifado JBS | Seara",
             status_searching: "Procurando base de dados...",
@@ -417,226 +419,6 @@
             th_items_balance: "Items w/ Balance",
             th_critical_deviation: "Critical Deviation",
             msg_loading: "Loading metrics..."
-        },
-        IT: {
-            nav_dashboard: "Dashboard Generale",
-            nav_pesquisa: "Ricerca Articoli",
-            nav_actions: "Azioni di Sistema",
-            btn_conn_folder: "📂 Connetti Cartella Immagini",
-            btn_load_imgs: "🖼️ Carica Immagini",
-            btn_select_sheet: "📂 Seleziona Foglio",
-            btn_sync_base: "🔄 Sincronizza Database",
-            label_balance_status: "📦 Stato Saldo:",
-            opt_all_items: "Tutti gli Articoli",
-            opt_with_balance: "✅ Con Saldo (> 0)",
-            opt_zero_minmax: "⚠️ Zero con Min/Max (> 0)",
-            label_item_image: "🖼️ Immagine Articolo:",
-            opt_all_photos: "Tutte le Foto",
-            opt_with_photo: "📸 Con Immagine",
-            opt_without_photo: "🚫 Senza Immagine",
-            label_supplier: "🏢 Fornitore:",
-            opt_all_suppliers: "Tutti i Fornitori",
-            label_stock_location: "📍 Posizione Magazzino:",
-            opt_all_locations: "Tutte le Posizioni",
-            btn_clear_filters: "🧹 Pulisci Filtri",
-            label_audit_category: "📋 Categoria di Audit:",
-            opt_all_active: "🔍 Tutti gli Articoli Attivi",
-            opt_total_rupture: "⚠️ Solo Rottura Totale (A zero)",
-            opt_below_min: "📉 Solo Sotto il Minimo",
-            opt_above_max: "🚨 Solo Sopra il Massimo",
-            opt_normal_stock: "✅ Stock Normale/Regolare",
-            header_title: "Magazzino JBS | Seara",
-            status_searching: "Ricerca database...",
-            btn_prev: "❮ Precedente",
-            btn_next: "Successivo ❯",
-            dash_header_title: "Dashboard Esecutivo & Indicatori",
-            kpi_total_monitored: "Totale Monitorato",
-            kpi_sub_registered: "Registrati nel Database",
-            kpi_with_balance: "Articoli con Saldo (>0)",
-            kpi_total_rupture: "⚠️ Rottura Totale (A zero)",
-            kpi_below_min: "📉 Sotto il Minimo",
-            kpi_sub_critical_low: "Stock Critico Basso",
-            kpi_above_max: "🚨 Sopra il Massimo",
-            kpi_sub_excess: "Eccesso di Stock",
-            audit_section_title: "📋 Audit di Magazzino (Passa il mouse per la foto)",
-            th_code: "Codice",
-            th_description: "Descrizione Articolo",
-            th_balance: "Saldo Attuale",
-            th_minmax: "Min / Max",
-            th_location: "Posizione",
-            th_status: "Stato Critico",
-            th_supplier: "Fornitore",
-            msg_no_items: "Nessun articolo trovato.",
-            supplier_section_title: "🏢 Volume Articoli per Fornitore (Top 10)",
-            th_total_items: "Totale Articoli",
-            th_items_balance: "Articoli con Saldo",
-            th_critical_deviation: "In Deviazione Critica",
-            msg_loading: "Caricamento metriche..."
-        },
-        FR: {
-            nav_dashboard: "Tableau de Bord Général",
-            nav_pesquisa: "Recherche d'Articles",
-            nav_actions: "Actions Système",
-            btn_conn_folder: "📂 Connecter Dossier Images",
-            btn_load_imgs: "🖼️ Charger Images",
-            btn_select_sheet: "📂 Sélectionner Fichier",
-            btn_sync_base: "🔄 Synchroniser",
-            label_balance_status: "📦 Statut du Solde:",
-            opt_all_items: "Tous les Articles",
-            opt_with_balance: "✅ Avec Solde (> 0)",
-            opt_zero_minmax: "⚠️ Zéro avec Min/Max (> 0)",
-            label_item_image: "🖼️ Image de l'Article:",
-            opt_all_photos: "Toutes les Photos",
-            opt_with_photo: "📸 Avec Image",
-            opt_without_photo: "🚫 Sans Image",
-            label_supplier: "🏢 Fournisseur:",
-            opt_all_suppliers: "Tous les Fournisseurs",
-            label_stock_location: "📍 Emplacement de Stock:",
-            opt_all_locations: "Tous les Emplacements",
-            btn_clear_filters: "🧹 Effacer Filtres",
-            label_audit_category: "📋 Catégorie d'Audit:",
-            opt_all_active: "🔍 Tous les Articles Actifs",
-            opt_total_rupture: "⚠️ Rupture Totale (Zéro)",
-            opt_below_min: "📉 En Dessous du Minimum",
-            opt_above_max: "🚨 Au-dessus du Maximum",
-            opt_normal_stock: "✅ Stock Normal/Régulier",
-            header_title: "Entrepôt JBS | Seara",
-            status_searching: "Recherche de la base...",
-            btn_prev: "❮ Précédent",
-            btn_next: "Suivant ❯",
-            dash_header_title: "Tableau de Bord Exécutif & Indicateurs",
-            kpi_total_monitored: "Total Surveillé",
-            kpi_sub_registered: "Enregistrés dans la Base",
-            kpi_with_balance: "Articles Avec Solde (>0)",
-            kpi_total_rupture: "⚠️ Rupture Totale (Zéro)",
-            kpi_below_min: "📉 Sous le Minimum",
-            kpi_sub_critical_low: "Stock Critique Bas",
-            kpi_above_max: "🚨 Au-dessus du Maximum",
-            kpi_sub_excess: "Excès de Stock",
-            audit_section_title: "📋 Audit de Stock (Survolez pour voir la photo)",
-            th_code: "Code",
-            th_description: "Description de l'Article",
-            th_balance: "Solde Actuel",
-            th_minmax: "Min / Max",
-            th_location: "Emplacement",
-            th_status: "Statut Critique",
-            th_supplier: "Fournisseur",
-            msg_no_items: "Aucun article trouvé.",
-            supplier_section_title: "🏢 Volume d'Articles par Fournisseur (Top 10)",
-            th_total_items: "Total d'Articles",
-            th_items_balance: "Articles avec Solde",
-            th_critical_deviation: "En Déviation Critique",
-            msg_loading: "Chargement des métriques..."
-        },
-        DE: {
-            nav_dashboard: "Allgemeines Dashboard",
-            nav_pesquisa: "Artikel Suche",
-            nav_actions: "Systemaktionen",
-            btn_conn_folder: "📂 Bilderordner Verbinden",
-            btn_load_imgs: "🖼️ Bilder Laden",
-            btn_select_sheet: "📂 Tabelle Auswählen",
-            btn_sync_base: "🔄 Datenbank Synchronisieren",
-            label_balance_status: "📦 Saldenstatus:",
-            opt_all_items: "Alle Artikel",
-            opt_with_balance: "✅ Mit Saldo (> 0)",
-            opt_zero_minmax: "⚠️ Null mit Min/Max (> 0)",
-            label_item_image: "🖼️ Artikelbild:",
-            opt_all_photos: "Alle Fotos",
-            opt_with_photo: "📸 Mit Bild",
-            opt_without_photo: "🚫 Ohne Bild",
-            label_supplier: "🏢 Lieferant:",
-            opt_all_suppliers: "Alle Lieferanten",
-            label_stock_location: "📍 Lagerort:",
-            opt_all_locations: "Alle Standorte",
-            btn_clear_filters: "🧹 Filter Löschen",
-            label_audit_category: "📋 Prüfkategorie:",
-            opt_all_active: "🔍 Alle Aktiven Artikel",
-            opt_total_rupture: "⚠️ Nur Gesamteinbruch (Null)",
-            opt_below_min: "📉 Nur Unter Minimum",
-            opt_above_max: "🚨 Nur Über Maximum",
-            opt_normal_stock: "✅ Normaler/Regulärer Bestand",
-            header_title: "Lagerhaus JBS | Seara",
-            status_searching: "Durchsuche Datenbank...",
-            btn_prev: "❮ Vorherige",
-            btn_next: "Nächste ❯",
-            dash_header_title: "Executive Dashboard & Indikatoren",
-            kpi_total_monitored: "Gesamt Überwacht",
-            kpi_sub_registered: "In der Basis Registriert",
-            kpi_with_balance: "Artikel Mit Saldo (>0)",
-            kpi_total_rupture: "⚠️ Gesamteinbruch (Null)",
-            kpi_below_min: "📉 Unter Minimum",
-            kpi_sub_critical_low: "Kritischer Tiefstand",
-            kpi_above_max: "🚨 Über Maximum",
-            kpi_sub_excess: "Bestandsüberschuss",
-            audit_section_title: "📋 Bestandsprüfung (Mit Mauszeiger Foto anzeigen)",
-            th_code: "Code",
-            th_description: "Artikelbeschreibung",
-            th_balance: "Aktueller Saldo",
-            th_minmax: "Min / Max",
-            th_location: "Lagerort",
-            th_status: "Kritischer Status",
-            th_supplier: "Lieferant",
-            msg_no_items: "Keine Artikel gefunden.",
-            supplier_section_title: "🏢 Artikelvolumen nach Lieferanten (Top 10)",
-            th_total_items: "Gesamtartikel",
-            th_items_balance: "Artikel mit Saldo",
-            th_critical_deviation: "Kritische Abweichung",
-            msg_loading: "Lade Metriken..."
-        },
-        NL: {
-            nav_dashboard: "Algemeen Dashboard",
-            nav_pesquisa: "Artikel Zoeken",
-            nav_actions: "Systeemacties",
-            btn_conn_folder: "📂 Afbeeldingenmap Koppelen",
-            btn_load_imgs: "🖼️ Afbeeldingen Laden",
-            btn_select_sheet: "📂 Selecteer Spreadsheet",
-            btn_sync_base: "🔄 Database Synchroniseren",
-            label_balance_status: "📦 Saldo Status:",
-            opt_all_items: "Alle Artikelen",
-            opt_with_balance: "✅ Met Saldo (> 0)",
-            opt_zero_minmax: "⚠️ Nul met Min/Max (> 0)",
-            label_item_image: "🖼️ Artikel Afbeelding:",
-            opt_all_photos: "Alle Foto's",
-            opt_with_photo: "📸 Met Afbeelding",
-            opt_without_photo: "🚫 Zonder Afbeelding",
-            label_supplier: "🏢 Leverancier:",
-            opt_all_suppliers: "Alle Leveranciers",
-            label_stock_location: "📍 Voorraadlocatie:",
-            opt_all_locations: "Alle Locaties",
-            btn_clear_filters: "🧹 Filters Wissen",
-            label_audit_category: "📋 Audit Categorie:",
-            opt_all_active: "🔍 Alle Actieve Artikelen",
-            opt_total_rupture: "⚠️ Alleen Totale Breuk (Nul)",
-            opt_below_min: "📉 Alleen Onder Minimum",
-            opt_above_max: "🚨 Alleen Boven Maximum",
-            opt_normal_stock: "✅ Normale/Reguliere Voorraad",
-            header_title: "Magazijn JBS | Seara",
-            status_searching: "Database doorzoeken...",
-            btn_prev: "❮ Vorige",
-            btn_next: "Volgende ❯",
-            dash_header_title: "Executive Dashboard & Indicatoren",
-            kpi_total_monitored: "Totaal Gemonitord",
-            kpi_sub_registered: "Geregistreerd in Basis",
-            kpi_with_balance: "Artikelen Met Saldo (>0)",
-            kpi_total_rupture: "⚠️ Totale Breuk (Nul)",
-            kpi_below_min: "📉 Onder Minimum",
-            kpi_sub_critical_low: "Kritisch Lage Voorraad",
-            kpi_above_max: "🚨 Boven Maximum",
-            kpi_sub_excess: "Voorraadoverschot",
-            audit_section_title: "📋 Voorraad Audit (BewEeg muis om foto te zien)",
-            th_code: "Code",
-            th_description: "Artikel Omschrijving",
-            th_balance: "Huidig Saldo",
-            th_minmax: "Min / Max",
-            th_location: "Locatie",
-            th_status: "Kritieke Status",
-            th_supplier: "Leverancier",
-            msg_no_items: "Geen artikelen gevonden.",
-            supplier_section_title: "🏢 Volume Artikelen per Leverancier (Top 10)",
-            th_total_items: "Totaal Artikelen",
-            th_items_balance: "Artikelen m/ Saldo",
-            th_critical_deviation: "Kritieke Afwijking",
-            msg_loading: "Metrieken laden..."
         }
     };
 
@@ -652,15 +434,6 @@
                 el.innerText = dicionarioIdiomas[sigla][chave];
             }
         });
-
-        const inputBusca = document.getElementById('busca');
-        if (inputBusca) {
-            inputBusca.placeholder = sigla === 'EN' ? "Type code, name, branch, equipment..." : "Digite código, nome, filial, equipamento, especificação...";
-        }
-        const dashBusca = document.getElementById('dash-busca-dinamica');
-        if (dashBusca) {
-            dashBusca.placeholder = sigla === 'EN' ? "Filter by code, name, branch..." : "Filtrar por código, nome, filial...";
-        }
 
         renderizarPagina();
         atualizarMétricasDashboard();
@@ -679,7 +452,6 @@
             viewDashboard.style.display = 'none';
             navPesquisa.classList.add('active');
             navDashboard.classList.remove('active');
-
             if (groupDashCat) groupDashCat.style.display = 'none';
             filtrar();
         } else if (view === 'dashboard') {
@@ -687,7 +459,6 @@
             viewDashboard.style.display = 'flex';
             navPesquisa.classList.remove('active');
             navDashboard.classList.add('active');
-
             if (groupDashCat) groupDashCat.style.display = 'flex';
             atualizarMétricasDashboard();
         }
@@ -725,7 +496,6 @@
             document.documentElement.setAttribute('data-theme', tema);
         }
         localStorage.setItem('jbs_theme_preference', tema);
-        
         document.querySelectorAll('.theme-chip').forEach(chip => chip.classList.remove('active'));
         const chipAtivo = document.querySelector(`.theme-chip[onclick="aplicarTema('${tema}')"]`);
         if (chipAtivo) chipAtivo.classList.add('active');
@@ -740,10 +510,8 @@
         const telaPequena = window.innerWidth <= 900;
         const eTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         isMobile = telaPequena || (eTouch && window.innerWidth <= 1024);
-
         const body = document.body;
         const badge = document.getElementById('device-badge');
-
         if (isMobile) {
             body.classList.remove('desktop-mode');
             body.classList.add('mobile-mode');
@@ -796,7 +564,6 @@
             const pathname = window.location.pathname.split('/').filter(Boolean);
             const user = window.location.hostname.split('.')[0];
             const repo = pathname[0];
-
             if (user && repo) {
                 const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/imagens`);
                 if (response.ok) {
@@ -814,9 +581,7 @@
                     return;
                 }
             }
-        } catch (e) {
-            console.warn("Carregamento automático de imagens ignorado.", e);
-        }
+        } catch (e) {}
     }
 
     async function mapearPastaImagensServidor() {
@@ -831,7 +596,6 @@
         const logoContainer = document.getElementById('logo-container');
         const extensoesLogo = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
         let encontrada = false;
-
         extensoesLogo.forEach(ext => {
             if (encontrada) return;
             const caminhosTestar = [`logo.${ext}`, `imagens/logo.${ext}`];
@@ -902,46 +666,37 @@
     async function carregarSaldos() {
         mapaSaldos.clear();
         mapaLocalEstoqueSaldo.clear();
-
         try {
             const resposta = await fetch('saldo.csv?t=' + new Date().getTime(), { cache: 'no-cache' });
             if (resposta.ok) {
                 const headerData = resposta.headers.get('Last-Modified');
                 if (headerData) {
-                    const dataObj = new Date(headerData);
-                    ultimaAtualizacaoSaldo = dataObj.toLocaleString('pt-BR');
+                    ultimaAtualizacaoSaldo = new Date(headerData).toLocaleString('pt-BR');
                 } else {
                     ultimaAtualizacaoSaldo = new Date().toLocaleString('pt-BR');
                 }
-
                 const textoCSV = await resposta.text();
                 const linhas = textoCSV.split(/\r?\n/);
-                
                 if (linhas.length > 0) {
                     const separador = linhas[0].includes(';') ? ';' : ',';
                     const cabecalhos = linhas[0].toLowerCase().split(separador).map(h => h.trim().replace(/["']/g, ''));
-                    
                     let idxCod = cabecalhos.findIndex(h => h.includes('cod') || h.includes('item'));
                     let idxSaldo = cabecalhos.findIndex(h => h.includes('saldo') || h.includes('qtd') || h.includes('estoque') || h.includes('quantidade'));
                     let idxLocal = cabecalhos.findIndex(h => h.includes('local') || h.includes('armazem') || h.includes('deposito'));
-
                     if (idxCod === -1) idxCod = 0;
                     if (idxSaldo === -1) idxSaldo = 1;
 
                     for (let i = 1; i < linhas.length; i++) {
                         const linha = linhas[i].trim();
                         if (!linha) continue;
-
                         const colunas = linha.split(separador).map(c => c.trim().replace(/["']/g, ''));
                         const codBruto = colunas[idxCod];
                         const saldoVal = colunas[idxSaldo];
                         const localVal = idxLocal !== -1 && colunas[idxLocal] ? colunas[idxLocal] : 'Geral';
-
                         const codNorm = normalizarCod(codBruto);
                         if (codNorm) {
                             const numSaldo = parseNum(saldoVal);
                             const saldoAcumulado = mapaSaldos.get(codNorm) || 0;
-
                             mapaSaldos.set(codNorm, saldoAcumulado + numSaldo);
                             mapaLocalEstoqueSaldo.set(codNorm, localVal);
                         }
@@ -951,22 +706,18 @@
                 ultimaAtualizacaoSaldo = 'Arquivo saldo.csv não encontrado no servidor';
             }
         } catch (e) {
-            console.warn("Acesso ao saldo.csv indisponível.", e);
             ultimaAtualizacaoSaldo = 'Leitura local bloqueada';
         }
     }
 
     async function carregarCSV() {
         const statusDiv = document.getElementById('status-texto');
-        
         statusDiv.innerText = "🔄 [1/2] Sincronizando saldo.csv...";
         await carregarSaldos();
-
         statusDiv.innerText = "🔄 [2/2] Sincronizando base de dados principal...";
 
         let arquivoEncontrado = null;
         let bufferArquivo = null;
-
         for (const arquivo of FORMATOS_SUPORTADOS) {
             try {
                 const resposta = await fetch(`${arquivo}?t=` + new Date().getTime(), { cache: 'no-cache' });
@@ -982,14 +733,12 @@
             statusDiv.innerText = "⚠️ Clique em '📂 Selecionar Planilha' para carregar a base de dados.";
             return;
         }
-
         processarBuffer(bufferArquivo, arquivoEncontrado);
     }
 
     function carregarArquivoManual(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = async function(e) {
             await carregarSaldos();
@@ -1008,22 +757,17 @@
             dadosCSV = dadosBrutos.filter(item => {
                 const codBruto = getVal(item, ['cod_item', 'codigo', 'cod']);
                 const codNorm = normalizarCod(codBruto);
-                
                 const saldoAtual = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
                 const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
                 const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-
                 const temMinMaxMonitorado = estMin > 0 && estMax > 0;
                 const temSaldoMonitorado = saldoAtual > 0 && estMin <= 0 && estMax <= 0;
-
                 return temMinMaxMonitorado || temSaldoMonitorado;
             });
 
             dadosFiltrados = dadosCSV;
             paginaAtual = 1;
-
             popularSegmentacaoDados();
-
             statusDiv.innerText = `✅ Sincronização concluída! Base (${nomeArquivo}) carregada com ${dadosCSV.length} itens monitorados.`;
             renderizarPagina();
             atualizarMétricasDashboard();
@@ -1037,7 +781,6 @@
         const selectForn = document.getElementById('select-fornecedor');
         const selectLocal = document.getElementById('select-local-estoque');
         const selectFilial = document.getElementById('select-filial');
-
         const fornecedoresUnicos = new Set();
         const locaisUnicos = new Set();
         const filiaisUnicas = new Set();
@@ -1047,7 +790,6 @@
             const codNorm = normalizarCod(getVal(item, ['cod_item', 'codigo', 'cod']));
             const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
-            
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
             const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
@@ -1063,14 +805,12 @@
                 selectForn.innerHTML += `<option value="${f}">${f}</option>`;
             });
         }
-
         if (selectLocal) {
             selectLocal.innerHTML = '<option value="">Todos os Locais</option>';
             Array.from(locaisUnicos).sort().forEach(l => {
                 selectLocal.innerHTML += `<option value="${l}">${l}</option>`;
             });
         }
-
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
             Array.from(filiaisUnicas).sort().forEach(fi => {
@@ -1099,22 +839,18 @@
         let rupturaTotal = 0;
         let abaixoMin = 0;
         let acimaMax = 0;
-
         cacheItensCriticos = [];
         const mapaFornecedores = new Map();
 
         dadosCSV.forEach(item => {
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const codNorm = normalizarCod(cod);
-
             const saldo = mapaSaldos.get(codNorm) || 0;
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-            
             const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
-
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
             const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
@@ -1128,7 +864,6 @@
             }
 
             let statusTipo = 'normal';
-
             if (saldo > 0) {
                 comSaldo++;
                 if (estMin > 0 && saldo < estMin) {
@@ -1159,10 +894,8 @@
         document.getElementById('dash-kpi-total').innerText = totalMonitorados;
         document.getElementById('dash-kpi-com-saldo').innerText = comSaldo;
         document.getElementById('dash-kpi-com-saldo-perc').innerText = totalMonitorados > 0 ? `${((comSaldo / totalMonitorados) * 100).toFixed(1)}%` : '0%';
-
         document.getElementById('dash-kpi-ruptura').innerText = rupturaTotal;
         document.getElementById('dash-kpi-ruptura-perc').innerText = totalMonitorados > 0 ? `${((rupturaTotal / totalMonitorados) * 100).toFixed(1)}%` : '0%';
-
         document.getElementById('dash-kpi-abaixo').innerText = abaixoMin;
         document.getElementById('dash-kpi-acima').innerText = acimaMax;
 
@@ -1170,11 +903,7 @@
 
         const tbodyForn = document.getElementById('dash-table-fornecedores-body');
         tbodyForn.innerHTML = '';
-
-        const topFornecedores = Array.from(mapaFornecedores.entries())
-            .sort((a, b) => b[1].total - a[1].total)
-            .slice(0, 10);
-
+        const topFornecedores = Array.from(mapaFornecedores.entries()).sort((a, b) => b[1].total - a[1].total).slice(0, 10);
         if (topFornecedores.length === 0) {
             tbodyForn.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Sem dados disponíveis.</td></tr>';
         } else {
@@ -1206,7 +935,6 @@
         const itensFiltrados = cacheItensCriticos.filter(obj => {
             const cod = getVal(obj.item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
-
             const linhaCompleta = Object.values(obj.item).join(' ').toLowerCase();
             const fornItem = getVal(obj.item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
             const localEstoqueItem = String(obj.localEstoque).toLowerCase();
@@ -1250,19 +978,13 @@
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
 
             let badgeHtml = '';
-            if (statusTipo === 'ruptura') {
-                badgeHtml = '<span class="badge-status badge-ruptura">⚠️ Ruptura Total</span>';
-            } else if (statusTipo === 'abaixo') {
-                badgeHtml = '<span class="badge-status badge-abaixo">📉 Abaixo Mín.</span>';
-            } else if (statusTipo === 'acima') {
-                badgeHtml = '<span class="badge-status badge-acima">🚨 Acima Máx.</span>';
-            } else {
-                badgeHtml = '<span class="badge-status" style="background:#eef2f7; color:#1e293b;">✅ Normal</span>';
-            }
+            if (statusTipo === 'ruptura') badgeHtml = '<span class="badge-status badge-ruptura">⚠️ Ruptura Total</span>';
+            else if (statusTipo === 'abaixo') badgeHtml = '<span class="badge-status badge-abaixo">📉 Abaixo Mín.</span>';
+            else if (statusTipo === 'acima') badgeHtml = '<span class="badge-status badge-acima">🚨 Acima Máx.</span>';
+            else badgeHtml = '<span class="badge-status" style="background:#eef2f7; color:#1e293b;">✅ Normal</span>';
 
             const tr = document.createElement('tr');
             tr.onclick = () => abrirModalDadosItem(item);
-
             if (!isMobile) {
                 tr.onmousemove = (e) => mostrarHoverCardDashboard(e, item, saldo, localEstoque, filialExibir);
                 tr.onmouseleave = esconderHoverCard;
@@ -1284,24 +1006,9 @@
 
     function mostrarHoverCardDashboard(e, item, saldo, localEstoque, filialExibir) {
         if (isMobile) return;
-
         const cardHover = document.getElementById('hover-card');
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
-        const divi = getVal(item, ['divisao', 'div', 'gaveta']);
-        const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
-        let enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
-
-        const estMin = getVal(item, ['est_min', 'minimo']);
-        const estMax = getVal(item, ['est_max', 'maximo']);
-        const leadTime = getVal(item, ['lead_time', 'lead']);
-        const especificacao = getVal(item, ['especificacao', 'espec']);
-        const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
-
-        const codNorm = normalizarCod(cod);
-        const saldoAtual = mapaSaldos.get(codNorm) || 0;
-
         const srcFoto = cacheCaminhoFoto.get(String(cod).trim()) || '';
         const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
 
@@ -1309,18 +1016,12 @@
             ${tagFoto}
             <div class="hover-card-title">[${cod}] ${nome}</div>
             <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
-            <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldoAtual} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoque}</div>
-            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${enderecoCompleto}</div>
-            <div class="hover-card-section"><strong>📈 Mín / Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; <strong>Lead:</strong> ${leadTime}</div>
-            <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
-            <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
+            <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldo} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoque}</div>
         `;
-
         let posX = e.clientX + 20;
         let posY = e.clientY + 10;
         if (posX + 350 > window.innerWidth) posX = e.clientX - 350;
         if (posY + 370 > window.innerHeight) posY = window.innerHeight - 380;
-
         cardHover.style.left = posX + 'px';
         cardHover.style.top = posY + 'px';
         cardHover.style.display = 'block';
@@ -1328,16 +1029,12 @@
 
     function esconderHoverCard() {
         const hoverCard = document.getElementById('hover-card');
-        if (hoverCard) {
-            hoverCard.style.display = 'none';
-        }
+        if (hoverCard) hoverCard.style.display = 'none';
     }
 
     function abrirModalDadosItem(item) {
         const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === getVal(item, ['cod_item', 'codigo', 'cod']));
-        if (indexReal !== -1) {
-            abrirModal(indexReal);
-        }
+        if (indexReal !== -1) abrirModal(indexReal);
     }
 
     function renderizarPagina() {
@@ -1345,7 +1042,6 @@
         const contDiv = document.getElementById('contador-itens');
         const paginacaoDiv = document.getElementById('paginacao');
         divContainer.innerHTML = '';
-
         const totalItens = dadosFiltrados.length;
 
         let comFoto = 0;
@@ -1357,35 +1053,19 @@
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const codLimpo = String(cod).trim();
             const codNorm = normalizarCod(cod);
-
             if (itensComFoto.has(codLimpo)) comFoto++;
-
             const saldo = mapaSaldos.get(codNorm) || 0;
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-
-            if (saldo > 0) {
-                qtdComSaldo++;
-            } else if (estMin > 0 && estMax > 0) {
-                qtdZeradoMinMax++;
-            } else {
-                qtdZeradoSemMinMax++;
-            }
+            if (saldo > 0) qtdComSaldo++;
+            else if (estMin > 0 && estMax > 0) qtdZeradoMinMax++;
+            else qtdZeradoSemMinMax++;
         });
 
         const semFoto = totalItens - comFoto;
-        const percComFoto = totalItens > 0 ? ((comFoto / totalItens) * 100).toFixed(1) : 0;
-        const percSemFoto = totalItens > 0 ? ((semFoto / totalItens) * 100).toFixed(1) : 0;
-
         contDiv.innerHTML = `
             <div style="text-align: right; line-height: 1.4;">
-                <div><strong>Total:</strong> ${totalItens} itens &nbsp;|&nbsp; 
-                <span style="color:var(--text-success, #16a34a); font-weight:700;">✅ Saldo > 0:</span> ${qtdComSaldo} &nbsp;|&nbsp; 
-                <span style="color:#eab308; font-weight:700;">⚠️ Zerados (Mín/Máx > 0):</span> ${qtdZeradoMinMax} &nbsp;|&nbsp;
-                <span style="color:var(--text-secondary); font-weight:700;">⚪ Zerados (Sem Mín/Máx):</span> ${qtdZeradoSemMinMax}</div>
-                <div style="margin-top:2px;">
-                <span style="color:var(--text-success, #16a34a); font-weight:700;">📸 Com Foto:</span> ${comFoto} (${percComFoto}%) &nbsp;|&nbsp; 
-                <span style="color:var(--text-danger, #dc2626); font-weight:700;">🚫 Sem Foto:</span> ${semFoto} (${percSemFoto}%)</div>
+                <div><strong>Total:</strong> ${totalItens} itens &nbsp;|&nbsp; <span style="color:var(--text-success); font-weight:700;">✅ Saldo > 0:</span> ${qtdComSaldo}</div>
                 <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">🕒 <strong>Última Atualização:</strong> ${ultimaAtualizacaoSaldo}</div>
             </div>
         `;
@@ -1404,68 +1084,25 @@
             const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
             const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
             const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-            const equipamento = getVal(item, ['equipamento', 'equip']);
-            const especificacao = getVal(item, ['especificacao', 'espec']);
-            
-            const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
-            const divi = getVal(item, ['divisao', 'div', 'gaveta']);
-            const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
-            const enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
-
-            const estMin = getVal(item, ['est_min', 'minimo']);
-            const estMax = getVal(item, ['est_max', 'maximo']);
-            const leadTime = getVal(item, ['lead_time', 'lead']);
-            
             const codNorm = normalizarCod(cod);
             const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
-            const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
-
-            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-            const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
-            const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
-
             const indexReal = dadosCSV.findIndex(i => getVal(i, ['cod_item', 'codigo', 'cod']) === cod);
 
             const row = document.createElement('div');
             row.className = 'item-row';
-            
             row.onclick = () => abrirModal(indexReal);
 
-            if (!isMobile) {
-                row.onmousemove = (e) => mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir, enderecoCompleto);
-                row.onmouseleave = esconderHoverCard;
-            }
-
-            const eZeradoAlerta = saldoExibir <= 0 && parseNum(estMin) > 0 && parseNum(estMax) > 0;
-            const estiloBadgeEstoque = eZeradoAlerta 
-                ? 'background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:bold;' 
-                : 'background:var(--bg-subcard); color:var(--text-primary); border:1px solid var(--border-color);';
-
             row.innerHTML = `
-                <div class="row-thumb" id="row-thumb-${indexReal}">
-                    <span>Sem foto</span>
-                </div>
-
+                <div class="row-thumb" id="row-thumb-${indexReal}"><span>Sem foto</span></div>
                 <div class="row-content">
                     <div class="row-title">Código: ${cod} — ${nome}</div>
                     <div class="row-details">
-                        <span class="row-location" style="background:var(--primary-color); color:#fff;">🏢 ${filialExibir}</span>
-                        <span class="row-location">📍 Local: ${localEstoqueExibir} | End: ${enderecoCompleto}</span>
-                        <span class="row-stock-badge" style="${estiloBadgeEstoque}">
-                            📊 Saldo: ${saldoExibir} un.
-                        </span>
-                        <span class="row-lead-badge">⏱️ Lead: ${leadTime}</span>
+                        <span class="row-stock-badge">📊 Saldo: ${saldoExibir} un.</span>
                         <span><strong>Forn:</strong> ${fornecedor}</span>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-top:2px;">
-                        <strong>Espec:</strong> ${especificacao}
                     </div>
                 </div>
             `;
             divContainer.appendChild(row);
-
             carregarFotoCapaLinha(cod, indexReal);
         });
 
@@ -1483,9 +1120,7 @@
     function carregarFotoCapaLinha(codItem, indexReal) {
         const thumbDiv = document.getElementById(`row-thumb-${indexReal}`);
         if (!codItem || codItem === '-') return;
-
         const codLimpo = String(codItem).trim();
-
         if (cacheCaminhoFoto.has(codLimpo)) {
             const src = cacheCaminhoFoto.get(codLimpo);
             if (src) {
@@ -1493,125 +1128,15 @@
                 return;
             }
         }
-
-        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
-        const padroes = [`${codLimpo} - 01`, `${codLimpo}-01`];
-        let encontrada = false;
-
-        const testarProxima = (pIndex, eIndex) => {
-            if (encontrada || pIndex >= padroes.length) return;
-
-            const src = `imagens/${padroes[pIndex]}.${extensoes[eIndex]}`;
-            const img = new Image();
-            
-            img.onload = () => {
-                if (!encontrada) {
-                    encontrada = true;
-                    itensComFoto.add(codLimpo);
-                    cacheCaminhoFoto.set(codLimpo, src);
-                    thumbDiv.innerHTML = `<img src="${src}" loading="lazy" alt="Foto Capa" id="img-capa-${indexReal}">`;
-                }
-            };
-
-            img.onerror = () => {
-                if (!encontrada) {
-                    if (eIndex + 1 < extensoes.length) {
-                        testarProxima(pIndex, eIndex + 1);
-                    } else {
-                        testarProxima(pIndex + 1, 0);
-                    }
-                }
-            };
-
-            img.src = src;
-        };
-
-        testarProxima(0, 0);
-    }
-
-    async function verificarPDFItem(codItem) {
-        const codLimpo = String(codItem).trim();
-        if (cachePDFs.has(codLimpo)) return cachePDFs.get(codLimpo);
-
-        const caminhosTestar = [
-            `arquivos/${codLimpo}/${codLimpo}.pdf`,
-            `arquivos/${codLimpo}/documento.pdf`,
-            `arquivos/${codLimpo}/ficha.pdf`,
-            `arquivos/${codLimpo}.pdf`
-        ];
-
-        for (const path of caminhosTestar) {
-            try {
-                const res = await fetch(path, { method: 'HEAD' });
-                if (res.ok) {
-                    cachePDFs.set(codLimpo, path);
-                    return path;
-                }
-            } catch (e) {}
-        }
-
-        cachePDFs.set(codLimpo, null);
-        return null;
-    }
-
-    function mostrarHoverCard(e, indexReal, localEstoqueExibir, filialExibir, enderecoCompleto) {
-        if (isMobile) return;
-
-        const item = dadosCSV[indexReal];
-        const cardHover = document.getElementById('hover-card');
-        const imgCapa = document.getElementById(`img-capa-${indexReal}`);
-        
-        const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-        const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
-        const estMin = getVal(item, ['est_min', 'minimo']);
-        const estMax = getVal(item, ['est_max', 'maximo']);
-        const leadTime = getVal(item, ['lead_time', 'lead']);
-        const especificacao = getVal(item, ['especificacao', 'espec']);
-        const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
-
-        const codNorm = normalizarCod(cod);
-        const saldoAtual = mapaSaldos.get(codNorm) || 0;
-
-        const srcFoto = imgCapa ? imgCapa.src : '';
-        const tagFoto = srcFoto ? `<img src="${srcFoto}" class="hover-card-img">` : '<div class="hover-card-img" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">Sem Imagem</div>';
-
-        cardHover.innerHTML = `
-            ${tagFoto}
-            <div class="hover-card-title">[${cod}] ${nome}</div>
-            <div class="hover-card-section" style="color:var(--primary-color);"><strong>🏢 Filial:</strong> ${filialExibir}</div>
-            <div class="hover-card-section"><strong>📊 Saldo:</strong> ${saldoAtual} un. &nbsp;|&nbsp; <strong>Local:</strong> ${localEstoqueExibir}</div>
-            <div class="hover-card-section"><strong>🏠 Endereço:</strong> ${enderecoCompleto}</div>
-            <div class="hover-card-section"><strong>📈 Mín / Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; <strong>Lead:</strong> ${leadTime}</div>
-            <div class="hover-card-section"><strong>🛠️ Especificações:</strong><br>${especificacao}</div>
-            <div class="hover-card-section"><strong>⚙️ Aplicação:</strong><br>${locaisAplicacao}</div>
-        `;
-
-        let posX = e.clientX + 20;
-        let posY = e.clientY + 10;
-        if (posX + 350 > window.innerWidth) posX = e.clientX - 350;
-        if (posY + 370 > window.innerHeight) posY = window.innerHeight - 380;
-
-        cardHover.style.left = posX + 'px';
-        cardHover.style.top = posY + 'px';
-        cardHover.style.display = 'block';
     }
 
     async function abrirModal(indexReal) {
         esconderHoverCard();
-        
         const item = dadosCSV[indexReal];
         const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
         const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
         const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-        const equipamento = getVal(item, ['equipamento', 'equip']);
         const especificacao = getVal(item, ['especificacao', 'espec']);
-        
-        const prat = getVal(item, ['prateleira', 'prat', 'rua', 'endereco']);
-        const divi = getVal(item, ['divisao', 'div', 'gaveta']);
-        const repa = getVal(item, ['reparticao', 'rep', 'nicho']);
-        const enderecoCompleto = [prat, divi, repa].filter(x => x && x !== '-').join(' | ') || 'Não informado';
-
-        const locaisAplicacao = getVal(item, ['locais_aplicacao', 'aplicacao']);
         const estMin = getVal(item, ['est_min', 'minimo']);
         const estMax = getVal(item, ['est_max', 'maximo']);
         const leadTime = getVal(item, ['lead_time', 'lead']);
@@ -1621,217 +1146,192 @@
         const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
         const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
 
-        const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-        const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-        const filialStr = (codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '');
-        const filialExibir = filialStr.trim() !== '-' ? filialStr.trim() : 'Geral';
-
-        let camposExtrasHTML = '';
-        const chavesIgnorar = [
-            'cod_item','codigo','cod','nome_item','nome','item','descricao',
-            'cod_fornecedor','fornecedor','forn','equipamento','equip','especificacao','espec',
-            'endereco','prateleira','rua','prat','divisao','div','gaveta','reparticao','rep','nicho',
-            'locais_aplicacao','aplicacao','est_min','estmin','minimo','est_max','estmax','maximo','lead_time','leadtime','lead','local_estoque','local','armazem','deposito',
-            'cod_filial','nome_filial','filial_cod','filial_nome','filial'
-        ];
-        
-        Object.keys(item).forEach(key => {
-            const keyNorm = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!chavesIgnorar.some(p => keyNorm === p || keyNorm.includes(p))) {
-                if (item[key] !== undefined && item[key] !== null && String(item[key]).trim() !== '') {
-                    camposExtrasHTML += `<p><strong>${key}:</strong> ${item[key]}</p>`;
-                }
-            }
-        });
-
         const conteudoDiv = document.getElementById('modal-conteudo');
         conteudoDiv.innerHTML = `
             <h2 style="color:var(--primary-color); margin-top:0; font-size:18px; font-weight:700;">[Código: ${cod}] — ${nome}</h2>
             <div class="modal-body">
                 <div class="modal-info">
-                    <div style="background:var(--bg-subcard); border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; margin-bottom:10px; color:var(--text-primary);">
-                        <p style="margin:2px 0;">🏢 <strong>Filial:</strong> ${filialExibir}</p>
-                        <p style="margin:4px 0 0 0;">📍 <strong>Local de Estoque:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 🏠 <strong>Endereço:</strong> ${enderecoCompleto}</p>
-                    </div>
-
-                    <div style="background:var(--bg-subcard); color:var(--text-primary); padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
-                        <p style="margin:2px 0;">📊 <strong>Saldo Atual:</strong> <strong>${saldoExibir} un.</strong></p>
-                        <p style="margin:2px 0; margin-top:4px;">📈 <strong>Estoque Mín / Máx:</strong> ${estMin} / ${estMax} un. &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
-                    </div>
-
-                    <p><strong>Cód. Fornecedor:</strong> ${fornecedor}</p>
-                    <p><strong>Equipamento Principal:</strong> ${equipamento}</p>
-                    <p><strong>Especificações Técnicas:</strong> ${especificacao}</p>
-                    <p><strong>Locais de Aplicação:</strong> ${locaisAplicacao}</p>
+                    <p>📍 <strong>Local:</strong> ${localEstoqueExibir} &nbsp;|&nbsp; 📊 <strong>Saldo:</strong> ${saldoExibir} un.</p>
+                    <p>📈 <strong>Mín/Máx:</strong> ${estMin} / ${estMax} &nbsp;|&nbsp; ⏱️ <strong>Lead Time:</strong> ${leadTime}</p>
+                    <p><strong>Fornecedor:</strong> ${fornecedor}</p>
+                    <p><strong>Especificação:</strong> ${especificacao}</p>
                     
-                    ${camposExtrasHTML}
-
-                    <div id="pdf-container-btn" style="margin-top: 12px;"></div>
-
-                    <div class="camera-section">
-                        <label class="btn-camera">
-                            📸 Retirar Foto da Prateleira
-                            <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none;" onchange="salvarFotoCapturada(event, '${cod}')">
-                        </label>
-                        <span id="camera-status"></span>
+                    <div style="margin-top: 16px;">
+                        <button class="btn-pdf-link" onclick="gerarPdfFotosItemComJsPDF(${indexReal})" style="cursor:pointer; border:none;">
+                            📄 Baixar PDF do Item (Com todas as fotos em grid)
+                        </button>
                     </div>
-
-                    <button class="btn-print" onclick="window.print()">🖨️ Imprimir Ficha PDF</button>
                 </div>
-
                 <div class="modal-gallery">
-                    <div class="main-media-box" id="modal-media-box">
-                        <span>Carregando mídias...</span>
-                    </div>
+                    <div class="main-media-box" id="modal-media-box"><span>Carregando...</span></div>
                     <div class="thumbnails-box" id="modal-thumbs-box"></div>
                 </div>
             </div>
         `;
-
         document.getElementById('modal-item').style.display = 'flex';
         carregarMidiasCompletas(cod);
-
-        const pathPDF = await verificarPDFItem(cod);
-        const pdfBtnContainer = document.getElementById('pdf-container-btn');
-        if (pathPDF && pdfBtnContainer) {
-            pdfBtnContainer.innerHTML = `
-                <a href="${pathPDF}" target="_blank" class="btn-pdf-link">
-                    📄 Abrir Documento Técnico (PDF)
-                </a>
-            `;
-        }
     }
 
-    async function salvarFotoCapturada(event, codItem) {
-        const file = event.target.files[0];
-        const statusText = document.getElementById('camera-status');
-        if (!file || !codItem || codItem === '-') return;
+    // FUNÇÃO DE GERAÇÃO DO PDF COM TODAS AS FOTOS EM GRID
+    async function gerarPdfFotosItemComJsPDF(indexReal) {
+        const item = dadosCSV[indexReal];
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
+        const nome = getVal(item, ['nome_item', 'nome', 'item', 'descricao']);
+        const fornecedor = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
+        const especificacao = getVal(item, ['especificacao', 'espec']);
+        const estMin = getVal(item, ['est_min', 'minimo']);
+        const estMax = getVal(item, ['est_max', 'maximo']);
+        const leadTime = getVal(item, ['lead_time', 'lead']);
+        
+        const codNorm = normalizarCod(cod);
+        const saldoExibir = mapaSaldos.has(codNorm) ? mapaSaldos.get(codNorm) : 0;
+        const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
+        const localEstoqueExibir = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
 
-        const codLimpo = String(codItem).trim();
-        statusText.innerText = "Verificando sequência na pasta local...";
+        // Cabeçalho Corporativo JBS | Seara
+        doc.setFillColor(10, 61, 120);
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.text("JBS | SEARA — FICHA TÉCNICA E AUDITORIA DE ITEM", 14, 16);
 
-        let proximaSequencia = 1;
+        // Dados Técnicos do Item
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(12);
+        doc.text(`Código do Item: ${cod}`, 14, 35);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Descrição: ${nome}`, 14, 42);
+        doc.text(`Fornecedor: ${fornecedor}`, 14, 48);
+        doc.text(`Local de Estoque: ${localEstoqueExibir} | Saldo Atual: ${saldoExibir} un.`, 14, 54);
+        doc.text(`Estoque Mín/Máx: ${estMin} / ${estMax} | Lead Time: ${leadTime}`, 14, 60);
+        doc.text(`Especificações: ${especificacao}`, 14, 66, { maxWidth: 180 });
 
-        if (pastaImagensHandle) {
-            try {
-                let maiorSeqLocal = 0;
-                for await (const entry of pastaImagensHandle.values()) {
-                    if (entry.kind === 'file') {
-                        const nomeArquivo = entry.name;
-                        if (nomeArquivo.toLowerCase().startsWith(codLimpo.toLowerCase())) {
-                            const match = nomeArquivo.match(/[-_]\s*(\d{2})/);
-                            if (match && match[1]) {
-                                const numSeq = parseInt(match[1], 10);
-                                if (numSeq > maiorSeqLocal) maiorSeqLocal = numSeq;
-                            }
-                        }
-                    }
+        // Coletar todas as fotos disponíveis daquele item (sequência 01 a 6)
+        let imagensItem = [];
+        const codLimpo = String(cod).trim();
+        const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
+
+        for (let seq = 1; seq <= 6; seq++) {
+            const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
+            let encontradaSeq = false;
+            for (const ext of extensoes) {
+                const src = `imagens/${codLimpo} - ${numSeq}.${ext}`;
+                const base64Img = await carregarImagemComoBase64(src);
+                if (base64Img) {
+                    imagensItem.push(base64Img);
+                    encontradaSeq = true;
+                    break;
                 }
-                proximaSequencia = maiorSeqLocal + 1;
-                const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
-                const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
-
-                const fileHandle = await pastaImagensHandle.getFileHandle(nomeFinal, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(file);
-                await writable.close();
-
-                statusText.innerText = `✅ Salvo na pasta local: ${nomeFinal}`;
-                itensComFoto.add(codLimpo);
-                carregarMidiasCompletas(codItem, true);
-                return;
-            } catch (err) {
-                console.error("Erro ao acessar pasta local:", err);
             }
         }
 
-        const imagensGaleria = document.querySelectorAll('#modal-thumbs-box .thumb-item img');
-        let maiorSequencia = 0;
-        imagensGaleria.forEach(img => {
-            const src = decodeURIComponent(img.src);
-            const match = src.match(/[-_]\s*(\d{2})/);
-            if (match && match[1]) {
-                const numSeq = parseInt(match[1], 10);
-                if (numSeq > maiorSequencia) maiorSequencia = numSeq;
-            }
-        });
+        // Seção de Fotos (Grid Organizado em Tamanho Menor na mesma página)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("Registro Fotográfico da Prateleira / Item:", 14, 82);
 
-        proximaSequencia = maiorSequencia + 1;
-        const seqFormatada = proximaSequencia < 10 ? `0${proximaSequencia}` : `${proximaSequencia}`;
-        const nomeFinal = `${codLimpo} - ${seqFormatada}.jpg`;
+        if (imagensItem.length > 0) {
+            let posX = 14;
+            let posY = 88;
+            let larguraImg = 54;
+            let alturaImg = 44;
+            let margemX = 12;
 
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(file);
-        a.download = nomeFinal;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+            imagensItem.forEach((imgBase64, index) => {
+                if (index > 0 && index % 3 === 0) {
+                    posX = 14;
+                    posY += alturaImg + 16;
+                }
+                doc.setDrawColor(200, 200, 200);
+                doc.rect(posX, posY, larguraImg, alturaImg);
+                doc.addImage(imgBase64, 'JPEG', posX + 1, posY + 1, larguraImg - 2, alturaImg - 2);
+                
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Foto 0${index + 1}`, posX + (larguraImg / 2), posY + alturaImg + 5, { align: 'center' });
 
-        statusText.innerText = `💾 Baixado: ${nomeFinal}`;
+                posX += larguraImg + margemX;
+            });
+        } else {
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(150, 150, 150);
+            doc.text("Nenhuma imagem cadastrada para este item.", 14, 92);
+        }
+
+        // Rodapé
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Gerado automaticamente pelo Sistema de Almoxarifado JBS | Seara em ${new Date().toLocaleString('pt-BR')}`, 14, 285);
+
+        doc.save(`Ficha_${cod}_${nome.substring(0, 15).trim()}.pdf`);
     }
 
-    async function carregarMidiasCompletas(codItem, forcarReload = false) {
+    async function carregarImagemComoBase64(url) {
+        try {
+            const resposta = await fetch(url);
+            if (!resposta.ok) return null;
+            const blob = await resposta.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function carregarMidiasCompletas(codItem) {
         const mediaBox = document.getElementById('modal-media-box');
         const thumbsBox = document.getElementById('modal-thumbs-box');
         thumbsBox.innerHTML = '';
-
-        if (!codItem || codItem === '-') {
-            mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens/vídeos</span>';
-            return;
-        }
-
         const codLimpo = String(codItem).trim();
         const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
         let midias = [];
-        const timestamp = forcarReload ? `?v=${new Date().getTime()}` : '';
 
-        for (let seq = 1; seq <= 10; seq++) {
+        for (let seq = 1; seq <= 6; seq++) {
             const numSeq = seq < 10 ? `0${seq}` : `${seq}`;
-            let achouNaSeq = false;
-
+            let achou = false;
             for (const ext of extensoes) {
-                const src = `imagens/${codLimpo} - ${numSeq}.${ext}${timestamp}`;
+                const src = `imagens/${codLimpo} - ${numSeq}.${ext}`;
                 const existe = await new Promise(resolve => {
                     const img = new Image();
                     img.onload = () => resolve(true);
                     img.onerror = () => resolve(false);
                     img.src = src;
                 });
-
                 if (existe) {
-                    midias.push({ tipo: 'foto', seq: seq, src: src });
-                    achouNaSeq = true;
+                    midias.push({ src: src });
+                    achou = true;
                     break;
                 }
             }
-            if (!achouNaSeq) break;
+            if (!achou) break;
         }
 
         if (midias.length === 0) {
-            mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens/vídeos</span>';
+            mediaBox.innerHTML = '<span style="font-size:12px; color:#999;">Sem imagens</span>';
             return;
         }
 
-        exibirNoPlayer(midias[0], mediaBox);
-
+        mediaBox.innerHTML = `<img src="${midias[0].src}" alt="Foto Peça">`;
         midias.forEach((m, i) => {
             const thumb = document.createElement('div');
             thumb.className = `thumb-item ${i === 0 ? 'active' : ''}`;
-            const img = document.createElement('img');
-            img.src = m.src;
-            thumb.appendChild(img);
-
+            thumb.innerHTML = `<img src="${m.src}">`;
             thumb.onclick = () => {
-                exibirNoPlayer(m, mediaBox);
+                mediaBox.innerHTML = `<img src="${m.src}" alt="Foto Peça">`;
                 thumbsBox.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
                 thumb.classList.add('active');
             };
             thumbsBox.appendChild(thumb);
         });
-    }
-
-    function exibirNoPlayer(midia, container) {
-        container.innerHTML = `<img src="${midia.src}" alt="Foto Peça">`;
     }
 
     function fecharModal() {
@@ -1846,62 +1346,17 @@
     function mudarPagina(direcao) {
         paginaAtual += direcao;
         renderizarPagina();
-        const areaScroll = document.getElementById('scrollable-results-section');
-        if (areaScroll) areaScroll.scrollTop = 0;
     }
 
     function filtrar() {
         const termo = document.getElementById('busca').value.toLowerCase().trim();
-        const fornSel = document.getElementById('select-fornecedor').value.toLowerCase().trim();
-        const localSel = document.getElementById('select-local-estoque').value.toLowerCase().trim();
-        const filialSel = document.getElementById('select-filial').value.toLowerCase().trim();
-        const imagemSel = document.getElementById('select-imagem').value;
-        const saldoStatusSel = document.getElementById('select-saldo-status').value;
-
         dadosFiltrados = dadosCSV.filter(item => {
-            const cod = getVal(item, ['cod_item', 'codigo', 'cod']);
-            const codLimpo = String(cod).trim();
-            const codNorm = normalizarCod(cod);
-
             const linhaCompleta = Object.values(item).join(' ').toLowerCase();
-            const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']).toLowerCase();
-            const localEstoqueItem = (localPlanilha && localPlanilha !== '-') ? localPlanilha : String(mapaLocalEstoqueSaldo.get(codNorm) || 'geral').toLowerCase();
-
-            const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
-            const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
-            const filialStr = ((codFilial !== '-' ? codFilial : '') + (nomeFilial !== '-' ? ' - ' + nomeFilial : '')).trim().toLowerCase();
-
-            const bateTexto = !termo || linhaCompleta.includes(termo);
-            const bateForn = !fornSel || fornItem === fornSel;
-            const bateLocal = !localSel || localEstoqueItem === localSel;
-            const bateFilial = !filialSel || filialStr.includes(filialSel);
-
-            let bateImagem = true;
-            if (imagemSel) {
-                const temFoto = itensComFoto.has(codLimpo);
-                if (imagemSel === 'com_foto') bateImagem = temFoto;
-                else if (imagemSel === 'sem_foto') bateImagem = !temFoto;
-            }
-
-            let bateSaldoStatus = true;
-            if (saldoStatusSel) {
-                const saldoAtual = mapaSaldos.get(codNorm) || 0;
-                const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
-                const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
-
-                if (saldoStatusSel === 'com_saldo') bateSaldoStatus = saldoAtual > 0;
-                else if (saldoStatusSel === 'zerado_com_minmax') bateSaldoStatus = saldoAtual <= 0 && estMin > 0 && estMax > 0;
-            }
-
-            return bateTexto && bateForn && bateLocal && bateFilial && bateImagem && bateSaldoStatus;
+            return !termo || linhaCompleta.includes(termo);
         });
-
         paginaAtual = 1;
         renderizarPagina();
     }
-
-    window.addEventListener('resize', detectarDispositivo);
 
     window.onload = () => {
         carregarTemaSalvo();
@@ -1909,7 +1364,6 @@
         detectarDispositivo();
         carregarLogoUniversal();
         mudarIdioma('PT');
-        
         navegarPara('dashboard');
         carregarCSV();
     };
