@@ -198,13 +198,13 @@
                     <div class="kpi-card">
                         <span class="kpi-title" data-i18n="kpi_below_min">📉 Abaixo do Mínimo</span>
                         <span class="kpi-value color-warning" id="dash-kpi-abaixo">0</span>
-                        <span class="kpi-sub" id="dash-kpi-sub_critical_low">Estoque Crítico Baixo</span>
+                        <span class="kpi-sub" data-i18n="kpi_sub_critical_low">Estoque Crítico Baixo</span>
                     </div>
 
                     <div class="kpi-card">
                         <span class="kpi-title" data-i18n="kpi_above_max">🚨 Acima do Máximo</span>
                         <span class="kpi-value color-info" id="dash-kpi-acima">0</span>
-                        <span class="kpi-sub" id="dash-kpi-sub_excess">Excesso de Estoque</span>
+                        <span class="kpi-sub" data-i18n="kpi_sub_excess">Excesso de Estoque</span>
                     </div>
                 </div>
 
@@ -255,7 +255,6 @@
     let dadosCSV = [];
     let dadosFiltrados = [];
     let mapaSaldos = new Map();
-    let mapaLocalEstoqueSaldo = new Map();
     let ultimaAtualizacaoSaldo = 'Não carregado';
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 20;
@@ -408,9 +407,9 @@
         return isNaN(num) ? 0 : num;
     }
 
+    // saldo.csv atua estritamente como auxiliar de saldo
     async function carregarSaldos() {
         mapaSaldos.clear();
-        mapaLocalEstoqueSaldo.clear();
         try {
             const resposta = await fetch('saldo.csv?t=' + new Date().getTime(), { cache: 'no-cache' });
             if (resposta.ok) {
@@ -421,7 +420,6 @@
                     const cabecalhos = linhas[0].toLowerCase().split(separador).map(h => h.trim().replace(/["']/g, ''));
                     let idxCod = cabecalhos.findIndex(h => h.includes('cod') || h.includes('item'));
                     let idxSaldo = cabecalhos.findIndex(h => h.includes('saldo') || h.includes('qtd') || h.includes('estoque'));
-                    let idxLocal = cabecalhos.findIndex(h => h.includes('local') || h.includes('armazem'));
                     if (idxCod === -1) idxCod = 0;
                     if (idxSaldo === -1) idxSaldo = 1;
 
@@ -431,12 +429,10 @@
                         const colunas = linha.split(separador).map(c => c.trim().replace(/["']/g, ''));
                         const codBruto = colunas[idxCod];
                         const saldoVal = colunas[idxSaldo];
-                        const localVal = idxLocal !== -1 && colunas[idxLocal] ? colunas[idxLocal] : 'Geral';
                         const codNorm = normalizarCod(codBruto);
                         if (codNorm) {
                             const numSaldo = parseNum(saldoVal);
                             mapaSaldos.set(codNorm, (mapaSaldos.get(codNorm) || 0) + numSaldo);
-                            mapaLocalEstoqueSaldo.set(codNorm, localVal);
                         }
                     }
                 }
@@ -493,9 +489,7 @@
 
         dadosCSV.forEach(item => {
             const forn = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']);
-            const codNorm = normalizarCod(getVal(item, ['cod_item', 'codigo', 'cod']));
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem']);
-            const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
+            const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
@@ -531,7 +525,7 @@
         dispararFiltrosGerais();
     }
 
-    // FUNÇÃO ROBUSTA DE BUSCA DA FOTO DE CAPA OBRIGATORIAMENTE COM FINAL - 01 ou -01
+    // Busca da foto de capa obrigatoriamente com final - 01 ou -01
     async function carregarImagensAutomatico() {
         const extensoes = ['jpg', 'png', 'jpeg', 'webp'];
         
@@ -540,7 +534,6 @@
             if (!cod || cod === '-') continue;
             const codLimpo = String(cod).trim();
 
-            // Padrões estritos exigidos para a foto da capa (- 01 ou -01)
             const padroesCapa = [`${codLimpo} - 01`, `${codLimpo}-01`, `${codLimpo} -01`, `${codLimpo}- 01`];
             let encontrada = false;
 
@@ -585,8 +578,7 @@
             const estMin = parseNum(getVal(item, ['est_min', 'minimo', 'estmin']));
             const estMax = parseNum(getVal(item, ['est_max', 'maximo', 'estmax']));
             
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem']);
-            const localEstoque = (localPlanilha && localPlanilha !== '-') ? localPlanilha : (mapaLocalEstoqueSaldo.get(codNorm) || 'Geral');
+            const localEstoque = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']);
             
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
@@ -642,7 +634,6 @@
             const filialItem = String(obj.filialExibir).toLowerCase();
 
             const bateBusca = (!termoBusca || linhaCompleta.includes(termoBusca));
-            // Filtro flexível por filial (funciona perfeitamente para qualquer filial selecionada)
             const bateFilial = (!filialSel || filialItem === filialSel || filialItem.includes(filialSel));
             const bateForn = (!fornSel || fornItem === fornSel);
             const bateLocal = (!localSel || localEstoqueItem === localSel);
@@ -760,8 +751,7 @@
 
             const linhaCompleta = Object.values(item).join(' ').toLowerCase();
             const fornItem = getVal(item, ['cod_fornecedor', 'fornecedor', 'forn']).toLowerCase();
-            const localPlanilha = getVal(item, ['local_estoque', 'local', 'armazem']).toLowerCase();
-            const localEstoqueItem = (localPlanilha && localPlanilha !== '-') ? localPlanilha : String(mapaLocalEstoqueSaldo.get(codNorm) || 'geral').toLowerCase();
+            const localEstoqueItem = getVal(item, ['local_estoque', 'local', 'armazem', 'deposito']).toLowerCase();
             
             const codFilial = getVal(item, ['cod_filial', 'filial_cod']);
             const nomeFilial = getVal(item, ['nome_filial', 'filial_nome', 'filial']);
