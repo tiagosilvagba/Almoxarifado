@@ -433,12 +433,11 @@
 
             const valorImobilizado = saldo * custoUnitario;
 
-            // CÁLCULO: Dias de Giro (Cobertura de Estoque) -> (Saldo / ConsumoMensal) * 30
             let diasGiro = 0;
             if (consumo > 0) {
                 diasGiro = Math.round((saldo / consumo) * 30);
             } else if (saldo > 0) {
-                diasGiro = Infinity; // Sem Giro
+                diasGiro = Infinity;
             }
 
             let status = 'Estoque Normal';
@@ -518,9 +517,9 @@
         itensFiltrados.slice(0, 100).forEach(i => { 
             
             const imagemCapa = `imagens/${i.cod} - 01.jpg`;
+            // Aplicado o novo Fallback perfeitamente integrado ao design
             const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder"><span>📷</span>Cadastrar<br>Imagem</div>';`;
 
-            // Tratamento visual do calculo de Dias de Giro
             let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
             let giroClass = i.diasGiro === Infinity ? 'highlight-giro' : '';
 
@@ -595,7 +594,6 @@
             if (i.status === 'Obsoleto (Sem Consumo)') { valorObsoleto += i.valorImobilizado; qtdObsoleto++; }
         });
 
-        // Cálculo da Cobertura Geral da Fábrica/Filtro
         let giroMedioGeral = 0;
         if (totalConsumo > 0) giroMedioGeral = Math.round((totalSaldo / totalConsumo) * 30);
 
