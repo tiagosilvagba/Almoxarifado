@@ -6,7 +6,6 @@
     <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
     
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -54,10 +53,15 @@
                 <div id="status-consumos" class="status-item">⏳ Buscando 02 - Consumos.csv...</div>
             </div>
 
-            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="background: var(--bg-subcard); color: var(--text-primary); border: 1px solid var(--border-color); text-align: center; margin-top: 5px;">
-                🔄 Forçar Nova Leitura
+            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="background: var(--text-info); color: white; border: none; text-align: center; margin-top: 5px;">
+                🔄 Forçar Auto Leitura
             </button>
-            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; display:block; border: none; background: transparent; color: var(--primary-color); margin-top: 5px;">
+            <label class="btn-sidebar-action" style="text-align: center; background: var(--bg-card); cursor:pointer;">
+                <span>📁 Ou clique aqui para upload manual</span>
+                <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
+            </label>
+
+            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; display:block; border: none; background: transparent; color: var(--text-primary); margin-top: 5px;">
                 ▼ Exibir/Ocultar Filtros
             </button>
         </div>
@@ -165,6 +169,9 @@
 </div>
 
 <script>
+    // ==========================================================================
+    // VARIÁVEIS E CONFIGURAÇÕES
+    // ==========================================================================
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
     let itensFiltrados = [];
@@ -198,22 +205,29 @@
     }
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
-    function normalizarString(val) { return String(val || '').toLowerCase().trim(); }
     
-    // Normaliza código (remove zeros à esquerda para evitar erros de match entre os arquivos)
-    function normalizarCod(val) { 
-        return String(val || '').toLowerCase().replace(/[^a-z0-9-]/g, '').trim().replace(/^0+/, ''); 
+    // Tratamento de acentuação para busca precisa
+    function normalizarString(val) { 
+        return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); 
     }
     
+    function normalizarCod(val) { 
+        return String(val || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, ''); 
+    }
+    
+    // Motor robusto para números no formato Brasileiro
     function converterParaNumero(val) {
-        if (!val) return 0;
+        if (val === null || val === undefined || val === '') return 0;
         if (typeof val === 'number') return val;
-        let limpo = val.replace(/\./g, '').replace(',', '.');
-        let floatVal = parseFloat(limpo);
+        let str = String(val).trim().replace(/[R$\s]/g, '');
+        // Se possui vírgula, converte padrao BR para Internacional (Ponto)
+        if (str.includes(',')) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        }
+        let floatVal = parseFloat(str);
         return isNaN(floatVal) ? 0 : floatVal;
     }
 
-    // Motor de Busca de Colunas Exatas
     function lerValorDinamico(item, termosChave, tipoRetorno = 'string') {
         if (!item) return tipoRetorno === 'numero' ? 0 : '';
         const chaves = Object.keys(item);
@@ -229,27 +243,56 @@
         return tipoRetorno === 'numero' ? 0 : '';
     }
 
-    function corrigirDelimitadorCSV(json) {
-        if (!json || json.length === 0) return json;
-        const primeiraChave = Object.keys(json[0])[0];
-        if (Object.keys(json[0]).length === 1 && primeiraChave.includes(';')) {
-            return json.map(linha => {
-                const cabecalhos = primeiraChave.split(';');
-                const valores = String(linha[primeiraChave]).split(';');
-                const novoObjeto = {};
-                cabecalhos.forEach((cab, index) => {
-                    novoObjeto[cab.trim()] = valores[index] !== undefined ? valores[index].trim() : '';
-                });
-                return novoObjeto;
-            });
-        }
-        return json;
-    }
-
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
     // ==========================================================================
-    // AUTO FETCH - LEITURA AUTOMÁTICA
+    // PARSER CSV NATIVO E BLINDADO (Ignora linhas vazias e corrige separadores)
+    // ==========================================================================
+    function parseCSV(text) {
+        let lines = text.split(/\r?\n/);
+        let headerIndex = 0;
+        
+        // Acha a primeira linha real (que não seja apenas ponto e vírgula ou em branco)
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].replace(/[;\s"]/g, '').length > 0) { 
+                headerIndex = i;
+                break;
+            }
+        }
+        if (headerIndex >= lines.length) return [];
+
+        // Trata quebras dentro de aspas no CSV
+        function splitCSVLine(line) {
+            let result = [];
+            let curVal = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                let char = line[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ';' && !inQuotes) { result.push(curVal); curVal = ''; } 
+                else { curVal += char; }
+            }
+            result.push(curVal);
+            return result.map(v => v.trim());
+        }
+
+        let headers = splitCSVLine(lines[headerIndex]);
+        let result = [];
+        
+        for (let i = headerIndex + 1; i < lines.length; i++) {
+            if (lines[i].replace(/[;\s"]/g, '').length === 0) continue; // Pula linha vazia
+            let values = splitCSVLine(lines[i]);
+            let obj = {};
+            for (let j = 0; j < headers.length; j++) {
+                obj[headers[j]] = values[j] !== undefined ? values[j] : '';
+            }
+            result.push(obj);
+        }
+        return result;
+    }
+
+    // ==========================================================================
+    // AUTO FETCH - LEITURA DE ARQUIVOS
     // ==========================================================================
     async function carregarArquivosAutomaticamente() {
         const arquivos = [
@@ -259,6 +302,7 @@
         ];
 
         let carregados = 0;
+        const decoder = new TextDecoder('windows-1252'); // Impede erro de acentuação (ç, á)
 
         for (const arq of arquivos) {
             const elStatus = document.getElementById(arq.statusId);
@@ -270,20 +314,17 @@
                 if (!response.ok) throw new Error(`Status ${response.status}`);
                 
                 const arrayBuffer = await response.arrayBuffer();
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
-                let json = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
+                const text = decoder.decode(arrayBuffer);
                 
-                json = corrigirDelimitadorCSV(json);
-                bases[arq.id] = json;
+                bases[arq.id] = parseCSV(text);
                 
-                elStatus.innerText = `✅ ${arq.url} lido!`;
+                elStatus.innerText = `✅ ${arq.url} lido! (${bases[arq.id].length} linhas)`;
                 elStatus.classList.add('status-ok');
                 carregados++;
 
             } catch (error) {
                 console.warn(`Falha ao ler ${arq.url}`, error);
-                elStatus.innerText = `❌ Falha ao achar ${arq.url}`;
+                elStatus.innerText = `❌ Falha: ${arq.url}`;
                 elStatus.classList.add('status-erro');
             }
         }
@@ -297,24 +338,57 @@
         }
     }
 
+    // Função de Backup caso o usuário esteja abrindo sem servidor e o bloqueio de segurança dispare
+    function uploadManualMultiplo(event) {
+        const files = event.target.files;
+        let carregados = 0;
+        const decoder = new TextDecoder('windows-1252');
+
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = decoder.decode(e.target.result);
+                const nomeLower = file.name.toLowerCase();
+                
+                let alvoId = null;
+                if (nomeLower.includes('base')) alvoId = 'baseItens';
+                else if (nomeLower.includes('compras')) alvoId = 'compras';
+                else if (nomeLower.includes('consumos')) alvoId = 'consumos';
+
+                if (alvoId) {
+                    bases[alvoId] = parseCSV(text);
+                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).innerText = `✅ ${file.name} (Carregado)`;
+                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).classList.add('status-ok');
+                    carregados++;
+                    if(carregados === files.length) {
+                        mostrarToast("Upload manual concluído. Processando...", "success");
+                        processarInteligencia();
+                    }
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
     window.onload = carregarArquivosAutomaticamente;
 
     // ==========================================================================
-    // INTELIGÊNCIA - MAPEAMENTO EXATO DOS CABEÇALHOS DO USUÁRIO
+    // INTELIGÊNCIA - MAPEAMENTO DOS CABEÇALHOS DO USUÁRIO
     // ==========================================================================
     function processarInteligencia() {
-        if (bases.baseItens.length === 0) return;
+        if (bases.baseItens.length === 0) {
+            mostrarToast("Erro: Base_Itens.csv está vazio ou não carregado.", "error");
+            return;
+        }
 
-        // Dicionário com os nomes exatos passados por você, com fallbacks genéricos
-        const colCod = ['cd item', 'cod', 'código'];
-        const colDesc = ['nome do item detalhado', 'nome do item resumido', 'desc', 'nome'];
-        const colQtd = ['qt saldo atual', 'saldo', 'qtd'];
-        const colCusto = ['vl custo unitario atual', 'custo', 'valor'];
+        const colCod = ['cd item', 'cod produto', 'codigo', 'cod'];
+        const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc'];
+        const colQtd = ['qt saldo atual', 'quantidade', 'qt movimento', 'saldo'];
+        const colCusto = ['vl custo unitario atual', 'valor estimado', 'custo'];
         
-        // Novas colunas mapeadas
         const colUM = ['cd unidade medida', 'un', 'um'];
         const colFilial = ['nm filial', 'filial'];
-        const colGrupo = ['nm grupo', 'grupo'];
+        const colGrupo = ['nm grupo', 'grupo', 'categoria'];
         const colClasse = ['nm classe', 'classe'];
         const colReparticao = ['cd reparticao', 'reparticao'];
         const colPrateleira = ['cd prateleira', 'prateleira'];
@@ -340,11 +414,12 @@
             const codNorm = normalizarCod(codBruto);
             if(!codNorm) return null; 
 
-            const desc = lerValorDinamico(item, colDesc, 'string');
+            let desc = lerValorDinamico(item, colDesc, 'string');
+            if(!desc) desc = "Item sem Descrição";
+
             const saldo = lerValorDinamico(item, colQtd, 'numero');
             const custoUnitario = lerValorDinamico(item, colCusto, 'numero');
             
-            // Dados adicionais para exibição
             const um = lerValorDinamico(item, colUM, 'string');
             const filial = lerValorDinamico(item, colFilial, 'string');
             const grupo = lerValorDinamico(item, colGrupo, 'string');
@@ -353,7 +428,8 @@
             const prateleira = lerValorDinamico(item, colPrateleira, 'string');
             
             const transito = mapCompras.get(codNorm) || 0;
-            const consumo = mapConsumos.get(codNorm) || 0;
+            // Abs (módulo) para garantir que saídas negativas virem positivas pro consumo
+            const consumo = Math.abs(mapConsumos.get(codNorm)) || 0;
 
             const valorImobilizado = saldo * custoUnitario;
             const valorConsumo = consumo * custoUnitario; 
@@ -374,6 +450,11 @@
                 status: status, statusBadge: statusBadge, curva: 'C'
             };
         }).filter(i => i !== null);
+
+        if(itensProcessados.length === 0) {
+            mostrarToast("A leitura funcionou, mas nenhuma coluna mapeada (Cd Item) bateu. Verifique seu CSV.", "warning");
+            return;
+        }
 
         const usarFinanceiro = valorTotalConsumido > 0;
         itensProcessados.sort((a, b) => usarFinanceiro ? b.valorConsumo - a.valorConsumo : b.consumo - a.consumo);
@@ -396,7 +477,7 @@
     }
 
     // ==========================================================================
-    // RENDERIZAÇÃO E FILTROS COM OS NOVOS DADOS
+    // RENDERIZAÇÃO 
     // ==========================================================================
     function dispararFiltros() {
         const termo = normalizarString(document.getElementById('busca')?.value);
@@ -404,7 +485,6 @@
         const curvaFiltro = document.getElementById('select-curva').value;
 
         itensFiltrados = itensProcessados.filter(i => {
-            // Busca abrange Código, Descrição, Grupo e Classe
             const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo) + " " + normalizarString(i.classe));
             const bateTermo = !termo || txt.includes(termo);
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
@@ -425,13 +505,8 @@
 
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
-        document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens localizados.`;
+        document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens processados com sucesso.`;
         container.innerHTML = '';
-
-        if(itensFiltrados.length === 0 && itensProcessados.length > 0) {
-            container.innerHTML = `<div style="padding: 20px; color: var(--text-secondary);">Nenhum item corresponde aos filtros atuais.</div>`;
-            return;
-        }
 
         let html = '';
         itensFiltrados.slice(0, 100).forEach(i => { 
