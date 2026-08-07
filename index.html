@@ -9,6 +9,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Estilos específicos adicionados para a nova barra de status automática */
+        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .status-item { font-size: 13px; font-weight: 600; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .status-ok { color: var(--text-success); border-color: #bbf7d0; background: #f0fdf4; }
+        .status-erro { color: var(--text-danger); border-color: #fecaca; background: #fef2f2; }
+    </style>
 </head>
 <body class="desktop-mode">
 
@@ -41,27 +49,18 @@
                 <option value="dark">🌙 Tema Escuro</option>
             </select>
 
-            <span class="nav-section-title">Importação (100% Automático)</span>
+            <span class="nav-section-title">Status da Importação Local</span>
             
-            <label class="btn-sidebar-action">
-                <span class="btn-title" id="status-base">📦 1. 03 - Base_Itens.csv</span>
-                <span class="btn-sub">Mestre, Saldo e Custos</span>
-                <input type="file" accept=".csv, .xlsx, .xls" style="display:none;" onchange="carregarArquivo(event, 'baseItens')">
-            </label>
-            
-            <label class="btn-sidebar-action">
-                <span class="btn-title" id="status-compras">🚚 2. 01 - Compras.csv</span>
-                <span class="btn-sub">Trânsito e Pedidos Abertos</span>
-                <input type="file" accept=".csv, .xlsx, .xls" style="display:none;" onchange="carregarArquivo(event, 'compras')">
-            </label>
+            <div class="status-importacao">
+                <div id="status-base" class="status-item">⏳ Buscando 03 - Base_Itens.csv...</div>
+                <div id="status-compras" class="status-item">⏳ Buscando 01 - Compras.csv...</div>
+                <div id="status-consumos" class="status-item">⏳ Buscando 02 - Consumos.csv...</div>
+            </div>
 
-            <label class="btn-sidebar-action">
-                <span class="btn-title" id="status-consumos">📉 3. 02 - Consumos.csv</span>
-                <span class="btn-sub">Saídas e Movimentações</span>
-                <input type="file" accept=".csv, .xlsx, .xls" style="display:none;" onchange="carregarArquivo(event, 'consumos')">
-            </label>
-
-            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; display:block; border: none; background: transparent; color: var(--primary-color); margin-top: 10px;">
+            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="background: var(--bg-subcard); color: var(--text-primary); border: 1px solid var(--border-color); text-align: center; margin-top: 5px;">
+                🔄 Forçar Nova Leitura
+            </button>
+            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; display:block; border: none; background: transparent; color: var(--primary-color); margin-top: 5px;">
                 ▼ Exibir/Ocultar Filtros
             </button>
         </div>
@@ -77,9 +76,9 @@
                 <label class="filter-label">Curva ABC Financeira:</label>
                 <select id="select-curva" class="segmentation-select" onchange="dispararFiltros()">
                     <option value="">Todas as Classes</option>
-                    <option value="A">Curva A (Alto Valor Consumido)</option>
-                    <option value="B">Curva B (Médio Valor Consumido)</option>
-                    <option value="C">Curva C (Baixo Valor Consumido)</option>
+                    <option value="A">Curva A (Alto Valor)</option>
+                    <option value="B">Curva B (Médio Valor)</option>
+                    <option value="C">Curva C (Baixo Valor)</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -100,8 +99,8 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
-                <input type="text" id="busca" class="search-box" placeholder="Busque por código ou descrição do material..." oninput="dispararFiltros()">
-                <div class="status"><span id="contador-itens">Aguardando importação do arquivo "Base_Itens.csv" para iniciar...</span></div>
+                <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, sku, grupo..." oninput="dispararFiltros()">
+                <div class="status"><span id="contador-itens">Iniciando leitura automática do diretório...</span></div>
             </div>
             <div class="scrollable-results-section">
                 <div id="resultados"></div>
@@ -123,19 +122,19 @@
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">🔴 Ruptura Crítica (Sem Pedido)</span>
+                        <span class="kpi-title">🔴 Ruptura Crítica</span>
                         <span class="kpi-value color-critical" id="dash-kpi-ruptura-critica">0</span>
-                        <span class="kpi-sub">Requer ação imediata de compras</span>
+                        <span class="kpi-sub">Requer ação imediata (sem pedido)</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">⚠️ Ruptura (Em Trânsito)</span>
+                        <span class="kpi-title">⚠️ Ruptura em Trânsito</span>
                         <span class="kpi-value color-warning" id="dash-kpi-ruptura-transito">0</span>
                         <span class="kpi-sub">Aguardando entrega de fornecedor</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">🛑 Capital Travado (Obsoletos)</span>
+                        <span class="kpi-title">🛑 Capital Travado</span>
                         <span class="kpi-value" style="color: var(--text-primary);" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
-                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro no período</span>
+                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens obsoletos (sem giro)</span>
                     </div>
                 </div>
 
@@ -150,16 +149,16 @@
                             <thead>
                                 <tr>
                                     <th>Curva</th>
-                                    <th>Código / Material</th>
+                                    <th>Código / Descrição</th>
                                     <th>Saldo Atual</th>
                                     <th>Em Trânsito</th>
                                     <th>Consumo (Período)</th>
-                                    <th>Valor Imobilizado</th>
+                                    <th>Valor Imob.</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-table-body">
-                                <tr><td colspan="7" style="text-align:center; padding: 30px;">Anexe os arquivos na barra lateral para iniciar a inteligência.</td></tr>
+                                <tr><td colspan="7" style="text-align:center; padding: 30px;">Aguardando leitura automática...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -197,7 +196,7 @@
         toast.className = `toast toast-${tipo}`;
         toast.innerText = mensagem;
         container.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 4000);
+        setTimeout(() => { toast.remove(); }, 5000);
     }
 
     function navegarPara(view) {
@@ -211,7 +210,7 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     function normalizarString(val) { return String(val || '').toLowerCase().trim(); }
-    function normalizarCod(val) { return String(val || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim(); }
+    function normalizarCod(val) { return String(val || '').toLowerCase().replace(/[^a-z0-9-]/g, '').trim(); }
     
     function converterParaNumero(val) {
         if (!val) return 0;
@@ -221,7 +220,7 @@
         return isNaN(floatVal) ? 0 : floatVal;
     }
 
-    // Leitura Dinâmica de Colunas
+    // Leitura Dinâmica de Colunas (Motor Inteligente Ampliado)
     function lerValorDinamico(item, termosChave, tipoRetorno = 'string') {
         if (!item) return tipoRetorno === 'numero' ? 0 : '';
         const chaves = Object.keys(item);
@@ -255,60 +254,78 @@
         return json;
     }
 
+    function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
     // ==========================================================================
-    // CARREGAMENTO E AUTOMAÇÃO
+    // AUTO FETCH - LEITURA AUTOMÁTICA DOS DIRETÓRIOS LOCAIS
     // ==========================================================================
-    function carregarArquivo(event, tipoBase) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
+    async function carregarArquivosAutomaticamente() {
+        const arquivos = [
+            { id: 'baseItens', url: '03 - Base_Itens.csv', statusId: 'status-base' },
+            { id: 'compras', url: '01 - Compras.csv', statusId: 'status-compras' },
+            { id: 'consumos', url: '02 - Consumos.csv', statusId: 'status-consumos' }
+        ];
+
+        let carregados = 0;
+
+        for (const arq of arquivos) {
+            const elStatus = document.getElementById(arq.statusId);
+            elStatus.innerText = `⏳ Buscando ${arq.url}...`;
+            elStatus.className = 'status-item';
+
             try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                // Tenta buscar o arquivo da mesma pasta
+                const response = await fetch(arq.url, { cache: "no-store" });
+                if (!response.ok) throw new Error(`Status ${response.status}`);
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
                 let json = XLSX.utils.sheet_to_json(primeiraAba, { defval: "" });
                 
                 json = corrigirDelimitadorCSV(json);
-                bases[tipoBase] = json;
+                bases[arq.id] = json;
                 
-                if (tipoBase === 'baseItens') document.getElementById('status-base').innerText = '✅ 1. Base_Itens (OK)';
-                if (tipoBase === 'compras') document.getElementById('status-compras').innerText = '✅ 2. Compras (OK)';
-                if (tipoBase === 'consumos') document.getElementById('status-consumos').innerText = '✅ 3. Consumos (OK)';
-                
-                mostrarToast(`Arquivo processado com sucesso.`, 'success');
-                
-                // Dispara o processamento automático se a Base já estiver lá
-                if (bases.baseItens.length > 0) {
-                    setTimeout(processarInteligencia, 300);
-                } else {
-                    mostrarToast("Aguardando o arquivo '03 - Base_Itens' para exibir os dados.", "warning");
-                }
-                
+                elStatus.innerText = `✅ ${arq.url} lido!`;
+                elStatus.classList.add('status-ok');
+                carregados++;
+
             } catch (error) {
-                console.error(error);
-                mostrarToast(`Erro ao ler o arquivo: ${file.name}`, 'error');
+                console.warn(`Falha ao ler ${arq.url} via Fetch.`, error);
+                elStatus.innerText = `❌ Falha ao achar ${arq.url}`;
+                elStatus.classList.add('status-erro');
             }
-        };
-        reader.readAsArrayBuffer(file);
+        }
+
+        if (carregados === 3) {
+            mostrarToast("Todos os arquivos foram identificados e carregados! Processando...", "success");
+            setTimeout(processarInteligencia, 500);
+        } else if (carregados > 0) {
+            mostrarToast("Alguns arquivos faltaram. Tentando cruzar o que foi encontrado...", "warning");
+            setTimeout(processarInteligencia, 500);
+        } else {
+            mostrarToast("Bloqueio de Segurança: Abra este HTML através de um Servidor Local (Ex: Live Server) para a leitura automática funcionar.", "error");
+        }
     }
 
-    function formatarMoeda(valor) {
-        return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
+    // Aciona a varredura automática assim que a página terminar de carregar
+    window.onload = carregarArquivosAutomaticamente;
 
     // ==========================================================================
-    // INTELIGÊNCIA E CRUZAMENTO
+    // INTELIGÊNCIA E CRUZAMENTO (COM DICIONÁRIOS EXPANDIDOS)
     // ==========================================================================
     function processarInteligencia() {
         if (bases.baseItens.length === 0) return;
 
-        // Dicionários expandidos para garantir que as colunas sejam encontradas
-        const colCod = ['cod', 'material', 'item', 'produto', 'sku'];
-        const colDesc = ['desc', 'nome', 'texto', 'material', 'especificação'];
-        const colQtd = ['qtd', 'qtde', 'quantidade', 'saldo', 'livre', 'estoque', 'saida', 'consumo', 'pendente', 'transito', 'utiliz'];
-        const colCusto = ['custo', 'preco', 'valor', 'unitario', 'vlr', 'unitário', 'preço', 'pm'];
+        // Dicionários altamente expandidos para abraçar variações de exportações de ERP
+        const colCod = ['cod', 'código', 'codigo', 'material', 'item', 'produto', 'sku', 'pn', 'part number', 'referencia'];
+        const colDesc = ['desc', 'nome', 'texto', 'especificação', 'especificacao', 'detalhe', 'descrição'];
+        const colQtd = ['qtd', 'qtde', 'quantidade', 'saldo', 'livre', 'estoque', 'saida', 'consumo', 'pendente', 'transito', 'utiliz', 'disp'];
+        const colCusto = ['custo', 'preco', 'preço', 'valor', 'unitario', 'unitário', 'vlr', 'pm', 'medio'];
+        
+        // Novas utilidades extraídas se existirem no seu CSV:
+        const colGrupo = ['grupo', 'grp', 'categoria', 'familia', 'classe', 'tipo'];
+        const colLeadTime = ['lead', 'tempo', 'dias', 'reposição', 'reposicao', 'entrega', 'prazo'];
 
         const mapCompras = new Map();
         bases.compras.forEach(item => {
@@ -327,7 +344,7 @@
         let valorTotalConsumido = 0;
 
         itensProcessados = bases.baseItens.map(item => {
-            // Trava de Segurança: Se não achar coluna de Código, pega a 1ª coluna da planilha
+            // Trava de Segurança
             let codBruto = lerValorDinamico(item, colCod, 'string');
             if (!codBruto) {
                 const primeiraColuna = Object.keys(item)[0];
@@ -335,9 +352,8 @@
             }
             
             const codNorm = normalizarCod(codBruto);
-            if(!codNorm) return null; // Pula linha vazia
+            if(!codNorm) return null; 
 
-            // Trava de Segurança: Se não achar Descrição, pega a 2ª coluna
             let desc = lerValorDinamico(item, colDesc, 'string');
             if (!desc) {
                 const chaves = Object.keys(item);
@@ -346,6 +362,8 @@
 
             const saldo = lerValorDinamico(item, colQtd, 'numero');
             const custoUnitario = lerValorDinamico(item, colCusto, 'numero');
+            const grupo = lerValorDinamico(item, colGrupo, 'string');
+            const leadTime = lerValorDinamico(item, colLeadTime, 'numero');
             
             const transito = mapCompras.get(codNorm) || 0;
             const consumo = mapConsumos.get(codNorm) || 0;
@@ -364,6 +382,7 @@
                 cod: codBruto, codNorm: codNorm, desc: desc,
                 saldo: saldo, custo: custoUnitario,
                 transito: transito, consumo: consumo,
+                grupo: grupo, leadTime: leadTime,
                 valorImobilizado: valorImobilizado, valorConsumo: valorConsumo,
                 status: status, statusBadge: statusBadge, curva: 'C'
             };
@@ -398,7 +417,9 @@
         const curvaFiltro = document.getElementById('select-curva').value;
 
         itensFiltrados = itensProcessados.filter(i => {
-            const bateTermo = !termo || i.codNorm.includes(termo) || normalizarString(i.desc).includes(termo);
+            // Busca abrange código, descrição e grupo
+            const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo));
+            const bateTermo = !termo || txt.includes(termo);
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
             return bateTermo && bateCurva && bateStatus;
@@ -430,6 +451,7 @@
             const imagemCapa = `imagens/${i.cod} - 01.jpg`;
             const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder">Sem<br>Imagem</div>';`;
 
+            // Adição das Utilidades (Grupo e Lead Time) no cartão
             html += `
                 <div class="item-row">
                     <div class="item-image-container">
@@ -438,14 +460,18 @@
                     <div class="abc-badge curva-${i.curva}">${i.curva}</div>
                     <div class="row-content" style="width:100%;">
                         <div class="row-title">${i.cod} — ${i.desc}</div>
+                        
                         <div class="row-details">
                             <span class="row-stock-badge">📊 Saldo: <strong>${i.saldo}</strong></span>
                             ${i.transito > 0 ? `<span class="row-stock-badge" style="color:#0369a1;">🚚 Trânsito: ${i.transito}</span>` : ''}
                             <span class="row-stock-badge">📉 Consumo: ${i.consumo}</span>
-                            ${i.valorImobilizado > 0 ? `<span class="row-stock-badge" style="color:#166534;">💲 Imobilizado: ${formatarMoeda(i.valorImobilizado)}</span>` : ''}
+                            ${i.valorImobilizado > 0 ? `<span class="row-stock-badge" style="color:#166534;">💲 Imob.: ${formatarMoeda(i.valorImobilizado)}</span>` : ''}
                         </div>
-                        <div style="margin-top: 5px;">
+
+                        <div class="row-details" style="margin-top: 6px;">
                             <span class="badge-status ${i.statusBadge}">${i.status}</span>
+                            ${i.grupo ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px;">🏷️ Grp: ${i.grupo}</span>` : ''}
+                            ${i.leadTime > 0 ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px;">⏱️ Reposição: ${i.leadTime} dias</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -470,7 +496,7 @@
         document.getElementById('dash-kpi-ruptura-critica').innerText = qtdRupturaCritica;
         document.getElementById('dash-kpi-ruptura-transito').innerText = qtdRupturaTransito;
         document.getElementById('dash-kpi-valor-obsoleto').innerText = formatarMoeda(valorObsoleto);
-        document.getElementById('dash-kpi-obsoleto-qtd').innerText = `${qtdObsoleto} itens sem giro (risco)`;
+        document.getElementById('dash-kpi-obsoleto-qtd').innerText = `${qtdObsoleto} itens sem giro`;
 
         const tbody = document.getElementById('dash-table-body');
         let htmlTbody = '';
@@ -478,7 +504,11 @@
             htmlTbody += `
                 <tr>
                     <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px;">${i.curva}</div></td>
-                    <td><strong>${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary);">${i.desc}</span></td>
+                    <td>
+                        <strong>${i.cod}</strong><br>
+                        <span style="font-size:11px;color:var(--text-secondary);">${i.desc}</span>
+                        ${i.grupo ? `<br><span style="font-size:9px;color:var(--primary-color);">[${i.grupo}]</span>` : ''}
+                    </td>
                     <td style="font-size:14px; font-weight:bold;">${i.saldo}</td>
                     <td>${i.transito > 0 ? `🚚 ${i.transito}` : '-'}</td>
                     <td>${i.consumo}</td>
