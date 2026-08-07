@@ -6,12 +6,10 @@
     <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
     
     <link rel="stylesheet" href="style.css">
-
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* Estilos específicos adicionados para a nova barra de status automática */
         .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
         .status-item { font-size: 13px; font-weight: 600; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-secondary); }
         .status-ok { color: var(--text-success); border-color: #bbf7d0; background: #f0fdf4; }
@@ -50,7 +48,6 @@
             </select>
 
             <span class="nav-section-title">Status da Importação Local</span>
-            
             <div class="status-importacao">
                 <div id="status-base" class="status-item">⏳ Buscando 03 - Base_Itens.csv...</div>
                 <div id="status-compras" class="status-item">⏳ Buscando 01 - Compras.csv...</div>
@@ -99,7 +96,7 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
-                <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, sku, grupo..." oninput="dispararFiltros()">
+                <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, grupo, classe..." oninput="dispararFiltros()">
                 <div class="status"><span id="contador-itens">Iniciando leitura automática do diretório...</span></div>
             </div>
             <div class="scrollable-results-section">
@@ -114,7 +111,6 @@
                 <header><h1>Dashboard de Inteligência</h1></header>
             </div>
             <div class="scrollable-results-section">
-                
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <span class="kpi-title">💵 Valor Total Imobilizado</span>
@@ -169,20 +165,13 @@
 </div>
 
 <script>
-    // ==========================================================================
-    // VARIÁVEIS E CONFIGURAÇÕES
-    // ==========================================================================
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
     let itensFiltrados = [];
     let vistaAtual = 'pesquisa';
-
     let chartABCInstance = null;
     let chartStatusInstance = null;
 
-    // ==========================================================================
-    // FUNÇÕES DE INTERFACE E TEMAS
-    // ==========================================================================
     function alterarTema() {
         const tema = document.getElementById('tema-sistema').value;
         if (tema === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
@@ -210,7 +199,11 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     function normalizarString(val) { return String(val || '').toLowerCase().trim(); }
-    function normalizarCod(val) { return String(val || '').toLowerCase().replace(/[^a-z0-9-]/g, '').trim(); }
+    
+    // Normaliza código (remove zeros à esquerda para evitar erros de match entre os arquivos)
+    function normalizarCod(val) { 
+        return String(val || '').toLowerCase().replace(/[^a-z0-9-]/g, '').trim().replace(/^0+/, ''); 
+    }
     
     function converterParaNumero(val) {
         if (!val) return 0;
@@ -220,14 +213,14 @@
         return isNaN(floatVal) ? 0 : floatVal;
     }
 
-    // Leitura Dinâmica de Colunas (Motor Inteligente Ampliado)
+    // Motor de Busca de Colunas Exatas
     function lerValorDinamico(item, termosChave, tipoRetorno = 'string') {
         if (!item) return tipoRetorno === 'numero' ? 0 : '';
         const chaves = Object.keys(item);
         for (const termo of termosChave) {
             const termoBusca = normalizarString(termo);
             for (const chave of chaves) {
-                if (normalizarString(chave).includes(termoBusca)) {
+                if (normalizarString(chave) === termoBusca || normalizarString(chave).includes(termoBusca)) {
                     const val = item[chave];
                     return tipoRetorno === 'numero' ? converterParaNumero(val) : String(val).trim();
                 }
@@ -236,7 +229,6 @@
         return tipoRetorno === 'numero' ? 0 : '';
     }
 
-    // Vacina contra CSVs separados por ponto e vírgula
     function corrigirDelimitadorCSV(json) {
         if (!json || json.length === 0) return json;
         const primeiraChave = Object.keys(json[0])[0];
@@ -257,7 +249,7 @@
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
     // ==========================================================================
-    // AUTO FETCH - LEITURA AUTOMÁTICA DOS DIRETÓRIOS LOCAIS
+    // AUTO FETCH - LEITURA AUTOMÁTICA
     // ==========================================================================
     async function carregarArquivosAutomaticamente() {
         const arquivos = [
@@ -274,7 +266,6 @@
             elStatus.className = 'status-item';
 
             try {
-                // Tenta buscar o arquivo da mesma pasta
                 const response = await fetch(arq.url, { cache: "no-store" });
                 if (!response.ok) throw new Error(`Status ${response.status}`);
                 
@@ -291,41 +282,42 @@
                 carregados++;
 
             } catch (error) {
-                console.warn(`Falha ao ler ${arq.url} via Fetch.`, error);
+                console.warn(`Falha ao ler ${arq.url}`, error);
                 elStatus.innerText = `❌ Falha ao achar ${arq.url}`;
                 elStatus.classList.add('status-erro');
             }
         }
 
         if (carregados === 3) {
-            mostrarToast("Todos os arquivos foram identificados e carregados! Processando...", "success");
+            mostrarToast("Todos os arquivos foram identificados! Processando inteligência...", "success");
             setTimeout(processarInteligencia, 500);
         } else if (carregados > 0) {
-            mostrarToast("Alguns arquivos faltaram. Tentando cruzar o que foi encontrado...", "warning");
+            mostrarToast("Arquivos parcialmente encontrados. Cruzando dados disponíveis...", "warning");
             setTimeout(processarInteligencia, 500);
-        } else {
-            mostrarToast("Bloqueio de Segurança: Abra este HTML através de um Servidor Local (Ex: Live Server) para a leitura automática funcionar.", "error");
         }
     }
 
-    // Aciona a varredura automática assim que a página terminar de carregar
     window.onload = carregarArquivosAutomaticamente;
 
     // ==========================================================================
-    // INTELIGÊNCIA E CRUZAMENTO (COM DICIONÁRIOS EXPANDIDOS)
+    // INTELIGÊNCIA - MAPEAMENTO EXATO DOS CABEÇALHOS DO USUÁRIO
     // ==========================================================================
     function processarInteligencia() {
         if (bases.baseItens.length === 0) return;
 
-        // Dicionários altamente expandidos para abraçar variações de exportações de ERP
-        const colCod = ['cod', 'código', 'codigo', 'material', 'item', 'produto', 'sku', 'pn', 'part number', 'referencia'];
-        const colDesc = ['desc', 'nome', 'texto', 'especificação', 'especificacao', 'detalhe', 'descrição'];
-        const colQtd = ['qtd', 'qtde', 'quantidade', 'saldo', 'livre', 'estoque', 'saida', 'consumo', 'pendente', 'transito', 'utiliz', 'disp'];
-        const colCusto = ['custo', 'preco', 'preço', 'valor', 'unitario', 'unitário', 'vlr', 'pm', 'medio'];
+        // Dicionário com os nomes exatos passados por você, com fallbacks genéricos
+        const colCod = ['cd item', 'cod', 'código'];
+        const colDesc = ['nome do item detalhado', 'nome do item resumido', 'desc', 'nome'];
+        const colQtd = ['qt saldo atual', 'saldo', 'qtd'];
+        const colCusto = ['vl custo unitario atual', 'custo', 'valor'];
         
-        // Novas utilidades extraídas se existirem no seu CSV:
-        const colGrupo = ['grupo', 'grp', 'categoria', 'familia', 'classe', 'tipo'];
-        const colLeadTime = ['lead', 'tempo', 'dias', 'reposição', 'reposicao', 'entrega', 'prazo'];
+        // Novas colunas mapeadas
+        const colUM = ['cd unidade medida', 'un', 'um'];
+        const colFilial = ['nm filial', 'filial'];
+        const colGrupo = ['nm grupo', 'grupo'];
+        const colClasse = ['nm classe', 'classe'];
+        const colReparticao = ['cd reparticao', 'reparticao'];
+        const colPrateleira = ['cd prateleira', 'prateleira'];
 
         const mapCompras = new Map();
         bases.compras.forEach(item => {
@@ -344,26 +336,21 @@
         let valorTotalConsumido = 0;
 
         itensProcessados = bases.baseItens.map(item => {
-            // Trava de Segurança
-            let codBruto = lerValorDinamico(item, colCod, 'string');
-            if (!codBruto) {
-                const primeiraColuna = Object.keys(item)[0];
-                codBruto = String(item[primeiraColuna] || '').trim();
-            }
-            
+            const codBruto = lerValorDinamico(item, colCod, 'string');
             const codNorm = normalizarCod(codBruto);
             if(!codNorm) return null; 
 
-            let desc = lerValorDinamico(item, colDesc, 'string');
-            if (!desc) {
-                const chaves = Object.keys(item);
-                desc = chaves.length > 1 ? String(item[chaves[1]]).trim() : "Sem Descrição";
-            }
-
+            const desc = lerValorDinamico(item, colDesc, 'string');
             const saldo = lerValorDinamico(item, colQtd, 'numero');
             const custoUnitario = lerValorDinamico(item, colCusto, 'numero');
+            
+            // Dados adicionais para exibição
+            const um = lerValorDinamico(item, colUM, 'string');
+            const filial = lerValorDinamico(item, colFilial, 'string');
             const grupo = lerValorDinamico(item, colGrupo, 'string');
-            const leadTime = lerValorDinamico(item, colLeadTime, 'numero');
+            const classe = lerValorDinamico(item, colClasse, 'string');
+            const reparticao = lerValorDinamico(item, colReparticao, 'string');
+            const prateleira = lerValorDinamico(item, colPrateleira, 'string');
             
             const transito = mapCompras.get(codNorm) || 0;
             const consumo = mapConsumos.get(codNorm) || 0;
@@ -380,9 +367,9 @@
 
             return {
                 cod: codBruto, codNorm: codNorm, desc: desc,
-                saldo: saldo, custo: custoUnitario,
-                transito: transito, consumo: consumo,
-                grupo: grupo, leadTime: leadTime,
+                saldo: saldo, custo: custoUnitario, transito: transito, consumo: consumo,
+                um: um, filial: filial, grupo: grupo, classe: classe, 
+                reparticao: reparticao, prateleira: prateleira,
                 valorImobilizado: valorImobilizado, valorConsumo: valorConsumo,
                 status: status, statusBadge: statusBadge, curva: 'C'
             };
@@ -409,7 +396,7 @@
     }
 
     // ==========================================================================
-    // RENDERIZAÇÃO
+    // RENDERIZAÇÃO E FILTROS COM OS NOVOS DADOS
     // ==========================================================================
     function dispararFiltros() {
         const termo = normalizarString(document.getElementById('busca')?.value);
@@ -417,8 +404,8 @@
         const curvaFiltro = document.getElementById('select-curva').value;
 
         itensFiltrados = itensProcessados.filter(i => {
-            // Busca abrange código, descrição e grupo
-            const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo));
+            // Busca abrange Código, Descrição, Grupo e Classe
+            const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo) + " " + normalizarString(i.classe));
             const bateTermo = !termo || txt.includes(termo);
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
@@ -451,7 +438,6 @@
             const imagemCapa = `imagens/${i.cod} - 01.jpg`;
             const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder">Sem<br>Imagem</div>';`;
 
-            // Adição das Utilidades (Grupo e Lead Time) no cartão
             html += `
                 <div class="item-row">
                     <div class="item-image-container">
@@ -459,20 +445,27 @@
                     </div>
                     <div class="abc-badge curva-${i.curva}">${i.curva}</div>
                     <div class="row-content" style="width:100%;">
-                        <div class="row-title">${i.cod} — ${i.desc}</div>
+                        
+                        <div class="row-title">
+                            ${i.cod} — ${i.desc} 
+                            <span style="font-size:11px; font-weight:normal; color:var(--text-secondary)">(${i.um || 'UN'})</span>
+                        </div>
                         
                         <div class="row-details">
-                            <span class="row-stock-badge">📊 Saldo: <strong>${i.saldo}</strong></span>
-                            ${i.transito > 0 ? `<span class="row-stock-badge" style="color:#0369a1;">🚚 Trânsito: ${i.transito}</span>` : ''}
-                            <span class="row-stock-badge">📉 Consumo: ${i.consumo}</span>
-                            ${i.valorImobilizado > 0 ? `<span class="row-stock-badge" style="color:#166534;">💲 Imob.: ${formatarMoeda(i.valorImobilizado)}</span>` : ''}
+                            <span class="row-stock-badge">📊 Saldo Atual: <strong>${i.saldo}</strong></span>
+                            ${i.transito > 0 ? `<span class="row-stock-badge" style="color:#0369a1;">🚚 Em Trânsito: ${i.transito}</span>` : ''}
+                            <span class="row-stock-badge">📉 Consumo (Período): ${i.consumo}</span>
+                            ${i.valorImobilizado > 0 ? `<span class="row-stock-badge" style="color:#166534;">💲 Imobilizado: ${formatarMoeda(i.valorImobilizado)}</span>` : ''}
                         </div>
 
                         <div class="row-details" style="margin-top: 6px;">
                             <span class="badge-status ${i.statusBadge}">${i.status}</span>
-                            ${i.grupo ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px;">🏷️ Grp: ${i.grupo}</span>` : ''}
-                            ${i.leadTime > 0 ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px;">⏱️ Reposição: ${i.leadTime} dias</span>` : ''}
+                            ${i.filial ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">🏢 Filial: ${i.filial}</span>` : ''}
+                            ${i.grupo ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">🏷️ Grupo: ${i.grupo}</span>` : ''}
+                            ${i.classe ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">📌 Classe: ${i.classe}</span>` : ''}
+                            ${(i.prateleira || i.reparticao) ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">📍 Loc: Rep. ${i.reparticao || '-'} / Prat. ${i.prateleira || '-'}</span>` : ''}
                         </div>
+                        
                     </div>
                 </div>
             `;
@@ -509,7 +502,7 @@
                         <span style="font-size:11px;color:var(--text-secondary);">${i.desc}</span>
                         ${i.grupo ? `<br><span style="font-size:9px;color:var(--primary-color);">[${i.grupo}]</span>` : ''}
                     </td>
-                    <td style="font-size:14px; font-weight:bold;">${i.saldo}</td>
+                    <td style="font-size:14px; font-weight:bold;">${i.saldo} <span style="font-size:10px; font-weight:normal;">${i.um||''}</span></td>
                     <td>${i.transito > 0 ? `🚚 ${i.transito}` : '-'}</td>
                     <td>${i.consumo}</td>
                     <td>${formatarMoeda(i.valorImobilizado)}</td>
