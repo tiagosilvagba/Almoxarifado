@@ -13,59 +13,6 @@
         .status-item { font-size: 13px; font-weight: 600; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-secondary); }
         .status-ok { color: var(--text-success); border-color: #bbf7d0; background: #f0fdf4; }
         .status-erro { color: var(--text-danger); border-color: #fecaca; background: #fef2f2; }
-
-        /* ==========================================================================
-           NOVO DESIGN: CARTÕES DO CATÁLOGO (MAIS LIMPO E ORGANIZADO)
-           ========================================================================== */
-        .item-card {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
-            padding: 16px; margin-bottom: 15px; display: flex; gap: 20px; align-items: stretch;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: background-color 0.3s;
-        }
-        
-        /* Coluna da Imagem e Curva ABC */
-        .item-media {
-            display: flex; flex-direction: column; gap: 10px; align-items: center; width: 110px; flex-shrink: 0;
-        }
-        .item-image-container {
-            width: 110px; height: 110px; border-radius: 8px; overflow: hidden; background: var(--bg-subcard);
-            border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;
-        }
-        .item-image-container img { width: 100%; height: 100%; object-fit: cover; }
-        .img-placeholder { font-size: 11px; color: var(--text-secondary); text-align: center; line-height: 1.4; }
-        
-        /* Corpo do Cartão (Dados) */
-        .item-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;}
-        .item-title { font-size: 16px; font-weight: 800; color: var(--text-primary); }
-        .item-category { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500;}
-        
-        /* Grade de Indicadores (Métricas) */
-        .item-metrics-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 12px;
-        }
-        .metric-box {
-            background: var(--bg-subcard); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
-            display: flex; flex-direction: column;
-        }
-        .metric-label { font-size: 10px; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 2px;}
-        .metric-value { font-size: 15px; font-weight: 800; color: var(--text-primary); }
-        
-        /* Destaques de Cores nas Métricas */
-        .metric-box.highlight-saldo { border-color: #bbf7d0; background: #f0fdf4; }
-        .metric-box.highlight-saldo .metric-value { color: #166534; }
-        .metric-box.highlight-transito { border-color: #bae6fd; background: #f0f9ff; }
-        .metric-box.highlight-transito .metric-value { color: #0369a1; }
-        
-        /* Rodapé do Cartão (Endereço e Status) */
-        .item-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-top: 12px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
-        }
-        .item-address {
-            font-size: 12px; font-weight: 700; background: #e0f2fe; color: #0369a1; 
-            padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;
-        }
     </style>
 </head>
 <body class="desktop-mode">
@@ -127,12 +74,12 @@
         </div>
         <div class="filter-panel-body">
             <div class="filter-group">
-                <label class="filter-label">Curva ABC Financeira:</label>
+                <label class="filter-label">Curva ABC (Por Consumo):</label>
                 <select id="select-curva" class="segmentation-select" onchange="dispararFiltros()">
                     <option value="">Todas as Classes</option>
-                    <option value="A">Curva A (Alto Valor)</option>
-                    <option value="B">Curva B (Médio Valor)</option>
-                    <option value="C">Curva C (Baixo Valor)</option>
+                    <option value="A">Curva A (Alto Giro)</option>
+                    <option value="B">Curva B (Giro Médio)</option>
+                    <option value="C">Curva C (Baixo Giro)</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -175,19 +122,24 @@
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card">
+                        <span class="kpi-title">🔄 Cobertura Média (Giro)</span>
+                        <span class="kpi-value color-success" id="dash-kpi-giro-medio">0 dias</span>
+                        <span class="kpi-sub">Tempo para zerar estoque</span>
+                    </div>
+                    <div class="kpi-card">
                         <span class="kpi-title">🔴 Ruptura Crítica</span>
                         <span class="kpi-value color-critical" id="dash-kpi-ruptura-critica">0</span>
-                        <span class="kpi-sub">Requer ação imediata (sem pedido)</span>
+                        <span class="kpi-sub">Ação imediata necessária</span>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title">⚠️ Ruptura em Trânsito</span>
                         <span class="kpi-value color-warning" id="dash-kpi-ruptura-transito">0</span>
-                        <span class="kpi-sub">Aguardando entrega de fornecedor</span>
+                        <span class="kpi-sub">Aguardando entrega</span>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title">🛑 Capital Travado</span>
                         <span class="kpi-value" style="color: var(--text-primary);" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
-                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens obsoletos (sem giro)</span>
+                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens (obsoletos)</span>
                     </div>
                 </div>
 
@@ -205,8 +157,8 @@
                                     <th>Código / Descrição</th>
                                     <th>Endereço Físico</th>
                                     <th>Saldo</th>
-                                    <th>Trânsito</th>
                                     <th>Consumo</th>
+                                    <th>Dias Giro</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -261,7 +213,7 @@
     }
     
     function normalizarCod(val) { 
-        return String(val || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); 
+        return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); 
     }
     
     function converterParaNumero(val) {
@@ -293,7 +245,7 @@
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
     // ==========================================================================
-    // PARSER CSV
+    // PARSER CSV NATIVO
     // ==========================================================================
     function parseCSV(text) {
         let lines = text.split(/\r?\n/);
@@ -374,10 +326,10 @@
         }
 
         if (carregados === 3) {
-            mostrarToast("Todos os arquivos foram identificados! Processando inteligência...", "success");
+            mostrarToast("Arquivos identificados! Cruzando dados...", "success");
             setTimeout(processarInteligencia, 500);
         } else if (carregados > 0) {
-            mostrarToast("Arquivos parcialmente encontrados. Cruzando dados disponíveis...", "warning");
+            mostrarToast("Arquivos parcialmente encontrados...", "warning");
             setTimeout(processarInteligencia, 500);
         }
     }
@@ -404,7 +356,7 @@
                     document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).classList.add('status-ok');
                     carregados++;
                     if(carregados === files.length) {
-                        mostrarToast("Upload manual concluído. Processando...", "success");
+                        mostrarToast("Upload concluído. Processando...", "success");
                         processarInteligencia();
                     }
                 }
@@ -416,25 +368,24 @@
     window.onload = carregarArquivosAutomaticamente;
 
     // ==========================================================================
-    // INTELIGÊNCIA - MAPEAMENTO DOS CABEÇALHOS
+    // INTELIGÊNCIA - MAPEAMENTO DE DADOS E CÁLCULO DE DIAS DE GIRO
     // ==========================================================================
     function processarInteligencia() {
         if (bases.baseItens.length === 0) {
-            mostrarToast("Erro: Base_Itens.csv está vazio ou não carregado.", "error");
+            mostrarToast("Erro: Base_Itens.csv não carregado.", "error");
             return;
         }
 
-        const colCod = ['cd item', 'cod produto', 'codigo', 'cod'];
+        const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item'];
         const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc'];
         const colQtd = ['qt saldo atual', 'quantidade', 'qt movimento', 'saldo'];
         const colCusto = ['vl custo unitario atual', 'valor estimado', 'custo'];
-        
+        const colMin = ['qt minimo', 'minimo', 'min'];
+        const colMax = ['qt maximo', 'maximo', 'max'];
         const colUM = ['cd unidade medida', 'un', 'um'];
         const colFilial = ['nm filial', 'filial'];
         const colGrupo = ['nm grupo', 'grupo', 'categoria'];
         const colClasse = ['nm classe', 'classe'];
-        
-        // Mapeamento das colunas de endereço solicitadas
         const colReparticao = ['cd reparticao', 'reparticao'];
         const colPrateleira = ['cd prateleira', 'prateleira'];
         const colDivisao = ['cd divisao', 'divisao'];
@@ -453,25 +404,26 @@
             if (cod) mapConsumos.set(cod, (mapConsumos.get(cod) || 0) + qtd);
         });
 
-        let valorTotalConsumido = 0;
-
         itensProcessados = bases.baseItens.map(item => {
-            const codBruto = lerValorDinamico(item, colCod, 'string');
+            let codBruto = lerValorDinamico(item, colCod, 'string').replace(/\./g, '');
             const codNorm = normalizarCod(codBruto);
             if(!codNorm) return null; 
+
+            const saldo = lerValorDinamico(item, colQtd, 'numero');
+            const minimo = lerValorDinamico(item, colMin, 'numero');
+            const maximo = lerValorDinamico(item, colMax, 'numero');
+
+            // Ignorar mortos
+            if (saldo === 0 && minimo === 0 && maximo === 0) return null;
 
             let desc = lerValorDinamico(item, colDesc, 'string');
             if(!desc) desc = "Item sem Descrição";
 
-            const saldo = lerValorDinamico(item, colQtd, 'numero');
             const custoUnitario = lerValorDinamico(item, colCusto, 'numero');
-            
             const um = lerValorDinamico(item, colUM, 'string');
             const filial = lerValorDinamico(item, colFilial, 'string');
             const grupo = lerValorDinamico(item, colGrupo, 'string');
             const classe = lerValorDinamico(item, colClasse, 'string');
-            
-            // Extração do Endereço Completo
             const reparticao = lerValorDinamico(item, colReparticao, 'string') || '-';
             const prateleira = lerValorDinamico(item, colPrateleira, 'string') || '-';
             const divisao = lerValorDinamico(item, colDivisao, 'string') || '-';
@@ -480,8 +432,14 @@
             const consumo = Math.abs(mapConsumos.get(codNorm)) || 0;
 
             const valorImobilizado = saldo * custoUnitario;
-            const valorConsumo = consumo * custoUnitario; 
-            valorTotalConsumido += valorConsumo;
+
+            // CÁLCULO: Dias de Giro (Cobertura de Estoque) -> (Saldo / ConsumoMensal) * 30
+            let diasGiro = 0;
+            if (consumo > 0) {
+                diasGiro = Math.round((saldo / consumo) * 30);
+            } else if (saldo > 0) {
+                diasGiro = Infinity; // Sem Giro
+            }
 
             let status = 'Estoque Normal';
             let statusBadge = 'badge-normal';
@@ -491,33 +449,32 @@
 
             return {
                 cod: codBruto, codNorm: codNorm, desc: desc,
-                saldo: saldo, custo: custoUnitario, transito: transito, consumo: consumo,
+                saldo: saldo, minimo: minimo, maximo: maximo,
+                custo: custoUnitario, transito: transito, consumo: consumo,
+                diasGiro: diasGiro,
                 um: um, filial: filial, grupo: grupo, classe: classe, 
                 reparticao: reparticao, prateleira: prateleira, divisao: divisao,
-                valorImobilizado: valorImobilizado, valorConsumo: valorConsumo,
+                valorImobilizado: valorImobilizado,
                 status: status, statusBadge: statusBadge, curva: 'C'
             };
         }).filter(i => i !== null);
 
-        if(itensProcessados.length === 0) {
-            mostrarToast("A leitura funcionou, mas nenhuma coluna mapeada (Cd Item) bateu. Verifique seu CSV.", "warning");
-            return;
-        }
+        if(itensProcessados.length === 0) return;
 
-        const usarFinanceiro = valorTotalConsumido > 0;
-        itensProcessados.sort((a, b) => usarFinanceiro ? b.valorConsumo - a.valorConsumo : b.consumo - a.consumo);
-        
-        const valorReferenciaGlobal = usarFinanceiro ? valorTotalConsumido : itensProcessados.reduce((acc, curr) => acc + curr.consumo, 0);
-        let valorAcumulado = 0;
+        // CURVA ABC
+        itensProcessados.sort((a, b) => b.consumo - a.consumo);
+        const consumoTotalGlobal = itensProcessados.reduce((acc, curr) => acc + curr.consumo, 0);
+        let consumoAcumulado = 0;
 
         itensProcessados.forEach(item => {
-            const valorReferenciaItem = usarFinanceiro ? item.valorConsumo : item.consumo;
-            if (valorReferenciaGlobal > 0 && valorReferenciaItem > 0) {
-                valorAcumulado += valorReferenciaItem;
-                const percentual = valorAcumulado / valorReferenciaGlobal;
+            if (consumoTotalGlobal > 0 && item.consumo > 0) {
+                consumoAcumulado += item.consumo;
+                const percentual = consumoAcumulado / consumoTotalGlobal;
                 if (percentual <= 0.80) item.curva = 'A';
                 else if (percentual <= 0.95) item.curva = 'B';
                 else item.curva = 'C';
+            } else {
+                item.curva = 'C';
             }
         });
 
@@ -525,7 +482,7 @@
     }
 
     // ==========================================================================
-    // RENDERIZAÇÃO E NOVO LAYOUT DO CATÁLOGO
+    // RENDERIZAÇÃO
     // ==========================================================================
     function dispararFiltros() {
         const termo = normalizarString(document.getElementById('busca')?.value);
@@ -554,15 +511,18 @@
 
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
-        document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens processados com sucesso.`;
+        document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
         container.innerHTML = '';
 
         let html = '';
         itensFiltrados.slice(0, 100).forEach(i => { 
             
-            // Regra exata de imagem que você solicitou: "imagens/CODIGO - 01.jpg"
             const imagemCapa = `imagens/${i.cod} - 01.jpg`;
-            const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder">FOTO<br>INDISPONÍVEL</div>';`;
+            const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder"><span>📷</span>Cadastrar<br>Imagem</div>';`;
+
+            // Tratamento visual do calculo de Dias de Giro
+            let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
+            let giroClass = i.diasGiro === Infinity ? 'highlight-giro' : '';
 
             html += `
                 <div class="item-card">
@@ -570,7 +530,7 @@
                         <div class="item-image-container">
                             <img src="${imagemCapa}" onerror="${imagemFallback}" alt="Foto ${i.cod}">
                         </div>
-                        <div class="abc-badge curva-${i.curva}">${i.curva}</div>
+                        <div class="abc-badge curva-${i.curva}" title="Curva ABC (Consumo Físico)">${i.curva}</div>
                     </div>
 
                     <div class="item-info">
@@ -580,12 +540,12 @@
                                 <span class="badge-status ${i.statusBadge}">${i.status}</span>
                             </div>
                             <div class="item-category">
-                                ${i.grupo || 'Sem Grupo'} | ${i.classe || 'Sem Classe'} | <strong>Unidade: ${i.um || 'UN'}</strong>
+                                ${i.grupo || 'Sem Grupo'} | ${i.classe || 'Sem Classe'} | <strong>Unid: ${i.um || 'UN'}</strong>
                             </div>
                             
                             <div class="item-metrics-grid">
                                 <div class="metric-box highlight-saldo">
-                                    <span class="metric-label">Saldo Físico</span>
+                                    <span class="metric-label">Saldo Atual</span>
                                     <span class="metric-value">${i.saldo}</span>
                                 </div>
                                 <div class="metric-box ${i.transito > 0 ? 'highlight-transito' : ''}">
@@ -593,11 +553,15 @@
                                     <span class="metric-value">${i.transito}</span>
                                 </div>
                                 <div class="metric-box">
-                                    <span class="metric-label">Consumo</span>
+                                    <span class="metric-label">Consumo Mês</span>
                                     <span class="metric-value">${i.consumo}</span>
                                 </div>
+                                <div class="metric-box ${giroClass}">
+                                    <span class="metric-label">Dias de Giro</span>
+                                    <span class="metric-value">${giroText}</span>
+                                </div>
                                 <div class="metric-box">
-                                    <span class="metric-label">Valor Imobilizado</span>
+                                    <span class="metric-label">Capital Travado</span>
                                     <span class="metric-value">${i.valorImobilizado > 0 ? formatarMoeda(i.valorImobilizado) : 'R$ 0,00'}</span>
                                 </div>
                             </div>
@@ -605,9 +569,9 @@
 
                         <div class="item-footer">
                             <div class="item-address">
-                                📍 Endereço Físico: &nbsp; Repartição ${i.reparticao} &nbsp;|&nbsp; Prateleira ${i.prateleira} &nbsp;|&nbsp; Divisão ${i.divisao}
+                                📍 Repartição ${i.reparticao} &nbsp;|&nbsp; Prateleira ${i.prateleira} &nbsp;|&nbsp; Divisão ${i.divisao}
                             </div>
-                            ${i.filial ? `<div style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">🏢 Filial: ${i.filial}</div>` : ''}
+                            ${i.filial ? `<div style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">🏢 ${i.filial}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -619,24 +583,37 @@
     function renderizarDashboard() {
         let valorTotal = 0, valorObsoleto = 0, qtdObsoleto = 0;
         let qtdRupturaCritica = 0, qtdRupturaTransito = 0;
+        let totalSaldo = 0, totalConsumo = 0;
 
         itensFiltrados.forEach(i => {
             valorTotal += i.valorImobilizado;
+            totalSaldo += i.saldo;
+            totalConsumo += i.consumo;
+
             if (i.status === 'Ruptura Crítica (Sem Pedido)') qtdRupturaCritica++;
             if (i.status === 'Ruptura (Em Trânsito)') qtdRupturaTransito++;
             if (i.status === 'Obsoleto (Sem Consumo)') { valorObsoleto += i.valorImobilizado; qtdObsoleto++; }
         });
 
+        // Cálculo da Cobertura Geral da Fábrica/Filtro
+        let giroMedioGeral = 0;
+        if (totalConsumo > 0) giroMedioGeral = Math.round((totalSaldo / totalConsumo) * 30);
+
         document.getElementById('dash-kpi-valor-total').innerText = formatarMoeda(valorTotal);
         document.getElementById('dash-kpi-total-itens').innerText = `Em ${itensFiltrados.length} itens`;
+        
+        document.getElementById('dash-kpi-giro-medio').innerText = totalConsumo > 0 ? `${giroMedioGeral} dias` : 'Sem Giro';
+
         document.getElementById('dash-kpi-ruptura-critica').innerText = qtdRupturaCritica;
         document.getElementById('dash-kpi-ruptura-transito').innerText = qtdRupturaTransito;
         document.getElementById('dash-kpi-valor-obsoleto').innerText = formatarMoeda(valorObsoleto);
-        document.getElementById('dash-kpi-obsoleto-qtd').innerText = `${qtdObsoleto} itens sem giro`;
+        document.getElementById('dash-kpi-obsoleto-qtd').innerText = `${qtdObsoleto} itens`;
 
         const tbody = document.getElementById('dash-table-body');
         let htmlTbody = '';
         itensFiltrados.slice(0, 50).forEach(i => { 
+            let giroText = i.diasGiro === Infinity ? 'Obsoleto' : `${i.diasGiro}d`;
+
             htmlTbody += `
                 <tr>
                     <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px;">${i.curva}</div></td>
@@ -648,8 +625,8 @@
                         Rep ${i.reparticao} | Prat ${i.prateleira} | Div ${i.divisao}
                     </td>
                     <td style="font-size:14px; font-weight:bold;">${i.saldo}</td>
-                    <td>${i.transito > 0 ? `🚚 ${i.transito}` : '-'}</td>
                     <td>${i.consumo}</td>
+                    <td style="font-weight:600;">${giroText}</td>
                     <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
                 </tr>
             `;
@@ -670,10 +647,11 @@
         const fontColor = isDark ? '#f8fafc' : '#0f172a';
 
         const contagemStatus = { Normal: 0, RupturaCritica: 0, RupturaTransito: 0, Obsoleto: 0 };
-        const financABC = { A: 0, B: 0, C: 0 };
+        const volumeABC = { A: 0, B: 0, C: 0 };
 
         itensFiltrados.forEach(i => {
-            if(financABC[i.curva] !== undefined) financABC[i.curva] += i.valorImobilizado;
+            if(volumeABC[i.curva] !== undefined) volumeABC[i.curva] += i.consumo; 
+            
             if(i.status === 'Estoque Normal') contagemStatus.Normal++;
             else if(i.status === 'Ruptura Crítica (Sem Pedido)') contagemStatus.RupturaCritica++;
             else if(i.status === 'Ruptura (Em Trânsito)') contagemStatus.RupturaTransito++;
@@ -687,12 +665,12 @@
             data: {
                 labels: ['Curva A', 'Curva B', 'Curva C'],
                 datasets: [{ 
-                    data: [financABC.A, financABC.B, financABC.C], 
+                    data: [volumeABC.A, volumeABC.B, volumeABC.C], 
                     backgroundColor: ['#16a34a', '#0284c7', '#64748b'],
                     borderWidth: 2, borderColor: isDark ? '#1e293b' : '#ffffff'
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Capital Imobilizado por Curva (R$)', font: { size: 14 } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Volume de Consumo por Curva (Físico)', font: { size: 14 } } } }
         });
 
         chartStatusInstance = new Chart(ctxStatus, {
@@ -707,7 +685,7 @@
             },
             options: { 
                 responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false }, title: { display: true, text: 'Risco Logístico (Volume de Itens)', font: { size: 14 } } },
+                plugins: { legend: { display: false }, title: { display: true, text: 'Risco Logístico (Quantidade de Itens)', font: { size: 14 } } },
                 scales: { y: { beginAtZero: true, grid: { color: isDark ? '#334155' : '#e2e8f0' } }, x: { grid: { display: false } } }
             }
         });
