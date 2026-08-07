@@ -13,6 +13,59 @@
         .status-item { font-size: 13px; font-weight: 600; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-secondary); }
         .status-ok { color: var(--text-success); border-color: #bbf7d0; background: #f0fdf4; }
         .status-erro { color: var(--text-danger); border-color: #fecaca; background: #fef2f2; }
+
+        /* ==========================================================================
+           NOVO DESIGN: CARTÕES DO CATÁLOGO (MAIS LIMPO E ORGANIZADO)
+           ========================================================================== */
+        .item-card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 16px; margin-bottom: 15px; display: flex; gap: 20px; align-items: stretch;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: background-color 0.3s;
+        }
+        
+        /* Coluna da Imagem e Curva ABC */
+        .item-media {
+            display: flex; flex-direction: column; gap: 10px; align-items: center; width: 110px; flex-shrink: 0;
+        }
+        .item-image-container {
+            width: 110px; height: 110px; border-radius: 8px; overflow: hidden; background: var(--bg-subcard);
+            border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;
+        }
+        .item-image-container img { width: 100%; height: 100%; object-fit: cover; }
+        .img-placeholder { font-size: 11px; color: var(--text-secondary); text-align: center; line-height: 1.4; }
+        
+        /* Corpo do Cartão (Dados) */
+        .item-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;}
+        .item-title { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+        .item-category { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500;}
+        
+        /* Grade de Indicadores (Métricas) */
+        .item-metrics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 12px;
+        }
+        .metric-box {
+            background: var(--bg-subcard); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
+        }
+        .metric-label { font-size: 10px; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 2px;}
+        .metric-value { font-size: 15px; font-weight: 800; color: var(--text-primary); }
+        
+        /* Destaques de Cores nas Métricas */
+        .metric-box.highlight-saldo { border-color: #bbf7d0; background: #f0fdf4; }
+        .metric-box.highlight-saldo .metric-value { color: #166534; }
+        .metric-box.highlight-transito { border-color: #bae6fd; background: #f0f9ff; }
+        .metric-box.highlight-transito .metric-value { color: #0369a1; }
+        
+        /* Rodapé do Cartão (Endereço e Status) */
+        .item-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 12px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
+        }
+        .item-address {
+            font-size: 12px; font-weight: 700; background: #e0f2fe; color: #0369a1; 
+            padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;
+        }
     </style>
 </head>
 <body class="desktop-mode">
@@ -100,7 +153,7 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
-                <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, grupo, classe..." oninput="dispararFiltros()">
+                <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, grupo, classe ou endereço..." oninput="dispararFiltros()">
                 <div class="status"><span id="contador-itens">Iniciando leitura automática do diretório...</span></div>
             </div>
             <div class="scrollable-results-section">
@@ -150,10 +203,10 @@
                                 <tr>
                                     <th>Curva</th>
                                     <th>Código / Descrição</th>
-                                    <th>Saldo Atual</th>
-                                    <th>Em Trânsito</th>
-                                    <th>Consumo (Período)</th>
-                                    <th>Valor Imob.</th>
+                                    <th>Endereço Físico</th>
+                                    <th>Saldo</th>
+                                    <th>Trânsito</th>
+                                    <th>Consumo</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -169,9 +222,6 @@
 </div>
 
 <script>
-    // ==========================================================================
-    // VARIÁVEIS E CONFIGURAÇÕES
-    // ==========================================================================
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
     let itensFiltrados = [];
@@ -206,21 +256,18 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     
-    // Tratamento de acentuação para busca precisa
     function normalizarString(val) { 
         return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); 
     }
     
     function normalizarCod(val) { 
-        return String(val || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, ''); 
+        return String(val || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); 
     }
     
-    // Motor robusto para números no formato Brasileiro
     function converterParaNumero(val) {
         if (val === null || val === undefined || val === '') return 0;
         if (typeof val === 'number') return val;
         let str = String(val).trim().replace(/[R$\s]/g, '');
-        // Se possui vírgula, converte padrao BR para Internacional (Ponto)
         if (str.includes(',')) {
             str = str.replace(/\./g, '').replace(',', '.');
         }
@@ -246,13 +293,11 @@
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
     // ==========================================================================
-    // PARSER CSV NATIVO E BLINDADO (Ignora linhas vazias e corrige separadores)
+    // PARSER CSV
     // ==========================================================================
     function parseCSV(text) {
         let lines = text.split(/\r?\n/);
         let headerIndex = 0;
-        
-        // Acha a primeira linha real (que não seja apenas ponto e vírgula ou em branco)
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].replace(/[;\s"]/g, '').length > 0) { 
                 headerIndex = i;
@@ -261,7 +306,6 @@
         }
         if (headerIndex >= lines.length) return [];
 
-        // Trata quebras dentro de aspas no CSV
         function splitCSVLine(line) {
             let result = [];
             let curVal = '';
@@ -280,7 +324,7 @@
         let result = [];
         
         for (let i = headerIndex + 1; i < lines.length; i++) {
-            if (lines[i].replace(/[;\s"]/g, '').length === 0) continue; // Pula linha vazia
+            if (lines[i].replace(/[;\s"]/g, '').length === 0) continue; 
             let values = splitCSVLine(lines[i]);
             let obj = {};
             for (let j = 0; j < headers.length; j++) {
@@ -292,7 +336,7 @@
     }
 
     // ==========================================================================
-    // AUTO FETCH - LEITURA DE ARQUIVOS
+    // AUTO FETCH
     // ==========================================================================
     async function carregarArquivosAutomaticamente() {
         const arquivos = [
@@ -302,7 +346,7 @@
         ];
 
         let carregados = 0;
-        const decoder = new TextDecoder('windows-1252'); // Impede erro de acentuação (ç, á)
+        const decoder = new TextDecoder('windows-1252'); 
 
         for (const arq of arquivos) {
             const elStatus = document.getElementById(arq.statusId);
@@ -318,7 +362,7 @@
                 
                 bases[arq.id] = parseCSV(text);
                 
-                elStatus.innerText = `✅ ${arq.url} lido! (${bases[arq.id].length} linhas)`;
+                elStatus.innerText = `✅ ${arq.url} lido!`;
                 elStatus.classList.add('status-ok');
                 carregados++;
 
@@ -338,7 +382,6 @@
         }
     }
 
-    // Função de Backup caso o usuário esteja abrindo sem servidor e o bloqueio de segurança dispare
     function uploadManualMultiplo(event) {
         const files = event.target.files;
         let carregados = 0;
@@ -357,7 +400,7 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSV(text);
-                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).innerText = `✅ ${file.name} (Carregado)`;
+                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).innerText = `✅ ${file.name}`;
                     document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).classList.add('status-ok');
                     carregados++;
                     if(carregados === files.length) {
@@ -373,7 +416,7 @@
     window.onload = carregarArquivosAutomaticamente;
 
     // ==========================================================================
-    // INTELIGÊNCIA - MAPEAMENTO DOS CABEÇALHOS DO USUÁRIO
+    // INTELIGÊNCIA - MAPEAMENTO DOS CABEÇALHOS
     // ==========================================================================
     function processarInteligencia() {
         if (bases.baseItens.length === 0) {
@@ -390,8 +433,11 @@
         const colFilial = ['nm filial', 'filial'];
         const colGrupo = ['nm grupo', 'grupo', 'categoria'];
         const colClasse = ['nm classe', 'classe'];
+        
+        // Mapeamento das colunas de endereço solicitadas
         const colReparticao = ['cd reparticao', 'reparticao'];
         const colPrateleira = ['cd prateleira', 'prateleira'];
+        const colDivisao = ['cd divisao', 'divisao'];
 
         const mapCompras = new Map();
         bases.compras.forEach(item => {
@@ -424,11 +470,13 @@
             const filial = lerValorDinamico(item, colFilial, 'string');
             const grupo = lerValorDinamico(item, colGrupo, 'string');
             const classe = lerValorDinamico(item, colClasse, 'string');
-            const reparticao = lerValorDinamico(item, colReparticao, 'string');
-            const prateleira = lerValorDinamico(item, colPrateleira, 'string');
+            
+            // Extração do Endereço Completo
+            const reparticao = lerValorDinamico(item, colReparticao, 'string') || '-';
+            const prateleira = lerValorDinamico(item, colPrateleira, 'string') || '-';
+            const divisao = lerValorDinamico(item, colDivisao, 'string') || '-';
             
             const transito = mapCompras.get(codNorm) || 0;
-            // Abs (módulo) para garantir que saídas negativas virem positivas pro consumo
             const consumo = Math.abs(mapConsumos.get(codNorm)) || 0;
 
             const valorImobilizado = saldo * custoUnitario;
@@ -445,7 +493,7 @@
                 cod: codBruto, codNorm: codNorm, desc: desc,
                 saldo: saldo, custo: custoUnitario, transito: transito, consumo: consumo,
                 um: um, filial: filial, grupo: grupo, classe: classe, 
-                reparticao: reparticao, prateleira: prateleira,
+                reparticao: reparticao, prateleira: prateleira, divisao: divisao,
                 valorImobilizado: valorImobilizado, valorConsumo: valorConsumo,
                 status: status, statusBadge: statusBadge, curva: 'C'
             };
@@ -477,7 +525,7 @@
     }
 
     // ==========================================================================
-    // RENDERIZAÇÃO 
+    // RENDERIZAÇÃO E NOVO LAYOUT DO CATÁLOGO
     // ==========================================================================
     function dispararFiltros() {
         const termo = normalizarString(document.getElementById('busca')?.value);
@@ -485,7 +533,8 @@
         const curvaFiltro = document.getElementById('select-curva').value;
 
         itensFiltrados = itensProcessados.filter(i => {
-            const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo) + " " + normalizarString(i.classe));
+            const endereco = `rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`;
+            const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo) + " " + normalizarString(i.classe) + " " + normalizarString(endereco));
             const bateTermo = !termo || txt.includes(termo);
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
@@ -510,37 +559,56 @@
 
         let html = '';
         itensFiltrados.slice(0, 100).forEach(i => { 
+            
+            // Regra exata de imagem que você solicitou: "imagens/CODIGO - 01.jpg"
             const imagemCapa = `imagens/${i.cod} - 01.jpg`;
-            const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder">Sem<br>Imagem</div>';`;
+            const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder">FOTO<br>INDISPONÍVEL</div>';`;
 
             html += `
-                <div class="item-row">
-                    <div class="item-image-container">
-                        <img src="${imagemCapa}" onerror="${imagemFallback}" alt="Foto ${i.cod}">
-                    </div>
-                    <div class="abc-badge curva-${i.curva}">${i.curva}</div>
-                    <div class="row-content" style="width:100%;">
-                        
-                        <div class="row-title">
-                            ${i.cod} — ${i.desc} 
-                            <span style="font-size:11px; font-weight:normal; color:var(--text-secondary)">(${i.um || 'UN'})</span>
+                <div class="item-card">
+                    <div class="item-media">
+                        <div class="item-image-container">
+                            <img src="${imagemCapa}" onerror="${imagemFallback}" alt="Foto ${i.cod}">
                         </div>
-                        
-                        <div class="row-details">
-                            <span class="row-stock-badge">📊 Saldo Atual: <strong>${i.saldo}</strong></span>
-                            ${i.transito > 0 ? `<span class="row-stock-badge" style="color:#0369a1;">🚚 Em Trânsito: ${i.transito}</span>` : ''}
-                            <span class="row-stock-badge">📉 Consumo (Período): ${i.consumo}</span>
-                            ${i.valorImobilizado > 0 ? `<span class="row-stock-badge" style="color:#166534;">💲 Imobilizado: ${formatarMoeda(i.valorImobilizado)}</span>` : ''}
+                        <div class="abc-badge curva-${i.curva}">${i.curva}</div>
+                    </div>
+
+                    <div class="item-info">
+                        <div>
+                            <div class="item-header">
+                                <div class="item-title">${i.cod} — ${i.desc}</div>
+                                <span class="badge-status ${i.statusBadge}">${i.status}</span>
+                            </div>
+                            <div class="item-category">
+                                ${i.grupo || 'Sem Grupo'} | ${i.classe || 'Sem Classe'} | <strong>Unidade: ${i.um || 'UN'}</strong>
+                            </div>
+                            
+                            <div class="item-metrics-grid">
+                                <div class="metric-box highlight-saldo">
+                                    <span class="metric-label">Saldo Físico</span>
+                                    <span class="metric-value">${i.saldo}</span>
+                                </div>
+                                <div class="metric-box ${i.transito > 0 ? 'highlight-transito' : ''}">
+                                    <span class="metric-label">Em Trânsito</span>
+                                    <span class="metric-value">${i.transito}</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="metric-label">Consumo</span>
+                                    <span class="metric-value">${i.consumo}</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="metric-label">Valor Imobilizado</span>
+                                    <span class="metric-value">${i.valorImobilizado > 0 ? formatarMoeda(i.valorImobilizado) : 'R$ 0,00'}</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="row-details" style="margin-top: 6px;">
-                            <span class="badge-status ${i.statusBadge}">${i.status}</span>
-                            ${i.filial ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">🏢 Filial: ${i.filial}</span>` : ''}
-                            ${i.grupo ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">🏷️ Grupo: ${i.grupo}</span>` : ''}
-                            ${i.classe ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">📌 Classe: ${i.classe}</span>` : ''}
-                            ${(i.prateleira || i.reparticao) ? `<span class="row-stock-badge" style="background:var(--bg-card); font-size: 10px; padding: 3px 8px;">📍 Loc: Rep. ${i.reparticao || '-'} / Prat. ${i.prateleira || '-'}</span>` : ''}
+                        <div class="item-footer">
+                            <div class="item-address">
+                                📍 Endereço Físico: &nbsp; Repartição ${i.reparticao} &nbsp;|&nbsp; Prateleira ${i.prateleira} &nbsp;|&nbsp; Divisão ${i.divisao}
+                            </div>
+                            ${i.filial ? `<div style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">🏢 Filial: ${i.filial}</div>` : ''}
                         </div>
-                        
                     </div>
                 </div>
             `;
@@ -575,12 +643,13 @@
                     <td>
                         <strong>${i.cod}</strong><br>
                         <span style="font-size:11px;color:var(--text-secondary);">${i.desc}</span>
-                        ${i.grupo ? `<br><span style="font-size:9px;color:var(--primary-color);">[${i.grupo}]</span>` : ''}
                     </td>
-                    <td style="font-size:14px; font-weight:bold;">${i.saldo} <span style="font-size:10px; font-weight:normal;">${i.um||''}</span></td>
+                    <td style="font-size:11px; font-weight:600; color:var(--text-info);">
+                        Rep ${i.reparticao} | Prat ${i.prateleira} | Div ${i.divisao}
+                    </td>
+                    <td style="font-size:14px; font-weight:bold;">${i.saldo}</td>
                     <td>${i.transito > 0 ? `🚚 ${i.transito}` : '-'}</td>
                     <td>${i.consumo}</td>
-                    <td>${formatarMoeda(i.valorImobilizado)}</td>
                     <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
                 </tr>
             `;
