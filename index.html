@@ -88,6 +88,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -98,14 +99,27 @@
             border-top-color: #38bdf8; border-radius: 50%; animation: loaderSpin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); margin-bottom: 25px;
         }
+        .loader-ring.error {
+             border-top-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); animation: none;
+        }
         .loader-title { font-size: 18px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; animation: loaderPulse 2s infinite; }
         .loader-logs { 
-            width: 320px; font-family: monospace; font-size: 11px; color: #94a3b8; 
-            text-align: left; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px;
-            border: 1px solid rgba(56, 189, 248, 0.2); max-height: 120px; overflow: hidden;
+            width: 80%; max-width: 600px; font-family: monospace; font-size: 12px; color: #94a3b8; 
+            text-align: left; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px;
+            border: 1px solid rgba(56, 189, 248, 0.2); max-height: 200px; overflow-y: auto;
             display: flex; flex-direction: column; justify-content: flex-end;
         }
-        .loader-logs div { margin-top: 4px; border-left: 2px solid #38bdf8; padding-left: 8px; }
+        .loader-logs div { margin-top: 4px; border-left: 2px solid #38bdf8; padding-left: 8px; word-break: break-all; }
+        .loader-logs div.error { color: #fca5a5; border-left-color: #ef4444; }
+        .loader-logs div.success { color: #6ee7b7; border-left-color: #10b981; }
+        
+        .btn-upload-fallback {
+            margin-top: 20px; padding: 12px 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;
+            color: #fca5a5; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase;
+            letter-spacing: 1px; transition: all 0.3s; display: none; /* Inicia oculto */
+        }
+        .btn-upload-fallback:hover { background: rgba(239, 68, 68, 0.3); color: white; }
+
         @keyframes loaderSpin { 100% { transform: rotate(360deg); } }
         @keyframes loaderPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
@@ -153,7 +167,7 @@
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
 
         .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
         .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
         .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
 
@@ -334,12 +348,17 @@
 <div id="toast-container" class="toast-container"></div>
 
 <div id="tech-loader">
-    <div class="loader-ring"></div>
+    <div class="loader-ring" id="loader-ring"></div>
     <div class="loader-title">JBS | SEARA</div>
     <div style="font-size: 12px; letter-spacing: 2px; opacity: 0.7; margin-bottom: 20px;">INICIALIZANDO DATA LAKE</div>
     <div class="loader-logs" id="loader-logs">
         <div>> Sistema inicializado...</div>
     </div>
+    
+    <label id="btn-fallback" class="btn-upload-fallback">
+        Tentar Fazer Upload Manual dos Arquivos
+        <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
+    </label>
 </div>
 
 <div class="app-layout segmentation-hidden" id="app-layout" style="opacity: 0;">
@@ -577,13 +596,25 @@
 
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
-    function addLog(msg) {
+    // MENSAGENS E ALERTAS DO LOADER
+    function addLog(msg, type='info') {
         const logs = document.getElementById('loader-logs');
         if(logs) {
-            logs.innerHTML += `<div>> ${msg}</div>`;
+            let classe = '';
+            if(type === 'error') classe = 'class="error"';
+            if(type === 'success') classe = 'class="success"';
+            logs.innerHTML += `<div ${classe}>> ${msg}</div>`;
             logs.scrollTop = logs.scrollHeight;
         }
     }
+    
+    function mostrarErroLoaderFatal() {
+        const ring = document.getElementById('loader-ring');
+        const btn = document.getElementById('btn-fallback');
+        if(ring) ring.classList.add('error');
+        if(btn) btn.style.display = 'block';
+    }
+
     function fecharLoader() {
         const loader = document.getElementById('tech-loader');
         const app = document.getElementById('app-layout');
@@ -686,6 +717,7 @@
         ];
 
         let carregados = 0;
+        let errosCríticos = false;
         const decoder = new TextDecoder('windows-1252'); 
 
         for (const arq of arquivos) {
@@ -693,35 +725,42 @@
             const elStatus = document.getElementById(arq.statusId);
             try {
                 const response = await fetch(arq.url, { cache: "no-store" });
-                if (!response.ok) throw new Error(`Status ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status})`);
+                }
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const text = decoder.decode(arrayBuffer);
                 bases[arq.id] = parseCSVFast(text);
                 
-                addLog(`✓ ${arq.url} (Lido com Sucesso)`);
+                addLog(`✓ ${arq.url} (Lido com Sucesso)`, 'success');
                 elStatus.innerText = `✅ ${arq.url} lido!`;
                 elStatus.classList.add('status-ok');
                 carregados++;
             } catch (error) {
-                addLog(`[ERROR] Falha ao ler ${arq.url}`);
+                addLog(`[ERRO ${arq.url}] ${error.message} (Verifique se o arquivo está na pasta ou se há bloqueio CORS)`, 'error');
                 elStatus.innerText = `❌ Falha: ${arq.url}`;
                 elStatus.classList.add('status-erro');
+                errosCríticos = true;
             }
         }
 
         if (carregados === 3) {
-            addLog("Cruzando Tabelas de Dados...");
+            addLog("Tabelas carregadas. Cruzando Dados...", 'success');
             setTimeout(processarInteligencia, 800);
-        } else {
-            addLog("Aguardando upload manual (CORS ativado).");
-            setTimeout(fecharLoader, 1500);
+        } else if (errosCríticos) {
+            addLog("A leitura automática falhou. Processo interrompido.", 'error');
+            mostrarErroLoaderFatal();
         }
     }
 
     window.uploadManualMultiplo = function(event) {
+        // Reseta a tela de erro
+        document.getElementById('loader-ring').classList.remove('error');
+        document.getElementById('btn-fallback').style.display = 'none';
         document.getElementById('tech-loader').style.display = 'flex';
         document.getElementById('tech-loader').style.opacity = '1';
+        
         addLog("Iniciando upload manual...");
 
         const files = event.target.files;
@@ -741,12 +780,12 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    addLog(`✓ ${file.name} Importado.`);
+                    addLog(`✓ ${file.name} Importado e LIDO.`, 'success');
                     document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).innerText = `✅ ${file.name}`;
                     document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).classList.add('status-ok');
                     carregados++;
                     if(carregados === files.length) {
-                        addLog("Processando Inteligência...");
+                        addLog("Processando Inteligência...", 'success');
                         setTimeout(processarInteligencia, 500);
                     }
                 }
@@ -758,7 +797,9 @@
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
             mostrarToast("Erro: Arquivo Mestre não localizado.", "error"); 
-            fecharLoader(); return; 
+            addLog("Erro Crítico: Base Mestre ausente.", 'error');
+            mostrarErroLoaderFatal();
+            return; 
         }
 
         const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item'];
@@ -900,15 +941,17 @@
 
         if(baseSujaProcessada.length === 0) { fecharLoader(); return; }
 
-        if(typeof addLog === 'function') addLog("Auditando Banco de Imagens Locais...");
-        const batchSize = 50;
+        // OTIMIZAÇÃO: Loteamento da checagem de imagens para não travar o navegador
+        if(typeof addLog === 'function') addLog("Auditando Banco de Imagens Locais (Lotes)...");
+        const batchSize = 100;
         for (let i = 0; i < baseSujaProcessada.length; i += batchSize) {
             const batch = baseSujaProcessada.slice(i, i + batchSize);
             await Promise.all(batch.map(item => {
                 return new Promise(resolve => {
                     const img = new Image();
-                    img.onload = () => { item.temImagem = true; resolve(); };
-                    img.onerror = () => { item.temImagem = false; resolve(); };
+                    const timeout = setTimeout(() => { item.temImagem = false; resolve(); }, 1500); // 1.5s max para falhar
+                    img.onload = () => { clearTimeout(timeout); item.temImagem = true; resolve(); };
+                    img.onerror = () => { clearTimeout(timeout); item.temImagem = false; resolve(); };
                     img.src = `imagens/${item.cod} - 01.jpg`;
                 });
             }));
@@ -929,9 +972,8 @@
         });
 
         itensProcessados = baseSujaProcessada;
-        addLog("Concluído. Renderizando Painel...");
+        addLog("Concluído. Renderizando Painel...", "success");
         
-        // Atualizando textos de Meses Dinâmicos no Layout
         const elTitleConsumo = document.getElementById('kpi-consumo-title');
         const elThConsumo = document.getElementById('th-consumo');
         if (elTitleConsumo) elTitleConsumo.innerText = `Consumo Físico (${mesConsumoAtual})`;
@@ -1212,5 +1254,6 @@
         });
     }
 </script>
+
 </body>
 </html>
