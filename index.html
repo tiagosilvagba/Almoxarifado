@@ -171,6 +171,11 @@
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
 
+        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
+        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+
         /* ==========================================================================
            4. PAINEL DE FILTROS (ESQUERDA)
            ========================================================================== */
@@ -385,7 +390,7 @@
         <div>> Sistema inicializado... aguardando comando de leitura.</div>
     </div>
     <label id="btn-fallback" class="btn-upload-fallback">
-        Fazer Upload Manual dos Arquivos CSV
+        FAZER UPLOAD MANUAL DOS ARQUIVOS CSV
         <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
     </label>
 </div>
@@ -521,8 +526,8 @@
                                     <th>Código / Descrição</th>
                                     <th>Filial</th>
                                     <th>Saldo Consolidado</th>
-                                    <th>Mínimo</th>
-                                    <th>Máximo</th>
+                                    <th>Mínimo Global</th>
+                                    <th>Máximo Global</th>
                                     <th style="color: var(--text-success);">Sugestão Compra (Reposição)</th>
                                 </tr>
                             </thead>
@@ -551,12 +556,12 @@
 
                     <h3>3. Giro de Estoque Financeiro vs Físico</h3>
                     <ul>
-                        <li><b>No Dashboard (Macro):</b> O Giro Anual e a Cobertura Média de Dias são calculados pelo <b>peso financeiro</b> (Soma em R$ do Consumo / Soma em R$ do Saldo). Isso impede que a quantidade de peças baratas distorça sua análise de capital.</li>
+                        <li><b>No Dashboard (Macro):</b> O Giro de Período e a Cobertura Financeira (Dias) são calculados pelo <b>peso financeiro</b> (Soma em R$ do Consumo / Soma em R$ do Saldo). Isso impede que a quantidade de peças baratas distorça sua análise de capital.</li>
                         <li><b>No Catálogo (Micro):</b> Os cartões individuais de cada SKU e a janela auxiliar (Modal) exibem o consumo e os dias de giro baseados na <b>quantidade física real (und)</b> movimentada.</li>
                     </ul>
 
                     <h3>4. Regra de Reserva Estratégica: Local Crítico 299</h3>
-                    <p>Se o sistema detectar que o material possui saldo vinculado ao código de local <code>299</code> (ou nome de estoque correspondente), esse item receberá uma "blindagem" do sistema. Mesmo que ele não possua nenhum consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status <b>🟣 Normal/Local Crítico (299)</b>.</p>
+                    <p>Se o sistema detectar que o material possui saldo vinculado ao código de local <code>299</code> (ou nome de estoque correspondente a 299), esse item receberá uma "blindagem" do sistema. Mesmo que ele não possua nenhum consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299)</b>.</p>
 
                     <h3>5. Consolidação de Múltiplos Locais e Filiais</h3>
                     <p>Itens duplicados (cadastrados em prateleiras distintas) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição de prateleira) em formato de tabela (Acordeão).</p>
@@ -582,14 +587,14 @@
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card border-success">
-                        <span class="kpi-title">Giro Financeiro (Anual)</span>
+                        <span class="kpi-title">Giro Financeiro (Período)</span>
                         <span class="kpi-value color-success" id="dash-kpi-giro-anual">0.0x</span>
                         <span class="kpi-sub">Total Consumo R$ / Total Saldo R$</span>
                     </div>
                     <div class="kpi-card border-primary">
                         <span class="kpi-title">Cobertura Financeira</span>
                         <span class="kpi-value" style="color: var(--primary-color);" id="dash-kpi-giro-medio">0 dias</span>
-                        <span class="kpi-sub">Giro ponderado do estoque</span>
+                        <span class="kpi-sub">(Saldo R$ / Consumo R$) * 30</span>
                     </div>
                     <div class="kpi-card" style="border-left-color: var(--text-secondary);">
                         <span class="kpi-title">Capital Obsoleto</span>
@@ -607,12 +612,12 @@
                     <div class="kpi-card border-warning">
                         <span class="kpi-title">Risco de Ruptura</span>
                         <span class="kpi-value color-warning" id="dash-kpi-risco-minimo">0</span>
-                        <span class="kpi-sub">Saldo Abaixo do Mínimo</span>
+                        <span class="kpi-sub">Saldo Abaixo do Mínimo Global</span>
                     </div>
                     <div class="kpi-card" style="border-left-color: var(--primary-hover);">
                         <span class="kpi-title">Excesso de Estoque</span>
                         <span class="kpi-value" style="color: var(--primary-hover);" id="dash-kpi-excesso">0</span>
-                        <span class="kpi-sub">Saldo Acima do Máximo</span>
+                        <span class="kpi-sub">Saldo Acima do Máximo Global</span>
                     </div>
                     <div class="kpi-card" style="border-left-color: var(--text-info);">
                         <span class="kpi-title">Pedidos em Trânsito</span>
@@ -628,12 +633,12 @@
                         <span class="kpi-sub">Códigos na prateleira</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">Volume Físico Total</span>
-                        <span class="kpi-value" id="dash-kpi-volume-fisico">0</span>
-                        <span class="kpi-sub">Peças consolidadas</span>
+                        <span class="kpi-title">Volume Financeiro Total</span>
+                        <span class="kpi-value" id="dash-kpi-volume-fisico">R$ 0,00</span>
+                        <span class="kpi-sub">Valor do saldo consolidado</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title" id="kpi-consumo-title">Custo do Consumo (Mês)</span>
+                        <span class="kpi-title" id="kpi-consumo-title">Valor do Consumo (Mês)</span>
                         <span class="kpi-value" id="dash-kpi-consumo-financeiro">R$ 0,00</span>
                         <span class="kpi-sub">Valor das saídas no período</span>
                     </div>
@@ -841,7 +846,7 @@
     }
 
     // ==========================================================================
-    // CARGA DE ARQUIVOS (AUTOMÁTICA E MANUAL)
+    // CARGA DE ARQUIVOS E IMAGENS
     // ==========================================================================
     async function carregarArquivosAutomaticamente() {
         if (isFetchingData) return; 
@@ -884,7 +889,7 @@
                 if (typeof Papa === 'undefined') throw new Error("Biblioteca PapaParse offline ou não carregou.");
                 
                 const response = await fetch(arq.url, { cache: "no-store" });
-                if (!response.ok) throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status}). Atenção ao nome exato do arquivo.`);
+                if (!response.ok) throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status}). Atenção à exatidão do nome.`);
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const text = decoder.decode(arrayBuffer);
@@ -952,7 +957,7 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    setProgress(20 + (idx*20), `✓ ${file.name} Importado com Sucesso.`, 'success');
+                    setProgress(20 + (idx*20), `✓ ${file.name} Importado.`, 'success');
                     
                     const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
                     if (elStatus) {
@@ -997,7 +1002,7 @@
     }
 
     // ==========================================================================
-    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO (COM REGRA 299 E CUSTO REAL)
+    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
     // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
@@ -1025,7 +1030,7 @@
         const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
         const colUM = ['cd unidade medida', 'un', 'um'];
         
-        // CUSTOS E LOCAIS DINÂMICOS
+        // LOCAIS E VALORES
         const colLocalId = ['cd local', 'cod local', 'local'];
         const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
         const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
@@ -1075,7 +1080,7 @@
             });
         }
 
-        setProgress(95, "Consolidando Base Mestre, Regra 299 e Custos Reais...");
+        setProgress(95, "Consolidando Base Mestre, Regra 299 e Custos Dinâmicos...");
         await new Promise(r => setTimeout(r, 50)); 
 
         const b_cod = encontrarChave(bases.baseItens[0], colCod);
@@ -1122,18 +1127,18 @@
             const minimoLinha = converterParaNumero(item[b_min]);
             const maximoLinha = converterParaNumero(item[b_max]);
             
-            // REGRA: BLINDAGEM DE LOCAL CRÍTICO (299)
+            // REGRA DO LOCAL 299 CRÍTICO
             let is299 = false;
             if (localId === '299' || localNm === '299' || localNm.includes('299')) is299 = true;
 
             let valorTotalLinha = b_valorTotal ? converterParaNumero(item[b_valorTotal]) : 0;
             let custoUnitarioLinha = converterParaNumero(item[b_custo]);
 
-            // CUSTO UNITÁRIO DINÂMICO DA LINHA (Valor Total / Saldo Físico)
+            // CUSTO UNITÁRIO DINÂMICO
             if (valorTotalLinha > 0 && saldoLinha > 0) {
                 custoUnitarioLinha = valorTotalLinha / saldoLinha;
             } else if (custoUnitarioLinha > 0 && saldoLinha > 0) {
-                valorTotalLinha = custoUnitarioLinha * saldoLinha; // Fallback
+                valorTotalLinha = custoUnitarioLinha * saldoLinha;
             }
 
             const chave = codNorm + '|' + filialIdBase;
@@ -1146,7 +1151,9 @@
                     filialNm: filialNm, filialIdBase: filialIdBase,
                     grupo: item[b_grupo] || '',
                     classe: item[b_classe] || '',
-                    saldo: 0, minimo: 0, maximo: 0,
+                    saldo: 0, 
+                    minimo: minimoLinha, 
+                    maximo: maximoLinha,
                     valorTotalGlobal: 0,
                     custoUnitario: 0,
                     locais: []
@@ -1155,8 +1162,6 @@
 
             const obj = mapConsolidado.get(chave);
             obj.saldo += saldoLinha;
-            obj.minimo += minimoLinha;
-            obj.maximo += maximoLinha;
             obj.valorTotalGlobal += valorTotalLinha;
             
             obj.locais.push({ 
@@ -1178,7 +1183,7 @@
         let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
             if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0) return null; 
 
-            // CUSTO UNITÁRIO MACRO DINÂMICO (Consolidado Total / Saldo Total)
+            // CUSTO UNITÁRIO MACRO (Total / Saldo Total)
             if (item.saldo > 0 && item.valorTotalGlobal > 0) {
                 item.custoUnitario = item.valorTotalGlobal / item.saldo;
             } else if (item.locais.length > 0) {
@@ -1193,7 +1198,6 @@
             if (consumoMesAnterior > 0) diasGiro = Math.round((item.saldo / consumoMesAnterior) * 30);
             else if (item.saldo > 0) diasGiro = Infinity;
 
-            // Verifica se este item possui saldo válido alocado em algum Local 299
             let isLocal299Macro = item.locais.some(l => l.is299 && l.saldo > 0);
 
             let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
@@ -1207,7 +1211,7 @@
                 }
             } 
             else if (item.saldo > 0 && item.minimo > 0 && item.saldo < item.minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
-            else if (item.saldo > item.maximo && item.maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
+            else if (item.maximo > 0 && item.saldo > item.maximo) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
 
             item.reparticao = item.locais[0]?.reparticao || '-';
             item.prateleira = item.locais[0]?.prateleira || '-';
@@ -1264,7 +1268,7 @@
     }
 
     // ==========================================================================
-    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
+    // BUSCA INTELIGENTE E RENDERIZAÇÃO DOM
     // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
@@ -1323,9 +1327,6 @@
         dispararFiltrosSemAtraso();
     }
 
-    // ==========================================================================
-    // MODAL INTERATIVO (AGORA COM FILIAL E CUSTO REAL)
-    // ==========================================================================
     window.abrirModalDetalhes = function(codNorm, filialId) {
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
         if(!i) return;
@@ -1409,9 +1410,6 @@
     window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
     window.onclick = function(event) { if (event.target === document.getElementById('modal-item')) fecharModal(); }
 
-    // ==========================================================================
-    // RENDERIZAÇÃO DOM: CATÁLOGO E DASHBOARD
-    // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
         document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
@@ -1518,10 +1516,14 @@
         });
 
         let giroDoPeriodo = 0;
-        if (totalSaldoFinanceiro > 0) giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
+        if (totalSaldoFinanceiro > 0) {
+            giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
+        }
 
         let coberturaDiasFinanceira = 0;
-        if (totalConsumoMensalFinanceiro > 0) coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
+        if (totalConsumoMensalFinanceiro > 0) {
+            coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
+        }
 
         const safeSetText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
@@ -1536,7 +1538,6 @@
         safeSetText('dash-kpi-valor-obsoleto', formatarMoeda(valorObsoleto));
         safeSetText('dash-kpi-obsoleto-qtd', `${qtdObsoleto} itens`);
         safeSetText('dash-kpi-skus-ativos', skusAtivos);
-        
         safeSetText('dash-kpi-volume-fisico', totalSaldoFisico.toLocaleString('pt-BR', { maximumFractionDigits: 2 }));
         safeSetText('dash-kpi-consumo-financeiro', formatarMoeda(totalConsumoMensalFinanceiro));
         safeSetText('dash-kpi-total-itens-proc', itensProcessados.length);
