@@ -1,15 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
     
-    <!-- Bibliotecas de Alta Performance -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
-    <!-- Carregamento Imediato de Tema Salvo -->
     <script>
         const temaSalvo = localStorage.getItem('temaAlmoxarifado') || 'light';
         if (temaSalvo !== 'light') document.documentElement.setAttribute('data-theme', temaSalvo);
@@ -78,7 +76,7 @@
         [data-theme="macintosh"] { --primary-color: #000080; --primary-hover: #000055; --bg-body: #e5e5e5; --bg-card: #f5f5f5; --bg-subcard: #e0e0e0; --text-primary: #333333; --text-secondary: #666666; --border-color: #cccccc; --shadow-sm: 2px 2px 0px rgba(0,0,0,0.2); }
 
         /* ==========================================================================
-           2. ESTILOS GERAIS, ANIMAÇÕES E TELA DE CARREGAMENTO
+           2. ESTILOS GERAIS E TELA DE CARREGAMENTO
            ========================================================================== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-primary); overflow: hidden; transition: background-color 0.4s ease; }
@@ -117,13 +115,19 @@
         .loader-logs div { margin-top: 4px; border-left: 2px solid #38bdf8; padding-left: 8px; word-break: break-all; }
         .loader-logs div.error { color: #fca5a5; border-left-color: #ef4444; }
         .loader-logs div.success { color: #6ee7b7; border-left-color: #10b981; }
+        .loader-logs div.warning { color: #fcd34d; border-left-color: #f59e0b; }
         
+        /* BOTÃO DE FALLBACK GIGANTE E PULSANTE */
         .btn-upload-fallback {
-            margin-top: 20px; padding: 12px 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;
-            color: #fca5a5; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase;
-            letter-spacing: 1px; transition: all 0.3s; display: none;
+            margin-top: 30px; padding: 16px 32px; background: #10b981; border: none;
+            color: #ffffff; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; text-transform: uppercase;
+            letter-spacing: 1px; transition: all 0.3s; display: none; box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            animation: pulseBtn 2s infinite;
         }
-        .btn-upload-fallback:hover { background: rgba(239, 68, 68, 0.3); color: white; }
+        .btn-upload-fallback:hover { background: #059669; transform: scale(1.05); }
+        @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); } 50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8); } }
+
+        @keyframes loaderSpin { 100% { transform: rotate(360deg); } }
         @keyframes loaderPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         /* ==========================================================================
@@ -279,8 +283,16 @@
         .metric-label { font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;}
         .metric-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px;}
 
+        .item-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 14px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
+        }
+        .item-address { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; }
+        .item-address-icon { background: var(--bg-subcard); padding: 4px 8px; border-radius: 8px; font-size: 14px; border: 1px solid var(--border-color);}
+        .item-filial { font-size: 12px; color: var(--text-secondary); font-weight: 700; background: var(--bg-subcard); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);}
+
         /* ==========================================================================
-           7. DASHBOARD E KPIs 
+           7. DASHBOARD E KPIs (ESTILO APPLE / VERCEL)
            ========================================================================== */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px; }
         .kpi-card { 
@@ -360,7 +372,6 @@
 
 <div id="toast-container" class="toast-container"></div>
 
-<!-- SPLASH SCREEN DE ALTA TECNOLOGIA -->
 <div id="tech-loader">
     <div class="loader-logo">JBS | SEARA</div>
     <div class="progress-container">
@@ -371,12 +382,11 @@
         <div>> Sistema inicializado... aguardando leitura.</div>
     </div>
     <label id="btn-fallback" class="btn-upload-fallback">
-        Fazer Upload Manual dos Arquivos CSV
+        FAZER UPLOAD MANUAL DOS ARQUIVOS CSV
         <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
     </label>
 </div>
 
-<!-- MODAL DE DETALHES DO ITEM -->
 <div class="modal-overlay" id="modal-item">
     <div class="modal-content">
         <span class="modal-close" onclick="fecharModal()">×</span>
@@ -480,19 +490,17 @@
         </div>
     </aside>
 
-    <!-- TELA: PESQUISA / CATÁLOGO -->
     <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
-                <input type="text" id="busca" class="search-box" placeholder="Busque códigos separados por vírgula (ex: 5555, manutenção, 1234)...">
+                <input type="text" id="busca" class="search-box" placeholder="Busque códigos separados por vírgula (ex: 5555, manutenção, 1234)..." oninput="dispararFiltrosDebounce()">
                 <div class="status"><span id="contador-itens">Aguardando sincronização...</span></div>
             </div>
             <div class="scrollable-results-section" id="resultados"></div>
         </div>
     </main>
 
-    <!-- TELA: COMPRAS (Necessidade) -->
     <main class="main-content" id="view-compras" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
@@ -523,7 +531,6 @@
         </div>
     </main>
 
-    <!-- TELA: COMO UTILIZAR -->
     <main class="main-content" id="view-instrucoes" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
@@ -547,7 +554,6 @@
         </div>
     </main>
 
-    <!-- TELA: DASHBOARD -->
     <main class="main-content" id="view-dashboard" style="display: flex;">
         <div class="container">
             <div class="fixed-top-section">
@@ -670,7 +676,7 @@
 
 <script>
     // ==========================================================================
-    // ESTADO GLOBAL DO SISTEMA
+    // ESTADO GLOBAL DO SISTEMA E VARIÁVEIS
     // ==========================================================================
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
@@ -688,10 +694,10 @@
     let imagensMapeadas = new Set();
     let mapeamentoDeImagemAtivo = false;
 
-    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
     // ==========================================================================
-    // TELA DE CARREGAMENTO (LOADER COM PORCENTAGEM)
+    // TELA DE CARREGAMENTO (LOADER) E TOASTS
     // ==========================================================================
     function setProgress(percent, msg, type='info') {
         loaderProgress = percent;
@@ -705,7 +711,7 @@
     function addLog(msg, type='info') {
         const logs = document.getElementById('loader-logs');
         if(logs) {
-            let classe = type === 'error' ? 'class="error"' : type === 'success' ? 'class="success"' : '';
+            let classe = type === 'error' ? 'class="error"' : type === 'success' ? 'class="success"' : type === 'warning' ? 'class="warning"' : '';
             logs.innerHTML += `<div ${classe}>> ${msg}</div>`;
             logs.scrollTop = logs.scrollHeight;
         }
@@ -728,13 +734,25 @@
         }
     }
 
+    function mostrarToast(mensagem, tipo = 'info') {
+        const container = document.getElementById('toast-container');
+        if(!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${tipo}`;
+        toast.innerText = mensagem;
+        container.appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 5000);
+    }
+
+    // ==========================================================================
+    // UI, NAVEGAÇÃO E TEMAS
+    // ==========================================================================
     document.addEventListener('DOMContentLoaded', () => {
         const temaLocal = localStorage.getItem('temaAlmoxarifado') || 'light';
         document.querySelectorAll('.theme-btn').forEach(btn => {
             if(btn.getAttribute('data-theme-val') === temaLocal) btn.classList.add('active');
         });
-        const campoBusca = document.getElementById('busca');
-        if (campoBusca) campoBusca.addEventListener('input', dispararFiltrosDebounce);
+        
         setTimeout(carregarArquivosAutomaticamente, 500);
     });
 
@@ -751,15 +769,6 @@
         if (itensProcessados.length > 0) atualizarGraficos();
     }
 
-    function mostrarToast(mensagem, tipo = 'info') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${tipo}`;
-        toast.innerText = mensagem;
-        container.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 5000);
-    }
-
     function navegarPara(view) {
         vistaAtual = view;
         ['pesquisa', 'dashboard', 'compras', 'instrucoes'].forEach(v => {
@@ -774,7 +783,10 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     
-    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
+    // ==========================================================================
+    // FUNÇÕES ÚTEIS E PARSER CSV NATIVO
+    // ==========================================================================
+    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
     function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
     function converterParaNumero(val) {
         if (val === null || val === undefined || val === '') return 0;
@@ -800,14 +812,12 @@
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
     function parseCSVFast(text) {
-        let lines = text.split(/?
-/);
+        let lines = text.split(/\r?\n/);
         let headerIndex = 0;
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].replace(/[;\s"]/g, '').length > 0) { headerIndex = i; break; }
         }
-        let validText = lines.slice(headerIndex).join('
-');
+        let validText = lines.slice(headerIndex).join('\n');
         let result = Papa.parse(validText, { header: true, skipEmptyLines: true, dynamicTyping: false });
         return result.data;
     }
@@ -838,24 +848,36 @@
 
         for (let i=0; i<arquivos.length; i++) {
             const arq = arquivos[i];
-            setProgress(10 + (i*20), `Baixando pacote: ${arq.url}`);
+            setProgress(10 + (i*20), `Buscando arquivo: ${arq.url}...`);
+            await new Promise(r => setTimeout(r, 100)); // UI Breath
+            
             const elStatus = document.getElementById(arq.statusId);
             try {
+                if (typeof Papa === 'undefined') throw new Error("Biblioteca PapaParse offline ou não carregou.");
+                
                 const response = await fetch(arq.url, { cache: "no-store" });
-                if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+                if (!response.ok) throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status})`);
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const text = decoder.decode(arrayBuffer);
+                
+                setProgress(15 + (i*20), `Extraindo dados de ${arq.url}...`);
+                await new Promise(r => setTimeout(r, 50)); 
+                
                 bases[arq.id] = parseCSVFast(text);
                 
-                setProgress(30 + (i*20), `✓ ${arq.url} (Extraído)`, 'success');
+                setProgress(30 + (i*20), `✓ ${arq.url} (Lido e Extraído com Sucesso)`, 'success');
                 if (elStatus) {
                     elStatus.innerText = `✅ ${arq.url}`;
                     elStatus.className = 'status-item status-ok';
                 }
                 carregados++;
             } catch (error) {
-                setProgress(loaderProgress, `[ERRO] ${error.message} em ${arq.url}. Permissão de segurança (CORS) bloqueada.`, 'error');
+                let detalhe = error.message;
+                if (detalhe.includes('Failed to fetch') || detalhe.includes('NetworkError')) {
+                    detalhe = "Bloqueio de Segurança do Navegador (CORS). Upload manual necessário.";
+                }
+                setProgress(loaderProgress, `[ERRO ${arq.url}]: ${detalhe}`, 'error');
                 if (elStatus) {
                     elStatus.innerText = `❌ Falha: ${arq.url}`;
                     elStatus.className = 'status-item status-erro';
@@ -865,10 +887,10 @@
         }
 
         if (carregados === 3) {
-            setProgress(90, "Modelos carregados. Iniciando consolidação...", 'success');
+            setProgress(90, "Todos os modelos foram carregados. Iniciando consolidação inteligente...", 'success');
             setTimeout(processarInteligencia, 500);
         } else if (errosCriticos) {
-            setProgress(loaderProgress, "Leitura automática interrompida. Por favor, utilize o Upload Manual.", 'error');
+            setProgress(loaderProgress, "Leitura automática interrompida por bloqueio. Clique no botão verde gigante abaixo para continuar.", 'warning');
             mostrarErroLoaderFatal();
             isFetchingData = false;
         }
@@ -902,7 +924,7 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    setProgress(20 + (idx*20), `✓ ${file.name} Importado.`, 'success');
+                    setProgress(20 + (idx*20), `✓ ${file.name} Importado com Sucesso.`, 'success');
                     
                     const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
                     if (elStatus) {
@@ -911,7 +933,7 @@
                     }
                     carregados++;
                     if(carregados === files.length) {
-                        setProgress(90, "Iniciando Motor de Inteligência...", 'success');
+                        setProgress(90, "Todos os arquivos manuais carregados. Iniciando Inteligência...", 'success');
                         setTimeout(processarInteligencia, 500);
                     }
                 }
@@ -951,8 +973,8 @@
     // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
-            mostrarToast("Erro: Arquivo Mestre não localizado.", "error"); 
-            setProgress(loaderProgress, "Erro Crítico: Base Mestre ausente.", 'error');
+            mostrarToast("Erro Crítico: Arquivo Mestre (Base_Itens) não localizado.", "error"); 
+            setProgress(loaderProgress, "Erro Crítico: Base Mestre ausente ou corrompida.", 'error');
             mostrarErroLoaderFatal();
             isFetchingData = false; return; 
         }
@@ -984,7 +1006,9 @@
         mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
         const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-        // Processar Compras
+        setProgress(92, "Processando ordens de Compras e Consumos...");
+        await new Promise(r => setTimeout(r, 50)); 
+
         const mapCompras = new Map();
         if(bases.compras.length > 0) {
             const c_cod = encontrarChave(bases.compras[0], colCod);
@@ -996,7 +1020,6 @@
             });
         }
 
-        // Processar Consumos (Mês Exato)
         let cs_mes = encontrarChave(bases.consumos[0], colMesMovimento);
         let cs_cod = encontrarChave(bases.consumos[0], colCod);
         let cs_filialId = encontrarChave(bases.consumos[0], colFilialId);
@@ -1022,7 +1045,9 @@
             });
         }
 
-        // Dicionários para Base
+        setProgress(95, "Consolidando Base Mestre e Regra Rolândia...");
+        await new Promise(r => setTimeout(r, 50)); 
+
         const b_cod = encontrarChave(bases.baseItens[0], colCod);
         const b_desc = encontrarChave(bases.baseItens[0], colDesc);
         const b_saldo = encontrarChave(bases.baseItens[0], colQtdSaldo);
@@ -1038,7 +1063,6 @@
         const b_prat = encontrarChave(bases.baseItens[0], colPrateleira);
         const b_div = encontrarChave(bases.baseItens[0], colDivisao);
 
-        // Agrupamento de SKUs e Regra Rolândia
         const mapConsolidado = new Map();
 
         bases.baseItens.forEach(item => {
@@ -1055,7 +1079,7 @@
             // REGRA: Rolândia - ALM. Preparados
             if (filialIdBase === '704' || reparticao.toUpperCase() === 'AP' || reparticao.length === 1) {
                 filialNm = 'Rolândia - ALM. Preparados';
-                filialIdBase = '704_ROL'; // Chave virtual para não misturar com a 704 normal se houver
+                filialIdBase = '704_ROL'; 
             }
 
             const saldo = converterParaNumero(item[b_saldo]);
@@ -1085,7 +1109,9 @@
             obj.locais.push({ reparticao, prateleira, divisao, saldo });
         });
 
-        // Aplicando Cálculos Finais após Consolidação
+        setProgress(98, "Calculando Curva ABC e Risco Logístico...");
+        await new Promise(r => setTimeout(r, 50)); 
+
         let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
             if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0) return null; // Remove os mortos
 
@@ -1106,7 +1132,6 @@
             else if (item.saldo > 0 && item.minimo > 0 && item.saldo < item.minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
             else if (item.saldo > item.maximo && item.maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
 
-            // O Endereço de Exibição Principal (Primeiro da Lista)
             item.reparticao = item.locais[0]?.reparticao || '-';
             item.prateleira = item.locais[0]?.prateleira || '-';
             item.divisao = item.locais[0]?.divisao || '-';
@@ -1123,10 +1148,8 @@
 
         if(baseSujaProcessada.length === 0) { fecharLoader(); isFetchingData = false; return; }
 
-        // Ordenar Progressivamente pelo Código Numérico
         baseSujaProcessada.sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
-        // Curva ABC FÍSICA
         const itemsParaABC = [...baseSujaProcessada].sort((a, b) => b.consumo - a.consumo);
         const consumoTotalGlobal = itemsParaABC.reduce((acc, curr) => acc + curr.consumo, 0);
         let consumoAcumulado = 0;
@@ -1142,7 +1165,7 @@
         });
 
         itensProcessados = baseSujaProcessada;
-        setProgress(100, "Renderizando Interface...", "success");
+        setProgress(100, "Renderizando Interface Gráfica...", "success");
         
         const elTitleConsumo = document.getElementById('kpi-consumo-title');
         const elThConsumo = document.getElementById('th-consumo');
@@ -1151,14 +1174,16 @@
 
         setTimeout(() => {
             dispararFiltrosSemAtraso();
-            if(encontrouConsumoNoMesAlvo) mostrarToast(`Inteligência Processada. Consumo travado em ${mesConsumoAtual}.`, "success");
+            if(!encontrouConsumoNoMesAlvo && bases.consumos.length > 0) {
+                mostrarToast(`Atenção: Não detectamos saídas para o mês de ${mesConsumoAtual} no arquivo de consumos.`, "warning");
+            }
             fecharLoader();
             isFetchingData = false; 
-        }, 600);
+        }, 800);
     }
 
     // ==========================================================================
-    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
+    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE) E RENDERIZAÇÃO
     // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
@@ -1183,7 +1208,6 @@
         }
 
         itensFiltrados = itensProcessados.filter(i => {
-            // Busca múltipla: O item passa se contiver QUALQUER UM dos termos separados por vírgula
             const bateTermo = termosSplit.length === 0 || termosSplit.some(t => i.searchString.includes(t));
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
@@ -1294,15 +1318,8 @@
     }
 
     window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
-    
-    // Fechar modal clicando fora
-    window.onclick = function(event) {
-        if (event.target === document.getElementById('modal-item')) fecharModal();
-    }
+    window.onclick = function(event) { if (event.target === document.getElementById('modal-item')) fecharModal(); }
 
-    // ==========================================================================
-    // RENDERIZAÇÃO DOM: CATÁLOGO, DASHBOARD E NECESSIDADE COMPRA
-    // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
         document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
@@ -1532,7 +1549,7 @@
                 datasets: [{ 
                     label: 'Itens', 
                     data: [contagemStatus.Normal, contagemStatus.Risco, contagemStatus.Excesso, contagemStatus.RupturaCritica, contagemStatus.Obsoleto], 
-                    backgroundColor: [corA, '#f59e0b', '#0ea5e9', '#ef4444', corC], borderRadius: 6, borderSkipped: false
+                    backgroundColor: [corA, '#f59e0b', '#0284c7', '#ef4444', corC], borderRadius: 6, borderSkipped: false
                 }]
             },
             options: { 
