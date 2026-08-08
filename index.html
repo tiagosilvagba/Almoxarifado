@@ -38,7 +38,6 @@
             --badge-obsoleto-bg: #f1f5f9; --badge-obsoleto-text: #475569;
             --badge-abaixo-bg: #ffedd5; --badge-abaixo-text: #c2410c;
             --badge-acima-bg: #e0f2fe; --badge-acima-text: #0369a1;
-            /* NOVA BADGE LOCAL 299 CRÍTICO */
             --badge-local-critico-bg: #f3e8ff; --badge-local-critico-text: #6b21a8;
 
             --metric-saldo-bg: #f0fdf4; --metric-saldo-border: #bbf7d0; --metric-saldo-text: #15803d; --metric-saldo-label: #166534;
@@ -93,7 +92,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA (COM BARRA PERCENTUAL) */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -172,11 +170,6 @@
             transition: all 0.2s; color: var(--text-primary); background: transparent; font-size: 12px;
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
-
-        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
-        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
-        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
 
         /* ==========================================================================
            4. PAINEL DE FILTROS (ESQUERDA)
@@ -392,7 +385,7 @@
         <div>> Sistema inicializado... aguardando comando de leitura.</div>
     </div>
     <label id="btn-fallback" class="btn-upload-fallback">
-        FAZER UPLOAD MANUAL DOS ARQUIVOS CSV
+        Fazer Upload Manual dos Arquivos CSV
         <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
     </label>
 </div>
@@ -553,7 +546,7 @@
                     <h3>1. Sincronização Automática vs Manual</h3>
                     <p>Ao abrir o painel, ele buscará os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na raiz do seu repositório. O GitHub é <i>Case Sensitive</i>, portanto, respeite letras maiúsculas e minúsculas exatas no nome do arquivo. Se houver falha de rede ou CORS, utilize o botão de "Upload Manual" na tela inicial.</p>
                     
-                    <h3>2. Cálculo de Custo Unitário Dinâmico (NOVO)</h3>
+                    <h3>2. Cálculo de Custo Unitário Dinâmico</h3>
                     <p>O custo unitário de um item não é lido apenas de forma estática do ERP. O sistema o calcula inteligentemente através da fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante que as frações de preço sejam precisas. Essa regra é aplicada globalmente (no total do item consolidado) e no detalhe de cada local de estoque.</p>
 
                     <h3>3. Giro de Estoque Financeiro vs Físico</h3>
@@ -562,7 +555,7 @@
                         <li><b>No Catálogo (Micro):</b> Os cartões individuais de cada SKU e a janela auxiliar (Modal) exibem o consumo e os dias de giro baseados na <b>quantidade física real (und)</b> movimentada.</li>
                     </ul>
 
-                    <h3>4. Regra de Reserva Estratégica: Local Crítico 299 (NOVO)</h3>
+                    <h3>4. Regra de Reserva Estratégica: Local Crítico 299</h3>
                     <p>Se o sistema detectar que o material possui saldo vinculado ao código de local <code>299</code> (ou nome de estoque correspondente), esse item receberá uma "blindagem" do sistema. Mesmo que ele não possua nenhum consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status <b>🟣 Normal/Local Crítico (299)</b>.</p>
 
                     <h3>5. Consolidação de Múltiplos Locais e Filiais</h3>
@@ -959,7 +952,7 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    setProgress(20 + (idx*20), `✓ ${file.name} Importado.`, 'success');
+                    setProgress(20 + (idx*20), `✓ ${file.name} Importado com Sucesso.`, 'success');
                     
                     const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
                     if (elStatus) {
@@ -968,7 +961,7 @@
                     }
                     carregados++;
                     if(carregados === files.length) {
-                        setProgress(90, "Arquivos manuais carregados. Iniciando Inteligência...", 'success');
+                        setProgress(90, "Todos os arquivos manuais carregados. Iniciando Inteligência...", 'success');
                         setTimeout(processarInteligencia, 500);
                     }
                 }
@@ -1004,7 +997,7 @@
     }
 
     // ==========================================================================
-    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
+    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO (COM REGRA 299 E CUSTO REAL)
     // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
@@ -1032,7 +1025,7 @@
         const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
         const colUM = ['cd unidade medida', 'un', 'um'];
         
-        // NOVO PARÂMETRO: LOCAL DE ESTOQUE E VALOR TOTAL
+        // CUSTOS E LOCAIS DINÂMICOS
         const colLocalId = ['cd local', 'cod local', 'local'];
         const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
         const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
@@ -1082,7 +1075,7 @@
             });
         }
 
-        setProgress(95, "Consolidando Base Mestre, Locais e Custos Dinâmicos...");
+        setProgress(95, "Consolidando Base Mestre, Regra 299 e Custos Reais...");
         await new Promise(r => setTimeout(r, 50)); 
 
         const b_cod = encontrarChave(bases.baseItens[0], colCod);
@@ -1125,19 +1118,18 @@
                 filialIdBase = '704_ROL'; 
             }
 
-            // REGRA DO LOCAL 299 CRÍTICO (Blindagem de Obsoleto)
-            let is299 = false;
-            if (localId === '299' || localNm === '299') is299 = true;
-            if (String(item[b_localId] || '').trim() === '299') is299 = true;
-
             const saldoLinha = converterParaNumero(item[b_saldo]);
             const minimoLinha = converterParaNumero(item[b_min]);
             const maximoLinha = converterParaNumero(item[b_max]);
             
+            // REGRA: BLINDAGEM DE LOCAL CRÍTICO (299)
+            let is299 = false;
+            if (localId === '299' || localNm === '299' || localNm.includes('299')) is299 = true;
+
             let valorTotalLinha = b_valorTotal ? converterParaNumero(item[b_valorTotal]) : 0;
             let custoUnitarioLinha = converterParaNumero(item[b_custo]);
 
-            // CUSTO UNITÁRIO DINÂMICO DA LINHA (Total / Saldo)
+            // CUSTO UNITÁRIO DINÂMICO DA LINHA (Valor Total / Saldo Físico)
             if (valorTotalLinha > 0 && saldoLinha > 0) {
                 custoUnitarioLinha = valorTotalLinha / saldoLinha;
             } else if (custoUnitarioLinha > 0 && saldoLinha > 0) {
@@ -1156,7 +1148,7 @@
                     classe: item[b_classe] || '',
                     saldo: 0, minimo: 0, maximo: 0,
                     valorTotalGlobal: 0,
-                    custoUnitario: 0, // Será calculado no final
+                    custoUnitario: 0,
                     locais: []
                 });
             }
@@ -1186,23 +1178,23 @@
         let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
             if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0) return null; 
 
-            // CUSTO UNITÁRIO MACRO DINÂMICO (Consolidado)
+            // CUSTO UNITÁRIO MACRO DINÂMICO (Consolidado Total / Saldo Total)
             if (item.saldo > 0 && item.valorTotalGlobal > 0) {
                 item.custoUnitario = item.valorTotalGlobal / item.saldo;
             } else if (item.locais.length > 0) {
-                item.custoUnitario = item.locais[0].custoUnitario; // Fallback extremo
+                item.custoUnitario = item.locais[0].custoUnitario;
             }
 
             const transito = mapCompras.get(item.codNorm) || 0;
             const consumoMesAnterior = Math.abs(mapConsumosTotais.get(item.codNorm)) || 0;
-
             const valorImobilizado = item.valorTotalGlobal > 0 ? item.valorTotalGlobal : (item.saldo * item.custoUnitario);
 
             let diasGiro = 0;
             if (consumoMesAnterior > 0) diasGiro = Math.round((item.saldo / consumoMesAnterior) * 30);
             else if (item.saldo > 0) diasGiro = Infinity;
 
-            let isLocal299Macro = item.locais.some(l => l.is299);
+            // Verifica se este item possui saldo válido alocado em algum Local 299
+            let isLocal299Macro = item.locais.some(l => l.is299 && l.saldo > 0);
 
             let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
             if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
@@ -1217,7 +1209,6 @@
             else if (item.saldo > 0 && item.minimo > 0 && item.saldo < item.minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
             else if (item.saldo > item.maximo && item.maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
 
-            // Endereço de Exibição Principal (Primeiro da Lista)
             item.reparticao = item.locais[0]?.reparticao || '-';
             item.prateleira = item.locais[0]?.prateleira || '-';
             item.divisao = item.locais[0]?.divisao || '-';
@@ -1236,7 +1227,7 @@
 
         baseSujaProcessada.sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
-        // CURVA ABC FINANCEIRA REAL (Consumo * Custo Unitário)
+        // CURVA ABC FINANCEIRA REAL
         const itemsParaABC = [...baseSujaProcessada].sort((a, b) => (b.consumo * b.custoUnitario) - (a.consumo * a.custoUnitario));
         const consumoTotalFinanceiroGlobal = itemsParaABC.reduce((acc, curr) => acc + (curr.consumo * curr.custoUnitario), 0);
         let consumoAcumulado = 0;
@@ -1273,7 +1264,7 @@
     }
 
     // ==========================================================================
-    // BUSCA INTELIGENTE E RENDERIZAÇÃO DOM
+    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
     // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
@@ -1332,6 +1323,9 @@
         dispararFiltrosSemAtraso();
     }
 
+    // ==========================================================================
+    // MODAL INTERATIVO (AGORA COM FILIAL E CUSTO REAL)
+    // ==========================================================================
     window.abrirModalDetalhes = function(codNorm, filialId) {
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
         if(!i) return;
@@ -1415,6 +1409,9 @@
     window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
     window.onclick = function(event) { if (event.target === document.getElementById('modal-item')) fecharModal(); }
 
+    // ==========================================================================
+    // RENDERIZAÇÃO DOM: CATÁLOGO E DASHBOARD
+    // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
         document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
@@ -1509,10 +1506,8 @@
             valorTotal += i.valorImobilizado;
             totalSaldoFinanceiro += i.valorImobilizado;
             totalConsumoMensalFinanceiro += (i.consumo * i.custoUnitario);
-            
             totalSaldoFisico += i.saldo;
             totalConsumoFisico += i.consumo;
-            
             if (i.saldo > 0) skusAtivos++;
 
             if (i.status === 'Ruptura Crítica (Sem Pedido)') qtdRupturaCritica++;
@@ -1523,14 +1518,10 @@
         });
 
         let giroDoPeriodo = 0;
-        if (totalSaldoFinanceiro > 0) {
-            giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
-        }
+        if (totalSaldoFinanceiro > 0) giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
 
         let coberturaDiasFinanceira = 0;
-        if (totalConsumoMensalFinanceiro > 0) {
-            coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
-        }
+        if (totalConsumoMensalFinanceiro > 0) coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
 
         const safeSetText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
