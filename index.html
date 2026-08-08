@@ -1,13 +1,15 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
     
+    <!-- Bibliotecas de Alta Performance -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
+    <!-- Carregamento Imediato de Tema Salvo -->
     <script>
         const temaSalvo = localStorage.getItem('temaAlmoxarifado') || 'light';
         if (temaSalvo !== 'light') document.documentElement.setAttribute('data-theme', temaSalvo);
@@ -15,7 +17,7 @@
 
     <style>
         /* ==========================================================================
-           1. FONTES E VARIÁVEIS DE TEMA (MODERN SOFT UI + 8 TEMAS)
+           1. FONTES E VARIÁVEIS DE TEMA (MODERN SOFT UI + 10 TEMAS)
            ========================================================================== */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
@@ -72,9 +74,11 @@
         [data-theme="ocean"] { --primary-color: #0ea5e9; --bg-body: #082f49; --bg-card: #0c4a6e; --bg-subcard: #075985; --text-primary: #f0f9ff; --text-secondary: #bae6fd; --border-color: rgba(255,255,255,0.05); }
         [data-theme="dracula"] { --primary-color: #ff79c6; --bg-body: #282a36; --bg-card: #44475a; --bg-subcard: #282a36; --text-primary: #f8f8f2; --text-secondary: #6272a4; --border-color: rgba(255,255,255,0.05); }
         [data-theme="hacker"] { --primary-color: #10b981; --bg-body: #000000; --bg-card: #0a0a0a; --bg-subcard: #111111; --text-primary: #10b981; --text-secondary: #059669; --border-color: #064e3b; }
+        [data-theme="ios"] { --primary-color: #007aff; --primary-hover: #005bb5; --bg-body: #f2f2f7; --bg-card: #ffffff; --bg-subcard: #f5f5f7; --border-color: rgba(0,0,0,0.05); --shadow-sm: 0 4px 12px rgba(0,0,0,0.04); }
+        [data-theme="macintosh"] { --primary-color: #000080; --primary-hover: #000055; --bg-body: #e5e5e5; --bg-card: #f5f5f5; --bg-subcard: #e0e0e0; --text-primary: #333333; --text-secondary: #666666; --border-color: #cccccc; --shadow-sm: 2px 2px 0px rgba(0,0,0,0.2); }
 
         /* ==========================================================================
-           2. ESTILOS GERAIS E TELA DE CARREGAMENTO
+           2. ESTILOS GERAIS, ANIMAÇÕES E TELA DE CARREGAMENTO
            ========================================================================== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-primary); overflow: hidden; transition: background-color 0.4s ease; }
@@ -88,20 +92,22 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA (COM BARRA PERCENTUAL) */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: #38bdf8; transition: opacity 0.6s ease, visibility 0.6s;
         }
-        .loader-ring {
-            width: 90px; height: 90px; border: 3px solid rgba(56, 189, 248, 0.1);
-            border-top-color: #38bdf8; border-radius: 50%; animation: loaderSpin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); margin-bottom: 25px;
+        .loader-logo { font-size: 24px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; animation: loaderPulse 2s infinite; }
+        
+        .progress-container {
+            width: 300px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px;
         }
-        .loader-ring.error {
-             border-top-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); animation: none;
+        .progress-bar {
+            height: 100%; width: 0%; background: #38bdf8; transition: width 0.3s ease;
         }
-        .loader-title { font-size: 18px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; animation: loaderPulse 2s infinite; }
+        .progress-text { font-size: 14px; font-weight: bold; margin-bottom: 25px; color: #bae6fd;}
+
         .loader-logs { 
             width: 80%; max-width: 600px; font-family: monospace; font-size: 12px; color: #94a3b8; 
             text-align: left; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px;
@@ -118,8 +124,6 @@
             letter-spacing: 1px; transition: all 0.3s; display: none;
         }
         .btn-upload-fallback:hover { background: rgba(239, 68, 68, 0.3); color: white; }
-
-        @keyframes loaderSpin { 100% { transform: rotate(360deg); } }
         @keyframes loaderPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         /* ==========================================================================
@@ -127,9 +131,9 @@
            ========================================================================== */
         .sidebar {
             width: var(--sidebar-width); background: var(--bg-card); border-right: 1px solid var(--border-color);
-            display: flex; flex-direction: column; padding: 24px; z-index: 10; box-shadow: var(--shadow-md);
+            display: flex; flex-direction: column; padding: 24px; z-index: 10; box-shadow: var(--shadow-md); overflow-y:auto;
         }
-        .sidebar-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+        .sidebar-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
         .logo-placeholder { 
             background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); color: white; 
             padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 18px; letter-spacing: -0.5px;
@@ -138,37 +142,32 @@
         .brand-name { display: block; font-weight: 800; font-size: 18px; color: var(--text-primary); letter-spacing: -0.5px;}
         .brand-sub { display: block; font-size: 12px; color: var(--text-secondary); font-weight: 500;}
 
-        .sidebar-nav { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
-        .nav-section-title { font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--text-secondary); margin-bottom: 12px; letter-spacing: 0.5px; }
+        .sidebar-nav { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+        .nav-section-title { font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--text-secondary); margin-bottom: 10px; letter-spacing: 0.5px; }
         .nav-item {
             display: flex; align-items: center; gap: 12px; padding: 12px 14px;
             text-decoration: none; color: var(--text-secondary); border-radius: 10px;
-            transition: all 0.2s ease; font-weight: 600; font-size: 14px;
+            transition: all 0.2s ease; font-weight: 600; font-size: 13px;
         }
         .nav-item:hover { background: var(--bg-subcard); color: var(--text-primary); }
         .nav-item.active { background: var(--primary-color); color: white; box-shadow: var(--shadow-sm); } 
 
-        .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+        .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 16px; }
         .theme-btn {
             background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary);
-            padding: 10px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center;
-            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 8px 4px; border-radius: 8px; font-size: 10px; font-weight: 600; cursor: pointer; text-align: center;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px;
         }
         .theme-btn:hover { border-color: var(--primary-color); color: var(--text-primary); }
         .theme-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); box-shadow: var(--shadow-sm); }
 
-        .sidebar-actions-container { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; }
+        .sidebar-actions-container { display: flex; flex-direction: column; gap: 8px; }
         .btn-sidebar-action {
-            width: 100%; padding: 14px; border: 1px dashed var(--border-color); border-radius: 12px;
-            font-weight: 600; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 4px;
-            transition: all 0.2s; color: var(--text-primary); background: transparent;
+            width: 100%; padding: 12px; border: 1px dashed var(--border-color); border-radius: 12px;
+            font-weight: 600; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.2s; color: var(--text-primary); background: transparent; font-size: 12px;
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
-
-        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
-        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
-        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
 
         /* ==========================================================================
            4. PAINEL DE FILTROS (ESQUERDA)
@@ -183,7 +182,7 @@
         .panel-title { font-weight: 800; font-size: 14px; color: var(--text-primary); letter-spacing: -0.5px;}
         .btn-toggle-filter { background: none; border: none; cursor: pointer; color: var(--text-secondary); transition: color 0.2s;}
         .btn-toggle-filter:hover { color: var(--primary-color); }
-        .filter-panel-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .filter-panel-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow-y:auto; }
         .filter-group { display: flex; flex-direction: column; gap: 8px; }
         .filter-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
         .segmentation-select { padding: 12px; background: var(--bg-subcard); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s; font-weight: 500; cursor: pointer;}
@@ -216,13 +215,13 @@
         .scrollable-results-section { flex-grow: 1; overflow-y: auto; padding-right: 15px; padding-top: 5px; padding-bottom: 30px;}
 
         /* ==========================================================================
-           6. CARTÕES DO CATÁLOGO
+           6. CARTÕES DO CATÁLOGO (GLASSMORPHISM / CLEAN UI)
            ========================================================================== */
         .item-card {
             background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
             padding: 20px; margin-bottom: 20px; display: flex; gap: 24px; align-items: center;
             box-shadow: var(--shadow-sm); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative; overflow: hidden;
+            position: relative; overflow: hidden; cursor: pointer;
         }
         .item-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--primary-color); }
 
@@ -250,7 +249,7 @@
         .curva-B { background: var(--primary-color); }
         .curva-C { background: var(--text-secondary); }
 
-        .item-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+        .item-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; pointer-events: none;}
         .item-header { display: flex; justify-content: space-between; align-items: flex-start;}
         .item-title { font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1.3; letter-spacing: -0.5px;}
         .item-title-cod { color: var(--primary-color); margin-right: 8px; }
@@ -279,14 +278,6 @@
 
         .metric-label { font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;}
         .metric-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px;}
-
-        .item-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-top: 14px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
-        }
-        .item-address { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; }
-        .item-address-icon { background: var(--bg-subcard); padding: 4px 8px; border-radius: 8px; font-size: 14px; border: 1px solid var(--border-color);}
-        .item-filial { font-size: 12px; color: var(--text-secondary); font-weight: 700; background: var(--bg-subcard); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);}
 
         /* ==========================================================================
            7. DASHBOARD E KPIs 
@@ -319,7 +310,7 @@
         .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; color: var(--text-primary); }
         .dash-table th, .dash-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); }
         .dash-table th { background: var(--bg-subcard); font-weight: 700; color: var(--text-secondary); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-top: 1px solid var(--border-color);}
-        .dash-table tbody tr:hover { background: var(--bg-body); }
+        .dash-table tbody tr:hover { background: var(--bg-body); cursor: pointer;}
 
         .badge-status { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid transparent; letter-spacing: 0.5px;}
         .badge-ruptura-critica { background: var(--badge-ruptura-bg); color: var(--badge-ruptura-text); }
@@ -330,7 +321,30 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. TOASTS
+           8. MODAL DE DETALHES DO ITEM
+           ========================================================================== */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000;
+            display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--bg-card); border-radius: 24px; width: 90%; max-width: 900px;
+            max-height: 90vh; overflow-y: auto; padding: 30px; box-shadow: var(--shadow-lg); position: relative;
+            animation: fadeIn 0.3s ease; border: 1px solid var(--border-color);
+        }
+        .modal-close {
+            position: absolute; top: 20px; right: 24px; font-size: 24px; color: var(--text-secondary);
+            cursor: pointer; font-weight: bold; transition: color 0.2s;
+        }
+        .modal-close:hover { color: var(--text-danger); }
+        
+        .modal-header-section { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 24px;}
+        .modal-locais-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;}
+        .modal-locais-table th { background: var(--bg-subcard); padding: 10px; color: var(--text-secondary); text-align: left;}
+        .modal-locais-table td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500;}
+
+        /* ==========================================================================
+           9. TOASTS
            ========================================================================== */
         .toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
         .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
@@ -346,18 +360,28 @@
 
 <div id="toast-container" class="toast-container"></div>
 
+<!-- SPLASH SCREEN DE ALTA TECNOLOGIA -->
 <div id="tech-loader">
-    <div class="loader-ring" id="loader-ring"></div>
-    <div class="loader-title">JBS | SEARA</div>
-    <div style="font-size: 12px; letter-spacing: 2px; opacity: 0.7; margin-bottom: 20px;">INICIALIZANDO DATA LAKE</div>
-    <div class="loader-logs" id="loader-logs">
-        <div>> Sistema inicializado...</div>
+    <div class="loader-logo">JBS | SEARA</div>
+    <div class="progress-container">
+        <div class="progress-bar" id="loader-bar"></div>
     </div>
-    
+    <div class="progress-text" id="loader-percent">0%</div>
+    <div class="loader-logs" id="loader-logs">
+        <div>> Sistema inicializado... aguardando leitura.</div>
+    </div>
     <label id="btn-fallback" class="btn-upload-fallback">
         Fazer Upload Manual dos Arquivos CSV
         <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
     </label>
+</div>
+
+<!-- MODAL DE DETALHES DO ITEM -->
+<div class="modal-overlay" id="modal-item">
+    <div class="modal-content">
+        <span class="modal-close" onclick="fecharModal()">×</span>
+        <div id="modal-body-content"></div>
+    </div>
 </div>
 
 <div class="app-layout segmentation-hidden" id="app-layout" style="opacity: 0;">
@@ -378,10 +402,16 @@
             <a href="#" class="nav-item" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
                 <span style="font-size: 18px;">🔍</span><span>Catálogo & Pesquisa</span>
             </a>
+            <a href="#" class="nav-item" id="nav-compras" onclick="navegarPara('compras')">
+                <span style="font-size: 18px;">🛒</span><span>Necessidade de Compra</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-instrucoes" onclick="navegarPara('instrucoes')">
+                <span style="font-size: 18px;">📖</span><span>Como Utilizar</span>
+            </a>
         </nav>
 
         <div class="sidebar-actions-container">
-            <span class="nav-section-title" style="margin-top: 5px;">Personalização</span>
+            <span class="nav-section-title">Temas (10 Opções)</span>
             <div class="theme-grid">
                 <button class="theme-btn" data-theme-val="light" onclick="alterarTema('light')">☀️ Corporativo</button>
                 <button class="theme-btn" data-theme-val="nature" onclick="alterarTema('nature')">🍃 Natureza</button>
@@ -391,26 +421,21 @@
                 <button class="theme-btn" data-theme-val="ocean" onclick="alterarTema('ocean')">🌊 Oceano</button>
                 <button class="theme-btn" data-theme-val="dracula" onclick="alterarTema('dracula')">🧛 Drácula</button>
                 <button class="theme-btn" data-theme-val="hacker" onclick="alterarTema('hacker')">💻 Hacker</button>
+                <button class="theme-btn" data-theme-val="ios" onclick="alterarTema('ios')">📱 iOS Style</button>
+                <button class="theme-btn" data-theme-val="macintosh" onclick="alterarTema('macintosh')">🖥️ Macintosh</button>
             </div>
 
-            <span class="nav-section-title" style="margin-top: 10px;">Imagens e Diretórios</span>
-            
-            <label class="btn-sidebar-action" style="text-align: center; cursor:pointer; border-color: var(--primary-color); background: rgba(14, 165, 233, 0.05);">
+            <span class="nav-section-title" style="margin-top: 5px;">Imagens e Atualização</span>
+            <label class="btn-sidebar-action" style="cursor:pointer; border-color: var(--primary-color); background: rgba(14, 165, 233, 0.05);">
                 <span style="color: var(--primary-color);">🖼️ Mapear Pasta de Imagens</span>
                 <input type="file" webkitdirectory directory multiple style="display:none;" onchange="mapearImagensPasta(event)">
             </label>
 
-            <div class="status-importacao" style="margin-top: 15px;">
-                <div id="status-base" class="status-item">⏳ Buscando Base_Itens.csv...</div>
-                <div id="status-compras" class="status-item">⏳ Buscando Compras.csv...</div>
-                <div id="status-consumos" class="status-item">⏳ Buscando Consumos.csv...</div>
-            </div>
-
-            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="border-color: var(--text-secondary); background: transparent; margin-top: 5px;">
-                <span style="text-align: center; color: var(--text-secondary); font-size: 13px;">🔄 Sincronizar Tudo Novamente</span>
+            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="border-color: var(--text-secondary); background: transparent;">
+                <span style="text-align: center; color: var(--text-secondary); font-size: 12px;">🔄 Sincronizar Tudo Novamente</span>
             </button>
             
-            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; border: none; background: transparent; margin-top: 5px;">
+            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; border: none; background: transparent;">
                 <span style="color: var(--text-secondary);">▼ Filtros Avançados</span>
             </button>
         </div>
@@ -455,17 +480,74 @@
         </div>
     </aside>
 
+    <!-- TELA: PESQUISA / CATÁLOGO -->
     <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
-                <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, grupo, classe ou endereço...">
+                <input type="text" id="busca" class="search-box" placeholder="Busque códigos separados por vírgula (ex: 5555, manutenção, 1234)...">
                 <div class="status"><span id="contador-itens">Aguardando sincronização...</span></div>
             </div>
             <div class="scrollable-results-section" id="resultados"></div>
         </div>
     </main>
 
+    <!-- TELA: COMPRAS (Necessidade) -->
+    <main class="main-content" id="view-compras" style="display: none;">
+        <div class="container">
+            <div class="fixed-top-section">
+                <header><h1>Necessidade de Compra (Críticos)</h1></header>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo exclusivamente itens em ruptura ou abaixo do mínimo com política de estoque ativa (Min/Max > 0).</p>
+            </div>
+            <div class="scrollable-results-section">
+                <div class="dash-section-box">
+                    <div class="dash-table-container">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>Código / Descrição</th>
+                                    <th>Filial</th>
+                                    <th>Saldo Consolidado</th>
+                                    <th>Mínimo</th>
+                                    <th>Máximo</th>
+                                    <th style="color: var(--text-success);">Sugestão Compra (Reposição)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compras-table-body">
+                                <tr><td colspan="6" style="text-align:center; padding: 40px;">Nenhuma necessidade encontrada.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- TELA: COMO UTILIZAR -->
+    <main class="main-content" id="view-instrucoes" style="display: none;">
+        <div class="container">
+            <div class="fixed-top-section">
+                <header><h1>📖 Guia de Utilização</h1></header>
+            </div>
+            <div class="scrollable-results-section">
+                <div class="dash-section-box" style="line-height: 1.6; color: var(--text-secondary); font-size: 14px;">
+                    <h3 style="color: var(--text-primary); margin-bottom: 10px;">1. Sincronização Automática vs Manual</h3>
+                    <p>Ao abrir o painel, ele tentará ler automaticamente os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na mesma pasta do sistema. Caso o navegador bloqueie por segurança (CORS), clique no botão para fazer o upload manual dos mesmos 3 arquivos.</p>
+                    <br>
+                    <h3 style="color: var(--text-primary); margin-bottom: 10px;">2. Imagens</h3>
+                    <p>O navegador não tem permissão para vasculhar suas pastas sozinho. Para ativar as fotos, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral e selecione a sua pasta local chamada "imagens". O sistema vai decorar todos os itens que possuem o padrão <code>código - 01.jpg</code> em 1 segundo.</p>
+                    <br>
+                    <h3 style="color: var(--text-primary); margin-bottom: 10px;">3. Inteligência de Busca e Filtros</h3>
+                    <p>Na barra de pesquisa, você pode buscar por múltiplos termos separando-os por <b>vírgula</b> (Ex: <i>1234, parafuso, manutenção</i>). Os gráficos do Dashboard são botões: clique na fatia da Curva A ou na barra de Ruptura para filtrar a tabela inferior imediatamente.</p>
+                    <br>
+                    <h3 style="color: var(--text-primary); margin-bottom: 10px;">4. Regra de Consolidação (Rolândia)</h3>
+                    <p>Itens duplicados em várias prateleiras são consolidados em um "Super Cartão". Se a filial for 704, tiver repartição "AP" ou de 1 letra, o sistema a rotulará automaticamente como <b>Rolândia - ALM. Preparados</b>, mantendo seu estoque separado das outras filiais. Clique no item para abrir o Modal e ver o saldo exato em cada prateleira.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- TELA: DASHBOARD -->
     <main class="main-content" id="view-dashboard" style="display: flex;">
         <div class="container">
             <div class="fixed-top-section">
@@ -480,19 +562,19 @@
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card border-success">
-                        <span class="kpi-title">Giro de Estoque</span>
+                        <span class="kpi-title">Giro de Estoque Anual</span>
                         <span class="kpi-value color-success" id="dash-kpi-giro-anual">0.0x</span>
-                        <span class="kpi-sub">Consumo Total / Saldo Total</span>
+                        <span class="kpi-sub">Vezes que o estoque se renova/ano</span>
                     </div>
                     <div class="kpi-card border-primary">
-                        <span class="kpi-title">Cobertura (Dias)</span>
+                        <span class="kpi-title">Cobertura Média</span>
                         <span class="kpi-value" style="color: var(--primary-color);" id="dash-kpi-giro-medio">0 dias</span>
-                        <span class="kpi-sub">Baseado no Valor Financeiro</span>
+                        <span class="kpi-sub">Tempo para zerar o estoque atual</span>
                     </div>
                     <div class="kpi-card" style="border-left-color: var(--text-secondary);">
                         <span class="kpi-title">Capital Obsoleto</span>
                         <span class="kpi-value color-secondary" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
-                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro</span>
+                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro anual</span>
                     </div>
                 </div>
 
@@ -588,7 +670,7 @@
 
 <script>
     // ==========================================================================
-    // TODA A LÓGICA E CÁLCULOS DO SISTEMA
+    // ESTADO GLOBAL DO SISTEMA
     // ==========================================================================
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
@@ -601,19 +683,29 @@
     let filtroGraficoStatus = null;
     let mesConsumoAtual = "MÊS";
     let isFetchingData = false; 
+    let loaderProgress = 0;
 
-    // Variáveis do Mapeamento de Imagens
     let imagensMapeadas = new Set();
     let mapeamentoDeImagemAtivo = false;
 
     Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
+    // ==========================================================================
+    // TELA DE CARREGAMENTO (LOADER COM PORCENTAGEM)
+    // ==========================================================================
+    function setProgress(percent, msg, type='info') {
+        loaderProgress = percent;
+        const bar = document.getElementById('loader-bar');
+        const text = document.getElementById('loader-percent');
+        if(bar) bar.style.width = `${percent}%`;
+        if(text) text.innerText = `${Math.round(percent)}%`;
+        if(msg) addLog(msg, type);
+    }
+
     function addLog(msg, type='info') {
         const logs = document.getElementById('loader-logs');
         if(logs) {
-            let classe = '';
-            if(type === 'error') classe = 'class="error"';
-            if(type === 'success') classe = 'class="success"';
+            let classe = type === 'error' ? 'class="error"' : type === 'success' ? 'class="success"' : '';
             logs.innerHTML += `<div ${classe}>> ${msg}</div>`;
             logs.scrollTop = logs.scrollHeight;
         }
@@ -641,10 +733,8 @@
         document.querySelectorAll('.theme-btn').forEach(btn => {
             if(btn.getAttribute('data-theme-val') === temaLocal) btn.classList.add('active');
         });
-
         const campoBusca = document.getElementById('busca');
         if (campoBusca) campoBusca.addEventListener('input', dispararFiltrosDebounce);
-
         setTimeout(carregarArquivosAutomaticamente, 500);
     });
 
@@ -654,12 +744,10 @@
         else document.documentElement.setAttribute('data-theme', tema);
         
         localStorage.setItem('temaAlmoxarifado', tema); 
-
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.classList.remove('active');
             if(btn.getAttribute('data-theme-val') === tema) btn.classList.add('active');
         });
-
         if (itensProcessados.length > 0) atualizarGraficos();
     }
 
@@ -674,16 +762,19 @@
 
     function navegarPara(view) {
         vistaAtual = view;
-        document.getElementById('view-pesquisa').style.display = view === 'pesquisa' ? 'flex' : 'none';
-        document.getElementById('view-dashboard').style.display = view === 'dashboard' ? 'flex' : 'none';
-        document.getElementById('nav-pesquisa').classList.toggle('active', view === 'pesquisa');
-        document.getElementById('nav-dashboard').classList.toggle('active', view === 'dashboard');
-        dispararFiltrosSemAtraso();
+        ['pesquisa', 'dashboard', 'compras', 'instrucoes'].forEach(v => {
+            const el = document.getElementById(`view-${v}`);
+            const nav = document.getElementById(`nav-${v}`);
+            if(el) el.style.display = (v === view) ? 'flex' : 'none';
+            if(nav) nav.classList.toggle('active', v === view);
+        });
+        if(view === 'pesquisa' || view === 'dashboard') dispararFiltrosSemAtraso();
+        if(view === 'compras') renderizarCompras();
     }
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     
-    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
     function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
     function converterParaNumero(val) {
         if (val === null || val === undefined || val === '') return 0;
@@ -709,17 +800,21 @@
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
     function parseCSVFast(text) {
-        let lines = text.split(/\r?\n/);
+        let lines = text.split(/?
+/);
         let headerIndex = 0;
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].replace(/[;\s"]/g, '').length > 0) { headerIndex = i; break; }
         }
-        let validText = lines.slice(headerIndex).join('\n');
-        
+        let validText = lines.slice(headerIndex).join('
+');
         let result = Papa.parse(validText, { header: true, skipEmptyLines: true, dynamicTyping: false });
         return result.data;
     }
 
+    // ==========================================================================
+    // CARGA DE ARQUIVOS (AUTOMÁTICA E MANUAL)
+    // ==========================================================================
     async function carregarArquivosAutomaticamente() {
         if (isFetchingData) return; 
         isFetchingData = true;
@@ -728,7 +823,8 @@
         document.getElementById('tech-loader').style.opacity = '1';
         document.getElementById('loader-ring').classList.remove('error');
         document.getElementById('btn-fallback').style.display = 'none';
-        document.getElementById('loader-logs').innerHTML = '<div>> Iniciando sincronização de arquivos locais...</div>';
+        document.getElementById('loader-logs').innerHTML = '';
+        setProgress(5, "Iniciando sincronização local via Fetch API...");
 
         const arquivos = [
             { id: 'baseItens', url: '03 - Base_Itens.csv', statusId: 'status-base' },
@@ -740,42 +836,39 @@
         let errosCriticos = false;
         const decoder = new TextDecoder('windows-1252'); 
 
-        for (const arq of arquivos) {
-            addLog(`Buscando ${arq.url}...`);
+        for (let i=0; i<arquivos.length; i++) {
+            const arq = arquivos[i];
+            setProgress(10 + (i*20), `Baixando pacote: ${arq.url}`);
             const elStatus = document.getElementById(arq.statusId);
             try {
                 const response = await fetch(arq.url, { cache: "no-store" });
-                if (!response.ok) {
-                    throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status})`);
-                }
+                if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const text = decoder.decode(arrayBuffer);
                 bases[arq.id] = parseCSVFast(text);
                 
-                addLog(`✓ ${arq.url} (Lido com Sucesso)`, 'success');
+                setProgress(30 + (i*20), `✓ ${arq.url} (Extraído)`, 'success');
                 if (elStatus) {
-                    elStatus.innerText = `✅ ${arq.url} lido!`;
-                    elStatus.classList.add('status-ok');
-                    elStatus.classList.remove('status-erro');
+                    elStatus.innerText = `✅ ${arq.url}`;
+                    elStatus.className = 'status-item status-ok';
                 }
                 carregados++;
             } catch (error) {
-                addLog(`[ERRO ${arq.url}] ${error.message}`, 'error');
+                setProgress(loaderProgress, `[ERRO] ${error.message} em ${arq.url}. Permissão de segurança (CORS) bloqueada.`, 'error');
                 if (elStatus) {
                     elStatus.innerText = `❌ Falha: ${arq.url}`;
-                    elStatus.classList.add('status-erro');
-                    elStatus.classList.remove('status-ok');
+                    elStatus.className = 'status-item status-erro';
                 }
                 errosCriticos = true;
             }
         }
 
         if (carregados === 3) {
-            addLog("Tabelas carregadas. Cruzando Dados...", 'success');
-            setTimeout(processarInteligencia, 800);
+            setProgress(90, "Modelos carregados. Iniciando consolidação...", 'success');
+            setTimeout(processarInteligencia, 500);
         } else if (errosCriticos) {
-            addLog("A leitura automática falhou. Processo interrompido.", 'error');
+            setProgress(loaderProgress, "Leitura automática interrompida. Por favor, utilize o Upload Manual.", 'error');
             mostrarErroLoaderFatal();
             isFetchingData = false;
         }
@@ -789,13 +882,14 @@
         document.getElementById('btn-fallback').style.display = 'none';
         document.getElementById('tech-loader').style.display = 'flex';
         document.getElementById('tech-loader').style.opacity = '1';
-        document.getElementById('loader-logs').innerHTML = '<div>> Iniciando upload manual...</div>';
+        document.getElementById('loader-logs').innerHTML = '';
+        setProgress(10, "Iniciando processamento manual FileReader...");
 
         const files = event.target.files;
         let carregados = 0;
         const decoder = new TextDecoder('windows-1252');
 
-        Array.from(files).forEach(file => {
+        Array.from(files).forEach((file, idx) => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const text = decoder.decode(e.target.result);
@@ -808,18 +902,16 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    addLog(`✓ ${file.name} Importado e LIDO.`, 'success');
+                    setProgress(20 + (idx*20), `✓ ${file.name} Importado.`, 'success');
                     
                     const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
                     if (elStatus) {
                         elStatus.innerText = `✅ ${file.name}`;
-                        elStatus.classList.add('status-ok');
-                        elStatus.classList.remove('status-erro');
+                        elStatus.className = 'status-item status-ok';
                     }
-                    
                     carregados++;
                     if(carregados === files.length) {
-                        addLog("Processando Inteligência...", 'success');
+                        setProgress(90, "Iniciando Motor de Inteligência...", 'success');
                         setTimeout(processarInteligencia, 500);
                     }
                 }
@@ -833,7 +925,6 @@
     window.mapearImagensPasta = function(event) {
         const files = event.target.files;
         if(files.length === 0) return;
-
         let count = 0;
         imagensMapeadas.clear();
 
@@ -846,26 +937,24 @@
                 count++;
             }
         }
-
         mapeamentoDeImagemAtivo = true;
 
         if (itensProcessados.length > 0) {
-            itensProcessados.forEach(item => {
-                item.temImagem = imagensMapeadas.has(item.codNorm);
-            });
+            itensProcessados.forEach(item => { item.temImagem = imagensMapeadas.has(item.codNorm); });
             dispararFiltrosSemAtraso();
         }
-
-        mostrarToast(`Sucesso: ${count} imagens mapeadas! O filtro já pode ser usado.`, "success");
+        mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
     }
 
+    // ==========================================================================
+    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO
+    // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
             mostrarToast("Erro: Arquivo Mestre não localizado.", "error"); 
-            addLog("Erro Crítico: Base Mestre ausente.", 'error');
+            setProgress(loaderProgress, "Erro Crítico: Base Mestre ausente.", 'error');
             mostrarErroLoaderFatal();
-            isFetchingData = false;
-            return; 
+            isFetchingData = false; return; 
         }
 
         const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item'];
@@ -886,6 +975,7 @@
         const colPrateleira = ['cd prateleira', 'prateleira'];
         const colDivisao = ['cd divisao', 'divisao'];
 
+        // Lógica de Trava de Mês Anterior
         const dataAtual = new Date();
         let mesAnteriorNum = dataAtual.getMonth(); 
         if (mesAnteriorNum === 0) mesAnteriorNum = 12; 
@@ -894,6 +984,7 @@
         mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
         const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
+        // Processar Compras
         const mapCompras = new Map();
         if(bases.compras.length > 0) {
             const c_cod = encontrarChave(bases.compras[0], colCod);
@@ -905,21 +996,19 @@
             });
         }
 
+        // Processar Consumos (Mês Exato)
         let cs_mes = encontrarChave(bases.consumos[0], colMesMovimento);
         let cs_cod = encontrarChave(bases.consumos[0], colCod);
         let cs_filialId = encontrarChave(bases.consumos[0], colFilialId);
         let cs_qtd = encontrarChave(bases.consumos[0], colQtdConsumo);
 
         const mapConsumosTotais = new Map();
-        let setMeses = new Set();
         let encontrouConsumoNoMesAlvo = false;
 
         if(bases.consumos.length > 0 && cs_mes) {
             bases.consumos.forEach(item => {
                 const mesStr = normalizarString(item[cs_mes]);
-                if(mesStr) setMeses.add(mesStr);
                 const mesItemNum = ordemMeses[mesStr];
-
                 if (mesItemNum === mesAnteriorNum) {
                     encontrouConsumoNoMesAlvo = true;
                     const cod = normalizarCod(item[cs_cod]);
@@ -933,8 +1022,7 @@
             });
         }
 
-        mesesAnalisados = setMeses.size > 0 ? setMeses.size : 1; 
-
+        // Dicionários para Base
         const b_cod = encontrarChave(bases.baseItens[0], colCod);
         const b_desc = encontrarChave(bases.baseItens[0], colDesc);
         const b_saldo = encontrarChave(bases.baseItens[0], colQtdSaldo);
@@ -950,68 +1038,100 @@
         const b_prat = encontrarChave(bases.baseItens[0], colPrateleira);
         const b_div = encontrarChave(bases.baseItens[0], colDivisao);
 
-        let baseSujaProcessada = bases.baseItens.map(item => {
+        // Agrupamento de SKUs e Regra Rolândia
+        const mapConsolidado = new Map();
+
+        bases.baseItens.forEach(item => {
             let codBruto = String(item[b_cod] || '').replace(/\./g, '');
             const codNorm = normalizarCod(codBruto);
-            if(!codNorm) return null; 
+            if(!codNorm) return; 
+
+            let filialIdBase = normalizarCod(item[b_filialId]);
+            let filialNm = item[b_filialNm] || '';
+            let reparticao = (item[b_rep] || '-').toString().trim();
+            const prateleira = item[b_prat] || '-';
+            const divisao = item[b_div] || '-';
+
+            // REGRA: Rolândia - ALM. Preparados
+            if (filialIdBase === '704' || reparticao.toUpperCase() === 'AP' || reparticao.length === 1) {
+                filialNm = 'Rolândia - ALM. Preparados';
+                filialIdBase = '704_ROL'; // Chave virtual para não misturar com a 704 normal se houver
+            }
 
             const saldo = converterParaNumero(item[b_saldo]);
             const minimo = converterParaNumero(item[b_min]);
             const maximo = converterParaNumero(item[b_max]);
 
-            if (saldo === 0 && minimo === 0 && maximo === 0) return null;
+            const chave = codNorm + '|' + filialIdBase;
 
-            const desc = item[b_desc] || "Item sem Descrição";
-            const custoUnitario = converterParaNumero(item[b_custo]);
-            const filialIdBase = normalizarCod(item[b_filialId]);
-            const grupo = item[b_grupo] || '';
-            const classe = item[b_classe] || '';
-            const reparticao = item[b_rep] || '-';
-            const prateleira = item[b_prat] || '-';
-            const divisao = item[b_div] || '-';
-            const filialNm = item[b_filialNm] || '';
-            const um = item[b_um] || 'UN';
-            
-            const transito = mapCompras.get(codNorm) || 0;
-            const chaveAmarracao = codNorm + '|' + filialIdBase;
+            if (!mapConsolidado.has(chave)) {
+                mapConsolidado.set(chave, {
+                    cod: codBruto, codNorm: codNorm, 
+                    desc: item[b_desc] || "Item sem Descrição",
+                    custoUnitario: converterParaNumero(item[b_custo]),
+                    um: item[b_um] || 'UN',
+                    filialNm: filialNm, filialIdBase: filialIdBase,
+                    grupo: item[b_grupo] || '',
+                    classe: item[b_classe] || '',
+                    saldo: 0, minimo: 0, maximo: 0,
+                    locais: []
+                });
+            }
+
+            const obj = mapConsolidado.get(chave);
+            obj.saldo += saldo;
+            obj.minimo += minimo;
+            obj.maximo += maximo;
+            obj.locais.push({ reparticao, prateleira, divisao, saldo });
+        });
+
+        // Aplicando Cálculos Finais após Consolidação
+        let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
+            if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0) return null; // Remove os mortos
+
+            const transito = mapCompras.get(item.codNorm) || 0;
+            const chaveAmarracao = item.codNorm + '|' + item.filialIdBase;
             const consumoMesAnterior = Math.abs(mapConsumosTotais.get(chaveAmarracao)) || 0;
 
-            const valorImobilizado = saldo * custoUnitario;
+            const valorImobilizado = item.saldo * item.custoUnitario;
 
             let diasGiro = 0;
-            if (consumoMesAnterior > 0) diasGiro = Math.round((saldo / consumoMesAnterior) * 30);
-            else if (saldo > 0) diasGiro = Infinity;
+            if (consumoMesAnterior > 0) diasGiro = Math.round((item.saldo / consumoMesAnterior) * 30);
+            else if (item.saldo > 0) diasGiro = Infinity;
 
             let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
-            if (saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
-            else if (saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
-            else if (saldo > 0 && consumoMesAnterior <= 0) { status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; }
-            else if (saldo > 0 && minimo > 0 && saldo < minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
-            else if (saldo > maximo && maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
+            if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
+            else if (item.saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
+            else if (item.saldo > 0 && consumoMesAnterior <= 0) { status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; }
+            else if (item.saldo > 0 && item.minimo > 0 && item.saldo < item.minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
+            else if (item.saldo > item.maximo && item.maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
 
-            const searchString = (codNorm + " " + normalizarString(desc) + " " + normalizarString(grupo) + " " + normalizarString(classe) + " rep " + reparticao + " prat " + prateleira + " div " + divisao).toLowerCase();
+            // O Endereço de Exibição Principal (Primeiro da Lista)
+            item.reparticao = item.locais[0]?.reparticao || '-';
+            item.prateleira = item.locais[0]?.prateleira || '-';
+            item.divisao = item.locais[0]?.divisao || '-';
+
+            const searchString = (item.codNorm + " " + normalizarString(item.desc) + " " + normalizarString(item.grupo) + " " + normalizarString(item.classe) + " rep " + item.reparticao + " prat " + item.prateleira + " div " + item.divisao).toLowerCase();
 
             return {
-                cod: codBruto, codNorm: codNorm, desc: desc,
-                saldo: saldo, minimo: minimo, maximo: maximo,
-                custo: custoUnitario, transito: transito, consumo: consumoMesAnterior,
-                diasGiro: diasGiro,
-                um: um, filial: filialNm, grupo: grupo, classe: classe, 
-                reparticao: reparticao, prateleira: prateleira, divisao: divisao,
-                valorImobilizado: valorImobilizado,
-                status: status, statusBadge: statusBadge, curva: 'C',
-                searchString: searchString,
-                temImagem: mapeamentoDeImagemAtivo ? imagensMapeadas.has(codNorm) : null
+                ...item,
+                transito, consumo: consumoMesAnterior, diasGiro, valorImobilizado,
+                status, statusBadge, curva: 'C', searchString,
+                temImagem: mapeamentoDeImagemAtivo ? imagensMapeadas.has(item.codNorm) : null
             };
         }).filter(i => i !== null);
 
         if(baseSujaProcessada.length === 0) { fecharLoader(); isFetchingData = false; return; }
 
-        baseSujaProcessada.sort((a, b) => b.consumo - a.consumo);
-        const consumoTotalGlobal = baseSujaProcessada.reduce((acc, curr) => acc + curr.consumo, 0);
+        // Ordenar Progressivamente pelo Código Numérico
+        baseSujaProcessada.sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
+
+        // Curva ABC FÍSICA
+        const itemsParaABC = [...baseSujaProcessada].sort((a, b) => b.consumo - a.consumo);
+        const consumoTotalGlobal = itemsParaABC.reduce((acc, curr) => acc + curr.consumo, 0);
         let consumoAcumulado = 0;
 
-        baseSujaProcessada.forEach(item => {
+        itemsParaABC.forEach(item => {
             if (consumoTotalGlobal > 0 && item.consumo > 0) {
                 consumoAcumulado += item.consumo;
                 const perc = consumoAcumulado / consumoTotalGlobal;
@@ -1022,7 +1142,7 @@
         });
 
         itensProcessados = baseSujaProcessada;
-        addLog("Concluído. Renderizando Painel...", "success");
+        setProgress(100, "Renderizando Interface...", "success");
         
         const elTitleConsumo = document.getElementById('kpi-consumo-title');
         const elThConsumo = document.getElementById('th-consumo');
@@ -1034,9 +1154,12 @@
             if(encontrouConsumoNoMesAlvo) mostrarToast(`Inteligência Processada. Consumo travado em ${mesConsumoAtual}.`, "success");
             fecharLoader();
             isFetchingData = false; 
-        }, 500);
+        }, 600);
     }
 
+    // ==========================================================================
+    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
+    // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
         clearTimeout(timerBusca);
@@ -1046,19 +1169,22 @@
     window.dispararFiltros = function() { dispararFiltrosSemAtraso(); } 
 
     function dispararFiltrosSemAtraso() {
-        const termo = normalizarString(document.getElementById('busca')?.value);
+        const termoBruto = normalizarString(document.getElementById('busca')?.value);
+        const termosSplit = termoBruto ? termoBruto.split(',').map(t => t.trim()).filter(t => t) : [];
+        
         const statusFiltro = document.getElementById('select-saldo-status').value;
         const curvaFiltro = document.getElementById('select-curva').value;
         const imagemFiltro = document.getElementById('select-imagem').value;
 
         if (imagemFiltro !== "" && !mapeamentoDeImagemAtivo) {
-            mostrarToast("Para filtrar por imagens, clique em 'Mapear Pasta de Imagens' no menu lateral.", "warning");
+            mostrarToast("Para filtrar por imagens, mapeie a pasta no menu lateral.", "warning");
             document.getElementById('select-imagem').value = "";
             return;
         }
 
         itensFiltrados = itensProcessados.filter(i => {
-            const bateTermo = !termo || i.searchString.includes(termo);
+            // Busca múltipla: O item passa se contiver QUALQUER UM dos termos separados por vírgula
+            const bateTermo = termosSplit.length === 0 || termosSplit.some(t => i.searchString.includes(t));
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
             
@@ -1067,12 +1193,12 @@
                 if (imagemFiltro === 'com_imagem') bateImagem = i.temImagem === true;
                 if (imagemFiltro === 'sem_imagem') bateImagem = i.temImagem === false;
             }
-            
             return bateTermo && bateCurva && bateStatus && bateImagem;
         });
 
         if (vistaAtual === 'pesquisa') renderizarPesquisa();
-        else renderizarDashboard();
+        else if (vistaAtual === 'dashboard') renderizarDashboard();
+        else if (vistaAtual === 'compras') renderizarCompras();
     }
 
     window.limparFiltroGrafico = function(tipo) {
@@ -1092,6 +1218,91 @@
         dispararFiltrosSemAtraso();
     }
 
+    // ==========================================================================
+    // MODAL INTERATIVO
+    // ==========================================================================
+    window.abrirModalDetalhes = function(codNorm, filialId) {
+        const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
+        if(!i) return;
+
+        let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
+        let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
+        
+        let imagemHTML = '';
+        if (mapeamentoDeImagemAtivo) {
+            imagemHTML = i.temImagem 
+                ? `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">` 
+                : `<div class="img-placeholder" style="border-radius:12px; font-size:14px;"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
+        } else {
+            imagemHTML = `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                          <div class="img-placeholder" style="display:none; border-radius:12px; font-size:14px;"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
+        }
+
+        let linhasLocais = i.locais.map(loc => `
+            <tr>
+                <td><b>${loc.reparticao}</b></td>
+                <td>${loc.prateleira}</td>
+                <td>${loc.divisao}</td>
+                <td style="color:var(--text-info); font-weight:800;">${loc.saldo}</td>
+            </tr>
+        `).join('');
+
+        let tabelaLocais = i.locais.length > 1 ? `
+            <h3 style="font-size:14px; margin-top:20px; color:var(--text-secondary); text-transform:uppercase;">📍 Múltiplos Locais Detectados</h3>
+            <table class="modal-locais-table">
+                <thead><tr><th>Repartição</th><th>Prateleira</th><th>Divisão</th><th>Saldo Físico</th></tr></thead>
+                <tbody>${linhasLocais}</tbody>
+            </table>
+        ` : '';
+
+        const html = `
+            <div class="modal-header-section">
+                <div style="width:180px; height:180px; flex-shrink:0; background:var(--bg-subcard); border:1px solid var(--border-color); border-radius:12px;">
+                    ${imagemHTML}
+                </div>
+                <div style="display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:12px; color:var(--text-secondary); font-weight:700; margin-bottom:4px;">${i.grupo} &nbsp;|&nbsp; ${i.classe}</div>
+                    <div style="font-size:24px; font-weight:900; color:var(--text-primary); line-height:1.2; margin-bottom:10px;">
+                        <span style="color:var(--primary-color);">#${i.cod}</span><br>${i.desc}
+                    </div>
+                    <span class="badge-status ${i.statusBadge}" style="align-self:flex-start; font-size:12px; padding:6px 14px;">${i.status}</span>
+                </div>
+            </div>
+            
+            <div class="item-metrics-grid" style="margin-bottom:20px;">
+                <div class="metric-box metric-saldo"><span class="metric-label">Saldo Consolidado</span><span class="metric-value" style="font-size:20px;">${i.saldo}</span></div>
+                <div class="metric-box ${i.transito > 0 ? 'metric-transito' : 'metric-default'}"><span class="metric-label">Em Trânsito</span><span class="metric-value" style="font-size:20px;">${i.transito}</span></div>
+                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${i.consumo}</span></div>
+                <div class="metric-box ${giroClass}"><span class="metric-label">Dias Cobertura</span><span class="metric-value" style="font-size:20px;">${giroText}</span></div>
+            </div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unitário</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Capital Travado</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.valorImobilizado)}</div></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Mínimo</div><div style="font-size:16px; font-weight:800; color:var(--text-warning);">${i.minimo}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Máximo</div><div style="font-size:16px; font-weight:800; color:var(--primary-hover);">${i.maximo}</div></div>
+            </div>
+
+            ${tabelaLocais}
+        `;
+        document.getElementById('modal-body-content').innerHTML = html;
+        document.getElementById('modal-item').style.display = 'flex';
+    }
+
+    window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
+    
+    // Fechar modal clicando fora
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('modal-item')) fecharModal();
+    }
+
+    // ==========================================================================
+    // RENDERIZAÇÃO DOM: CATÁLOGO, DASHBOARD E NECESSIDADE COMPRA
+    // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
         document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
@@ -1106,19 +1317,19 @@
             if (mapeamentoDeImagemAtivo) {
                 imagemHTML = i.temImagem 
                     ? `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}">` 
-                    : `<div class="img-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:5px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>FOTO NÃO<br>ENCONTRADA</div>`;
+                    : `<div class="img-placeholder"><span style="font-size:20px; margin-bottom:5px;">🚫</span>FOTO NÃO<br>ENCONTRADA</div>`;
             } else {
                 imagemHTML = `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                              <div class="img-placeholder" style="display:none;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:5px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>FOTO NÃO<br>ENCONTRADA</div>`;
+                              <div class="img-placeholder" style="display:none;"><span style="font-size:20px; margin-bottom:5px;">🚫</span>FOTO NÃO<br>ENCONTRADA</div>`;
             }
+            
+            let labelLocal = i.locais.length > 1 ? `📍 ${i.locais.length} Locais Mapeados (Clique para abrir)` : `📍 Repartição <strong>${i.reparticao}</strong> &nbsp;•&nbsp; Prateleira <strong>${i.prateleira}</strong>`;
 
             htmlLote.push(`
-                <div class="item-card fade-in">
+                <div class="item-card fade-in" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
                     <div class="item-media">
                         <div class="abc-badge curva-${i.curva}">${i.curva}</div>
-                        <div class="item-image-container">
-                            ${imagemHTML}
-                        </div>
+                        <div class="item-image-container">${imagemHTML}</div>
                     </div>
                     <div class="item-info">
                         <div>
@@ -1130,7 +1341,6 @@
                                 <span class="chip-category">${i.grupo || 'Geral'}</span>
                                 <span class="chip-category">${i.classe || 'N/A'}</span>
                                 <span class="chip-category">UN: ${i.um || 'UN'}</span>
-                                ${i.minimo > 0 || i.maximo > 0 ? `<span class="chip-category" style="color:var(--text-info); border-color:var(--border-color);">Min: ${i.minimo} / Max: ${i.maximo}</span>` : ''}
                             </div>
                             <div class="item-metrics-grid">
                                 <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${i.saldo}</span></div>
@@ -1141,8 +1351,8 @@
                             </div>
                         </div>
                         <div class="item-footer">
-                            <div class="item-address"><span class="item-address-icon">📍</span><span>Repartição <strong>${i.reparticao}</strong> &nbsp;•&nbsp; Prateleira <strong>${i.prateleira}</strong> &nbsp;•&nbsp; Divisão <strong>${i.divisao}</strong></span></div>
-                            ${i.filial ? `<div class="item-filial">🏢 ${i.filial}</div>` : ''}
+                            <div class="item-address">${labelLocal}</div>
+                            ${i.filialNm ? `<div class="item-filial">🏢 ${i.filialNm}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -1150,6 +1360,29 @@
         });
         
         container.innerHTML = htmlLote.join('');
+    }
+
+    function renderizarCompras() {
+        const tbody = document.getElementById('compras-table-body');
+        let htmlLote = [];
+        
+        const necessitaCompra = itensProcessados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
+        
+        necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
+            let sug = i.maximo - i.saldo;
+            htmlLote.push(`
+                <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
+                    <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
+                    <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-critical);">${i.saldo}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-warning);">${i.minimo}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--primary-color);">${i.maximo}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-success);">COMPRAR +${sug}</td>
+                </tr>
+            `);
+        });
+        
+        tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras críticas para os filtros atuais.</td></tr>`;
     }
 
     function renderizarDashboard() {
@@ -1163,7 +1396,7 @@
         itensFiltrados.forEach(i => {
             valorTotal += i.valorImobilizado;
             totalSaldoFinanceiro += i.valorImobilizado;
-            totalConsumoMensalFinanceiro += (i.consumo * i.custo);
+            totalConsumoMensalFinanceiro += (i.consumo * i.custoUnitario);
             totalSaldoFisico += i.saldo;
             totalConsumoFisico += i.consumo;
             if (i.saldo > 0) skusAtivos++;
@@ -1175,25 +1408,16 @@
             if (i.status === 'Excesso Estoque') qtdExcesso++;
         });
 
-        // -------------------------------------------------------------
-        // NOVO CÁLCULO FINANCEIRO DE GIRO E COBERTURA
-        // -------------------------------------------------------------
         let giroDoPeriodo = 0;
-        if (totalSaldoFinanceiro > 0) {
-            giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
-        }
+        if (totalSaldoFinanceiro > 0) giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
 
         let coberturaDiasFinanceira = 0;
-        if (totalConsumoMensalFinanceiro > 0) {
-            coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
-        }
+        if (totalConsumoMensalFinanceiro > 0) coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
 
         document.getElementById('dash-kpi-valor-total').innerText = formatarMoeda(valorTotal);
-        document.getElementById('dash-kpi-total-itens').innerText = `Em ${itensFiltrados.length} itens`;
-        
+        document.getElementById('dash-kpi-total-itens').innerText = `Em ${itensFiltrados.length} SKUs`;
         document.getElementById('dash-kpi-giro-anual').innerText = `${giroDoPeriodo}x`;
         document.getElementById('dash-kpi-giro-medio').innerText = totalConsumoMensalFinanceiro > 0 ? `${coberturaDiasFinanceira} dias` : 'Sem Giro';
-        
         document.getElementById('dash-kpi-ruptura-critica').innerText = qtdRupturaCritica;
         document.getElementById('dash-kpi-risco-minimo').innerText = qtdRiscoMinimo;
         document.getElementById('dash-kpi-excesso').innerText = qtdExcesso;
@@ -1212,7 +1436,6 @@
     function renderizarTabelaDashboard() {
         const tbody = document.getElementById('dash-table-body');
         let htmlLote = [];
-        
         let itensTabela = itensFiltrados;
 
         if (filtroGraficoABC) {
@@ -1225,7 +1448,6 @@
             if (filtroGraficoStatus === 'Ruptura') itensTabela = itensTabela.filter(i => i.status.includes('Ruptura')); 
             else if (filtroGraficoStatus === 'Obsoleto') itensTabela = itensTabela.filter(i => i.status.includes('Obsoleto'));
             else itensTabela = itensTabela.filter(i => i.status === filtroGraficoStatus);
-            
             document.getElementById('filtro-status-aviso').style.display = 'inline-block';
             document.getElementById('filtro-status-aviso').innerText = `✖ Filtro Status: ${filtroGraficoStatus}`;
         } else { document.getElementById('filtro-status-aviso').style.display = 'none'; }
@@ -1233,10 +1455,10 @@
         itensTabela.slice(0, 50).forEach(i => { 
             let giroText = i.diasGiro === Infinity ? 'Obsoleto' : `${i.diasGiro}d`;
             htmlLote.push(`
-                <tr class="fade-in">
+                <tr class="fade-in" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
                     <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px; position:static; box-shadow:none;">${i.curva}</div></td>
                     <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
-                    <td style="font-size:11px; font-weight:600; color:var(--text-info);">Rep ${i.reparticao} | Prat ${i.prateleira} | Div ${i.divisao}</td>
+                    <td style="font-size:11px; font-weight:600; color:var(--text-info);">Rep ${i.reparticao} | Prat ${i.prateleira}</td>
                     <td style="font-size:14px; font-weight:800; color:var(--text-primary);">${i.saldo}</td>
                     <td style="color:var(--text-primary); font-weight:600;">${i.consumo}</td>
                     <td style="font-weight:700; color:var(--text-primary);">${giroText}</td>
