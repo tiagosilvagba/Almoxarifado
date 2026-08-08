@@ -74,7 +74,7 @@
         [data-theme="hacker"] { --primary-color: #10b981; --bg-body: #000000; --bg-card: #0a0a0a; --bg-subcard: #111111; --text-primary: #10b981; --text-secondary: #059669; --border-color: #064e3b; }
 
         /* ==========================================================================
-           2. ESTILOS GERAIS, ANIMAÇÕES E TELA DE CARREGAMENTO
+           2. ESTILOS GERAIS E TELA DE CARREGAMENTO
            ========================================================================== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-primary); overflow: hidden; transition: background-color 0.4s ease; }
@@ -88,7 +88,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -172,7 +171,7 @@
         .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
 
         /* ==========================================================================
-           4. PAINEL DE FILTROS (ESQUERDA)
+           4. PAINEL DE FILTROS E BUSCA
            ========================================================================== */
         .filter-panel-left {
             width: 280px; background: var(--bg-card); border-right: 1px solid var(--border-color);
@@ -193,7 +192,7 @@
         .btn-reset-filters:hover { background: rgba(239, 68, 68, 0.1); }
 
         /* ==========================================================================
-           5. ÁREA PRINCIPAL
+           5. ÁREA PRINCIPAL E CATÁLOGO
            ========================================================================== */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .container { flex-grow: 1; display: flex; flex-direction: column; padding: 30px 40px; overflow: hidden; max-width: 1600px; margin: 0 auto; width: 100%;}
@@ -216,9 +215,6 @@
 
         .scrollable-results-section { flex-grow: 1; overflow-y: auto; padding-right: 15px; padding-top: 5px; padding-bottom: 30px;}
 
-        /* ==========================================================================
-           6. CARTÕES DO CATÁLOGO
-           ========================================================================== */
         .item-card {
             background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
             padding: 20px; margin-bottom: 20px; display: flex; gap: 24px; align-items: center;
@@ -746,22 +742,28 @@
             const elStatus = document.getElementById(arq.statusId);
             try {
                 const response = await fetch(arq.url, { cache: "no-store" });
-                if (!response.ok) throw new Error(`Erro HTTP ${response.status} (Não encontrado)`);
+                if (!response.ok) {
+                    throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status})`);
+                }
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const text = decoder.decode(arrayBuffer);
                 bases[arq.id] = parseCSVFast(text);
                 
                 addLog(`✓ ${arq.url} (Lido com Sucesso)`, 'success');
-                elStatus.innerText = `✅ ${arq.url} lido!`;
-                elStatus.classList.add('status-ok');
-                elStatus.classList.remove('status-erro');
+                if (elStatus) {
+                    elStatus.innerText = `✅ ${arq.url} lido!`;
+                    elStatus.classList.add('status-ok');
+                    elStatus.classList.remove('status-erro');
+                }
                 carregados++;
             } catch (error) {
                 addLog(`[ERRO ${arq.url}] ${error.message}`, 'error');
-                elStatus.innerText = `❌ Falha: ${arq.url}`;
-                elStatus.classList.add('status-erro');
-                elStatus.classList.remove('status-ok');
+                if (elStatus) {
+                    elStatus.innerText = `❌ Falha: ${arq.url}`;
+                    elStatus.classList.add('status-erro');
+                    elStatus.classList.remove('status-ok');
+                }
                 errosCriticos = true;
             }
         }
@@ -770,9 +772,9 @@
             addLog("Tabelas carregadas. Cruzando Dados...", 'success');
             setTimeout(processarInteligencia, 800);
         } else if (errosCriticos) {
-            addLog("Leitura automática falhou. Utilize o Upload Manual abaixo.", 'error');
+            addLog("A leitura automática falhou. Processo interrompido.", 'error');
             mostrarErroLoaderFatal();
-            isFetchingData = false; 
+            isFetchingData = false;
         }
     }
 
@@ -784,7 +786,7 @@
         document.getElementById('btn-fallback').style.display = 'none';
         document.getElementById('tech-loader').style.display = 'flex';
         document.getElementById('tech-loader').style.opacity = '1';
-        document.getElementById('loader-logs').innerHTML = '<div>> Iniciando upload manual CSV...</div>';
+        document.getElementById('loader-logs').innerHTML = '<div>> Iniciando upload manual...</div>';
 
         const files = event.target.files;
         let carregados = 0;
@@ -803,12 +805,16 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    addLog(`✓ ${file.name} Importado.`, 'success');
-                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).innerText = `✅ ${file.name}`;
-                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).classList.add('status-ok');
-                    document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`).classList.remove('status-erro');
-                    carregados++;
+                    addLog(`✓ ${file.name} Importado e LIDO.`, 'success');
                     
+                    const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
+                    if (elStatus) {
+                        elStatus.innerText = `✅ ${file.name}`;
+                        elStatus.classList.add('status-ok');
+                        elStatus.classList.remove('status-erro');
+                    }
+                    
+                    carregados++;
                     if(carregados === files.length) {
                         addLog("Processando Inteligência...", 'success');
                         setTimeout(processarInteligencia, 500);
@@ -822,7 +828,7 @@
     }
 
     // ==========================================================================
-    // MAPEADOR INSTANTÂNEO DE IMAGENS (NOVO)
+    // MAPEADOR INSTANTÂNEO DE IMAGENS 
     // ==========================================================================
     window.mapearImagensPasta = function(event) {
         const files = event.target.files;
@@ -1045,7 +1051,6 @@
         const curvaFiltro = document.getElementById('select-curva').value;
         const imagemFiltro = document.getElementById('select-imagem').value;
 
-        // ALERTA SE TENTAR USAR O FILTRO DE IMAGEM SEM MAPEAMENTO
         if (imagemFiltro !== "" && !mapeamentoDeImagemAtivo) {
             mostrarToast("Para filtrar por imagens, clique em 'Mapear Pasta de Imagens' no menu lateral.", "warning");
             document.getElementById('select-imagem').value = "";
@@ -1295,7 +1300,7 @@
                 datasets: [{ 
                     label: 'Itens', 
                     data: [contagemStatus.Normal, contagemStatus.Risco, contagemStatus.Excesso, contagemStatus.RupturaCritica, contagemStatus.Obsoleto], 
-                    backgroundColor: [corA, '#f59e0b', '#0284c7', '#ef4444', corC], borderRadius: 6, borderSkipped: false
+                    backgroundColor: [corA, '#f59e0b', '#0ea5e9', '#ef4444', corC], borderRadius: 6, borderSkipped: false
                 }]
             },
             options: { 
