@@ -14,17 +14,18 @@ let filtroGraficoABC = null;
 let filtroGraficoStatus = null;
 let mesConsumoAtual = "MÊS";
 
+// Força o Chart.js a usar a nova fonte 'Inter'
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
 // ==========================================================================
 // 1. INICIALIZAÇÃO E UI (TEMAS / NAVEGAÇÃO)
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Aplica o tema salvo na memória
     const temaLocal = localStorage.getItem('temaAlmoxarifado') || 'light';
     document.querySelectorAll('.theme-btn').forEach(btn => {
         if(btn.getAttribute('data-theme-val') === temaLocal) btn.classList.add('active');
     });
 
-    // Anexa o Debounce (Atraso Inteligente) na barra de pesquisa para não travar
     const campoBusca = document.getElementById('busca');
     if (campoBusca) {
         campoBusca.addEventListener('input', dispararFiltrosDebounce);
@@ -71,7 +72,7 @@ function toggleSegmentacao() {
 }
 
 // ==========================================================================
-// 2. FUNÇÕES ÚTEIS E OTIMIZADAS DE LIMPEZA DE DADOS
+// 2. FUNÇÕES ÚTEIS E OTIMIZADAS
 // ==========================================================================
 function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
 function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
@@ -85,8 +86,6 @@ function converterParaNumero(val) {
 }
 function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
-// [OTIMIZAÇÃO 1] Mapeador Estático: Ao invés de checar a coluna linha por linha,
-// achamos o nome da coluna no cabeçalho UMA VEZ e reutilizamos. Fica 100x mais rápido.
 function encontrarChave(objRef, termosChave) {
     if (!objRef) return null;
     const chaves = Object.keys(objRef);
@@ -102,7 +101,7 @@ function encontrarChave(objRef, termosChave) {
 }
 
 // ==========================================================================
-// 3. PARSER CSV RÁPIDO
+// 3. PARSER CSV
 // ==========================================================================
 function parseCSV(text) {
     let lines = text.split(/\r?\n/);
@@ -137,7 +136,7 @@ function parseCSV(text) {
 }
 
 // ==========================================================================
-// 4. CARGA DE ARQUIVOS (LOCAL FETCH E UPLOAD)
+// 4. CARGA DE ARQUIVOS
 // ==========================================================================
 async function carregarArquivosAutomaticamente() {
     const arquivos = [
@@ -209,12 +208,11 @@ window.uploadManualMultiplo = function(event) {
 }
 
 // ==========================================================================
-// 5. MOTOR DE INTELIGÊNCIA (AGORA COM CACHE DE COLUNAS - SUPER RÁPIDO)
+// 5. MOTOR DE INTELIGÊNCIA
 // ==========================================================================
 function processarInteligencia() {
-    if (bases.baseItens.length === 0) { mostrarToast("Erro: Arquivo Mestre (Base_Itens.csv) não localizado.", "error"); return; }
+    if (bases.baseItens.length === 0) { mostrarToast("Erro: Arquivo Mestre não localizado.", "error"); return; }
 
-    // Dicionários
     const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item'];
     const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc'];
     const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
@@ -233,7 +231,6 @@ function processarInteligencia() {
     const colPrateleira = ['cd prateleira', 'prateleira'];
     const colDivisao = ['cd divisao', 'divisao'];
 
-    // Mapeamento Estático Rápido - Compras
     const mapCompras = new Map();
     if(bases.compras.length > 0) {
         const c_cod = encontrarChave(bases.compras[0], colCod);
@@ -245,7 +242,6 @@ function processarInteligencia() {
         });
     }
 
-    // Detecção Automática do Mês Alvo (Consumos)
     const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
     let maxMesIdx = -1; let mesAlvo = null; let setMeses = new Set();
     
@@ -267,7 +263,6 @@ function processarInteligencia() {
     mesesAnalisados = setMeses.size > 0 ? setMeses.size : 1; 
     mesConsumoAtual = mesAlvo ? mesAlvo.toUpperCase() : "MÊS";
 
-    // Mapeamento Estático Rápido - Consumos
     const mapConsumosTotais = new Map();
     if(bases.consumos.length > 0) {
         bases.consumos.forEach(item => {
@@ -285,7 +280,6 @@ function processarInteligencia() {
         });
     }
 
-    // Processamento da Base de Itens Mestre
     const b_cod = encontrarChave(bases.baseItens[0], colCod);
     const b_desc = encontrarChave(bases.baseItens[0], colDesc);
     const b_saldo = encontrarChave(bases.baseItens[0], colQtdSaldo);
@@ -341,7 +335,6 @@ function processarInteligencia() {
         else if (saldo > 0 && minimo > 0 && saldo < minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
         else if (saldo > maximo && maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
 
-        // [OTIMIZAÇÃO 3] PRÉ-INDEXAÇÃO DO TEXTO PARA BUSCA ULTRARRÁPIDA
         const searchString = (codNorm + " " + normalizarString(desc) + " " + normalizarString(grupo) + " " + normalizarString(classe) + " rep " + reparticao + " prat " + prateleira + " div " + divisao).toLowerCase();
 
         return {
@@ -359,7 +352,6 @@ function processarInteligencia() {
 
     if(baseSujaProcessada.length === 0) return;
 
-    // Curva ABC
     baseSujaProcessada.sort((a, b) => b.consumo - a.consumo);
     const consumoTotalGlobal = baseSujaProcessada.reduce((acc, curr) => acc + curr.consumo, 0);
     let consumoAcumulado = 0;
@@ -375,7 +367,6 @@ function processarInteligencia() {
     });
 
     itensProcessados = baseSujaProcessada;
-    if (mesAlvo) mostrarToast(`Inteligência processada! Consumo travado em ${mesConsumoAtual}.`, "success");
     dispararFiltrosSemAtraso();
 }
 
@@ -385,17 +376,16 @@ function processarInteligencia() {
 let timerBusca;
 function dispararFiltrosDebounce() {
     clearTimeout(timerBusca);
-    timerBusca = setTimeout(dispararFiltrosSemAtraso, 300); // Aguarda 300ms parar de digitar
+    timerBusca = setTimeout(dispararFiltrosSemAtraso, 300); 
 }
 
-window.dispararFiltros = function() { dispararFiltrosSemAtraso(); } // Para os selects de curva/status
+window.dispararFiltros = function() { dispararFiltrosSemAtraso(); } 
 
 function dispararFiltrosSemAtraso() {
     const termo = normalizarString(document.getElementById('busca')?.value);
     const statusFiltro = document.getElementById('select-saldo-status').value;
     const curvaFiltro = document.getElementById('select-curva').value;
 
-    // [OTIMIZAÇÃO 3.1] Busca O(N) com pré-indexação 
     itensFiltrados = itensProcessados.filter(i => {
         const bateTermo = !termo || i.searchString.includes(termo);
         const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
@@ -424,13 +414,12 @@ window.limparFiltros = function() {
 }
 
 // ==========================================================================
-// 7. RENDERIZAÇÃO DOM EM LOTE (BATCH RENDER) - SUPER RÁPIDO
+// 7. RENDERIZAÇÃO DOM
 // ==========================================================================
 function renderizarPesquisa() {
     const container = document.getElementById('resultados');
     document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
     
-    // [OTIMIZAÇÃO 4] Monta array na memória e joga no DOM uma vez só
     let htmlLote = [];
     
     itensFiltrados.slice(0, 100).forEach(i => { 
@@ -438,14 +427,14 @@ function renderizarPesquisa() {
         let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
 
         htmlLote.push(`
-            <div class="item-card">
+            <div class="item-card fade-in">
                 <div class="item-media">
                     <div class="abc-badge curva-${i.curva}">${i.curva}</div>
                     <div class="item-image-container">
                         <img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="img-placeholder" style="display:none;">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:5px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                            FOTO NÃO<br>ENCONTRADA
+                            SEM<br>FOTO
                         </div>
                     </div>
                 </div>
@@ -459,7 +448,7 @@ function renderizarPesquisa() {
                             <span class="chip-category">${i.grupo || 'Geral'}</span>
                             <span class="chip-category">${i.classe || 'N/A'}</span>
                             <span class="chip-category">UN: ${i.um || 'UN'}</span>
-                            ${i.minimo > 0 || i.maximo > 0 ? `<span class="chip-category" style="color:var(--text-info); border-color:var(--text-info);">Min: ${i.minimo} / Max: ${i.maximo}</span>` : ''}
+                            ${i.minimo > 0 || i.maximo > 0 ? `<span class="chip-category" style="color:var(--text-info); border-color:var(--border-color);">Min: ${i.minimo} / Max: ${i.maximo}</span>` : ''}
                         </div>
                         <div class="item-metrics-grid">
                             <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${i.saldo}</span></div>
@@ -552,18 +541,18 @@ function renderizarTabelaDashboard() {
     itensTabela.slice(0, 50).forEach(i => { 
         let giroText = i.diasGiro === Infinity ? 'Obsoleto' : `${i.diasGiro}d`;
         htmlLote.push(`
-            <tr>
-                <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px; position:static;">${i.curva}</div></td>
-                <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary);">${i.desc}</span></td>
+            <tr class="fade-in">
+                <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px; position:static; box-shadow:none;">${i.curva}</div></td>
+                <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
                 <td style="font-size:11px; font-weight:600; color:var(--text-info);">Rep ${i.reparticao} | Prat ${i.prateleira} | Div ${i.divisao}</td>
-                <td style="font-size:14px; font-weight:bold; color:var(--text-primary);">${i.saldo}</td>
-                <td style="color:var(--text-primary);">${i.consumo}</td>
-                <td style="font-weight:600; color:var(--text-primary);">${giroText}</td>
+                <td style="font-size:14px; font-weight:800; color:var(--text-primary);">${i.saldo}</td>
+                <td style="color:var(--text-primary); font-weight:600;">${i.consumo}</td>
+                <td style="font-weight:700; color:var(--text-primary);">${giroText}</td>
                 <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
             </tr>
         `);
     });
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="7" style="text-align:center;">Nenhum dado encontrado para os filtros ativos.</td></tr>`;
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="7" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Nenhum dado encontrado para os filtros ativos.</td></tr>`;
 }
 
 function atualizarGraficos() {
@@ -576,9 +565,10 @@ function atualizarGraficos() {
     const styles = getComputedStyle(document.body);
     const fontColor = styles.getPropertyValue('--text-primary').trim();
     const gridColor = styles.getPropertyValue('--border-color').trim();
-    const isDark = ['dark', 'ocean', 'dracula', 'hacker'].includes(document.documentElement.getAttribute('data-theme'));
     
-    const corA = '#16a34a'; const corB = '#0284c7'; const corC = '#64748b'; 
+    const corA = '#10b981'; // Success Green 
+    const corB = '#0ea5e9'; // Info Blue
+    const corC = '#64748b'; // Secondary Slate
 
     const contagemStatus = { Normal: 0, Risco: 0, Excesso: 0, RupturaCritica: 0, Obsoleto: 0 };
     const volumeABC = { A: 0, B: 0, C: 0 };
@@ -593,6 +583,7 @@ function atualizarGraficos() {
     });
 
     Chart.defaults.color = fontColor;
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
     chartABCInstance = new Chart(ctxABC, {
         type: 'doughnut',
@@ -601,7 +592,7 @@ function atualizarGraficos() {
             datasets: [{ 
                 data: [volumeABC.A, volumeABC.B, volumeABC.C], 
                 backgroundColor: [corA, corB, corC],
-                borderWidth: isDark ? 0 : 2, borderColor: isDark ? 'transparent' : '#ffffff', hoverOffset: 8
+                borderWidth: 0, hoverOffset: 6
             }]
         },
         options: { 
@@ -614,8 +605,8 @@ function atualizarGraficos() {
                 }
             },
             onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
-            plugins: { title: { display: true, text: `Volume Físico Consumo (${mesConsumoAtual})`, font: { size: 13, weight: 'bold' } }, legend: { position: 'bottom', labels: { boxWidth: 12 } } },
-            cutout: '65%'
+            plugins: { title: { display: true, text: `Volume Físico Consumo (${mesConsumoAtual})`, font: { size: 14, weight: '800' } }, legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } } },
+            cutout: '75%'
         }
     });
 
@@ -628,7 +619,7 @@ function atualizarGraficos() {
             datasets: [{ 
                 label: 'Itens', 
                 data: [contagemStatus.Normal, contagemStatus.Risco, contagemStatus.Excesso, contagemStatus.RupturaCritica, contagemStatus.Obsoleto], 
-                backgroundColor: [corA, '#d97706', '#0369a1', '#dc2626', corC], borderRadius: 4
+                backgroundColor: [corA, '#f59e0b', '#0284c7', '#ef4444', corC], borderRadius: 6, borderSkipped: false
             }]
         },
         options: { 
@@ -641,7 +632,7 @@ function atualizarGraficos() {
                 }
             },
             onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
-            plugins: { legend: { display: false }, title: { display: true, text: 'Distribuição de Status (Quantidade de Itens)', font: { size: 13, weight: 'bold' } } },
+            plugins: { legend: { display: false }, title: { display: true, text: 'Distribuição de Status (Quantidade de Itens)', font: { size: 14, weight: '800' } } },
             scales: { y: { beginAtZero: true, grid: { color: gridColor }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } }
         }
     });

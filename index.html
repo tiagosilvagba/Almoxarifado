@@ -12,6 +12,13 @@
         const temaSalvo = localStorage.getItem('temaAlmoxarifado') || 'light';
         if (temaSalvo !== 'light') document.documentElement.setAttribute('data-theme', temaSalvo);
     </script>
+
+    <style>
+        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+    </style>
 </head>
 <body class="desktop-mode">
 
@@ -38,31 +45,31 @@
         </nav>
 
         <div class="sidebar-actions-container">
-            <span class="nav-section-title" style="margin-top: 5px;">Personalização</span>
+            <span class="nav-section-title" style="margin-top: 5px;">Temas e Cores</span>
             <div class="theme-grid">
-                <button class="theme-btn" data-theme-val="light" onclick="alterarTema('light')">☀️ Corporativo</button>
-                <button class="theme-btn" data-theme-val="nature" onclick="alterarTema('nature')">🍃 Natureza</button>
-                <button class="theme-btn" data-theme-val="sunset" onclick="alterarTema('sunset')">🌅 Pôr do Sol</button>
-                <button class="theme-btn" data-theme-val="coffee" onclick="alterarTema('coffee')">☕ Café</button>
-                <button class="theme-btn" data-theme-val="dark" onclick="alterarTema('dark')">🌙 Noturno</button>
-                <button class="theme-btn" data-theme-val="ocean" onclick="alterarTema('ocean')">🌊 Oceano</button>
-                <button class="theme-btn" data-theme-val="dracula" onclick="alterarTema('dracula')">🧛 Drácula</button>
+                <button class="theme-btn" data-theme-val="light" onclick="alterarTema('light')">☀️ Default</button>
+                <button class="theme-btn" data-theme-val="nature" onclick="alterarTema('nature')">🍃 Nature</button>
+                <button class="theme-btn" data-theme-val="sunset" onclick="alterarTema('sunset')">🌅 Sunset</button>
+                <button class="theme-btn" data-theme-val="coffee" onclick="alterarTema('coffee')">🟣 Purple</button>
+                <button class="theme-btn" data-theme-val="dark" onclick="alterarTema('dark')">🌙 Dark</button>
+                <button class="theme-btn" data-theme-val="ocean" onclick="alterarTema('ocean')">🌊 Ocean</button>
+                <button class="theme-btn" data-theme-val="dracula" onclick="alterarTema('dracula')">🧛 Dracula</button>
                 <button class="theme-btn" data-theme-val="hacker" onclick="alterarTema('hacker')">💻 Hacker</button>
             </div>
 
             <span class="nav-section-title">Status do Data Lake Local</span>
             <div class="status-importacao">
-                <div id="status-base" class="status-item">⏳ Buscando Base_Itens.csv...</div>
-                <div id="status-compras" class="status-item">⏳ Buscando Compras.csv...</div>
-                <div id="status-consumos" class="status-item">⏳ Buscando Consumos.csv...</div>
+                <div id="status-base" class="status-item">⏳ Base_Itens.csv...</div>
+                <div id="status-compras" class="status-item">⏳ Compras.csv...</div>
+                <div id="status-consumos" class="status-item">⏳ Consumos.csv...</div>
             </div>
 
-            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="border-color: var(--primary-color); box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.1);">
+            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="border-color: var(--primary-color); background: rgba(14, 165, 233, 0.05);">
                 <span style="text-align: center; color: var(--primary-color); font-size: 13px;">🔄 Sincronizar Diretório</span>
             </button>
             
             <label class="btn-sidebar-action" style="text-align: center; cursor:pointer;">
-                <span style="color: var(--text-secondary);">📁 Ou fazer Upload Manual</span>
+                <span style="color: var(--text-secondary);">📁 Fazer Upload Manual</span>
                 <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
             </label>
 
@@ -112,16 +119,15 @@
                     <span id="contador-itens">Iniciando leitura automática do diretório...</span>
                 </div>
             </div>
-            <div class="scrollable-results-section">
-                <div id="resultados"></div>
-            </div>
+            <div class="scrollable-results-section" id="resultados">
+                </div>
         </div>
     </main>
 
     <main class="main-content" id="view-dashboard" style="display: flex;">
         <div class="container">
             <div class="fixed-top-section">
-                <header><h1>Dashboard Executivo de Almoxarifado</h1></header>
+                <header><h1>Dashboard Executivo</h1></header>
             </div>
             <div class="scrollable-results-section">
                 
@@ -136,7 +142,7 @@
                         <span class="kpi-value color-success" id="dash-kpi-giro-anual">0.0x</span>
                         <span class="kpi-sub">Vezes que o estoque se renova/ano</span>
                     </div>
-                    <div class="kpi-card border-primary">
+                    <div class="kpi-card">
                         <span class="kpi-title">Cobertura Média</span>
                         <span class="kpi-value" style="color: var(--primary-color);" id="dash-kpi-giro-medio">0 dias</span>
                         <span class="kpi-sub">Tempo para zerar o estoque atual</span>
@@ -149,22 +155,22 @@
                 </div>
 
                 <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-                    <div class="kpi-card" style="border-left: 4px solid var(--text-critical);">
+                    <div class="kpi-card border-critical">
                         <span class="kpi-title">Ruptura Crítica</span>
                         <span class="kpi-value color-critical" id="dash-kpi-ruptura-critica">0</span>
                         <span class="kpi-sub">Saldo 0 e Sem Pedido</span>
                     </div>
-                    <div class="kpi-card" style="border-left: 4px solid var(--text-warning);">
+                    <div class="kpi-card border-warning">
                         <span class="kpi-title">Risco de Ruptura</span>
                         <span class="kpi-value color-warning" id="dash-kpi-risco-minimo">0</span>
                         <span class="kpi-sub">Saldo Abaixo do Mínimo</span>
                     </div>
-                    <div class="kpi-card" style="border-left: 4px solid var(--primary-hover);">
+                    <div class="kpi-card" style="border-left-color: var(--primary-hover);">
                         <span class="kpi-title">Excesso de Estoque</span>
                         <span class="kpi-value" style="color: var(--primary-hover);" id="dash-kpi-excesso">0</span>
                         <span class="kpi-sub">Saldo Acima do Máximo</span>
                     </div>
-                    <div class="kpi-card" style="border-left: 4px solid var(--text-info);">
+                    <div class="kpi-card" style="border-left-color: var(--text-info);">
                         <span class="kpi-title">Pedidos em Trânsito</span>
                         <span class="kpi-value color-info" id="dash-kpi-ruptura-transito">0</span>
                         <span class="kpi-sub">Aguardando Fornecedor</span>
@@ -197,17 +203,17 @@
                 <div class="charts-grid">
                     <div class="chart-container" style="position: relative;">
                         <canvas id="chartABC"></canvas>
-                        <div style="text-align:center; font-size: 10px; color: var(--text-secondary); margin-top: 5px;">💡 Clique nas fatias para filtrar</div>
+                        <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Clique nas fatias para filtrar</div>
                     </div>
                     <div class="chart-container" style="position: relative;">
                         <canvas id="chartStatus"></canvas>
-                        <div style="text-align:center; font-size: 10px; color: var(--text-secondary); margin-top: 5px;">💡 Clique nas barras para filtrar</div>
+                        <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Clique nas barras para filtrar</div>
                     </div>
                 </div>
 
                 <div class="dash-section-box">
-                    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="font-size: 14px; color: var(--text-primary); text-transform: uppercase;">Top Itens em Destaque</h3>
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Tabela de Detalhamento</h3>
                         <div class="filtro-aviso-container" id="container-filtros-grafico">
                             <span id="filtro-abc-aviso" class="filtro-aviso" style="display:none;" onclick="limparFiltroGrafico('abc')"></span>
                             <span id="filtro-status-aviso" class="filtro-aviso filtro-aviso-status" style="display:none;" onclick="limparFiltroGrafico('status')"></span>
@@ -228,7 +234,7 @@
                                 </tr>
                             </thead>
                             <tbody id="dash-table-body">
-                                <tr><td colspan="7" style="text-align:center; padding: 30px;">Aguardando leitura automática...</td></tr>
+                                <tr><td colspan="7" style="text-align:center; padding: 40px; color: var(--text-secondary); font-weight: 500;">Aguardando leitura automática...</td></tr>
                             </tbody>
                         </table>
                     </div>
