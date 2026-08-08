@@ -177,7 +177,7 @@
         .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
 
         /* ==========================================================================
-           4. PAINEL DE FILTROS (ESQUERDA)
+           4. PAINEL DE FILTROS E BUSCA
            ========================================================================== */
         .filter-panel-left {
             width: 280px; background: var(--bg-card); border-right: 1px solid var(--border-color);
@@ -197,9 +197,6 @@
         .btn-reset-filters { margin-top: 10px; padding: 12px; background: transparent; color: var(--text-danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .btn-reset-filters:hover { background: rgba(239, 68, 68, 0.1); }
 
-        /* ==========================================================================
-           5. ÁREA PRINCIPAL
-           ========================================================================== */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .container { flex-grow: 1; display: flex; flex-direction: column; padding: 30px 40px; overflow: hidden; max-width: 1600px; margin: 0 auto; width: 100%;}
         .fixed-top-section { margin-bottom: 24px; flex-shrink: 0; }
@@ -337,7 +334,7 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. MODAL DE DETALHES DO ITEM
+           8. MODAL DE DETALHES E GALERIA (CARROSSEL)
            ========================================================================== */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000;
@@ -350,13 +347,25 @@
         }
         .modal-close {
             position: absolute; top: 20px; right: 24px; font-size: 24px; color: var(--text-secondary);
-            cursor: pointer; font-weight: bold; transition: color 0.2s;
+            cursor: pointer; font-weight: bold; transition: color 0.2s; z-index: 2;
         }
         .modal-close:hover { color: var(--text-danger); }
+        
         .modal-header-section { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 24px;}
         .modal-locais-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;}
         .modal-locais-table th { background: var(--bg-subcard); padding: 10px; color: var(--text-secondary); text-align: left; text-transform: uppercase; font-size: 11px;}
         .modal-locais-table td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500;}
+
+        /* CSS Galeria Horizontal com Scroll Suave */
+        .modal-gallery-container {
+            display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; width: 100%; max-width: 600px;
+            scroll-snap-type: x mandatory;
+        }
+        .modal-gallery-container::-webkit-scrollbar { height: 6px; }
+        .modal-gallery-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .modal-gallery-container > img, .modal-gallery-container > .img-placeholder {
+            scroll-snap-align: start; flex-shrink: 0;
+        }
 
         /* ==========================================================================
            9. TOASTS E INSTRUÇÕES
@@ -443,7 +452,7 @@
                 <button class="theme-btn" data-theme-val="macintosh" onclick="alterarTema('macintosh')">🖥️ Mac</button>
             </div>
 
-            <span class="nav-section-title" style="margin-top: 10px;">Ações Rápidas</span>
+            <span class="nav-section-title" style="margin-top: 10px;">Imagens e Atualização</span>
             
             <label class="btn-sidebar-action" style="cursor:pointer; border-color: var(--primary-color); background: rgba(14, 165, 233, 0.05);">
                 <span style="color: var(--primary-color);">🖼️ Mapear Pasta de Imagens</span>
@@ -466,6 +475,12 @@
             <button class="btn-toggle-filter" onclick="toggleSegmentacao()">◀</button>
         </div>
         <div class="filter-panel-body">
+            <div class="filter-group">
+                <label class="filter-label">Filial:</label>
+                <select id="select-filial" class="segmentation-select" onchange="dispararFiltros()">
+                    <option value="">Todas as Filiais</option>
+                </select>
+            </div>
             <div class="filter-group">
                 <label class="filter-label">Filtro de Imagem:</label>
                 <select id="select-imagem" class="segmentation-select" onchange="dispararFiltros()">
@@ -557,17 +572,17 @@
                     <h3>3. Giro de Estoque Financeiro vs Físico</h3>
                     <ul>
                         <li><b>No Dashboard (Macro):</b> O Giro de Período e a Cobertura Financeira (Dias) são calculados pelo <b>peso financeiro</b> (Soma em R$ do Consumo / Soma em R$ do Saldo). Isso impede que a quantidade de peças baratas distorça sua análise de capital.</li>
-                        <li><b>No Catálogo (Micro):</b> Os cartões individuais de cada SKU e a janela auxiliar (Modal) exibem o consumo e os dias de giro baseados na <b>quantidade física real (und)</b> movimentada.</li>
+                        <li><b>No Catálogo e Modal (Micro):</b> Os cartões individuais de cada SKU e a janela auxiliar (Modal) exibem o consumo financeiro daquele item. Você também pode visualizar o <b>Giro Mensal</b> (Custo Consumo Mês / Saldo Financeiro) e o <b>Giro Anual Estimado</b> (Consumo x 12 / Saldo Financeiro). A cobertura (em dias) reflete quanto tempo esse saldo físico deve durar baseado no giro recente.</li>
                     </ul>
 
                     <h3>4. Regra de Reserva Estratégica: Local Crítico 299</h3>
                     <p>Se o sistema detectar que o material possui saldo vinculado ao código de local <code>299</code> (ou nome de estoque correspondente a 299), esse item receberá uma "blindagem" do sistema. Mesmo que ele não possua nenhum consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299)</b>.</p>
 
                     <h3>5. Consolidação de Múltiplos Locais e Filiais</h3>
-                    <p>Itens duplicados (cadastrados em prateleiras distintas) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição de prateleira) em formato de tabela (Acordeão).</p>
+                    <p>Itens duplicados (cadastrados em prateleiras ou locais distintos) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição de prateleira) em formato de tabela (Acordeão).</p>
 
-                    <h3>6. Tratamento de Imagens</h3>
-                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. Selecione sua pasta de fotos do computador. O sistema associará imediatamente os arquivos que terminarem no padrão <code>[código do item] - 01.jpg</code>. Isso ativará o filtro "Imagem Encontrada / Não Encontrada" na aba de pesquisa.</p>
+                    <h3>6. Tratamento de Múltiplas Imagens</h3>
+                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. Selecione sua pasta de fotos do computador. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item, desde que sigam o padrão: <code>[código do item] - 01.jpg</code>, <code>[código do item] - 02.jpg</code>, etc. A "foto 01" sempre será a capa principal no catálogo.</p>
                 </div>
             </div>
         </div>
@@ -633,14 +648,14 @@
                         <span class="kpi-sub">Códigos na prateleira</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">Volume Financeiro Total</span>
+                        <span class="kpi-title">Estoque Total (Valor)</span>
                         <span class="kpi-value" id="dash-kpi-volume-fisico">R$ 0,00</span>
-                        <span class="kpi-sub">Valor do saldo consolidado</span>
+                        <span class="kpi-sub">Valor do saldo consolidado filtrado</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title" id="kpi-consumo-title">Valor do Consumo (Mês)</span>
+                        <span class="kpi-title" id="kpi-consumo-title">Custo do Consumo (Mês)</span>
                         <span class="kpi-value" id="dash-kpi-consumo-financeiro">R$ 0,00</span>
-                        <span class="kpi-sub">Valor das saídas no período</span>
+                        <span class="kpi-sub">Valor das saídas no período filtrado</span>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title">Catálogo Analisado</span>
@@ -677,7 +692,7 @@
                                     <th>Código / Descrição</th>
                                     <th>Endereço Físico Principal</th>
                                     <th>Saldo Atual</th>
-                                    <th id="th-consumo">Consumo Mês (Qtd)</th>
+                                    <th id="th-consumo">Custo Consumo Mês</th>
                                     <th>Cobertura</th>
                                     <th>Status</th>
                                 </tr>
@@ -957,7 +972,7 @@
 
                 if (alvoId) {
                     bases[alvoId] = parseCSVFast(text);
-                    setProgress(20 + (idx*20), `✓ ${file.name} Importado.`, 'success');
+                    setProgress(20 + (idx*20), `✓ ${file.name} Importado com Sucesso.`, 'success');
                     
                     const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
                     if (elStatus) {
@@ -998,11 +1013,11 @@
             itensProcessados.forEach(item => { item.temImagem = imagensMapeadas.has(item.codNorm); });
             dispararFiltrosSemAtraso();
         }
-        mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
+        mostrarToast(`Sucesso: ${count} imagens mapeadas e prontas para galeria!`, "success");
     }
 
     // ==========================================================================
-    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
+    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA E LOCAL 299
     // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
@@ -1030,7 +1045,7 @@
         const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
         const colUM = ['cd unidade medida', 'un', 'um'];
         
-        // LOCAIS E VALORES
+        // LOCAIS E VALORES (PARA CUSTO MÉDIO REAL E REGRA 299)
         const colLocalId = ['cd local', 'cod local', 'local'];
         const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
         const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
@@ -1103,6 +1118,7 @@
         const b_valorTotal = encontrarChave(bases.baseItens[0], colValorTotal);
 
         const mapConsolidado = new Map();
+        const setFiliaisUnicas = new Set(); // Para popular o filtro da lateral
 
         bases.baseItens.forEach(item => {
             let codBruto = String(item[b_cod] || '').replace(/\./g, '');
@@ -1122,6 +1138,8 @@
                 filialNm = 'Rolândia - ALM. Preparados';
                 filialIdBase = '704_ROL'; 
             }
+            
+            if (filialNm && filialNm !== '-') setFiliaisUnicas.add(filialNm);
 
             const saldoLinha = converterParaNumero(item[b_saldo]);
             const minimoLinha = converterParaNumero(item[b_min]);
@@ -1134,7 +1152,7 @@
             let valorTotalLinha = b_valorTotal ? converterParaNumero(item[b_valorTotal]) : 0;
             let custoUnitarioLinha = converterParaNumero(item[b_custo]);
 
-            // CUSTO UNITÁRIO DINÂMICO
+            // CUSTO UNITÁRIO DINÂMICO REAL
             if (valorTotalLinha > 0 && saldoLinha > 0) {
                 custoUnitarioLinha = valorTotalLinha / saldoLinha;
             } else if (custoUnitarioLinha > 0 && saldoLinha > 0) {
@@ -1151,9 +1169,7 @@
                     filialNm: filialNm, filialIdBase: filialIdBase,
                     grupo: item[b_grupo] || '',
                     classe: item[b_classe] || '',
-                    saldo: 0, 
-                    minimo: minimoLinha, 
-                    maximo: maximoLinha,
+                    saldo: 0, minimo: 0, maximo: 0, // maximo e minimo serão os maiores declarados nas linhas
                     valorTotalGlobal: 0,
                     custoUnitario: 0,
                     locais: []
@@ -1163,6 +1179,10 @@
             const obj = mapConsolidado.get(chave);
             obj.saldo += saldoLinha;
             obj.valorTotalGlobal += valorTotalLinha;
+            
+            // Trava Maximo e Minimo real (O maior valor encontrado entre os multiplos locais do item)
+            if (minimoLinha > obj.minimo) obj.minimo = minimoLinha;
+            if (maximoLinha > obj.maximo) obj.maximo = maximoLinha;
             
             obj.locais.push({ 
                 filialNm: filialNm,
@@ -1176,6 +1196,15 @@
                 is299: is299
             });
         });
+
+        // POPULANDO O FILTRO LATERAL DE FILIAIS
+        const selectFilial = document.getElementById('select-filial');
+        if (selectFilial) {
+            selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
+            Array.from(setFiliaisUnicas).sort().forEach(f => {
+                selectFilial.innerHTML += `<option value="${f}">${f}</option>`;
+            });
+        }
 
         setProgress(98, "Calculando Curvas Financeiras e Status Logístico...");
         await new Promise(r => setTimeout(r, 50)); 
@@ -1253,7 +1282,7 @@
         const elTitleConsumo = document.getElementById('kpi-consumo-title');
         const elThConsumo = document.getElementById('th-consumo');
         if (elTitleConsumo) elTitleConsumo.innerText = `Custo do Consumo (${mesConsumoAtual})`;
-        if (elThConsumo) elThConsumo.innerText = `Consumo (${mesConsumoAtual}) Qtd`;
+        if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`; // Alterado título da tabela
 
         setTimeout(() => {
             dispararFiltrosSemAtraso();
@@ -1268,7 +1297,7 @@
     }
 
     // ==========================================================================
-    // BUSCA INTELIGENTE E RENDERIZAÇÃO DOM
+    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
     // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
@@ -1285,6 +1314,7 @@
         const statusFiltro = document.getElementById('select-saldo-status').value;
         const curvaFiltro = document.getElementById('select-curva').value;
         const imagemFiltro = document.getElementById('select-imagem').value;
+        const filialFiltro = document.getElementById('select-filial')?.value || "";
 
         if (imagemFiltro !== "" && !mapeamentoDeImagemAtivo) {
             mostrarToast("Para filtrar por imagens, mapeie a pasta no menu lateral.", "warning");
@@ -1296,13 +1326,14 @@
             const bateTermo = termosSplit.length === 0 || termosSplit.some(t => i.searchString.includes(t));
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
+            const bateFilial = !filialFiltro || i.filialNm === filialFiltro;
             
             let bateImagem = true;
             if (mapeamentoDeImagemAtivo) {
                 if (imagemFiltro === 'com_imagem') bateImagem = i.temImagem === true;
                 if (imagemFiltro === 'sem_imagem') bateImagem = i.temImagem === false;
             }
-            return bateTermo && bateCurva && bateStatus && bateImagem;
+            return bateTermo && bateCurva && bateStatus && bateImagem && bateFilial;
         });
 
         if (vistaAtual === 'pesquisa') renderizarPesquisa();
@@ -1320,6 +1351,7 @@
         document.getElementById('select-curva').value = "";
         document.getElementById('select-saldo-status').value = "";
         document.getElementById('select-imagem').value = "";
+        if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
         document.getElementById('busca').value = "";
         filtroGraficoABC = null; filtroGraficoStatus = null;
         document.getElementById('filtro-abc-aviso').style.display = 'none';
@@ -1327,22 +1359,34 @@
         dispararFiltrosSemAtraso();
     }
 
+    // ==========================================================================
+    // MODAL INTERATIVO (COM GALERIA DE FOTOS E METRICAS FINANCEIRAS EXATAS)
+    // ==========================================================================
     window.abrirModalDetalhes = function(codNorm, filialId) {
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
         if(!i) return;
 
+        let consumoFinanceiro = i.consumo * i.custoUnitario;
+        let saldoFinanceiro = i.valorImobilizado;
+        
+        let giroMensal = saldoFinanceiro > 0 ? (consumoFinanceiro / saldoFinanceiro).toFixed(2) + 'x' : 'Sem Saldo';
+        let giroAnual = saldoFinanceiro > 0 ? ((consumoFinanceiro * 12) / saldoFinanceiro).toFixed(2) + 'x' : 'Sem Saldo';
+        
         let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
         let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
         
-        let imagemHTML = '';
-        if (mapeamentoDeImagemAtivo) {
-            imagemHTML = i.temImagem 
-                ? `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">` 
-                : `<div class="img-placeholder" style="border-radius:12px; font-size:14px;"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
-        } else {
-            imagemHTML = `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                          <div class="img-placeholder" style="display:none; border-radius:12px; font-size:14px;"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
+        let imagensHTML = '';
+        
+        // Renderiza galeria até 6 imagens (Com Fallback automático se falhar na 1ª imagem)
+        for(let n=1; n<=6; n++) {
+            let nStr = n < 10 ? '0'+n : n;
+            let isFirst = (n === 1);
+            let fallback = isFirst ? `this.style.display='none'; document.getElementById('modal-img-fallback').style.display='flex';` : `this.style.display='none';`;
+            imagensHTML += `<img src="imagens/${i.cod} - ${nStr}.jpg" style="height:180px; min-width:180px; object-fit:cover; border-radius:12px; flex-shrink:0; border:1px solid var(--border-color);" onerror="${fallback}">`;
         }
+        
+        // Placeholder de Imagem Quebrada (Só aparece se a primeira falhar)
+        imagensHTML += `<div id="modal-img-fallback" class="img-placeholder" style="display:${(mapeamentoDeImagemAtivo && !i.temImagem) ? 'flex' : 'none'}; min-width:180px; height:180px; border-radius:12px; font-size:14px; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-subcard); border:1px solid var(--border-color); color:var(--text-secondary);"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
 
         let linhasLocais = i.locais.map(loc => {
             let locName = loc.localId ? `${loc.localId} - ${loc.localNm}` : loc.localNm || '-';
@@ -1369,11 +1413,11 @@
         ` : '';
 
         const html = `
-            <div class="modal-header-section">
-                <div style="width:180px; height:180px; flex-shrink:0; background:var(--bg-subcard); border:1px solid var(--border-color); border-radius:12px;">
-                    ${imagemHTML}
+            <div class="modal-header-section" style="flex-wrap:wrap;">
+                <div class="modal-gallery-container">
+                    ${imagensHTML}
                 </div>
-                <div style="display:flex; flex-direction:column; justify-content:center;">
+                <div style="display:flex; flex-direction:column; justify-content:center; flex-grow:1;">
                     <div style="font-size:12px; color:var(--text-secondary); font-weight:700; margin-bottom:4px;">${i.grupo} &nbsp;|&nbsp; ${i.classe}</div>
                     <div style="font-size:24px; font-weight:900; color:var(--text-primary); line-height:1.2; margin-bottom:10px;">
                         <span style="color:var(--primary-color);">#${i.cod}</span><br>${i.desc}
@@ -1383,22 +1427,21 @@
             </div>
             
             <div class="item-metrics-grid" style="margin-bottom:20px;">
-                <div class="metric-box metric-saldo"><span class="metric-label">Saldo Consolidado</span><span class="metric-value" style="font-size:20px;">${i.saldo}</span></div>
-                <div class="metric-box ${i.transito > 0 ? 'metric-transito' : 'metric-default'}"><span class="metric-label">Em Trânsito</span><span class="metric-value" style="font-size:20px;">${i.transito}</span></div>
-                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Consumo Físico (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${i.consumo} und</span></div>
-                <div class="metric-box ${giroClass}"><span class="metric-label">Dias Cobertura</span><span class="metric-value" style="font-size:20px;">${giroText}</span></div>
+                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(saldoFinanceiro)}</span></div>
+                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(consumoFinanceiro)}</span></div>
+                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal</span><span class="metric-value" style="font-size:20px;">${giroMensal}</span></div>
+                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual (Estimado)</span><span class="metric-value" style="font-size:20px;">${giroAnual}</span></div>
             </div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unit. Médio</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo do Consumo</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.consumo * i.custoUnitario)}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Capital Travado</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.valorImobilizado)}</div></div>
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Mínimo Global</div><div style="font-size:16px; font-weight:800; color:var(--text-warning);">${i.minimo}</div></div>
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Máximo Global</div><div style="font-size:16px; font-weight:800; color:var(--primary-hover);">${i.maximo}</div></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Mínimo Global (Qtd Física)</div><div style="font-size:16px; font-weight:800; color:var(--text-warning);">${i.minimo}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Máximo Global (Qtd Física)</div><div style="font-size:16px; font-weight:800; color:var(--primary-hover);">${i.maximo}</div></div>
             </div>
 
             ${tabelaLocais}
@@ -1410,6 +1453,9 @@
     window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
     window.onclick = function(event) { if (event.target === document.getElementById('modal-item')) fecharModal(); }
 
+    // ==========================================================================
+    // RENDERIZAÇÃO DOM: CATÁLOGO, DASHBOARD E NECESSIDADE COMPRA
+    // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
         document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
@@ -1450,11 +1496,10 @@
                                 <span class="chip-category">UN: ${i.um || 'UN'}</span>
                             </div>
                             <div class="item-metrics-grid">
-                                <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${i.saldo}</span></div>
-                                <div class="metric-box ${i.transito > 0 ? 'metric-transito' : 'metric-default'}"><span class="metric-label">Em Trânsito</span><span class="metric-value">${i.transito}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Consumo (${mesConsumoAtual})</span><span class="metric-value">${i.consumo}</span></div>
+                                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo</span><span class="metric-value">${formatarMoeda(i.valorImobilizado)}</span></div>
+                                <div class="metric-box ${i.transito > 0 ? 'metric-transito' : 'metric-default'}"><span class="metric-label">Em Trânsito (Físico)</span><span class="metric-value">${i.transito}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value">${formatarMoeda(i.consumo * i.custoUnitario)}</span></div>
                                 <div class="metric-box ${giroClass}"><span class="metric-label">Dias de Cobertura</span><span class="metric-value">${giroText}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label">Custo Médio Unit.</span><span class="metric-value">${formatarMoeda(i.custoUnitario)}</span></div>
                             </div>
                         </div>
                         <div class="item-footer">
@@ -1504,8 +1549,10 @@
             valorTotal += i.valorImobilizado;
             totalSaldoFinanceiro += i.valorImobilizado;
             totalConsumoMensalFinanceiro += (i.consumo * i.custoUnitario);
+            
             totalSaldoFisico += i.saldo;
             totalConsumoFisico += i.consumo;
+            
             if (i.saldo > 0) skusAtivos++;
 
             if (i.status === 'Ruptura Crítica (Sem Pedido)') qtdRupturaCritica++;
@@ -1538,7 +1585,8 @@
         safeSetText('dash-kpi-valor-obsoleto', formatarMoeda(valorObsoleto));
         safeSetText('dash-kpi-obsoleto-qtd', `${qtdObsoleto} itens`);
         safeSetText('dash-kpi-skus-ativos', skusAtivos);
-        safeSetText('dash-kpi-volume-fisico', totalSaldoFisico.toLocaleString('pt-BR', { maximumFractionDigits: 2 }));
+        
+        safeSetText('dash-kpi-volume-fisico', formatarMoeda(totalSaldoFinanceiro));
         safeSetText('dash-kpi-consumo-financeiro', formatarMoeda(totalConsumoMensalFinanceiro));
         safeSetText('dash-kpi-total-itens-proc', itensProcessados.length);
 
@@ -1583,7 +1631,7 @@
                     <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
                     <td style="font-size:11px; font-weight:600; color:var(--text-info);">${locAbrev}</td>
                     <td style="font-size:14px; font-weight:800; color:var(--text-primary);">${i.saldo}</td>
-                    <td style="color:var(--text-primary); font-weight:600;">${i.consumo}</td>
+                    <td style="color:var(--text-primary); font-weight:600;">${formatarMoeda(i.consumo * i.custoUnitario)}</td>
                     <td style="font-weight:700; color:var(--text-primary);">${giroText}</td>
                     <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
                 </tr>
