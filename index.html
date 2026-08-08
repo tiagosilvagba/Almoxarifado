@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
     
+    <script>
+        const temaSalvo = localStorage.getItem('temaAlmoxarifado') || 'light';
+        if (temaSalvo !== 'light') document.documentElement.setAttribute('data-theme', temaSalvo);
+    </script>
+
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .status-item { font-size: 13px; font-weight: 600; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-secondary); }
-        .status-ok { color: var(--text-success); border-color: #bbf7d0; background: #f0fdf4; }
-        .status-erro { color: var(--text-danger); border-color: #fecaca; background: #fef2f2; }
+        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 6px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .status-ok { color: var(--text-success); border-color: rgba(0, 255, 163, 0.3); background: rgba(0, 255, 163, 0.05); }
+        .status-erro { color: var(--text-danger); border-color: rgba(255, 0, 85, 0.3); background: rgba(255, 0, 85, 0.05); }
     </style>
 </head>
 <body class="desktop-mode">
@@ -24,52 +29,60 @@
         <div class="sidebar-logo">
             <div class="logo-placeholder">JBS</div>
             <div class="logo-text">
-                <span class="brand-name">JBS | Seara</span>
-                <span class="brand-sub">Gestão de Almoxarifado</span>
+                <span class="brand-name">JBS | SEARA</span>
+                <span class="brand-sub">Gestão Inteligente</span>
             </div>
         </div>
 
         <nav class="sidebar-nav">
             <span class="nav-section-title">Navegação</span>
-            <a href="#" class="nav-item" id="nav-dashboard" onclick="navegarPara('dashboard')">
-                <span>📊</span><span>Dashboard Executivo</span>
+            <a href="#" class="nav-item active" id="nav-dashboard" onclick="navegarPara('dashboard')">
+                <span style="font-size: 16px;">📊</span><span>Dashboard Executivo</span>
             </a>
-            <a href="#" class="nav-item active" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
-                <span>🔍</span><span>Catálogo & Pesquisa</span>
+            <a href="#" class="nav-item" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
+                <span style="font-size: 16px;">🔍</span><span>Catálogo & Pesquisa</span>
             </a>
         </nav>
 
         <div class="sidebar-actions-container">
             <span class="nav-section-title" style="margin-top: 5px;">Personalização</span>
-            <select id="tema-sistema" class="segmentation-select" style="margin-bottom: 20px;" onchange="alterarTema()">
-                <option value="light">☀️ Tema Claro (Padrão)</option>
-                <option value="dark">🌙 Tema Escuro</option>
-            </select>
-
-            <span class="nav-section-title">Status da Importação Local</span>
-            <div class="status-importacao">
-                <div id="status-base" class="status-item">⏳ Buscando 03 - Base_Itens.csv...</div>
-                <div id="status-compras" class="status-item">⏳ Buscando 01 - Compras.csv...</div>
-                <div id="status-consumos" class="status-item">⏳ Buscando 02 - Consumos.csv...</div>
+            
+            <div class="theme-grid">
+                <button class="theme-btn" data-theme-val="light" onclick="alterarTema('light')">☀️ Corportivo</button>
+                <button class="theme-btn" data-theme-val="nature" onclick="alterarTema('nature')">🍃 Natureza</button>
+                <button class="theme-btn" data-theme-val="sunset" onclick="alterarTema('sunset')">🌅 Pôr do Sol</button>
+                <button class="theme-btn" data-theme-val="coffee" onclick="alterarTema('coffee')">☕ Café</button>
+                <button class="theme-btn" data-theme-val="dark" onclick="alterarTema('dark')">🌙 Noturno</button>
+                <button class="theme-btn" data-theme-val="ocean" onclick="alterarTema('ocean')">🌊 Oceano</button>
+                <button class="theme-btn" data-theme-val="dracula" onclick="alterarTema('dracula')">🧛 Drácula</button>
+                <button class="theme-btn" data-theme-val="hacker" onclick="alterarTema('hacker')">💻 Hacker</button>
             </div>
 
-            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="background: var(--text-info); color: white; border: none; text-align: center; margin-top: 5px;">
-                🔄 Forçar Auto Leitura
+            <span class="nav-section-title">Status do Data Lake Local</span>
+            <div class="status-importacao">
+                <div id="status-base" class="status-item">⏳ Buscando Base_Itens.csv...</div>
+                <div id="status-compras" class="status-item">⏳ Buscando Compras.csv...</div>
+                <div id="status-consumos" class="status-item">⏳ Buscando Consumos.csv...</div>
+            </div>
+
+            <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="border-color: var(--primary-color); box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.1);">
+                <span style="text-align: center; color: var(--primary-color); font-size: 13px;">🔄 Sincronizar Diretório</span>
             </button>
-            <label class="btn-sidebar-action" style="text-align: center; background: var(--bg-card); cursor:pointer;">
-                <span>📁 Ou clique aqui para upload manual</span>
+            
+            <label class="btn-sidebar-action" style="text-align: center; cursor:pointer;">
+                <span style="color: var(--text-secondary);">📁 Ou fazer Upload Manual</span>
                 <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
             </label>
 
-            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; display:block; border: none; background: transparent; color: var(--text-primary); margin-top: 5px;">
-                ▼ Exibir/Ocultar Filtros
+            <button class="btn-sidebar-action" onclick="toggleSegmentacao()" style="text-align:center; border: none; background: transparent; margin-top: 5px;">
+                <span style="color: var(--text-secondary);">▼ Filtros Avançados</span>
             </button>
         </div>
     </aside>
 
     <aside class="filter-panel-left" id="panel-segmentacao">
         <div class="panel-header">
-            <span class="panel-title">Filtros Avançados</span>
+            <span class="panel-title">Filtros</span>
             <button class="btn-toggle-filter" onclick="toggleSegmentacao()">◀</button>
         </div>
         <div class="filter-panel-body">
@@ -89,6 +102,8 @@
                     <option value="Estoque Normal">✅ Estoque Normal</option>
                     <option value="Ruptura Crítica (Sem Pedido)">🔴 Ruptura (Sem Pedido - Crítico)</option>
                     <option value="Ruptura (Em Trânsito)">⚠️ Ruptura (Pedido em Trânsito)</option>
+                    <option value="Abaixo Mínimo">📉 Risco de Ruptura (< Mínimo)</option>
+                    <option value="Excesso Estoque">📈 Excesso de Estoque (> Máximo)</option>
                     <option value="Obsoleto (Sem Consumo)">🛑 Obsoleto (Capital Travado)</option>
                 </select>
             </div>
@@ -96,12 +111,14 @@
         </div>
     </aside>
 
-    <main class="main-content" id="view-pesquisa" style="display: flex;">
+    <main class="main-content" id="view-pesquisa" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
                 <input type="text" id="busca" class="search-box" placeholder="Busque por código, descrição, grupo, classe ou endereço..." oninput="dispararFiltros()">
-                <div class="status"><span id="contador-itens">Iniciando leitura automática do diretório...</span></div>
+                <div class="status">
+                    <span id="contador-itens">Iniciando leitura automática do diretório...</span>
+                </div>
             </div>
             <div class="scrollable-results-section">
                 <div id="resultados"></div>
@@ -109,46 +126,75 @@
         </div>
     </main>
 
-    <main class="main-content" id="view-dashboard" style="display: none;">
+    <main class="main-content" id="view-dashboard" style="display: flex;">
         <div class="container">
             <div class="fixed-top-section">
-                <header><h1>Dashboard de Inteligência</h1></header>
+                <header><h1>Dashboard Executivo de Almoxarifado</h1></header>
             </div>
             <div class="scrollable-results-section">
-                <div class="kpi-grid">
+                
+                <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
                     <div class="kpi-card">
-                        <span class="kpi-title">💵 Valor Total Imobilizado</span>
-                        <span class="kpi-value color-info" id="dash-kpi-valor-total">R$ 0,00</span>
+                        <span class="kpi-title">Valor Imobilizado (Total)</span>
+                        <span class="kpi-value" style="color: var(--text-info);" id="dash-kpi-valor-total">R$ 0,00</span>
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">🔄 Cobertura Média (Giro)</span>
-                        <span class="kpi-value color-success" id="dash-kpi-giro-medio">0 dias</span>
-                        <span class="kpi-sub">Tempo para zerar estoque</span>
+                        <span class="kpi-title">Giro de Estoque Anual</span>
+                        <span class="kpi-value" style="color: var(--text-success);" id="dash-kpi-giro-anual">0.0x</span>
+                        <span class="kpi-sub">Vezes que o estoque se renova/ano</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">🔴 Ruptura Crítica</span>
+                        <span class="kpi-title">Cobertura Média</span>
+                        <span class="kpi-value" style="color: var(--primary-color);" id="dash-kpi-giro-medio">0 dias</span>
+                        <span class="kpi-sub">Tempo para zerar o estoque</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Capital Obsoleto</span>
+                        <span class="kpi-value" style="color: var(--text-secondary);" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
+                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro anual</span>
+                    </div>
+                </div>
+
+                <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                    <div class="kpi-card" style="border-left: 4px solid var(--text-critical);">
+                        <span class="kpi-title">Ruptura Crítica</span>
                         <span class="kpi-value color-critical" id="dash-kpi-ruptura-critica">0</span>
-                        <span class="kpi-sub">Ação imediata necessária</span>
+                        <span class="kpi-sub">Saldo 0 e Sem Pedido</span>
                     </div>
-                    <div class="kpi-card">
-                        <span class="kpi-title">⚠️ Ruptura em Trânsito</span>
-                        <span class="kpi-value color-warning" id="dash-kpi-ruptura-transito">0</span>
-                        <span class="kpi-sub">Aguardando entrega</span>
+                    <div class="kpi-card" style="border-left: 4px solid var(--text-warning);">
+                        <span class="kpi-title">Risco de Ruptura</span>
+                        <span class="kpi-value color-warning" id="dash-kpi-risco-minimo">0</span>
+                        <span class="kpi-sub">Saldo Abaixo do Mínimo</span>
                     </div>
-                    <div class="kpi-card">
-                        <span class="kpi-title">🛑 Capital Travado</span>
-                        <span class="kpi-value" style="color: var(--text-primary);" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
-                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens (obsoletos)</span>
+                    <div class="kpi-card" style="border-left: 4px solid var(--primary-hover);">
+                        <span class="kpi-title">Excesso de Estoque</span>
+                        <span class="kpi-value" style="color: var(--primary-hover);" id="dash-kpi-excesso">0</span>
+                        <span class="kpi-sub">Saldo Acima do Máximo</span>
+                    </div>
+                    <div class="kpi-card" style="border-left: 4px solid var(--text-info);">
+                        <span class="kpi-title">Pedidos em Trânsito</span>
+                        <span class="kpi-value color-info" id="dash-kpi-ruptura-transito">0</span>
+                        <span class="kpi-sub">Aguardando Fornecedor</span>
                     </div>
                 </div>
 
                 <div class="charts-grid">
-                    <div class="chart-container"><canvas id="chartABC"></canvas></div>
+                    <div class="chart-container" style="position: relative;">
+                        <canvas id="chartABC"></canvas>
+                        <div style="text-align:center; font-size: 10px; color: var(--text-secondary); margin-top: 5px;">
+                            💡 Clique nas fatias do gráfico para filtrar a tabela abaixo
+                        </div>
+                    </div>
                     <div class="chart-container"><canvas id="chartStatus"></canvas></div>
                 </div>
 
                 <div class="dash-section-box">
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="font-size: 14px; color: var(--text-primary); text-transform: uppercase;">Top 50 Itens Críticos</h3>
+                        <span id="filtro-ativo-aviso" class="filtro-aviso" style="display:none;" onclick="limparFiltroGrafico()">✖ Limpar Filtro ABC</span>
+                    </div>
+                    
                     <div class="dash-table-container">
                         <table class="dash-table">
                             <thead>
@@ -156,9 +202,9 @@
                                     <th>Curva</th>
                                     <th>Código / Descrição</th>
                                     <th>Endereço Físico</th>
-                                    <th>Saldo</th>
-                                    <th>Consumo</th>
-                                    <th>Dias Giro</th>
+                                    <th>Saldo Atual</th>
+                                    <th>Consumo Mês (Média)</th>
+                                    <th>Cobertura</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -177,14 +223,39 @@
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
     let itensFiltrados = [];
-    let vistaAtual = 'pesquisa';
+    
+    let vistaAtual = 'dashboard';
     let chartABCInstance = null;
     let chartStatusInstance = null;
+    
+    let mesesAnalisados = 1; 
+    let filtroGraficoABC = null; 
 
-    function alterarTema() {
-        const tema = document.getElementById('tema-sistema').value;
-        if (tema === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        else document.documentElement.removeAttribute('data-theme');
+    // MARCA O BOTÃO DO TEMA ATIVO NA MEMÓRIA AO CARREGAR A PÁGINA
+    document.addEventListener('DOMContentLoaded', () => {
+        const temaLocal = localStorage.getItem('temaAlmoxarifado') || 'light';
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            if(btn.getAttribute('data-theme-val') === temaLocal) {
+                btn.classList.add('active');
+            }
+        });
+    });
+
+    // FUNÇÃO PARA ALTERAR E SALVAR TEMA (A PARTIR DOS NOVOS BOTÕES)
+    function alterarTema(tema) {
+        if (tema === 'light') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', tema);
+        
+        localStorage.setItem('temaAlmoxarifado', tema); 
+
+        // Atualiza a classe 'active' nos botões de tema
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if(btn.getAttribute('data-theme-val') === tema) {
+                btn.classList.add('active');
+            }
+        });
+
         if (itensProcessados.length > 0) atualizarGraficos();
     }
 
@@ -208,21 +279,13 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     
-    function normalizarString(val) { 
-        return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); 
-    }
-    
-    function normalizarCod(val) { 
-        return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); 
-    }
-    
+    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+    function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
     function converterParaNumero(val) {
         if (val === null || val === undefined || val === '') return 0;
         if (typeof val === 'number') return val;
         let str = String(val).trim().replace(/[R$\s]/g, '');
-        if (str.includes(',')) {
-            str = str.replace(/\./g, '').replace(',', '.');
-        }
+        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
         let floatVal = parseFloat(str);
         return isNaN(floatVal) ? 0 : floatVal;
     }
@@ -244,24 +307,16 @@
 
     function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
-    // ==========================================================================
-    // PARSER CSV NATIVO
-    // ==========================================================================
     function parseCSV(text) {
         let lines = text.split(/\r?\n/);
         let headerIndex = 0;
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].replace(/[;\s"]/g, '').length > 0) { 
-                headerIndex = i;
-                break;
-            }
+            if (lines[i].replace(/[;\s"]/g, '').length > 0) { headerIndex = i; break; }
         }
         if (headerIndex >= lines.length) return [];
 
         function splitCSVLine(line) {
-            let result = [];
-            let curVal = '';
-            let inQuotes = false;
+            let result = []; let curVal = ''; let inQuotes = false;
             for (let i = 0; i < line.length; i++) {
                 let char = line[i];
                 if (char === '"') inQuotes = !inQuotes;
@@ -274,22 +329,16 @@
 
         let headers = splitCSVLine(lines[headerIndex]);
         let result = [];
-        
         for (let i = headerIndex + 1; i < lines.length; i++) {
             if (lines[i].replace(/[;\s"]/g, '').length === 0) continue; 
             let values = splitCSVLine(lines[i]);
             let obj = {};
-            for (let j = 0; j < headers.length; j++) {
-                obj[headers[j]] = values[j] !== undefined ? values[j] : '';
-            }
+            for (let j = 0; j < headers.length; j++) { obj[headers[j]] = values[j] !== undefined ? values[j] : ''; }
             result.push(obj);
         }
         return result;
     }
 
-    // ==========================================================================
-    // AUTO FETCH
-    // ==========================================================================
     async function carregarArquivosAutomaticamente() {
         const arquivos = [
             { id: 'baseItens', url: '03 - Base_Itens.csv', statusId: 'status-base' },
@@ -311,25 +360,19 @@
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const text = decoder.decode(arrayBuffer);
-                
                 bases[arq.id] = parseCSV(text);
                 
                 elStatus.innerText = `✅ ${arq.url} lido!`;
                 elStatus.classList.add('status-ok');
                 carregados++;
-
             } catch (error) {
-                console.warn(`Falha ao ler ${arq.url}`, error);
                 elStatus.innerText = `❌ Falha: ${arq.url}`;
                 elStatus.classList.add('status-erro');
             }
         }
 
         if (carregados === 3) {
-            mostrarToast("Arquivos identificados! Cruzando dados...", "success");
-            setTimeout(processarInteligencia, 500);
-        } else if (carregados > 0) {
-            mostrarToast("Arquivos parcialmente encontrados...", "warning");
+            mostrarToast("Arquivos identificados! Calculando Média de Giro...", "success");
             setTimeout(processarInteligencia, 500);
         }
     }
@@ -367,23 +410,24 @@
 
     window.onload = carregarArquivosAutomaticamente;
 
-    // ==========================================================================
-    // INTELIGÊNCIA - MAPEAMENTO DE DADOS E CÁLCULO DE DIAS DE GIRO
-    // ==========================================================================
     function processarInteligencia() {
-        if (bases.baseItens.length === 0) {
-            mostrarToast("Erro: Base_Itens.csv não carregado.", "error");
-            return;
-        }
+        if (bases.baseItens.length === 0) { mostrarToast("Erro: Base_Itens.csv não carregado.", "error"); return; }
 
         const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item'];
         const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc'];
-        const colQtd = ['qt saldo atual', 'quantidade', 'qt movimento', 'saldo'];
+        
+        const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
+        const colQtdConsumo = ['qt movimento', 'quantidade consumida', 'quantidade'];
+        const colQtdCompra = ['quantidade', 'qtde', 'saldo aberto'];
         const colCusto = ['vl custo unitario atual', 'valor estimado', 'custo'];
         const colMin = ['qt minimo', 'minimo', 'min'];
         const colMax = ['qt maximo', 'maximo', 'max'];
+        
+        const colFilialId = ['cd filial']; 
+        const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
+
         const colUM = ['cd unidade medida', 'un', 'um'];
-        const colFilial = ['nm filial', 'filial'];
+        const colFilialNm = ['nm filial', 'filial'];
         const colGrupo = ['nm grupo', 'grupo', 'categoria'];
         const colClasse = ['nm classe', 'classe'];
         const colReparticao = ['cd reparticao', 'reparticao'];
@@ -393,15 +437,28 @@
         const mapCompras = new Map();
         bases.compras.forEach(item => {
             const cod = normalizarCod(lerValorDinamico(item, colCod, 'string'));
-            const qtd = lerValorDinamico(item, colQtd, 'numero');
+            const qtd = lerValorDinamico(item, colQtdCompra, 'numero');
             if (cod) mapCompras.set(cod, (mapCompras.get(cod) || 0) + qtd);
         });
 
-        const mapConsumos = new Map();
+        let setMeses = new Set();
+        bases.consumos.forEach(item => {
+            const mesStr = normalizarString(lerValorDinamico(item, colMesMovimento, 'string'));
+            if(mesStr) setMeses.add(mesStr);
+        });
+        
+        mesesAnalisados = setMeses.size > 0 ? setMeses.size : 1; 
+
+        const mapConsumosTotais = new Map();
         bases.consumos.forEach(item => {
             const cod = normalizarCod(lerValorDinamico(item, colCod, 'string'));
-            const qtd = lerValorDinamico(item, colQtd, 'numero');
-            if (cod) mapConsumos.set(cod, (mapConsumos.get(cod) || 0) + qtd);
+            const filialId = normalizarCod(lerValorDinamico(item, colFilialId, 'string'));
+            const qtd = lerValorDinamico(item, colQtdConsumo, 'numero');
+            
+            if (cod) {
+                const chave = cod + '|' + filialId;
+                mapConsumosTotais.set(chave, (mapConsumosTotais.get(chave) || 0) + qtd);
+            }
         });
 
         itensProcessados = bases.baseItens.map(item => {
@@ -409,19 +466,19 @@
             const codNorm = normalizarCod(codBruto);
             if(!codNorm) return null; 
 
-            const saldo = lerValorDinamico(item, colQtd, 'numero');
+            const filialIdBase = normalizarCod(lerValorDinamico(item, colFilialId, 'string'));
+            
+            const saldo = lerValorDinamico(item, colQtdSaldo, 'numero');
             const minimo = lerValorDinamico(item, colMin, 'numero');
             const maximo = lerValorDinamico(item, colMax, 'numero');
 
-            // Ignorar mortos
             if (saldo === 0 && minimo === 0 && maximo === 0) return null;
 
-            let desc = lerValorDinamico(item, colDesc, 'string');
-            if(!desc) desc = "Item sem Descrição";
+            let desc = lerValorDinamico(item, colDesc, 'string'); if(!desc) desc = "Item sem Descrição";
 
             const custoUnitario = lerValorDinamico(item, colCusto, 'numero');
             const um = lerValorDinamico(item, colUM, 'string');
-            const filial = lerValorDinamico(item, colFilial, 'string');
+            const filialNm = lerValorDinamico(item, colFilialNm, 'string');
             const grupo = lerValorDinamico(item, colGrupo, 'string');
             const classe = lerValorDinamico(item, colClasse, 'string');
             const reparticao = lerValorDinamico(item, colReparticao, 'string') || '-';
@@ -429,29 +486,35 @@
             const divisao = lerValorDinamico(item, colDivisao, 'string') || '-';
             
             const transito = mapCompras.get(codNorm) || 0;
-            const consumo = Math.abs(mapConsumos.get(codNorm)) || 0;
+            const chaveAmarracao = codNorm + '|' + filialIdBase;
+            
+            const consumoTotalAbsoluto = Math.abs(mapConsumosTotais.get(chaveAmarracao)) || 0;
+            const consumoMedioMensal = Math.round(consumoTotalAbsoluto / mesesAnalisados);
 
             const valorImobilizado = saldo * custoUnitario;
 
             let diasGiro = 0;
-            if (consumo > 0) {
-                diasGiro = Math.round((saldo / consumo) * 30);
+            if (consumoMedioMensal > 0) {
+                diasGiro = Math.round((saldo / consumoMedioMensal) * 30);
             } else if (saldo > 0) {
                 diasGiro = Infinity;
             }
 
             let status = 'Estoque Normal';
             let statusBadge = 'badge-normal';
+            
             if (saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
             else if (saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
-            else if (saldo > 0 && consumo <= 0) { status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; }
+            else if (saldo > 0 && consumoMedioMensal <= 0) { status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; }
+            else if (saldo > 0 && minimo > 0 && saldo < minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
+            else if (saldo > maximo && maximo > 0) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
 
             return {
                 cod: codBruto, codNorm: codNorm, desc: desc,
                 saldo: saldo, minimo: minimo, maximo: maximo,
-                custo: custoUnitario, transito: transito, consumo: consumo,
+                custo: custoUnitario, transito: transito, consumo: consumoMedioMensal,
                 diasGiro: diasGiro,
-                um: um, filial: filial, grupo: grupo, classe: classe, 
+                um: um, filial: filialNm, grupo: grupo, classe: classe, 
                 reparticao: reparticao, prateleira: prateleira, divisao: divisao,
                 valorImobilizado: valorImobilizado,
                 status: status, statusBadge: statusBadge, curva: 'C'
@@ -460,7 +523,6 @@
 
         if(itensProcessados.length === 0) return;
 
-        // CURVA ABC
         itensProcessados.sort((a, b) => b.consumo - a.consumo);
         const consumoTotalGlobal = itensProcessados.reduce((acc, curr) => acc + curr.consumo, 0);
         let consumoAcumulado = 0;
@@ -477,12 +539,10 @@
             }
         });
 
+        mostrarToast(`Cálculos realizados com base na média de ${mesesAnalisados} meses.`, "success");
         dispararFiltros();
     }
 
-    // ==========================================================================
-    // RENDERIZAÇÃO
-    // ==========================================================================
     function dispararFiltros() {
         const termo = normalizarString(document.getElementById('busca')?.value);
         const statusFiltro = document.getElementById('select-saldo-status').value;
@@ -491,9 +551,11 @@
         itensFiltrados = itensProcessados.filter(i => {
             const endereco = `rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`;
             const txt = (i.codNorm + " " + normalizarString(i.desc) + " " + normalizarString(i.grupo) + " " + normalizarString(i.classe) + " " + normalizarString(endereco));
+            
             const bateTermo = !termo || txt.includes(termo);
             const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
             const bateStatus = !statusFiltro || i.status === statusFiltro;
+            
             return bateTermo && bateCurva && bateStatus;
         });
 
@@ -505,7 +567,15 @@
         document.getElementById('select-curva').value = "";
         document.getElementById('select-saldo-status').value = "";
         document.getElementById('busca').value = "";
+        filtroGraficoABC = null;
+        document.getElementById('filtro-ativo-aviso').style.display = 'none';
         dispararFiltros();
+    }
+    
+    function limparFiltroGrafico() {
+        filtroGraficoABC = null;
+        document.getElementById('filtro-ativo-aviso').style.display = 'none';
+        renderizarTabelaDashboard(); 
     }
 
     function renderizarPesquisa() {
@@ -515,52 +585,54 @@
 
         let html = '';
         itensFiltrados.slice(0, 100).forEach(i => { 
-            
-            const imagemCapa = `imagens/${i.cod} - 01.jpg`;
-            // Aplicado o novo Fallback perfeitamente integrado ao design
-            const imagemFallback = `this.onerror=null; this.parentNode.innerHTML='<div class="img-placeholder"><span>📷</span>Cadastrar<br>Imagem</div>';`;
-
             let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
-            let giroClass = i.diasGiro === Infinity ? 'highlight-giro' : '';
+            let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
 
             html += `
                 <div class="item-card">
                     <div class="item-media">
-                        <div class="item-image-container">
-                            <img src="${imagemCapa}" onerror="${imagemFallback}" alt="Foto ${i.cod}">
-                        </div>
                         <div class="abc-badge curva-${i.curva}" title="Curva ABC (Consumo Físico)">${i.curva}</div>
+                        <div class="item-image-container">
+                            <img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="img-placeholder" style="display:none;">
+                                FOTO NÃO<br>ENCONTRADA
+                            </div>
+                        </div>
                     </div>
 
                     <div class="item-info">
                         <div>
                             <div class="item-header">
-                                <div class="item-title">${i.cod} — ${i.desc}</div>
+                                <div class="item-title"><span class="item-title-cod">#${i.cod}</span> ${i.desc}</div>
                                 <span class="badge-status ${i.statusBadge}">${i.status}</span>
                             </div>
+                            
                             <div class="item-category">
-                                ${i.grupo || 'Sem Grupo'} | ${i.classe || 'Sem Classe'} | <strong>Unid: ${i.um || 'UN'}</strong>
+                                <span class="chip-category">${i.grupo || 'Geral'}</span>
+                                <span class="chip-category">${i.classe || 'N/A'}</span>
+                                <span class="chip-category">UN: ${i.um || 'UN'}</span>
+                                ${i.minimo > 0 || i.maximo > 0 ? `<span class="chip-category" style="color:var(--text-info); border-color:var(--text-info);">Min: ${i.minimo} / Max: ${i.maximo}</span>` : ''}
                             </div>
                             
                             <div class="item-metrics-grid">
-                                <div class="metric-box highlight-saldo">
+                                <div class="metric-box metric-saldo">
                                     <span class="metric-label">Saldo Atual</span>
                                     <span class="metric-value">${i.saldo}</span>
                                 </div>
-                                <div class="metric-box ${i.transito > 0 ? 'highlight-transito' : ''}">
+                                <div class="metric-box ${i.transito > 0 ? 'metric-transito' : 'metric-default'}">
                                     <span class="metric-label">Em Trânsito</span>
                                     <span class="metric-value">${i.transito}</span>
                                 </div>
-                                <div class="metric-box">
-                                    <span class="metric-label">Consumo Mês</span>
+                                <div class="metric-box metric-default">
+                                    <span class="metric-label" style="color: var(--primary-color);">Consumo Mês (Média)</span>
                                     <span class="metric-value">${i.consumo}</span>
                                 </div>
                                 <div class="metric-box ${giroClass}">
-                                    <span class="metric-label">Dias de Giro</span>
+                                    <span class="metric-label">Dias de Cobertura</span>
                                     <span class="metric-value">${giroText}</span>
                                 </div>
-                                <div class="metric-box">
-                                    <span class="metric-label">Capital Travado</span>
+                                <div class="metric-box metric-default">
+                                    <span class="metric-label">Capital Imobilizado</span>
                                     <span class="metric-value">${i.valorImobilizado > 0 ? formatarMoeda(i.valorImobilizado) : 'R$ 0,00'}</span>
                                 </div>
                             </div>
@@ -568,9 +640,10 @@
 
                         <div class="item-footer">
                             <div class="item-address">
-                                📍 Repartição ${i.reparticao} &nbsp;|&nbsp; Prateleira ${i.prateleira} &nbsp;|&nbsp; Divisão ${i.divisao}
+                                <span class="item-address-icon">📍</span>
+                                <span>Repartição <strong>${i.reparticao}</strong> &nbsp;•&nbsp; Prateleira <strong>${i.prateleira}</strong> &nbsp;•&nbsp; Divisão <strong>${i.divisao}</strong></span>
                             </div>
-                            ${i.filial ? `<div style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">🏢 ${i.filial}</div>` : ''}
+                            ${i.filial ? `<div class="item-filial">🏢 ${i.filial}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -582,56 +655,82 @@
     function renderizarDashboard() {
         let valorTotal = 0, valorObsoleto = 0, qtdObsoleto = 0;
         let qtdRupturaCritica = 0, qtdRupturaTransito = 0;
-        let totalSaldo = 0, totalConsumo = 0;
+        let qtdRiscoMinimo = 0, qtdExcesso = 0;
+        let totalSaldoFinanceiro = 0, totalConsumoMensalFinanceiro = 0;
+        let totalSaldoFisico = 0, totalConsumoFisico = 0;
 
         itensFiltrados.forEach(i => {
             valorTotal += i.valorImobilizado;
-            totalSaldo += i.saldo;
-            totalConsumo += i.consumo;
+            totalSaldoFinanceiro += i.valorImobilizado;
+            totalConsumoMensalFinanceiro += (i.consumo * i.custo);
+            
+            totalSaldoFisico += i.saldo;
+            totalConsumoFisico += i.consumo;
 
             if (i.status === 'Ruptura Crítica (Sem Pedido)') qtdRupturaCritica++;
             if (i.status === 'Ruptura (Em Trânsito)') qtdRupturaTransito++;
             if (i.status === 'Obsoleto (Sem Consumo)') { valorObsoleto += i.valorImobilizado; qtdObsoleto++; }
+            if (i.status === 'Abaixo Mínimo') qtdRiscoMinimo++;
+            if (i.status === 'Excesso Estoque') qtdExcesso++;
         });
 
-        let giroMedioGeral = 0;
-        if (totalConsumo > 0) giroMedioGeral = Math.round((totalSaldo / totalConsumo) * 30);
+        let giroAnual = 0;
+        if (totalSaldoFinanceiro > 0) giroAnual = ((totalConsumoMensalFinanceiro * 12) / totalSaldoFinanceiro).toFixed(1);
+        
+        let coberturaMediaFisica = 0;
+        if (totalConsumoFisico > 0) coberturaMediaFisica = Math.round((totalSaldoFisico / totalConsumoFisico) * 30);
 
         document.getElementById('dash-kpi-valor-total').innerText = formatarMoeda(valorTotal);
         document.getElementById('dash-kpi-total-itens').innerText = `Em ${itensFiltrados.length} itens`;
         
-        document.getElementById('dash-kpi-giro-medio').innerText = totalConsumo > 0 ? `${giroMedioGeral} dias` : 'Sem Giro';
+        document.getElementById('dash-kpi-giro-anual').innerText = `${giroAnual}x`;
+        document.getElementById('dash-kpi-giro-medio').innerText = totalConsumoFisico > 0 ? `${coberturaMediaFisica} dias` : 'Sem Giro';
 
         document.getElementById('dash-kpi-ruptura-critica').innerText = qtdRupturaCritica;
+        document.getElementById('dash-kpi-risco-minimo').innerText = qtdRiscoMinimo;
+        document.getElementById('dash-kpi-excesso').innerText = qtdExcesso;
         document.getElementById('dash-kpi-ruptura-transito').innerText = qtdRupturaTransito;
         document.getElementById('dash-kpi-valor-obsoleto').innerText = formatarMoeda(valorObsoleto);
         document.getElementById('dash-kpi-obsoleto-qtd').innerText = `${qtdObsoleto} itens`;
 
+        atualizarGraficos(); 
+        renderizarTabelaDashboard(); 
+    }
+
+    function renderizarTabelaDashboard() {
         const tbody = document.getElementById('dash-table-body');
         let htmlTbody = '';
-        itensFiltrados.slice(0, 50).forEach(i => { 
+        
+        let itensTabela = itensFiltrados;
+        if (filtroGraficoABC) {
+            itensTabela = itensFiltrados.filter(i => i.curva === filtroGraficoABC);
+            document.getElementById('filtro-ativo-aviso').style.display = 'inline-block';
+            document.getElementById('filtro-ativo-aviso').innerText = `✖ Filtro Ativo: Exibindo Curva ${filtroGraficoABC}`;
+        } else {
+            document.getElementById('filtro-ativo-aviso').style.display = 'none';
+        }
+
+        itensTabela.slice(0, 50).forEach(i => { 
             let giroText = i.diasGiro === Infinity ? 'Obsoleto' : `${i.diasGiro}d`;
 
             htmlTbody += `
                 <tr>
-                    <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px;">${i.curva}</div></td>
+                    <td><div class="abc-badge curva-${i.curva}" style="width:28px; height:28px; font-size:13px; position:static;">${i.curva}</div></td>
                     <td>
-                        <strong>${i.cod}</strong><br>
+                        <strong style="color:var(--primary-color);">#${i.cod}</strong><br>
                         <span style="font-size:11px;color:var(--text-secondary);">${i.desc}</span>
                     </td>
                     <td style="font-size:11px; font-weight:600; color:var(--text-info);">
                         Rep ${i.reparticao} | Prat ${i.prateleira} | Div ${i.divisao}
                     </td>
-                    <td style="font-size:14px; font-weight:bold;">${i.saldo}</td>
-                    <td>${i.consumo}</td>
-                    <td style="font-weight:600;">${giroText}</td>
+                    <td style="font-size:14px; font-weight:bold; color:var(--text-primary);">${i.saldo}</td>
+                    <td style="color:var(--text-primary);">${i.consumo}</td>
+                    <td style="font-weight:600; color:var(--text-primary);">${giroText}</td>
                     <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
                 </tr>
             `;
         });
-        tbody.innerHTML = htmlTbody || `<tr><td colspan="7" style="text-align:center;">Nenhum dado com os filtros atuais.</td></tr>`;
-
-        atualizarGraficos();
+        tbody.innerHTML = htmlTbody || `<tr><td colspan="7" style="text-align:center;">Nenhum dado encontrado para este filtro.</td></tr>`;
     }
 
     function atualizarGraficos() {
@@ -641,19 +740,26 @@
         const ctxABC = document.getElementById('chartABC').getContext('2d');
         const ctxStatus = document.getElementById('chartStatus').getContext('2d');
         
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const fontColor = isDark ? '#f8fafc' : '#0f172a';
+        const styles = getComputedStyle(document.body);
+        const fontColor = styles.getPropertyValue('--text-primary').trim();
+        const gridColor = styles.getPropertyValue('--border-color').trim();
+        const isDark = ['dark', 'ocean', 'dracula', 'hacker'].includes(document.documentElement.getAttribute('data-theme'));
+        
+        const corA = '#16a34a'; 
+        const corB = '#0284c7'; 
+        const corC = '#64748b'; 
 
-        const contagemStatus = { Normal: 0, RupturaCritica: 0, RupturaTransito: 0, Obsoleto: 0 };
+        const contagemStatus = { Normal: 0, Risco: 0, Excesso: 0, RupturaCritica: 0, Obsoleto: 0 };
         const volumeABC = { A: 0, B: 0, C: 0 };
 
         itensFiltrados.forEach(i => {
             if(volumeABC[i.curva] !== undefined) volumeABC[i.curva] += i.consumo; 
             
             if(i.status === 'Estoque Normal') contagemStatus.Normal++;
-            else if(i.status === 'Ruptura Crítica (Sem Pedido)') contagemStatus.RupturaCritica++;
-            else if(i.status === 'Ruptura (Em Trânsito)') contagemStatus.RupturaTransito++;
-            else if(i.status === 'Obsoleto (Sem Consumo)') contagemStatus.Obsoleto++;
+            else if(i.status === 'Abaixo Mínimo') contagemStatus.Risco++;
+            else if(i.status === 'Excesso Estoque') contagemStatus.Excesso++;
+            else if(i.status.includes('Ruptura')) contagemStatus.RupturaCritica++;
+            else if(i.status.includes('Obsoleto')) contagemStatus.Obsoleto++;
         });
 
         Chart.defaults.color = fontColor;
@@ -664,27 +770,52 @@
                 labels: ['Curva A', 'Curva B', 'Curva C'],
                 datasets: [{ 
                     data: [volumeABC.A, volumeABC.B, volumeABC.C], 
-                    backgroundColor: ['#16a34a', '#0284c7', '#64748b'],
-                    borderWidth: 2, borderColor: isDark ? '#1e293b' : '#ffffff'
+                    backgroundColor: [corA, corB, corC],
+                    borderWidth: isDark ? 0 : 2, 
+                    borderColor: isDark ? 'transparent' : '#ffffff',
+                    hoverOffset: 8
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Volume de Consumo por Curva (Físico)', font: { size: 14 } } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                onClick: (event, activeElements) => {
+                    if(activeElements.length > 0) {
+                        const clickedIndex = activeElements[0].index;
+                        const curvaEscolhida = ['A', 'B', 'C'][clickedIndex];
+                        if (filtroGraficoABC === curvaEscolhida) filtroGraficoABC = null; 
+                        else filtroGraficoABC = curvaEscolhida;
+                        renderizarTabelaDashboard(); 
+                    }
+                },
+                onHover: (event, chartElement) => {
+                    event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                },
+                plugins: { 
+                    title: { display: true, text: `Volume Físico de Consumo / Mês`, font: { size: 13, weight: 'bold' } },
+                    legend: { position: 'bottom', labels: { boxWidth: 12 } }
+                },
+                cutout: '65%'
+            }
         });
 
         chartStatusInstance = new Chart(ctxStatus, {
             type: 'bar',
             data: {
-                labels: ['Saudável', 'Rupt. Crítica', 'Rupt. Trânsito', 'Obsoletos'],
+                labels: ['Normal', 'Risco (Min)', 'Excesso', 'Rupturas', 'Obsoletos'],
                 datasets: [{ 
-                    label: 'Quantidade de Materiais', 
-                    data: [contagemStatus.Normal, contagemStatus.RupturaCritica, contagemStatus.RupturaTransito, contagemStatus.Obsoleto], 
-                    backgroundColor: ['#16a34a', '#991b1b', '#d97706', '#64748b'] 
+                    label: 'Itens', 
+                    data: [contagemStatus.Normal, contagemStatus.Risco, contagemStatus.Excesso, contagemStatus.RupturaCritica, contagemStatus.Obsoleto], 
+                    backgroundColor: [corA, '#d97706', '#0369a1', '#dc2626', corC],
+                    borderRadius: 4
                 }]
             },
             options: { 
                 responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false }, title: { display: true, text: 'Risco Logístico (Quantidade de Itens)', font: { size: 14 } } },
-                scales: { y: { beginAtZero: true, grid: { color: isDark ? '#334155' : '#e2e8f0' } }, x: { grid: { display: false } } }
+                plugins: { legend: { display: false }, title: { display: true, text: 'Distribuição de Status (Quantidade de Itens)', font: { size: 13, weight: 'bold' } } },
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: gridColor }, border: { display: false } }, 
+                    x: { grid: { display: false }, border: { display: false } } 
+                }
             }
         });
     }
