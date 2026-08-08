@@ -151,8 +151,6 @@
             transition: all 0.2s; color: var(--text-primary); background: transparent;
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
-        .btn-sidebar-action span.btn-title { font-size: 13px; font-weight: 700; }
-        .btn-sidebar-action span.btn-sub { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 
         .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
         .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); }
@@ -278,7 +276,7 @@
         .item-filial { font-size: 12px; color: var(--text-secondary); font-weight: 700; background: var(--bg-subcard); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);}
 
         /* ==========================================================================
-           7. DASHBOARD E KPIs
+           7. DASHBOARD E KPIs 
            ========================================================================== */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px; }
         .kpi-card { 
@@ -319,7 +317,7 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. TOASTS E ALERTAS
+           8. TOASTS
            ========================================================================== */
         .toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
         .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
@@ -507,9 +505,9 @@
                         <span class="kpi-sub">Peças estocadas</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title">Consumo Físico (Mês)</span>
+                        <span class="kpi-title" id="kpi-consumo-title">Consumo Físico (Mês)</span>
                         <span class="kpi-value" id="dash-kpi-consumo-fisico">0</span>
-                        <span class="kpi-sub">Peças expedidas mensalmente</span>
+                        <span class="kpi-sub">Peças expedidas no período</span>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title">Catálogo Analisado</span>
@@ -546,7 +544,7 @@
                                     <th>Código / Descrição</th>
                                     <th>Endereço Físico</th>
                                     <th>Saldo Atual</th>
-                                    <th>Consumo Mês</th>
+                                    <th id="th-consumo">Consumo Mês</th>
                                     <th>Cobertura</th>
                                     <th>Status</th>
                                 </tr>
@@ -563,6 +561,9 @@
 </div>
 
 <script>
+    // ==========================================================================
+    // TODA A LÓGICA E CÁLCULOS DO SISTEMA
+    // ==========================================================================
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
     let itensFiltrados = [];
@@ -893,13 +894,12 @@
                 valorImobilizado: valorImobilizado,
                 status: status, statusBadge: statusBadge, curva: 'C',
                 searchString: searchString,
-                temImagem: null // Inicializa propriedade
+                temImagem: null
             };
         }).filter(i => i !== null);
 
         if(baseSujaProcessada.length === 0) { fecharLoader(); return; }
 
-        // [NOVO] ROBÔ AUDITOR DE IMAGENS - Varre silenciosamente
         if(typeof addLog === 'function') addLog("Auditando Banco de Imagens Locais...");
         const batchSize = 50;
         for (let i = 0; i < baseSujaProcessada.length; i += batchSize) {
@@ -931,6 +931,12 @@
         itensProcessados = baseSujaProcessada;
         addLog("Concluído. Renderizando Painel...");
         
+        // Atualizando textos de Meses Dinâmicos no Layout
+        const elTitleConsumo = document.getElementById('kpi-consumo-title');
+        const elThConsumo = document.getElementById('th-consumo');
+        if (elTitleConsumo) elTitleConsumo.innerText = `Consumo Físico (${mesConsumoAtual})`;
+        if (elThConsumo) elThConsumo.innerText = `Consumo (${mesConsumoAtual})`;
+
         setTimeout(() => {
             dispararFiltrosSemAtraso();
             if(encontrouConsumoNoMesAlvo) mostrarToast(`Inteligência Processada. Consumo travado em ${mesConsumoAtual}.`, "success");
@@ -950,7 +956,7 @@
         const termo = normalizarString(document.getElementById('busca')?.value);
         const statusFiltro = document.getElementById('select-saldo-status').value;
         const curvaFiltro = document.getElementById('select-curva').value;
-        const imagemFiltro = document.getElementById('select-imagem').value; // Filtro de Imagem
+        const imagemFiltro = document.getElementById('select-imagem').value;
 
         itensFiltrados = itensProcessados.filter(i => {
             const bateTermo = !termo || i.searchString.includes(termo);
@@ -995,7 +1001,6 @@
             let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
             let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
 
-            // DOM de Imagem Condicional e Ultrarrápido (Evita console errors)
             let imagemHTML = i.temImagem 
                 ? `<img src="imagens/${i.cod} - 01.jpg" alt="Foto ${i.cod}">` 
                 : `<div class="img-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:5px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>FOTO NÃO<br>ENCONTRADA</div>`;
