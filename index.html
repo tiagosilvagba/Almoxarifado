@@ -92,7 +92,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA (COM BARRA PERCENTUAL) */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -172,11 +171,6 @@
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
 
-        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
-        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
-        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
-
         /* ==========================================================================
            4. PAINEL DE FILTROS (ESQUERDA)
            ========================================================================== */
@@ -223,7 +217,7 @@
         .scrollable-results-section { flex-grow: 1; overflow-y: auto; padding-right: 15px; padding-top: 5px; padding-bottom: 30px;}
 
         /* ==========================================================================
-           6. CARTÕES DO CATÁLOGO (GLASSMORPHISM / CLEAN UI)
+           6. CARTÕES DO CATÁLOGO (PREVIEW OTIMIZADO)
            ========================================================================== */
         .item-card {
             background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
@@ -257,12 +251,12 @@
         .curva-B { background: var(--primary-color); }
         .curva-C { background: var(--text-secondary); }
 
-        .item-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; pointer-events: none;}
+        .item-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; pointer-events: none;}
         .item-header { display: flex; justify-content: space-between; align-items: flex-start;}
         .item-title { font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1.3; letter-spacing: -0.5px;}
         .item-title-cod { color: var(--primary-color); margin-right: 8px; }
 
-        .item-category { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        .item-category { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
         .chip-category {
             background: var(--bg-subcard); border: 1px solid var(--border-color);
             padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; color: var(--text-secondary);
@@ -286,14 +280,6 @@
 
         .metric-label { font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;}
         .metric-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px;}
-
-        .item-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-top: 14px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
-        }
-        .item-address { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; }
-        .item-address-icon { background: var(--bg-subcard); padding: 4px 8px; border-radius: 8px; font-size: 14px; border: 1px solid var(--border-color);}
-        .item-filial { font-size: 12px; color: var(--text-secondary); font-weight: 700; background: var(--bg-subcard); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);}
 
         /* ==========================================================================
            7. DASHBOARD E KPIs 
@@ -338,7 +324,7 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. MODAL DE DETALHES DO ITEM E GALERIA
+           8. MODAL DE DETALHES DO ITEM, GALERIA E LIGHTBOX
            ========================================================================== */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000;
@@ -369,6 +355,21 @@
         .modal-locais-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;}
         .modal-locais-table th { background: var(--bg-subcard); padding: 10px; color: var(--text-secondary); text-align: left; text-transform: uppercase; font-size: 11px;}
         .modal-locais-table td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500;}
+
+        /* CSS LIGHTBOX (Zoom de Imagem) */
+        .lightbox-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999999;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+            backdrop-filter: blur(8px);
+        }
+        .lightbox-img {
+            max-width: 90vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        .lightbox-close {
+            position: absolute; top: 20px; right: 40px; color: white; font-size: 40px; font-weight: 300; cursor: pointer; transition: color 0.2s;
+        }
+        .lightbox-close:hover { color: var(--text-danger); }
 
         /* ==========================================================================
            9. TOASTS E INSTRUÇÕES
@@ -412,6 +413,11 @@
         <span class="modal-close" onclick="fecharModal()">×</span>
         <div id="modal-body-content"></div>
     </div>
+</div>
+
+<div class="lightbox-overlay" id="lightbox-overlay" onclick="fecharLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img class="lightbox-img" id="lightbox-img" src="" onclick="event.stopPropagation()">
 </div>
 
 <div class="app-layout segmentation-hidden" id="app-layout" style="opacity: 0;">
@@ -575,7 +581,7 @@
                     <h3>3. Giro de Estoque Financeiro (Em Dias)</h3>
                     <ul>
                         <li><b>No Dashboard (Macro):</b> O Giro Mensal e Anual agora são expressos em <b>Dias de Cobertura</b>. A fórmula aplicada é <code>(Saldo Total em R$ / Consumo em R$) * 30</code> para o período mensal, e <code>(Saldo Total em R$ / Consumo Anualizado em R$) * 365</code> para o período anual.</li>
-                        <li><b>No Catálogo e Modal (Micro):</b> A mesma regra de conversão para dias é aplicada individualmente para cada SKU.</li>
+                        <li><b>No Catálogo e Modal (Micro):</b> A mesma regra de conversão para dias é aplicada individualmente para cada SKU na visualização detalhada.</li>
                     </ul>
 
                     <h3>4. Regra de Reserva Estratégica: Local Crítico 299</h3>
@@ -584,8 +590,8 @@
                     <h3>5. Consolidação de Múltiplos Locais e Filiais 704</h3>
                     <p>Itens duplicados (cadastrados em prateleiras ou locais distintos) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição) em formato de tabela. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b> inteligente: locais de estoque abaixo de 599 (exceto o 101 e 299) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>.</p>
 
-                    <h3>6. Tratamento de Múltiplas Imagens</h3>
-                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. Selecione sua pasta de fotos do computador. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item, desde que sigam o padrão: <code>[código do item] - 01.jpg</code>, <code>[código do item] - 02.jpg</code>, etc. A "foto 01" sempre será a capa principal no catálogo.</p>
+                    <h3>6. Tratamento de Múltiplas Imagens e Lightbox</h3>
+                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. Selecione sua pasta de fotos do computador. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item, desde que sigam o padrão: <code>[código do item] - 01.jpg</code>, <code>[código do item] - 02.jpg</code>, etc. A "foto 01" sempre será a capa principal no catálogo. Você pode clicar nas fotos dentro do Modal para expandi-las (Lightbox).</p>
                 </div>
             </div>
         </div>
@@ -739,7 +745,7 @@
     if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
     // ==========================================================================
-    // TELA DE CARREGAMENTO E MENSAGENS
+    // TELA DE CARREGAMENTO E LIGHTBOX
     // ==========================================================================
     function setProgress(percent, msg, type='info') {
         loaderProgress = percent;
@@ -786,6 +792,21 @@
         setTimeout(() => { toast.remove(); }, 5000);
     }
 
+    window.abrirLightbox = function(src, event) {
+        if(event) event.stopPropagation();
+        const img = document.getElementById('lightbox-img');
+        const overlay = document.getElementById('lightbox-overlay');
+        if(img && overlay) {
+            img.src = src;
+            overlay.style.display = 'flex';
+        }
+    }
+
+    window.fecharLightbox = function() {
+        const overlay = document.getElementById('lightbox-overlay');
+        if(overlay) overlay.style.display = 'none';
+    }
+
     // ==========================================================================
     // INICIALIZAÇÃO
     // ==========================================================================
@@ -829,9 +850,6 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     
-    // ==========================================================================
-    // FUNÇÕES ÚTEIS E PARSER
-    // ==========================================================================
     function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
     function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
     function converterParaNumero(val) {
@@ -1008,7 +1026,6 @@
 
         for(let i = 0; i < files.length; i++) {
             let fileName = files[i].name.toLowerCase();
-            // Aceitar do 01 ao 06 para o mapeador geral
             if(fileName.includes(' - 01.') || fileName.includes(' - 02.') || fileName.includes(' - 03.') || fileName.includes(' - 04.') || fileName.includes(' - 05.') || fileName.includes(' - 06.')) {
                 let codBruto = fileName.split(' - ')[0];
                 let codNorm = normalizarCod(codBruto);
@@ -1054,7 +1071,6 @@
         const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
         const colUM = ['cd unidade medida', 'un', 'um'];
         
-        // LOCAIS E VALORES (PARA CUSTO MÉDIO REAL E REGRA 299)
         const colLocalId = ['cd local', 'cod local', 'local'];
         const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
         const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
@@ -1127,7 +1143,7 @@
         const b_valorTotal = encontrarChave(bases.baseItens[0], colValorTotal);
 
         const mapConsolidado = new Map();
-        const setFiliaisUnicas = new Set(); // Para popular o filtro da lateral
+        const setFiliaisUnicas = new Set(); 
 
         bases.baseItens.forEach(item => {
             let codBruto = String(item[b_cod] || '').replace(/\./g, '');
@@ -1142,7 +1158,6 @@
             const prateleira = item[b_prat] || '-';
             const divisao = item[b_div] || '-';
 
-            // REGRA: Rolândia (Ab. Aves vs Alp. Preparados)
             if (filialIdBase === '704') {
                 let locNum = parseInt(localId, 10);
                 if (localId === '101' || localId === '299' || locNum >= 599) {
@@ -1152,7 +1167,7 @@
                     filialNm = 'Rolândia - Ab. Aves';
                     filialIdBase = '704_AB';
                 } else {
-                    filialNm = 'Rolândia - Alp. Preparados'; // Default para não ficar orfão
+                    filialNm = 'Rolândia - Alp. Preparados'; 
                     filialIdBase = '704_ALP';
                 }
             }
@@ -1163,14 +1178,12 @@
             const minimoLinha = converterParaNumero(item[b_min]);
             const maximoLinha = converterParaNumero(item[b_max]);
             
-            // REGRA DO LOCAL 299 CRÍTICO
             let is299 = false;
             if (localId === '299' || localNm === '299' || localNm.includes('299')) is299 = true;
 
             let valorTotalLinha = b_valorTotal ? converterParaNumero(item[b_valorTotal]) : 0;
             let custoUnitarioLinha = converterParaNumero(item[b_custo]);
 
-            // CUSTO UNITÁRIO DINÂMICO REAL
             if (valorTotalLinha > 0 && saldoLinha > 0) {
                 custoUnitarioLinha = valorTotalLinha / saldoLinha;
             } else if (custoUnitarioLinha > 0 && saldoLinha > 0) {
@@ -1187,7 +1200,7 @@
                     filialNm: filialNm, filialIdBase: filialIdBase,
                     grupo: item[b_grupo] || '',
                     classe: item[b_classe] || '',
-                    saldo: 0, minimo: 0, maximo: 0, // maximo e minimo serão os maiores declarados nas linhas
+                    saldo: 0, minimo: 0, maximo: 0, 
                     valorTotalGlobal: 0,
                     custoUnitario: 0,
                     locais: []
@@ -1198,7 +1211,6 @@
             obj.saldo += saldoLinha;
             obj.valorTotalGlobal += valorTotalLinha;
             
-            // Trava Maximo e Minimo real (O maior valor encontrado entre os multiplos locais do item)
             if (minimoLinha > obj.minimo) obj.minimo = minimoLinha;
             if (maximoLinha > obj.maximo) obj.maximo = maximoLinha;
             
@@ -1215,7 +1227,6 @@
             });
         });
 
-        // POPULANDO O FILTRO LATERAL DE FILIAIS
         const selectFilial = document.getElementById('select-filial');
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
@@ -1230,7 +1241,6 @@
         let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
             if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0) return null; 
 
-            // CUSTO UNITÁRIO MACRO (Total / Saldo Total)
             if (item.saldo > 0 && item.valorTotalGlobal > 0) {
                 item.custoUnitario = item.valorTotalGlobal / item.saldo;
             } else if (item.locais.length > 0) {
@@ -1238,19 +1248,22 @@
             }
 
             const transito = mapCompras.get(item.codNorm) || 0;
-            const consumoMesAnterior = Math.abs(mapConsumosTotais.get(item.codNorm)) || 0;
+            const consumoMesAnteriorFisico = Math.abs(mapConsumosTotais.get(item.codNorm)) || 0;
             const valorImobilizado = item.valorTotalGlobal > 0 ? item.valorTotalGlobal : (item.saldo * item.custoUnitario);
+            
+            const consumoFinanceiro = consumoMesAnteriorFisico * item.custoUnitario;
 
+            // NOVO CALCULO DE GIRO EM DIAS BASEADO EM VALOR (Saldo R$ / Consumo R$)
             let diasGiro = 0;
-            if (consumoMesAnterior > 0) diasGiro = Math.round((item.saldo / consumoMesAnterior) * 30);
-            else if (item.saldo > 0) diasGiro = Infinity;
+            if (consumoFinanceiro > 0) diasGiro = Math.round((valorImobilizado / consumoFinanceiro) * 30);
+            else if (valorImobilizado > 0) diasGiro = Infinity;
 
             let isLocal299Macro = item.locais.some(l => l.is299 && l.saldo > 0);
 
             let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
             if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
             else if (item.saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
-            else if (item.saldo > 0 && consumoMesAnterior <= 0) { 
+            else if (item.saldo > 0 && consumoMesAnteriorFisico <= 0) { 
                 if (isLocal299Macro) {
                     status = 'Normal/Local Crítico'; statusBadge = 'badge-normal-critico';
                 } else {
@@ -1268,7 +1281,7 @@
 
             return {
                 ...item,
-                transito, consumo: consumoMesAnterior, diasGiro, valorImobilizado,
+                transito, consumo: consumoMesAnteriorFisico, consumoFinanceiro: consumoFinanceiro, diasGiro, valorImobilizado,
                 status, statusBadge, curva: 'C', searchString,
                 temImagem: mapeamentoDeImagemAtivo ? imagensMapeadas.has(item.codNorm) : null
             };
@@ -1279,14 +1292,13 @@
         baseSujaProcessada.sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
         // CURVA ABC FINANCEIRA REAL
-        const itemsParaABC = [...baseSujaProcessada].sort((a, b) => (b.consumo * b.custoUnitario) - (a.consumo * a.custoUnitario));
-        const consumoTotalFinanceiroGlobal = itemsParaABC.reduce((acc, curr) => acc + (curr.consumo * curr.custoUnitario), 0);
+        const itemsParaABC = [...baseSujaProcessada].sort((a, b) => b.consumoFinanceiro - a.consumoFinanceiro);
+        const consumoTotalFinanceiroGlobal = itemsParaABC.reduce((acc, curr) => acc + curr.consumoFinanceiro, 0);
         let consumoAcumulado = 0;
 
         itemsParaABC.forEach(item => {
-            const valorConsumo = item.consumo * item.custoUnitario;
-            if (consumoTotalFinanceiroGlobal > 0 && valorConsumo > 0) {
-                consumoAcumulado += valorConsumo;
+            if (consumoTotalFinanceiroGlobal > 0 && item.consumoFinanceiro > 0) {
+                consumoAcumulado += item.consumoFinanceiro;
                 const perc = consumoAcumulado / consumoTotalFinanceiroGlobal;
                 if (perc <= 0.80) item.curva = 'A';
                 else if (perc <= 0.95) item.curva = 'B';
@@ -1378,16 +1390,15 @@
     }
 
     // ==========================================================================
-    // MODAL INTERATIVO (COM GALERIA DE FOTOS E METRICAS EM DIAS)
+    // MODAL INTERATIVO E GALERIA (COM CÁLCULO DE DIAS)
     // ==========================================================================
     window.abrirModalDetalhes = function(codNorm, filialId) {
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
         if(!i) return;
 
-        let consumoFinanceiro = i.consumo * i.custoUnitario;
+        let consumoFinanceiro = i.consumoFinanceiro;
         let saldoFinanceiro = i.valorImobilizado;
         
-        // Conversão dos Giros para "DIAS" (Como solicitado: Saldo / Consumo)
         let giroMensalDias = consumoFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoFinanceiro) * 30) + ' dias' : 'Sem Consumo';
         
         let consumoAnualFinanceiro = consumoFinanceiro * 12;
@@ -1402,7 +1413,7 @@
             let nStr = n < 10 ? '0'+n : n;
             let isFirst = (n === 1);
             let fallback = isFirst ? `this.style.display='none'; document.getElementById('modal-img-fallback').style.display='flex';` : `this.style.display='none';`;
-            imagensHTML += `<img src="imagens/${i.cod} - ${nStr}.jpg" style="height:180px; min-width:180px; object-fit:cover; border-radius:12px; flex-shrink:0; border:1px solid var(--border-color);" onerror="${fallback}">`;
+            imagensHTML += `<img src="imagens/${i.cod} - ${nStr}.jpg" onclick="abrirLightbox(this.src, event)" style="height:180px; min-width:180px; object-fit:cover; border-radius:12px; flex-shrink:0; border:1px solid var(--border-color); cursor:zoom-in;" onerror="${fallback}">`;
         }
         
         imagensHTML += `<div id="modal-img-fallback" class="img-placeholder" style="display:${(mapeamentoDeImagemAtivo && !i.temImagem) ? 'flex' : 'none'}; min-width:180px; height:180px; border-radius:12px; font-size:14px; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-subcard); border:1px solid var(--border-color); color:var(--text-secondary);"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
@@ -1425,7 +1436,7 @@
             <h3 style="font-size:14px; margin-top:20px; color:var(--text-secondary); text-transform:uppercase;">📍 Detalhamento de Locais / Prateleiras</h3>
             <div style="overflow-x:auto;">
             <table class="modal-locais-table" style="min-width:600px;">
-                <thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prat</th><th>Divisão</th><th>Saldo</th><th>Custo Unit.</th></tr></thead>
+                <thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prat</th><th>Divisão</th><th>Saldo Físico</th><th>Custo Unit. Real</th></tr></thead>
                 <tbody>${linhasLocais}</tbody>
             </table>
             </div>
@@ -1448,12 +1459,12 @@
             <div class="item-metrics-grid" style="margin-bottom:20px;">
                 <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(saldoFinanceiro)}</span></div>
                 <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(consumoFinanceiro)}</span></div>
-                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal (Dias)</span><span class="metric-value" style="font-size:20px;">${giroMensalDias}</span></div>
-                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado (Dias)</span><span class="metric-value" style="font-size:20px;">${giroAnualDias}</span></div>
+                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal</span><span class="metric-value" style="font-size:20px;">${giroMensalDias}</span></div>
+                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado</span><span class="metric-value" style="font-size:20px;">${giroAnualDias}</span></div>
             </div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque (Física)</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unit. Médio</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
             </div>
@@ -1469,11 +1480,8 @@
         document.getElementById('modal-item').style.display = 'flex';
     }
 
-    window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
-    window.onclick = function(event) { if (event.target === document.getElementById('modal-item')) fecharModal(); }
-
     // ==========================================================================
-    // RENDERIZAÇÃO DOM: CATÁLOGO, DASHBOARD E NECESSIDADE COMPRA
+    // RENDERIZAÇÃO DOM: CATÁLOGO COM NOVAS INFOS E LIGHTBOX
     // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
@@ -1482,8 +1490,12 @@
         let htmlLote = [];
         
         itensFiltrados.slice(0, 100).forEach(i => { 
-            let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
-            let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
+            let consumoFinanceiro = i.consumoFinanceiro;
+            let saldoFinanceiro = i.valorImobilizado;
+            
+            let giroMensalDias = consumoFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoFinanceiro) * 30) + 'd' : 'Sem Consumo';
+            let consumoAnualFinanceiro = consumoFinanceiro * 12;
+            let giroAnualDias = consumoAnualFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoAnualFinanceiro) * 365) + 'd' : 'Sem Consumo';
 
             let imagemHTML = '';
             if (mapeamentoDeImagemAtivo) {
@@ -1495,7 +1507,18 @@
                               <div class="img-placeholder" style="display:none;"><span style="font-size:20px; margin-bottom:5px;">🚫</span>FOTO NÃO<br>ENCONTRADA</div>`;
             }
             
-            let labelLocal = i.locais.length > 1 ? `📍 ${i.locais.length} Locais de Estoque (Clique para abrir)` : `📍 Local/Rep: <strong>${i.reparticao}</strong> &nbsp;•&nbsp; Prat: <strong>${i.prateleira}</strong>`;
+            // Filiais com saldo
+            let filiaisComSaldo = itensProcessados
+                .filter(x => x.codNorm === i.codNorm && x.saldo > 0)
+                .map(x => x.filialNm)
+                .filter((v, idx, a) => a.indexOf(v) === idx)
+                .join(', ');
+            if (!filiaisComSaldo) filiaisComSaldo = "Nenhuma filial com saldo físico";
+
+            // Endereço de Exibição
+            let enderecoFormatado = i.locais.length > 1 
+                ? `<span style="color:var(--primary-color);">Múltiplos Locais Detectados (Clique para ver)</span>` 
+                : `Rep: <strong>${i.reparticao}</strong> &nbsp;•&nbsp; Prat: <strong>${i.prateleira}</strong> &nbsp;•&nbsp; Div: <strong>${i.divisao}</strong>`;
 
             htmlLote.push(`
                 <div class="item-card fade-in" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
@@ -1514,16 +1537,18 @@
                                 <span class="chip-category">${i.classe || 'N/A'}</span>
                                 <span class="chip-category">UN: ${i.um || 'UN'}</span>
                             </div>
-                            <div class="item-metrics-grid">
-                                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo</span><span class="metric-value">${formatarMoeda(i.valorImobilizado)}</span></div>
-                                <div class="metric-box ${i.transito > 0 ? 'metric-transito' : 'metric-default'}"><span class="metric-label">Em Trânsito (Físico)</span><span class="metric-value">${i.transito}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value">${formatarMoeda(i.consumo * i.custoUnitario)}</span></div>
-                                <div class="metric-box ${giroClass}"><span class="metric-label">Dias de Cobertura</span><span class="metric-value">${giroText}</span></div>
+                            
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.6; background: var(--bg-subcard); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div>🏢 <strong>Filiais c/ Saldo:</strong> <span style="color: var(--text-primary); font-weight: 600;">${filiaisComSaldo}</span></div>
+                                <div>📍 <strong>Local de Estoque:</strong> <span style="color: var(--text-primary); font-weight: 600;">${enderecoFormatado}</span></div>
                             </div>
-                        </div>
-                        <div class="item-footer">
-                            <div class="item-address">${labelLocal}</div>
-                            ${i.filialNm ? `<div class="item-filial">🏢 ${i.filialNm}</div>` : ''}
+
+                            <div class="item-metrics-grid">
+                                <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${i.saldo} <span style="font-size:11px;">und</span></span></div>
+                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value">${giroAnualDias}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${formatarMoeda(i.consumoFinanceiro)}</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1567,7 +1592,7 @@
         itensFiltrados.forEach(i => {
             valorTotal += i.valorImobilizado;
             totalSaldoFinanceiro += i.valorImobilizado;
-            totalConsumoMensalFinanceiro += (i.consumo * i.custoUnitario);
+            totalConsumoMensalFinanceiro += i.consumoFinanceiro;
             
             totalSaldoFisico += i.saldo;
             totalConsumoFisico += i.consumo;
@@ -1650,7 +1675,7 @@
                     <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
                     <td style="font-size:11px; font-weight:600; color:var(--text-info);">${locAbrev}</td>
                     <td style="font-size:14px; font-weight:800; color:var(--text-primary);">${i.saldo}</td>
-                    <td style="color:var(--text-primary); font-weight:600;">${formatarMoeda(i.consumo * i.custoUnitario)}</td>
+                    <td style="color:var(--text-primary); font-weight:600;">${formatarMoeda(i.consumoFinanceiro)}</td>
                     <td style="font-weight:700; color:var(--text-primary);">${giroText}</td>
                     <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
                 </tr>
@@ -1682,7 +1707,7 @@
         const valorPorFilial = {};
 
         itensFiltrados.forEach(i => {
-            if(volumeABC[i.curva] !== undefined) volumeABC[i.curva] += (i.consumo * i.custoUnitario); 
+            if(volumeABC[i.curva] !== undefined) volumeABC[i.curva] += i.consumoFinanceiro; 
             
             if(!valorPorFilial[i.filialNm]) valorPorFilial[i.filialNm] = 0;
             valorPorFilial[i.filialNm] += i.valorImobilizado;
