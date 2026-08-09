@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JBS | Seara — Gestão de Almoxarifado Avançada + AI</title>
+    <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -53,7 +53,7 @@
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            /* Badges Dark */
+
             --badge-ruptura-bg: rgba(239, 68, 68, 0.15); --badge-ruptura-text: #fca5a5;
             --badge-transito-bg: rgba(245, 158, 11, 0.15); --badge-transito-text: #fcd34d;
             --badge-normal-bg: rgba(16, 185, 129, 0.15); --badge-normal-text: #6ee7b7;
@@ -61,7 +61,7 @@
             --badge-abaixo-bg: rgba(217, 119, 6, 0.15); --badge-abaixo-text: #fde68a;
             --badge-acima-bg: rgba(14, 165, 233, 0.15); --badge-acima-text: #7dd3fc;
             --badge-local-critico-bg: rgba(147, 51, 234, 0.15); --badge-local-critico-text: #d8b4fe;
-            /* Metrics Dark */
+
             --metric-saldo-bg: rgba(22, 163, 74, 0.1); --metric-saldo-border: rgba(22, 163, 74, 0.2); --metric-saldo-text: #86efac; --metric-saldo-label: #4ade80;
             --metric-transito-bg: rgba(2, 132, 199, 0.1); --metric-transito-border: rgba(2, 132, 199, 0.2); --metric-transito-text: #7dd3fc; --metric-transito-label: #38bdf8;
             --metric-giro-bg: rgba(217, 119, 6, 0.1); --metric-giro-border: rgba(217, 119, 6, 0.2); --metric-giro-text: #fde047; --metric-giro-label: #facc15;
@@ -165,8 +165,13 @@
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
 
+        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
+        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+
         /* ==========================================================================
-           4. PAINEL DE FILTROS E BUSCA
+           4. PAINEL DE FILTROS (ESQUERDA)
            ========================================================================== */
         .filter-panel-left {
             width: 280px; background: var(--bg-card); border-right: 1px solid var(--border-color);
@@ -186,6 +191,9 @@
         .btn-reset-filters { margin-top: 10px; padding: 12px; background: transparent; color: var(--text-danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .btn-reset-filters:hover { background: rgba(239, 68, 68, 0.1); }
 
+        /* ==========================================================================
+           5. ÁREA PRINCIPAL E BUSCA
+           ========================================================================== */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;}
         .container { flex-grow: 1; display: flex; flex-direction: column; padding: 30px 40px; overflow: hidden; max-width: 1600px; margin: 0 auto; width: 100%;}
         .fixed-top-section { margin-bottom: 24px; flex-shrink: 0; }
@@ -208,7 +216,7 @@
         .scrollable-results-section { flex-grow: 1; overflow-y: auto; padding-right: 15px; padding-top: 5px; padding-bottom: 30px;}
 
         /* ==========================================================================
-           6. CARTÕES DO CATÁLOGO E MÉTRICAS
+           6. CARTÕES DO CATÁLOGO
            ========================================================================== */
         .item-card {
             background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
@@ -271,14 +279,6 @@
 
         .metric-label { font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;}
         .metric-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px;}
-
-        .item-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-top: 14px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
-        }
-        .item-address { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; }
-        .item-address-icon { background: var(--bg-subcard); padding: 4px 8px; border-radius: 8px; font-size: 14px; border: 1px solid var(--border-color);}
-        .item-filial { font-size: 12px; color: var(--text-secondary); font-weight: 700; background: var(--bg-subcard); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);}
 
         /* ==========================================================================
            7. DASHBOARD E KPIs 
@@ -371,59 +371,16 @@
         .lightbox-close:hover { color: var(--text-danger); }
 
         /* ==========================================================================
-           9. AI ASSISTANT (CHATBOT)
+           9. TOASTS E INSTRUÇÕES
            ========================================================================== */
-        .ai-chat-btn {
-            position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-            color: white; padding: 14px 24px; border-radius: 30px; font-weight: 800; font-size: 14px;
-            cursor: pointer; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4); z-index: 99999;
-            display: flex; align-items: center; gap: 8px; transition: all 0.3s; border: none;
-        }
-        .ai-chat-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 30px rgba(139, 92, 246, 0.6); }
-        
-        .ai-chat-window {
-            position: fixed; bottom: 85px; right: 24px; width: 350px; height: 500px;
-            background: var(--bg-card); border-radius: 20px; box-shadow: var(--shadow-hover);
-            border: 1px solid var(--border-color); z-index: 99999; display: none;
-            flex-direction: column; overflow: hidden; animation: fadeIn 0.3s ease;
-        }
-        .ai-header {
-            background: linear-gradient(135deg, #8b5cf6, #3b82f6); padding: 16px 20px;
-            color: white; font-weight: 800; display: flex; justify-content: space-between; align-items: center;
-        }
-        .ai-close { cursor: pointer; font-size: 20px; opacity: 0.8; }
-        .ai-close:hover { opacity: 1; }
-        .ai-messages {
-            flex-grow: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
-            background: var(--bg-body); font-size: 13px;
-        }
-        .ai-msg { padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.5; }
-        .ai-msg-user { background: var(--primary-color); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .ai-msg-bot { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .ai-input-area {
-            padding: 15px; background: var(--bg-card); border-top: 1px solid var(--border-color);
-            display: flex; gap: 10px;
-        }
-        .ai-input {
-            flex-grow: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid var(--border-color);
-            background: var(--bg-subcard); color: var(--text-primary); font-size: 13px; outline: none;
-        }
-        .ai-input:focus { border-color: #8b5cf6; }
-        .ai-send {
-            background: #8b5cf6; color: white; border: none; width: 36px; height: 36px; border-radius: 50%;
-            cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* ==========================================================================
-           10. TOASTS E INSTRUÇÕES
-           ========================================================================== */
-        .toast-container { position: fixed; bottom: 24px; left: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
-        .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
+        .toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
+        .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
         .toast-success { background-color: #10b981; }
         .toast-error { background-color: #ef4444; }
         .toast-warning { background-color: #f59e0b; }
         .toast-info { background-color: #0ea5e9; }
-        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         
         .instrucoes-box h3 { color: var(--primary-color); margin-top: 20px; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
         .instrucoes-box p { margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
@@ -462,21 +419,6 @@
     <img class="lightbox-img" id="lightbox-img" src="" onclick="event.stopPropagation()">
 </div>
 
-<button class="ai-chat-btn" onclick="toggleAIChat()">💬 Seara AI</button>
-<div class="ai-chat-window" id="ai-chat-window">
-    <div class="ai-header">
-        <span>🤖 Copilot de Estoque</span>
-        <span class="ai-close" onclick="toggleAIChat()">×</span>
-    </div>
-    <div class="ai-messages" id="ai-messages">
-        <div class="ai-msg ai-msg-bot">Olá! Sou sua Inteligência Artificial local. Pergunte-me sobre os dados do seu catálogo atual (ex: <i>"resumo"</i>, <i>"itens em ruptura"</i>, <i>"item mais caro"</i>, <i>"valor obsoleto"</i>).</div>
-    </div>
-    <div class="ai-input-area">
-        <input type="text" id="ai-input" class="ai-input" placeholder="Pergunte sobre os dados..." onkeypress="if(event.key === 'Enter') enviarMensagemAI()">
-        <button class="ai-send" onclick="enviarMensagemAI()">➤</button>
-    </div>
-</div>
-
 <div class="app-layout segmentation-hidden" id="app-layout" style="opacity: 0;">
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -494,6 +436,9 @@
             </a>
             <a href="#" class="nav-item" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
                 <span style="font-size: 18px;">🔍</span><span>Catálogo & Pesquisa</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-revisao" onclick="navegarPara('revisao')">
+                <span style="font-size: 18px;">⚖️</span><span>Revisão Min/Max</span>
             </a>
             <a href="#" class="nav-item" id="nav-compras" onclick="navegarPara('compras')">
                 <span style="font-size: 18px;">🛒</span><span>Necessidade Compra</span>
@@ -569,7 +514,7 @@
                 <select id="select-saldo-status" class="segmentation-select" onchange="dispararFiltros()">
                     <option value="">Todos os Itens</option>
                     <option value="Estoque Normal">✅ Estoque Normal</option>
-                    <option value="Normal/Local Crítico">🟣 Normal/Local Crítico (299)</option>
+                    <option value="Normal/Local Crítico">🟣 Normal/Local Crítico (299/295)</option>
                     <option value="Ruptura Crítica (Sem Pedido)">🔴 Ruptura (Sem Pedido)</option>
                     <option value="Ruptura (Em Trânsito)">⚠️ Ruptura (Em Trânsito)</option>
                     <option value="Abaixo Mínimo">📉 Risco de Ruptura (< Mínimo)</option>
@@ -589,6 +534,38 @@
                 <div class="status"><span id="contador-itens">Aguardando sincronização...</span></div>
             </div>
             <div class="scrollable-results-section" id="resultados"></div>
+        </div>
+    </main>
+
+    <main class="main-content" id="view-revisao" style="display: none;">
+        <div class="container">
+            <div class="fixed-top-section">
+                <header><h1>⚖️ Revisão de Parâmetros (Mínimo/Máximo)</h1></header>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo itens com discrepância de configuração. <b>Nota:</b> O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295).</p>
+            </div>
+            <div class="scrollable-results-section">
+                <div class="dash-section-box">
+                    <div class="dash-table-container">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>Código / Descrição</th>
+                                    <th>Filial</th>
+                                    <th>Saldo Total</th>
+                                    <th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th>
+                                    <th>Mín Global</th>
+                                    <th>Máx Global</th>
+                                    <th>Consumo Mês (R$)</th>
+                                    <th style="color: var(--text-danger);">Ação Recomendada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="revisao-table-body">
+                                <tr><td colspan="8" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -629,25 +606,23 @@
             </div>
             <div class="scrollable-results-section">
                 <div class="dash-section-box instrucoes-box">
-                    <h3>1. Seara AI (Copiloto Inteligente) - NOVO</h3>
-                    <p>O botão flutuante no canto inferior direito abre um assistente de inteligência de dados local. Você pode enviar comandos em linguagem natural (ex: <i>"resumo"</i>, <i>"qual o item mais caro"</i>, <i>"itens em ruptura"</i>, <i>"obsoletos"</i>) e a IA lerá os dados filtrados da tela atual para gerar uma resposta inteligente instantânea.</p>
-
-                    <h3>2. Sincronização e Mapeamento de Arquivos</h3>
-                    <p>Ao abrir o painel, ele buscará os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na raiz do seu repositório. O GitHub é <i>Case Sensitive</i>, portanto, respeite letras exatas. Para fotos, clique em <b>"Mapear Pasta de Imagens"</b> e selecione sua pasta local. O sistema suporta carrossel de até 6 fotos (padrão <code>[cod] - 01.jpg</code> a <code>06.jpg</code>).</p>
+                    <h3>1. Sincronização Automática vs Manual</h3>
+                    <p>Ao abrir o painel, ele buscará os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na raiz do seu repositório. O GitHub é <i>Case Sensitive</i>, portanto, respeite letras maiúsculas e minúsculas exatas no nome do arquivo. Se houver falha de rede ou CORS, utilize o botão de "Upload Manual" na tela inicial.</p>
                     
-                    <h3>3. Cálculo de Custo Unitário Dinâmico</h3>
-                    <p>O custo unitário de um item é calculado pela fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante precisão em centavos em cada local de estoque.</p>
+                    <h3>2. Cálculo de Custo Unitário Dinâmico</h3>
+                    <p>O custo unitário de um item não é lido apenas de forma estática do ERP. O sistema o calcula inteligentemente através da fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante que as frações de preço sejam precisas. Essa regra é aplicada globalmente (no total do item consolidado) e no detalhe de cada local de estoque.</p>
 
-                    <h3>4. Giro de Estoque Financeiro (Em Dias)</h3>
-                    <ul>
-                        <li><b>No Dashboard (Macro) e Catálogo (Micro):</b> O Giro Mensal e Anual são expressos em <b>Dias de Cobertura Financeira</b>. Fórmula: <code>(Saldo Total em R$ / Consumo em R$) * 30/365</code>. Isso impede que a quantidade de peças baratas distorça sua análise de capital.</li>
-                    </ul>
+                    <h3>3. Regra de Reserva Estratégica: Locais 299 e 295</h3>
+                    <p>Se o sistema detectar que o material possui saldo nos locais <code>299</code> ou <code>295</code>, esse item recebe uma "blindagem". Mesmo sem consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299/295)</b>.</p>
 
-                    <h3>5. Regra de Reserva Estratégica: Local Crítico 299</h3>
-                    <p>Se o material possui saldo no código de local <code>299</code>, ele recebe uma "blindagem". Mesmo sem consumo, ele <b>NÃO</b> será classificado como "Obsoleto", mas sim como <b>🟣 Normal/Local Crítico (299)</b>.</p>
+                    <h3>4. Revisão de Mínimo e Máximo (Saldo Útil)</h3>
+                    <p>Na aba de <b>Revisão Min/Max</b>, o painel subtrai o saldo dos locais estratégicos (299/295) para encontrar o <b>"Saldo Útil"</b> que realmente gira na fábrica. Com base nisso, ele sugere alertas como "Aumentar Mínimo (Risco)", "Reduzir Máximo (Excesso)" ou "Revisar Parâmetros (Item Sem Consumo com Máximo Ativo)".</p>
 
-                    <h3>6. Filiais 704 (Ab. Aves vs Alp. Preparados)</h3>
-                    <p>Itens da Filial 704 são desdobrados automaticamente. Locais abaixo de 599 (exceto o 101 e 299) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>. Você pode cruzar esses dados no filtro lateral.</p>
+                    <h3>5. Consolidação de Múltiplos Locais e Filiais 704</h3>
+                    <p>Itens duplicados em prateleiras são fundidos em um <b>"Super Cartão"</b> para cálculo preciso. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b>: locais de estoque abaixo de 599 (exceto os protegidos 101, 299, 295) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>.</p>
+
+                    <h3>6. Tratamento de Múltiplas Imagens e Lightbox</h3>
+                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item (<code>[código] - 01.jpg</code> a <code>06.jpg</code>). Você pode clicar nas fotos dentro do Modal para expandi-las (Lightbox).</p>
                 </div>
             </div>
         </div>
@@ -679,7 +654,7 @@
                     <div class="kpi-card" style="border-left-color: var(--text-secondary);">
                         <span class="kpi-title">Capital Obsoleto</span>
                         <span class="kpi-value color-secondary" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
-                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro (Exceto 299)</span>
+                        <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro (Exceto 299/295)</span>
                     </div>
                 </div>
 
@@ -740,7 +715,7 @@
                     </div>
                     <div class="chart-container" style="position: relative;">
                         <canvas id="chartFiliais"></canvas>
-                        <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Valor Imobilizado por Filial</div>
+                        <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Clique nas fatias para filtrar por Filial</div>
                     </div>
                 </div>
 
@@ -750,6 +725,7 @@
                         <div class="filtro-aviso-container" id="container-filtros-grafico">
                             <span id="filtro-abc-aviso" class="filtro-aviso" style="display:none;" onclick="limparFiltroGrafico('abc')"></span>
                             <span id="filtro-status-aviso" class="filtro-aviso filtro-aviso-status" style="display:none;" onclick="limparFiltroGrafico('status')"></span>
+                            <span id="filtro-filial-aviso" class="filtro-aviso" style="display:none; background:var(--primary-color);" onclick="limparFiltroGrafico('filial')"></span>
                         </div>
                     </div>
                     
@@ -791,6 +767,7 @@
     let mesesAnalisados = 1; 
     let filtroGraficoABC = null; 
     let filtroGraficoStatus = null;
+    let filtroGraficoFilial = null;
     let mesConsumoAtual = "MÊS";
     let isFetchingData = false; 
     let loaderProgress = 0;
@@ -799,79 +776,6 @@
     let mapeamentoDeImagemAtivo = false;
 
     if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-
-    // ==========================================================================
-    // SEARA AI ASSISTANT (COPILOTO DE DADOS)
-    // ==========================================================================
-    function toggleAIChat() {
-        const win = document.getElementById('ai-chat-window');
-        win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
-        if(win.style.display === 'flex') document.getElementById('ai-input').focus();
-    }
-
-    function addAIMessage(msg, isUser = false) {
-        const container = document.getElementById('ai-messages');
-        const div = document.createElement('div');
-        div.className = 'ai-msg ' + (isUser ? 'ai-msg-user' : 'ai-msg-bot');
-        div.innerHTML = msg;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
-
-    function enviarMensagemAI() {
-        const input = document.getElementById('ai-input');
-        const text = input.value.trim();
-        if(!text) return;
-        
-        addAIMessage(text, true);
-        input.value = '';
-        
-        // Simular "Digitando..."
-        setTimeout(() => processarRespostaAI(text), 600);
-    }
-
-    function processarRespostaAI(query) {
-        if(itensFiltrados.length === 0) {
-            addAIMessage("No momento o catálogo está vazio ou filtrado sem resultados. Sincronize a base de dados primeiro.");
-            return;
-        }
-
-        let q = normalizarString(query);
-        let resp = "";
-
-        // Heurísticas Locais Inteligentes
-        if (q.includes('resumo') || q.includes('total') || q.includes('estoque')) {
-            let valTotal = formatarMoeda(itensFiltrados.reduce((acc, i) => acc + i.valorImobilizado, 0));
-            let consumo = formatarMoeda(itensFiltrados.reduce((acc, i) => acc + i.consumoFinanceiro, 0));
-            resp = `Atualmente, temos <b>${itensFiltrados.length} itens</b> listados na visão atual.<br><br>💰 <b>Valor Imobilizado:</b> ${valTotal}<br>📉 <b>Consumo (${mesConsumoAtual}):</b> ${consumo}`;
-        } 
-        else if (q.includes('ruptura') || q.includes('faltando') || q.includes('zerado')) {
-            let rupturas = itensFiltrados.filter(i => i.status.includes('Ruptura')).sort((a,b) => b.consumoFinanceiro - a.consumoFinanceiro);
-            if(rupturas.length > 0) {
-                resp = `Encontrei <b>${rupturas.length} itens em ruptura</b>.<br><br>🔴 <b>Top 3 mais críticos (Por Consumo):</b><br>`;
-                rupturas.slice(0, 3).forEach(i => resp += `- #${i.cod} (${i.desc})<br>`);
-            } else {
-                resp = "✅ Ótimas notícias! Não encontrei itens em ruptura na seleção atual.";
-            }
-        }
-        else if (q.includes('caro') || q.includes('maior valor') || q.includes('topo')) {
-            let maisCaro = [...itensFiltrados].sort((a,b) => b.valorImobilizado - a.valorImobilizado)[0];
-            resp = `O item com maior dinheiro travado em estoque é o:<br><br>💎 <b>#${maisCaro.cod} - ${maisCaro.desc}</b><br>Valor: <b>${formatarMoeda(maisCaro.valorImobilizado)}</b>`;
-        }
-        else if (q.includes('obsoleto') || q.includes('parado') || q.includes('sem giro')) {
-            let obs = itensFiltrados.filter(i => i.status.includes('Obsoleto'));
-            let valObs = formatarMoeda(obs.reduce((acc, i) => acc + i.valorImobilizado, 0));
-            resp = `Encontrei <b>${obs.length} itens obsoletos</b> (Sem consumo no período).<br>Isso representa <b>${valObs}</b> em capital travado.`;
-        }
-        else if (q.includes('ajuda') || q.includes('o que você faz')) {
-            resp = "Sou sua IA de Estoque! Posso analisar a base atual. Tente perguntar:<br>• <i>Resumo</i><br>• <i>Quais os itens em ruptura?</i><br>• <i>Qual o item mais caro?</i><br>• <i>Valor obsoleto</i>";
-        }
-        else {
-            resp = "Desculpe, não entendi bem. Como sou uma IA baseada em análise dos seus CSVs locais, tente usar palavras como <b>'resumo'</b>, <b>'ruptura'</b>, <b>'obsoleto'</b> ou <b>'mais caro'</b>.";
-        }
-
-        addAIMessage(resp);
-    }
 
     // ==========================================================================
     // TELA DE CARREGAMENTO E LIGHTBOX
@@ -967,7 +871,7 @@
 
     function navegarPara(view) {
         vistaAtual = view;
-        ['pesquisa', 'dashboard', 'compras', 'instrucoes'].forEach(v => {
+        ['pesquisa', 'dashboard', 'compras', 'instrucoes', 'revisao'].forEach(v => {
             const el = document.getElementById(`view-${v}`);
             const nav = document.getElementById(`nav-${v}`);
             if(el) el.style.display = (v === view) ? 'flex' : 'none';
@@ -975,6 +879,7 @@
         });
         if(view === 'pesquisa' || view === 'dashboard') dispararFiltrosSemAtraso();
         if(view === 'compras') renderizarCompras();
+        if(view === 'revisao') renderizarRevisao();
     }
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
@@ -1158,7 +1063,6 @@
 
         for(let i = 0; i < files.length; i++) {
             let fileName = files[i].name.toLowerCase();
-            // Aceitar do 01 ao 06 para o mapeador geral
             if(fileName.includes(' - 01.') || fileName.includes(' - 02.') || fileName.includes(' - 03.') || fileName.includes(' - 04.') || fileName.includes(' - 05.') || fileName.includes(' - 06.')) {
                 let codBruto = fileName.split(' - ')[0];
                 let codNorm = normalizarCod(codBruto);
@@ -1176,7 +1080,7 @@
     }
 
     // ==========================================================================
-    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
+    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA (REGRA 299/295)
     // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
@@ -1204,7 +1108,6 @@
         const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
         const colUM = ['cd unidade medida', 'un', 'um'];
         
-        // LOCAIS E VALORES (PARA CUSTO MÉDIO REAL E REGRA 299)
         const colLocalId = ['cd local', 'cod local', 'local'];
         const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
         const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
@@ -1295,19 +1198,18 @@
             // REGRA: Rolândia (Ab. Aves vs Alp. Preparados) com trava anti-vazio
             if (filialIdBase === '704') {
                 let locNum = parseInt(localIdRaw, 10);
-                if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || locNum >= 599) {
+                if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || localIdRaw === '295' || localIdRaw === '0295' || locNum >= 599) {
                     filialNm = 'Rolândia - Alp. Preparados';
                     filialIdBase = '704_ALP';
                 } else if (locNum > 0 && locNum < 599) {
                     filialNm = 'Rolândia - Ab. Aves';
                     filialIdBase = '704_AB';
                 } else {
-                    // Fallback se vier texto, zero ou vazio no local
                     if (reparticao.toUpperCase() === 'AP' || reparticao.length === 1) {
                         filialNm = 'Rolândia - Alp. Preparados';
                         filialIdBase = '704_ALP';
                     } else {
-                        filialNm = 'Rolândia - Alp. Preparados'; // Default
+                        filialNm = 'Rolândia - Alp. Preparados'; 
                         filialIdBase = '704_ALP';
                     }
                 }
@@ -1319,14 +1221,15 @@
             const minimoLinha = converterParaNumero(item[b_min]);
             const maximoLinha = converterParaNumero(item[b_max]);
             
-            // REGRA DO LOCAL 299 CRÍTICO
-            let is299 = false;
-            if (localIdRaw === '299' || localIdRaw === '0299' || localNm === '299' || localNm.includes('299')) is299 = true;
+            // REGRA DO LOCAL CRÍTICO 299 e 295 (BLINDAGEM E SALDO ÚTIL)
+            let isCritico = false;
+            if (['299', '0299', '295', '0295'].includes(localIdRaw) || localNm.includes('299') || localNm.includes('295')) {
+                isCritico = true;
+            }
 
             let valorTotalLinha = b_valorTotal ? converterParaNumero(item[b_valorTotal]) : 0;
             let custoUnitarioLinha = converterParaNumero(item[b_custo]);
 
-            // CUSTO UNITÁRIO DINÂMICO REAL
             if (valorTotalLinha > 0 && saldoLinha > 0) {
                 custoUnitarioLinha = valorTotalLinha / saldoLinha;
             } else if (custoUnitarioLinha > 0 && saldoLinha > 0) {
@@ -1354,7 +1257,6 @@
             obj.saldo += saldoLinha;
             obj.valorTotalGlobal += valorTotalLinha;
             
-            // Trava Maximo e Minimo real (O maior valor encontrado entre os multiplos locais do item)
             if (minimoLinha > obj.minimo) obj.minimo = minimoLinha;
             if (maximoLinha > obj.maximo) obj.maximo = maximoLinha;
             
@@ -1367,11 +1269,10 @@
                 divisao: divisao, 
                 saldo: saldoLinha,
                 custoUnitario: custoUnitarioLinha,
-                is299: is299
+                isCritico: isCritico
             });
         });
 
-        // POPULANDO O FILTRO LATERAL DE FILIAIS
         const selectFilial = document.getElementById('select-filial');
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
@@ -1386,7 +1287,6 @@
         let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
             if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0) return null; 
 
-            // CUSTO UNITÁRIO MACRO (Total / Saldo Total)
             if (item.saldo > 0 && item.valorTotalGlobal > 0) {
                 item.custoUnitario = item.valorTotalGlobal / item.saldo;
             } else if (item.locais.length > 0) {
@@ -1396,23 +1296,28 @@
             const transito = mapCompras.get(item.codNorm) || 0;
             const consumoMesAnteriorFisico = Math.abs(mapConsumosTotais.get(item.codNorm)) || 0;
             const valorImobilizado = item.valorTotalGlobal > 0 ? item.valorTotalGlobal : (item.saldo * item.custoUnitario);
-            
             const consumoFinanceiro = consumoMesAnteriorFisico * item.custoUnitario;
 
-            // CÁLCULO DE GIRO EM DIAS (Para uso no Modal/Dashboard)
+            // NOVO CALCULO DE GIRO EM DIAS BASEADO EM VALOR (Saldo R$ / Consumo R$)
             let diasGiroMensal = Infinity;
             if (consumoFinanceiro > 0) diasGiroMensal = Math.round((valorImobilizado / consumoFinanceiro) * 30);
             
+            let consumoAnualFinanceiro = consumoFinanceiro * 12;
             let diasGiroAnual = Infinity;
-            if (consumoFinanceiro > 0) diasGiroAnual = Math.round((valorImobilizado / (consumoFinanceiro * 12)) * 365);
+            if (consumoAnualFinanceiro > 0) diasGiroAnual = Math.round((valorImobilizado / consumoAnualFinanceiro) * 365);
 
-            let isLocal299Macro = item.locais.some(l => l.is299 && l.saldo > 0);
+            let isLocalCriticoMacro = item.locais.some(l => l.isCritico && l.saldo > 0);
+
+            // CÁLCULO DE SALDO ÚTIL (DESCONTANDO 299 E 295) PARA REVISÃO MIN/MAX
+            let saldoCritico = item.locais.filter(l => l.isCritico).reduce((sum, l) => sum + l.saldo, 0);
+            let saldoUtil = item.saldo - saldoCritico;
+            item.saldoUtil = saldoUtil;
 
             let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
             if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
             else if (item.saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
             else if (item.saldo > 0 && consumoMesAnteriorFisico <= 0) { 
-                if (isLocal299Macro) {
+                if (isLocalCriticoMacro) {
                     status = 'Normal/Local Crítico'; statusBadge = 'badge-normal-critico';
                 } else {
                     status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; 
@@ -1476,7 +1381,7 @@
     }
 
     // ==========================================================================
-    // BUSCA INTELIGENTE E RENDERIZAÇÃO DOM
+    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
     // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
@@ -1493,7 +1398,7 @@
         const statusFiltro = document.getElementById('select-saldo-status').value;
         const curvaFiltro = document.getElementById('select-curva').value;
         const imagemFiltro = document.getElementById('select-imagem').value;
-        const filialFiltro = document.getElementById('select-filial')?.value || "";
+        const filialFiltro = document.getElementById('select-filial')?.value || filtroGraficoFilial || "";
 
         if (imagemFiltro !== "" && !mapeamentoDeImagemAtivo) {
             mostrarToast("Para filtrar por imagens, mapeie a pasta no menu lateral.", "warning");
@@ -1518,12 +1423,14 @@
         if (vistaAtual === 'pesquisa') renderizarPesquisa();
         else if (vistaAtual === 'dashboard') renderizarDashboard();
         else if (vistaAtual === 'compras') renderizarCompras();
+        else if (vistaAtual === 'revisao') renderizarRevisao();
     }
 
     window.limparFiltroGrafico = function(tipo) {
         if (tipo === 'abc') { filtroGraficoABC = null; document.getElementById('filtro-abc-aviso').style.display = 'none'; }
         if (tipo === 'status') { filtroGraficoStatus = null; document.getElementById('filtro-status-aviso').style.display = 'none'; }
-        renderizarTabelaDashboard(); 
+        if (tipo === 'filial') { filtroGraficoFilial = null; document.getElementById('filtro-filial-aviso').style.display = 'none'; }
+        dispararFiltrosSemAtraso();
     }
 
     window.limparFiltros = function() {
@@ -1532,9 +1439,10 @@
         document.getElementById('select-imagem').value = "";
         if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
         document.getElementById('busca').value = "";
-        filtroGraficoABC = null; filtroGraficoStatus = null;
+        filtroGraficoABC = null; filtroGraficoStatus = null; filtroGraficoFilial = null;
         document.getElementById('filtro-abc-aviso').style.display = 'none';
         document.getElementById('filtro-status-aviso').style.display = 'none';
+        document.getElementById('filtro-filial-aviso').style.display = 'none';
         dispararFiltrosSemAtraso();
     }
 
@@ -1545,9 +1453,11 @@
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
         if(!i) return;
 
-        let giroMensalFormat = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal} dias`;
-        let giroAnualFormat = i.diasGiroAnual === Infinity ? 'Sem Consumo' : `${i.diasGiroAnual} dias`;
-        let giroText = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal} dias`;
+        let consumoFinanceiro = i.consumoFinanceiro;
+        let saldoFinanceiro = i.valorImobilizado;
+        
+        let giroMensalDias = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal} dias`;
+        let giroAnualDias = i.diasGiroAnual === Infinity ? 'Sem Consumo' : `${i.diasGiroAnual} dias`;
         
         let imagensHTML = '';
         
@@ -1599,14 +1509,14 @@
             </div>
             
             <div class="item-metrics-grid" style="margin-bottom:20px;">
-                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(i.valorImobilizado)}</span></div>
-                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(i.consumoFinanceiro)}</span></div>
-                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal (Dias)</span><span class="metric-value" style="font-size:20px;">${giroMensalFormat}</span></div>
-                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado (Dias)</span><span class="metric-value" style="font-size:20px;">${giroAnualFormat}</span></div>
+                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(saldoFinanceiro)}</span></div>
+                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(consumoFinanceiro)}</span></div>
+                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal (Dias)</span><span class="metric-value" style="font-size:20px;">${giroMensalDias}</span></div>
+                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado (Dias)</span><span class="metric-value" style="font-size:20px;">${giroAnualDias}</span></div>
             </div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Saldo Útil (Sem 299/295)</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.saldoUtil} und</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unit. Médio</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
             </div>
@@ -1626,7 +1536,7 @@
     window.onclick = function(event) { if (event.target === document.getElementById('modal-item')) fecharModal(); }
 
     // ==========================================================================
-    // RENDERIZAÇÃO DOM: CATÁLOGO COM NOVAS INFOS DA CAPA E LIGHTBOX
+    // RENDERIZAÇÃO DOM: CATÁLOGO
     // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
@@ -1648,7 +1558,6 @@
                               <div class="img-placeholder" style="display:none;"><span style="font-size:20px; margin-bottom:5px;">🚫</span>FOTO NÃO<br>ENCONTRADA</div>`;
             }
             
-            // Filiais com saldo dinâmicas
             let filiaisComSaldo = itensProcessados
                 .filter(x => x.codNorm === i.codNorm && x.saldo > 0)
                 .map(x => x.filialNm)
@@ -1656,7 +1565,6 @@
                 .join(', ');
             if (!filiaisComSaldo) filiaisComSaldo = "Nenhuma filial com saldo físico";
 
-            // Endereço de Exibição com os 3 itens solicitados na capa
             let enderecoFormatado = i.locais.length > 1 
                 ? `<span style="color:var(--primary-color);">Múltiplos Locais Detectados (Clique para ver)</span>` 
                 : `Rep: <strong>${i.reparticao}</strong> &nbsp;•&nbsp; Prat: <strong>${i.prateleira}</strong> &nbsp;•&nbsp; Div: <strong>${i.divisao}</strong>`;
@@ -1685,10 +1593,10 @@
                             </div>
 
                             <div class="item-metrics-grid">
-                                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo</span><span class="metric-value">${formatarMoeda(i.valorImobilizado)}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Custo Consumo</span><span class="metric-value">${formatarMoeda(i.consumoFinanceiro)}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
+                                <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual (Qtd)</span><span class="metric-value">${i.saldo} <span style="font-size:11px;">und</span></span></div>
+                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
                                 <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value">${giroAnualDias}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${formatarMoeda(i.consumoFinanceiro)}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1699,11 +1607,60 @@
         container.innerHTML = htmlLote.join('');
     }
 
+    // ==========================================================================
+    // RENDERIZAÇÃO DOM: REVISÃO DE MIN/MAX
+    // ==========================================================================
+    function renderizarRevisao() {
+        const tbody = document.getElementById('revisao-table-body');
+        let htmlLote = [];
+        
+        // Regras para aparecer na revisão: 
+        // 1. Saldo Util < Min (e consumo > 0)
+        // 2. Saldo Util > Max (e Max > 0)
+        // 3. Sem Consumo mas com Min ou Max configurado (Apenas alertas)
+        let itensRevisao = itensFiltrados.filter(i => {
+            if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) return true;
+            if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) return true;
+            if (i.saldoUtil > i.maximo && i.maximo > 0) return true;
+            return false;
+        });
+
+        itensRevisao.forEach(i => {
+            let acao = "";
+            let colorAcao = "";
+            if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) {
+                acao = "Revisar Parâmetros (Sem Consumo)"; colorAcao = "var(--text-warning)";
+            } else if (i.saldoUtil > i.maximo && i.maximo > 0) {
+                acao = "Reduzir Máximo (Excesso)"; colorAcao = "var(--primary-color)";
+            } else if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) {
+                acao = "Aumentar Mínimo (Risco)"; colorAcao = "var(--text-danger)";
+            }
+
+            htmlLote.push(`
+                <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
+                    <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
+                    <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
+                    <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${i.saldo}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--primary-color);">${i.saldoUtil}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-secondary);">${i.minimo}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-secondary);">${i.maximo}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${formatarMoeda(i.consumoFinanceiro)}</td>
+                    <td style="font-size:13px; font-weight:800; color:${colorAcao};">${acao}</td>
+                </tr>
+            `);
+        });
+        
+        tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="8" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Nenhum item exige revisão de parâmetros nos filtros atuais.</td></tr>`;
+    }
+
+    // ==========================================================================
+    // RENDERIZAÇÃO DOM: COMPRAS E DASHBOARD
+    // ==========================================================================
     function renderizarCompras() {
         const tbody = document.getElementById('compras-table-body');
         let htmlLote = [];
         
-        const necessitaCompra = itensProcessados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
+        const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
         
         necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
             let sug = i.maximo - i.saldo;
@@ -1727,16 +1684,12 @@
         let qtdRupturaCritica = 0, qtdRupturaTransito = 0;
         let qtdRiscoMinimo = 0, qtdExcesso = 0;
         let totalSaldoFinanceiro = 0, totalConsumoMensalFinanceiro = 0;
-        let totalSaldoFisico = 0, totalConsumoFisico = 0;
         let skusAtivos = 0; 
 
         itensFiltrados.forEach(i => {
             valorTotal += i.valorImobilizado;
             totalSaldoFinanceiro += i.valorImobilizado;
             totalConsumoMensalFinanceiro += i.consumoFinanceiro;
-            
-            totalSaldoFisico += i.saldo;
-            totalConsumoFisico += i.consumo;
             
             if (i.saldo > 0) skusAtivos++;
 
@@ -1806,6 +1759,15 @@
             const fStatus = document.getElementById('filtro-status-aviso');
             if(fStatus) fStatus.style.display = 'none'; 
         }
+        
+        if (filtroGraficoFilial) {
+            itensTabela = itensTabela.filter(i => i.filialNm === filtroGraficoFilial);
+            document.getElementById('filtro-filial-aviso').style.display = 'inline-block';
+            document.getElementById('filtro-filial-aviso').innerText = `✖ Filtro Filial: ${filtroGraficoFilial}`;
+        } else { 
+            const fFilial = document.getElementById('filtro-filial-aviso');
+            if(fFilial) fFilial.style.display = 'none'; 
+        }
 
         itensTabela.slice(0, 50).forEach(i => { 
             let giroText = i.diasGiroMensal === Infinity ? 'Obsoleto' : `${i.diasGiroMensal}d`;
@@ -1847,6 +1809,9 @@
         const volumeABC = { A: 0, B: 0, C: 0 };
         const valorPorFilial = {};
 
+        // Aplicamos os filtros ativos no dataset dos gráficos, 
+        // mas devemos ter cuidado para o clique num gráfico não zerar ele mesmo.
+        // Por simplicidade, renderizamos os dados "itensFiltrados" base.
         itensFiltrados.forEach(i => {
             if(volumeABC[i.curva] !== undefined) volumeABC[i.curva] += i.consumoFinanceiro; 
             
@@ -1884,17 +1849,17 @@
                     }
                 },
                 onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
-                plugins: { title: { display: true, text: `Custo de Consumo Financeiro (${mesConsumoAtual})`, font: { size: 14, weight: '800' } }, legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } } },
+                plugins: { title: { display: true, text: `Custo Consumo Financeiro (${mesConsumoAtual})`, font: { size: 14, weight: '800' } }, legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } } },
                 cutout: '75%'
             }
         });
 
-        const rotulosGraficoBarra = ['Estoque Normal', 'Abaixo Mínimo', 'Excesso Estoque', 'Ruptura', 'Obsoleto', 'Local 299'];
+        const rotulosGraficoBarra = ['Estoque Normal', 'Abaixo Mínimo', 'Excesso Estoque', 'Ruptura', 'Obsoleto', 'Local Crítico'];
 
         chartStatusInstance = new Chart(ctxStatus, {
             type: 'bar',
             data: {
-                labels: ['Normal', 'Risco (Min)', 'Excesso', 'Rupturas', 'Obsoletos', 'Local 299'],
+                labels: ['Normal', 'Risco (Min)', 'Excesso', 'Rupturas', 'Obsoletos', 'Local 299/295'],
                 datasets: [{ 
                     label: 'Itens', 
                     data: [contagemStatus.Normal, contagemStatus.Risco, contagemStatus.Excesso, contagemStatus.RupturaCritica, contagemStatus.Obsoleto, contagemStatus.LocalCritico], 
@@ -1906,7 +1871,7 @@
                 onClick: (event, activeElements) => {
                     if(activeElements.length > 0) {
                         let statusEscolhido = rotulosGraficoBarra[activeElements[0].index];
-                        if (statusEscolhido === 'Local 299') statusEscolhido = 'Normal/Local Crítico';
+                        if (statusEscolhido === 'Local Crítico') statusEscolhido = 'Normal/Local Crítico';
                         filtroGraficoStatus = (filtroGraficoStatus === statusEscolhido) ? null : statusEscolhido;
                         renderizarTabelaDashboard(); 
                     }
@@ -1918,19 +1883,28 @@
         });
         
         if (ctxFiliais) {
+            const keysFiliais = Object.keys(valorPorFilial);
             const coresFiliais = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b', '#3b82f6', '#14b8a6'];
             chartFiliaisInstance = new Chart(ctxFiliais, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(valorPorFilial),
+                    labels: keysFiliais,
                     datasets: [{ 
                         data: Object.values(valorPorFilial), 
-                        backgroundColor: coresFiliais,
+                        backgroundColor: coresFiliais.slice(0, keysFiliais.length),
                         borderWidth: isDark ? 0 : 2, borderColor: isDark ? 'transparent' : '#ffffff', hoverOffset: 6
                     }]
                 },
                 options: { 
                     responsive: true, maintainAspectRatio: false, 
+                    onClick: (event, activeElements) => {
+                        if(activeElements.length > 0) {
+                            const filialEscolhida = keysFiliais[activeElements[0].index];
+                            filtroGraficoFilial = (filtroGraficoFilial === filialEscolhida) ? null : filialEscolhida;
+                            renderizarTabelaDashboard(); 
+                        }
+                    },
+                    onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
                     plugins: { title: { display: true, text: `Distribuição de Estoque (R$)`, font: { size: 14, weight: '800' } }, legend: { display: false } },
                     cutout: '75%'
                 }
