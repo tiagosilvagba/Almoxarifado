@@ -92,6 +92,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA (COM BARRA PERCENTUAL) */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -177,7 +178,7 @@
         .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
 
         /* ==========================================================================
-           4. PAINEL DE FILTROS E BUSCA
+           4. PAINEL DE FILTROS (ESQUERDA)
            ========================================================================== */
         .filter-panel-left {
             width: 280px; background: var(--bg-card); border-right: 1px solid var(--border-color);
@@ -197,6 +198,9 @@
         .btn-reset-filters { margin-top: 10px; padding: 12px; background: transparent; color: var(--text-danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .btn-reset-filters:hover { background: rgba(239, 68, 68, 0.1); }
 
+        /* ==========================================================================
+           5. ÁREA PRINCIPAL
+           ========================================================================== */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .container { flex-grow: 1; display: flex; flex-direction: column; padding: 30px 40px; overflow: hidden; max-width: 1600px; margin: 0 auto; width: 100%;}
         .fixed-top-section { margin-bottom: 24px; flex-shrink: 0; }
@@ -219,7 +223,7 @@
         .scrollable-results-section { flex-grow: 1; overflow-y: auto; padding-right: 15px; padding-top: 5px; padding-bottom: 30px;}
 
         /* ==========================================================================
-           6. CARTÕES DO CATÁLOGO
+           6. CARTÕES DO CATÁLOGO (GLASSMORPHISM / CLEAN UI)
            ========================================================================== */
         .item-card {
             background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
@@ -311,7 +315,7 @@
         .border-critical::before { background: var(--text-critical); }
         .border-warning::before { background: var(--text-warning); }
 
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px; }
         .chart-container { 
             background: var(--bg-card); padding: 24px; border-radius: 20px; border: 1px solid var(--border-color); 
             height: 340px; box-shadow: var(--shadow-sm);
@@ -334,7 +338,7 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. MODAL DE DETALHES E GALERIA (CARROSSEL)
+           8. MODAL DE DETALHES DO ITEM E GALERIA
            ========================================================================== */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000;
@@ -350,13 +354,8 @@
             cursor: pointer; font-weight: bold; transition: color 0.2s; z-index: 2;
         }
         .modal-close:hover { color: var(--text-danger); }
-        
         .modal-header-section { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 24px;}
-        .modal-locais-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;}
-        .modal-locais-table th { background: var(--bg-subcard); padding: 10px; color: var(--text-secondary); text-align: left; text-transform: uppercase; font-size: 11px;}
-        .modal-locais-table td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500;}
-
-        /* CSS Galeria Horizontal com Scroll Suave */
+        
         .modal-gallery-container {
             display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; width: 100%; max-width: 600px;
             scroll-snap-type: x mandatory;
@@ -366,6 +365,10 @@
         .modal-gallery-container > img, .modal-gallery-container > .img-placeholder {
             scroll-snap-align: start; flex-shrink: 0;
         }
+
+        .modal-locais-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;}
+        .modal-locais-table th { background: var(--bg-subcard); padding: 10px; color: var(--text-secondary); text-align: left; text-transform: uppercase; font-size: 11px;}
+        .modal-locais-table td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500;}
 
         /* ==========================================================================
            9. TOASTS E INSTRUÇÕES
@@ -569,17 +572,17 @@
                     <h3>2. Cálculo de Custo Unitário Dinâmico</h3>
                     <p>O custo unitário de um item não é lido apenas de forma estática do ERP. O sistema o calcula inteligentemente através da fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante que as frações de preço sejam precisas. Essa regra é aplicada globalmente (no total do item consolidado) e no detalhe de cada local de estoque.</p>
 
-                    <h3>3. Giro de Estoque Financeiro vs Físico</h3>
+                    <h3>3. Giro de Estoque Financeiro (Em Dias)</h3>
                     <ul>
-                        <li><b>No Dashboard (Macro):</b> O Giro de Período e a Cobertura Financeira (Dias) são calculados pelo <b>peso financeiro</b> (Soma em R$ do Consumo / Soma em R$ do Saldo). Isso impede que a quantidade de peças baratas distorça sua análise de capital.</li>
-                        <li><b>No Catálogo e Modal (Micro):</b> Os cartões individuais de cada SKU e a janela auxiliar (Modal) exibem o consumo financeiro daquele item. Você também pode visualizar o <b>Giro Mensal</b> (Custo Consumo Mês / Saldo Financeiro) e o <b>Giro Anual Estimado</b> (Consumo x 12 / Saldo Financeiro). A cobertura (em dias) reflete quanto tempo esse saldo físico deve durar baseado no giro recente.</li>
+                        <li><b>No Dashboard (Macro):</b> O Giro Mensal e Anual agora são expressos em <b>Dias de Cobertura</b>. A fórmula aplicada é <code>(Saldo Total em R$ / Consumo em R$) * 30</code> para o período mensal, e <code>(Saldo Total em R$ / Consumo Anualizado em R$) * 365</code> para o período anual.</li>
+                        <li><b>No Catálogo e Modal (Micro):</b> A mesma regra de conversão para dias é aplicada individualmente para cada SKU.</li>
                     </ul>
 
                     <h3>4. Regra de Reserva Estratégica: Local Crítico 299</h3>
                     <p>Se o sistema detectar que o material possui saldo vinculado ao código de local <code>299</code> (ou nome de estoque correspondente a 299), esse item receberá uma "blindagem" do sistema. Mesmo que ele não possua nenhum consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299)</b>.</p>
 
-                    <h3>5. Consolidação de Múltiplos Locais e Filiais</h3>
-                    <p>Itens duplicados (cadastrados em prateleiras ou locais distintos) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição de prateleira) em formato de tabela (Acordeão).</p>
+                    <h3>5. Consolidação de Múltiplos Locais e Filiais 704</h3>
+                    <p>Itens duplicados (cadastrados em prateleiras ou locais distintos) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição) em formato de tabela. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b> inteligente: locais de estoque abaixo de 599 (exceto o 101 e 299) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>.</p>
 
                     <h3>6. Tratamento de Múltiplas Imagens</h3>
                     <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. Selecione sua pasta de fotos do computador. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item, desde que sigam o padrão: <code>[código do item] - 01.jpg</code>, <code>[código do item] - 02.jpg</code>, etc. A "foto 01" sempre será a capa principal no catálogo.</p>
@@ -602,14 +605,14 @@
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card border-success">
-                        <span class="kpi-title">Giro Financeiro (Período)</span>
-                        <span class="kpi-value color-success" id="dash-kpi-giro-anual">0.0x</span>
-                        <span class="kpi-sub">Total Consumo R$ / Total Saldo R$</span>
+                        <span class="kpi-title">Giro Financeiro (Anual)</span>
+                        <span class="kpi-value color-success" id="dash-kpi-giro-anual">0 dias</span>
+                        <span class="kpi-sub">Cobertura projetada (365 dias)</span>
                     </div>
                     <div class="kpi-card border-primary">
-                        <span class="kpi-title">Cobertura Financeira</span>
+                        <span class="kpi-title">Giro Financeiro (Mensal)</span>
                         <span class="kpi-value" style="color: var(--primary-color);" id="dash-kpi-giro-medio">0 dias</span>
-                        <span class="kpi-sub">(Saldo R$ / Consumo R$) * 30</span>
+                        <span class="kpi-sub">Cobertura real (30 dias)</span>
                     </div>
                     <div class="kpi-card" style="border-left-color: var(--text-secondary);">
                         <span class="kpi-title">Capital Obsoleto</span>
@@ -664,7 +667,7 @@
                     </div>
                 </div>
 
-                <div class="charts-grid">
+                <div class="charts-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
                     <div class="chart-container" style="position: relative;">
                         <canvas id="chartABC"></canvas>
                         <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Clique nas fatias para filtrar a tabela</div>
@@ -672,6 +675,10 @@
                     <div class="chart-container" style="position: relative;">
                         <canvas id="chartStatus"></canvas>
                         <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Clique nas barras para filtrar a tabela</div>
+                    </div>
+                    <div class="chart-container" style="position: relative;">
+                        <canvas id="chartFiliais"></canvas>
+                        <div style="text-align:center; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 10px;">💡 Valor Imobilizado por Filial</div>
                     </div>
                 </div>
 
@@ -718,6 +725,7 @@
     let vistaAtual = 'dashboard';
     let chartABCInstance = null;
     let chartStatusInstance = null;
+    let chartFiliaisInstance = null;
     let mesesAnalisados = 1; 
     let filtroGraficoABC = null; 
     let filtroGraficoStatus = null;
@@ -1000,8 +1008,9 @@
 
         for(let i = 0; i < files.length; i++) {
             let fileName = files[i].name.toLowerCase();
-            if(fileName.includes(' - 01.')) {
-                let codBruto = fileName.split(' - 01.')[0];
+            // Aceitar do 01 ao 06 para o mapeador geral
+            if(fileName.includes(' - 01.') || fileName.includes(' - 02.') || fileName.includes(' - 03.') || fileName.includes(' - 04.') || fileName.includes(' - 05.') || fileName.includes(' - 06.')) {
+                let codBruto = fileName.split(' - ')[0];
                 let codNorm = normalizarCod(codBruto);
                 imagensMapeadas.add(codNorm);
                 count++;
@@ -1013,11 +1022,11 @@
             itensProcessados.forEach(item => { item.temImagem = imagensMapeadas.has(item.codNorm); });
             dispararFiltrosSemAtraso();
         }
-        mostrarToast(`Sucesso: ${count} imagens mapeadas e prontas para galeria!`, "success");
+        mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
     }
 
     // ==========================================================================
-    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA E LOCAL 299
+    // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
     // ==========================================================================
     async function processarInteligencia() {
         if (bases.baseItens.length === 0) { 
@@ -1095,7 +1104,7 @@
             });
         }
 
-        setProgress(95, "Consolidando Base Mestre, Regra 299 e Custos Dinâmicos...");
+        setProgress(95, "Consolidando Base Mestre, Regras de Filial e Custos Dinâmicos...");
         await new Promise(r => setTimeout(r, 50)); 
 
         const b_cod = encontrarChave(bases.baseItens[0], colCod);
@@ -1133,10 +1142,19 @@
             const prateleira = item[b_prat] || '-';
             const divisao = item[b_div] || '-';
 
-            // REGRA: Rolândia - ALM. Preparados
-            if (filialIdBase === '704' || reparticao.toUpperCase() === 'AP' || reparticao.length === 1) {
-                filialNm = 'Rolândia - ALM. Preparados';
-                filialIdBase = '704_ROL'; 
+            // REGRA: Rolândia (Ab. Aves vs Alp. Preparados)
+            if (filialIdBase === '704') {
+                let locNum = parseInt(localId, 10);
+                if (localId === '101' || localId === '299' || locNum >= 599) {
+                    filialNm = 'Rolândia - Alp. Preparados';
+                    filialIdBase = '704_ALP';
+                } else if (locNum < 599) {
+                    filialNm = 'Rolândia - Ab. Aves';
+                    filialIdBase = '704_AB';
+                } else {
+                    filialNm = 'Rolândia - Alp. Preparados'; // Default para não ficar orfão
+                    filialIdBase = '704_ALP';
+                }
             }
             
             if (filialNm && filialNm !== '-') setFiliaisUnicas.add(filialNm);
@@ -1282,7 +1300,7 @@
         const elTitleConsumo = document.getElementById('kpi-consumo-title');
         const elThConsumo = document.getElementById('th-consumo');
         if (elTitleConsumo) elTitleConsumo.innerText = `Custo do Consumo (${mesConsumoAtual})`;
-        if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`; // Alterado título da tabela
+        if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`;
 
         setTimeout(() => {
             dispararFiltrosSemAtraso();
@@ -1360,7 +1378,7 @@
     }
 
     // ==========================================================================
-    // MODAL INTERATIVO (COM GALERIA DE FOTOS E METRICAS FINANCEIRAS EXATAS)
+    // MODAL INTERATIVO (COM GALERIA DE FOTOS E METRICAS EM DIAS)
     // ==========================================================================
     window.abrirModalDetalhes = function(codNorm, filialId) {
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
@@ -1369,15 +1387,17 @@
         let consumoFinanceiro = i.consumo * i.custoUnitario;
         let saldoFinanceiro = i.valorImobilizado;
         
-        let giroMensal = saldoFinanceiro > 0 ? (consumoFinanceiro / saldoFinanceiro).toFixed(2) + 'x' : 'Sem Saldo';
-        let giroAnual = saldoFinanceiro > 0 ? ((consumoFinanceiro * 12) / saldoFinanceiro).toFixed(2) + 'x' : 'Sem Saldo';
+        // Conversão dos Giros para "DIAS" (Como solicitado: Saldo / Consumo)
+        let giroMensalDias = consumoFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoFinanceiro) * 30) + ' dias' : 'Sem Consumo';
         
-        let giroText = i.diasGiro === Infinity ? 'Sem Giro' : `${i.diasGiro} dias`;
+        let consumoAnualFinanceiro = consumoFinanceiro * 12;
+        let giroAnualDias = consumoAnualFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoAnualFinanceiro) * 365) + ' dias' : 'Sem Consumo';
+        
+        let giroText = i.diasGiro === Infinity ? 'Sem Consumo' : `${i.diasGiro} dias`;
         let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
         
         let imagensHTML = '';
         
-        // Renderiza galeria até 6 imagens (Com Fallback automático se falhar na 1ª imagem)
         for(let n=1; n<=6; n++) {
             let nStr = n < 10 ? '0'+n : n;
             let isFirst = (n === 1);
@@ -1385,7 +1405,6 @@
             imagensHTML += `<img src="imagens/${i.cod} - ${nStr}.jpg" style="height:180px; min-width:180px; object-fit:cover; border-radius:12px; flex-shrink:0; border:1px solid var(--border-color);" onerror="${fallback}">`;
         }
         
-        // Placeholder de Imagem Quebrada (Só aparece se a primeira falhar)
         imagensHTML += `<div id="modal-img-fallback" class="img-placeholder" style="display:${(mapeamentoDeImagemAtivo && !i.temImagem) ? 'flex' : 'none'}; min-width:180px; height:180px; border-radius:12px; font-size:14px; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-subcard); border:1px solid var(--border-color); color:var(--text-secondary);"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
 
         let linhasLocais = i.locais.map(loc => {
@@ -1429,12 +1448,12 @@
             <div class="item-metrics-grid" style="margin-bottom:20px;">
                 <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(saldoFinanceiro)}</span></div>
                 <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(consumoFinanceiro)}</span></div>
-                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal</span><span class="metric-value" style="font-size:20px;">${giroMensal}</span></div>
-                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual (Estimado)</span><span class="metric-value" style="font-size:20px;">${giroAnual}</span></div>
+                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal (Dias)</span><span class="metric-value" style="font-size:20px;">${giroMensalDias}</span></div>
+                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado (Dias)</span><span class="metric-value" style="font-size:20px;">${giroAnualDias}</span></div>
             </div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unit. Médio</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
             </div>
@@ -1562,22 +1581,22 @@
             if (i.status === 'Excesso Estoque') qtdExcesso++;
         });
 
-        let giroDoPeriodo = 0;
-        if (totalSaldoFinanceiro > 0) {
-            giroDoPeriodo = (totalConsumoMensalFinanceiro / totalSaldoFinanceiro).toFixed(2);
-        }
+        let giroMensalDias = 0;
+        let giroAnualDias = 0;
 
-        let coberturaDiasFinanceira = 0;
         if (totalConsumoMensalFinanceiro > 0) {
-            coberturaDiasFinanceira = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
+            giroMensalDias = Math.round((totalSaldoFinanceiro / totalConsumoMensalFinanceiro) * 30);
+            giroAnualDias = Math.round((totalSaldoFinanceiro / (totalConsumoMensalFinanceiro * 12)) * 365);
         }
 
         const safeSetText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
         safeSetText('dash-kpi-valor-total', formatarMoeda(valorTotal));
         safeSetText('dash-kpi-total-itens', `Em ${itensFiltrados.length} SKUs`);
-        safeSetText('dash-kpi-giro-anual', `${giroDoPeriodo}x`);
-        safeSetText('dash-kpi-giro-medio', totalConsumoMensalFinanceiro > 0 ? `${coberturaDiasFinanceira} dias` : 'Sem Giro');
+        
+        safeSetText('dash-kpi-giro-anual', totalConsumoMensalFinanceiro > 0 ? `${giroAnualDias} dias` : 'Sem Consumo');
+        safeSetText('dash-kpi-giro-medio', totalConsumoMensalFinanceiro > 0 ? `${giroMensalDias} dias` : 'Sem Consumo');
+        
         safeSetText('dash-kpi-ruptura-critica', qtdRupturaCritica);
         safeSetText('dash-kpi-risco-minimo', qtdRiscoMinimo);
         safeSetText('dash-kpi-excesso', qtdExcesso);
@@ -1643,9 +1662,11 @@
     function atualizarGraficos() {
         if(chartABCInstance) chartABCInstance.destroy();
         if(chartStatusInstance) chartStatusInstance.destroy();
+        if(chartFiliaisInstance) chartFiliaisInstance.destroy();
 
         const ctxABC = document.getElementById('chartABC')?.getContext('2d');
         const ctxStatus = document.getElementById('chartStatus')?.getContext('2d');
+        const ctxFiliais = document.getElementById('chartFiliais')?.getContext('2d');
         
         if(!ctxABC || !ctxStatus) return;
 
@@ -1658,9 +1679,13 @@
 
         const contagemStatus = { Normal: 0, Risco: 0, Excesso: 0, RupturaCritica: 0, Obsoleto: 0, LocalCritico: 0 };
         const volumeABC = { A: 0, B: 0, C: 0 };
+        const valorPorFilial = {};
 
         itensFiltrados.forEach(i => {
             if(volumeABC[i.curva] !== undefined) volumeABC[i.curva] += (i.consumo * i.custoUnitario); 
+            
+            if(!valorPorFilial[i.filialNm]) valorPorFilial[i.filialNm] = 0;
+            valorPorFilial[i.filialNm] += i.valorImobilizado;
             
             if(i.status === 'Estoque Normal') contagemStatus.Normal++;
             else if(i.status === 'Abaixo Mínimo') contagemStatus.Risco++;
@@ -1725,6 +1750,26 @@
                 scales: { y: { beginAtZero: true, grid: { color: gridColor }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } }
             }
         });
+        
+        if (ctxFiliais) {
+            const coresFiliais = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b', '#3b82f6', '#14b8a6'];
+            chartFiliaisInstance = new Chart(ctxFiliais, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(valorPorFilial),
+                    datasets: [{ 
+                        data: Object.values(valorPorFilial), 
+                        backgroundColor: coresFiliais,
+                        borderWidth: isDark ? 0 : 2, borderColor: isDark ? 'transparent' : '#ffffff', hoverOffset: 6
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { title: { display: true, text: `Distribuição de Estoque (R$)`, font: { size: 14, weight: '800' } }, legend: { display: false } },
+                    cutout: '75%'
+                }
+            });
+        }
     }
 </script>
 </body>
