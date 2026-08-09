@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JBS | Seara — Gestão de Almoxarifado Avançada</title>
+    <title>JBS | Seara — Gestão de Almoxarifado Avançada + AI</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -53,7 +53,7 @@
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-
+            /* Badges Dark */
             --badge-ruptura-bg: rgba(239, 68, 68, 0.15); --badge-ruptura-text: #fca5a5;
             --badge-transito-bg: rgba(245, 158, 11, 0.15); --badge-transito-text: #fcd34d;
             --badge-normal-bg: rgba(16, 185, 129, 0.15); --badge-normal-text: #6ee7b7;
@@ -61,7 +61,7 @@
             --badge-abaixo-bg: rgba(217, 119, 6, 0.15); --badge-abaixo-text: #fde68a;
             --badge-acima-bg: rgba(14, 165, 233, 0.15); --badge-acima-text: #7dd3fc;
             --badge-local-critico-bg: rgba(147, 51, 234, 0.15); --badge-local-critico-text: #d8b4fe;
-
+            /* Metrics Dark */
             --metric-saldo-bg: rgba(22, 163, 74, 0.1); --metric-saldo-border: rgba(22, 163, 74, 0.2); --metric-saldo-text: #86efac; --metric-saldo-label: #4ade80;
             --metric-transito-bg: rgba(2, 132, 199, 0.1); --metric-transito-border: rgba(2, 132, 199, 0.2); --metric-transito-text: #7dd3fc; --metric-transito-label: #38bdf8;
             --metric-giro-bg: rgba(217, 119, 6, 0.1); --metric-giro-border: rgba(217, 119, 6, 0.2); --metric-giro-text: #fde047; --metric-giro-label: #facc15;
@@ -92,22 +92,15 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* TELA DE CARREGAMENTO HIGH-TECH ATUALIZADA */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: #38bdf8; transition: opacity 0.6s ease, visibility 0.6s;
         }
         .loader-logo { font-size: 24px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; animation: loaderPulse 2s infinite; }
-        
-        .progress-container {
-            width: 300px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px;
-        }
-        .progress-bar {
-            height: 100%; width: 0%; background: #38bdf8; transition: width 0.3s ease;
-        }
+        .progress-container { width: 300px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+        .progress-bar { height: 100%; width: 0%; background: #38bdf8; transition: width 0.3s ease; }
         .progress-text { font-size: 14px; font-weight: bold; margin-bottom: 25px; color: #bae6fd;}
-
         .loader-logs { 
             width: 80%; max-width: 600px; font-family: monospace; font-size: 12px; color: #94a3b8; 
             text-align: left; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px;
@@ -172,11 +165,6 @@
         }
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
 
-        .status-importacao { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .status-item { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-radius: 8px; background: var(--bg-subcard); border: 1px solid var(--border-color); color: var(--text-secondary); word-break: break-all;}
-        .status-ok { color: var(--text-success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
-        .status-erro { color: var(--text-danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
-
         /* ==========================================================================
            4. PAINEL DE FILTROS E BUSCA
            ========================================================================== */
@@ -198,7 +186,7 @@
         .btn-reset-filters { margin-top: 10px; padding: 12px; background: transparent; color: var(--text-danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .btn-reset-filters:hover { background: rgba(239, 68, 68, 0.1); }
 
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;}
         .container { flex-grow: 1; display: flex; flex-direction: column; padding: 30px 40px; overflow: hidden; max-width: 1600px; margin: 0 auto; width: 100%;}
         .fixed-top-section { margin-bottom: 24px; flex-shrink: 0; }
         header h1 { font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 20px; letter-spacing: -1px; }
@@ -284,6 +272,14 @@
         .metric-label { font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;}
         .metric-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px;}
 
+        .item-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 14px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
+        }
+        .item-address { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; }
+        .item-address-icon { background: var(--bg-subcard); padding: 4px 8px; border-radius: 8px; font-size: 14px; border: 1px solid var(--border-color);}
+        .item-filial { font-size: 12px; color: var(--text-secondary); font-weight: 700; background: var(--bg-subcard); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);}
+
         /* ==========================================================================
            7. DASHBOARD E KPIs 
            ========================================================================== */
@@ -327,7 +323,7 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. MODAL DE DETALHES, GALERIA E LIGHTBOX
+           8. MODAL DE DETALHES E LIGHTBOX
            ========================================================================== */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000;
@@ -375,16 +371,59 @@
         .lightbox-close:hover { color: var(--text-danger); }
 
         /* ==========================================================================
-           9. TOASTS E INSTRUÇÕES
+           9. AI ASSISTANT (CHATBOT)
            ========================================================================== */
-        .toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
-        .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
+        .ai-chat-btn {
+            position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            color: white; padding: 14px 24px; border-radius: 30px; font-weight: 800; font-size: 14px;
+            cursor: pointer; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4); z-index: 99999;
+            display: flex; align-items: center; gap: 8px; transition: all 0.3s; border: none;
+        }
+        .ai-chat-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 30px rgba(139, 92, 246, 0.6); }
+        
+        .ai-chat-window {
+            position: fixed; bottom: 85px; right: 24px; width: 350px; height: 500px;
+            background: var(--bg-card); border-radius: 20px; box-shadow: var(--shadow-hover);
+            border: 1px solid var(--border-color); z-index: 99999; display: none;
+            flex-direction: column; overflow: hidden; animation: fadeIn 0.3s ease;
+        }
+        .ai-header {
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6); padding: 16px 20px;
+            color: white; font-weight: 800; display: flex; justify-content: space-between; align-items: center;
+        }
+        .ai-close { cursor: pointer; font-size: 20px; opacity: 0.8; }
+        .ai-close:hover { opacity: 1; }
+        .ai-messages {
+            flex-grow: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+            background: var(--bg-body); font-size: 13px;
+        }
+        .ai-msg { padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.5; }
+        .ai-msg-user { background: var(--primary-color); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai-msg-bot { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .ai-input-area {
+            padding: 15px; background: var(--bg-card); border-top: 1px solid var(--border-color);
+            display: flex; gap: 10px;
+        }
+        .ai-input {
+            flex-grow: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid var(--border-color);
+            background: var(--bg-subcard); color: var(--text-primary); font-size: 13px; outline: none;
+        }
+        .ai-input:focus { border-color: #8b5cf6; }
+        .ai-send {
+            background: #8b5cf6; color: white; border: none; width: 36px; height: 36px; border-radius: 50%;
+            cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ==========================================================================
+           10. TOASTS E INSTRUÇÕES
+           ========================================================================== */
+        .toast-container { position: fixed; bottom: 24px; left: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
+        .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
         .toast-success { background-color: #10b981; }
         .toast-error { background-color: #ef4444; }
         .toast-warning { background-color: #f59e0b; }
         .toast-info { background-color: #0ea5e9; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
         .instrucoes-box h3 { color: var(--primary-color); margin-top: 20px; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
         .instrucoes-box p { margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
@@ -421,6 +460,21 @@
 <div class="lightbox-overlay" id="lightbox-overlay" onclick="fecharLightbox()">
     <span class="lightbox-close">&times;</span>
     <img class="lightbox-img" id="lightbox-img" src="" onclick="event.stopPropagation()">
+</div>
+
+<button class="ai-chat-btn" onclick="toggleAIChat()">💬 Seara AI</button>
+<div class="ai-chat-window" id="ai-chat-window">
+    <div class="ai-header">
+        <span>🤖 Copilot de Estoque</span>
+        <span class="ai-close" onclick="toggleAIChat()">×</span>
+    </div>
+    <div class="ai-messages" id="ai-messages">
+        <div class="ai-msg ai-msg-bot">Olá! Sou sua Inteligência Artificial local. Pergunte-me sobre os dados do seu catálogo atual (ex: <i>"resumo"</i>, <i>"itens em ruptura"</i>, <i>"item mais caro"</i>, <i>"valor obsoleto"</i>).</div>
+    </div>
+    <div class="ai-input-area">
+        <input type="text" id="ai-input" class="ai-input" placeholder="Pergunte sobre os dados..." onkeypress="if(event.key === 'Enter') enviarMensagemAI()">
+        <button class="ai-send" onclick="enviarMensagemAI()">➤</button>
+    </div>
 </div>
 
 <div class="app-layout segmentation-hidden" id="app-layout" style="opacity: 0;">
@@ -575,26 +629,25 @@
             </div>
             <div class="scrollable-results-section">
                 <div class="dash-section-box instrucoes-box">
-                    <h3>1. Sincronização Automática vs Manual</h3>
-                    <p>Ao abrir o painel, ele buscará os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na raiz do seu repositório. O GitHub é <i>Case Sensitive</i>, portanto, respeite letras maiúsculas e minúsculas exatas no nome do arquivo. Se houver falha de rede ou CORS, utilize o botão de "Upload Manual" na tela inicial.</p>
-                    
-                    <h3>2. Cálculo de Custo Unitário Dinâmico</h3>
-                    <p>O custo unitário de um item não é lido apenas de forma estática do ERP. O sistema o calcula inteligentemente através da fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante que as frações de preço sejam precisas. Essa regra é aplicada globalmente (no total do item consolidado) e no detalhe de cada local de estoque.</p>
+                    <h3>1. Seara AI (Copiloto Inteligente) - NOVO</h3>
+                    <p>O botão flutuante no canto inferior direito abre um assistente de inteligência de dados local. Você pode enviar comandos em linguagem natural (ex: <i>"resumo"</i>, <i>"qual o item mais caro"</i>, <i>"itens em ruptura"</i>, <i>"obsoletos"</i>) e a IA lerá os dados filtrados da tela atual para gerar uma resposta inteligente instantânea.</p>
 
-                    <h3>3. Giro de Estoque Financeiro (Em Dias)</h3>
+                    <h3>2. Sincronização e Mapeamento de Arquivos</h3>
+                    <p>Ao abrir o painel, ele buscará os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na raiz do seu repositório. O GitHub é <i>Case Sensitive</i>, portanto, respeite letras exatas. Para fotos, clique em <b>"Mapear Pasta de Imagens"</b> e selecione sua pasta local. O sistema suporta carrossel de até 6 fotos (padrão <code>[cod] - 01.jpg</code> a <code>06.jpg</code>).</p>
+                    
+                    <h3>3. Cálculo de Custo Unitário Dinâmico</h3>
+                    <p>O custo unitário de um item é calculado pela fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante precisão em centavos em cada local de estoque.</p>
+
+                    <h3>4. Giro de Estoque Financeiro (Em Dias)</h3>
                     <ul>
-                        <li><b>No Dashboard (Macro):</b> O Giro Mensal e Anual agora são expressos em <b>Dias de Cobertura</b>. A fórmula aplicada é <code>(Saldo Total em R$ / Consumo em R$) * 30</code> para o período mensal, e <code>(Saldo Total em R$ / Consumo Anualizado em R$) * 365</code> para o período anual.</li>
-                        <li><b>No Catálogo e Modal (Micro):</b> A mesma regra de conversão para dias é aplicada individualmente para cada SKU na visualização detalhada.</li>
+                        <li><b>No Dashboard (Macro) e Catálogo (Micro):</b> O Giro Mensal e Anual são expressos em <b>Dias de Cobertura Financeira</b>. Fórmula: <code>(Saldo Total em R$ / Consumo em R$) * 30/365</code>. Isso impede que a quantidade de peças baratas distorça sua análise de capital.</li>
                     </ul>
 
-                    <h3>4. Regra de Reserva Estratégica: Local Crítico 299</h3>
-                    <p>Se o sistema detectar que o material possui saldo vinculado ao código de local <code>299</code> (ou nome de estoque correspondente a 299), esse item receberá uma "blindagem" do sistema. Mesmo que ele não possua nenhum consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299)</b>.</p>
+                    <h3>5. Regra de Reserva Estratégica: Local Crítico 299</h3>
+                    <p>Se o material possui saldo no código de local <code>299</code>, ele recebe uma "blindagem". Mesmo sem consumo, ele <b>NÃO</b> será classificado como "Obsoleto", mas sim como <b>🟣 Normal/Local Crítico (299)</b>.</p>
 
-                    <h3>5. Consolidação de Múltiplos Locais e Filiais 704</h3>
-                    <p>Itens duplicados (cadastrados em prateleiras ou locais distintos) são fundidos em um <b>"Super Cartão"</b> para cálculo preciso de Risco Logístico e Curva ABC. Clique em qualquer item no catálogo para abrir o Modal e visualizar a quebra detalhada do saldo, custo e endereço (com código de local e descrição) em formato de tabela. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b> inteligente: locais de estoque abaixo de 599 (exceto o 101 e 299) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>.</p>
-
-                    <h3>6. Tratamento de Múltiplas Imagens e Lightbox</h3>
-                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. Selecione sua pasta de fotos do computador. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item, desde que sigam o padrão: <code>[código do item] - 01.jpg</code>, <code>[código do item] - 02.jpg</code>, etc. A "foto 01" sempre será a capa principal no catálogo. Você pode clicar nas fotos dentro do Modal para expandi-las (Lightbox).</p>
+                    <h3>6. Filiais 704 (Ab. Aves vs Alp. Preparados)</h3>
+                    <p>Itens da Filial 704 são desdobrados automaticamente. Locais abaixo de 599 (exceto o 101 e 299) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>. Você pode cruzar esses dados no filtro lateral.</p>
                 </div>
             </div>
         </div>
@@ -746,6 +799,79 @@
     let mapeamentoDeImagemAtivo = false;
 
     if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+    // ==========================================================================
+    // SEARA AI ASSISTANT (COPILOTO DE DADOS)
+    // ==========================================================================
+    function toggleAIChat() {
+        const win = document.getElementById('ai-chat-window');
+        win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
+        if(win.style.display === 'flex') document.getElementById('ai-input').focus();
+    }
+
+    function addAIMessage(msg, isUser = false) {
+        const container = document.getElementById('ai-messages');
+        const div = document.createElement('div');
+        div.className = 'ai-msg ' + (isUser ? 'ai-msg-user' : 'ai-msg-bot');
+        div.innerHTML = msg;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function enviarMensagemAI() {
+        const input = document.getElementById('ai-input');
+        const text = input.value.trim();
+        if(!text) return;
+        
+        addAIMessage(text, true);
+        input.value = '';
+        
+        // Simular "Digitando..."
+        setTimeout(() => processarRespostaAI(text), 600);
+    }
+
+    function processarRespostaAI(query) {
+        if(itensFiltrados.length === 0) {
+            addAIMessage("No momento o catálogo está vazio ou filtrado sem resultados. Sincronize a base de dados primeiro.");
+            return;
+        }
+
+        let q = normalizarString(query);
+        let resp = "";
+
+        // Heurísticas Locais Inteligentes
+        if (q.includes('resumo') || q.includes('total') || q.includes('estoque')) {
+            let valTotal = formatarMoeda(itensFiltrados.reduce((acc, i) => acc + i.valorImobilizado, 0));
+            let consumo = formatarMoeda(itensFiltrados.reduce((acc, i) => acc + i.consumoFinanceiro, 0));
+            resp = `Atualmente, temos <b>${itensFiltrados.length} itens</b> listados na visão atual.<br><br>💰 <b>Valor Imobilizado:</b> ${valTotal}<br>📉 <b>Consumo (${mesConsumoAtual}):</b> ${consumo}`;
+        } 
+        else if (q.includes('ruptura') || q.includes('faltando') || q.includes('zerado')) {
+            let rupturas = itensFiltrados.filter(i => i.status.includes('Ruptura')).sort((a,b) => b.consumoFinanceiro - a.consumoFinanceiro);
+            if(rupturas.length > 0) {
+                resp = `Encontrei <b>${rupturas.length} itens em ruptura</b>.<br><br>🔴 <b>Top 3 mais críticos (Por Consumo):</b><br>`;
+                rupturas.slice(0, 3).forEach(i => resp += `- #${i.cod} (${i.desc})<br>`);
+            } else {
+                resp = "✅ Ótimas notícias! Não encontrei itens em ruptura na seleção atual.";
+            }
+        }
+        else if (q.includes('caro') || q.includes('maior valor') || q.includes('topo')) {
+            let maisCaro = [...itensFiltrados].sort((a,b) => b.valorImobilizado - a.valorImobilizado)[0];
+            resp = `O item com maior dinheiro travado em estoque é o:<br><br>💎 <b>#${maisCaro.cod} - ${maisCaro.desc}</b><br>Valor: <b>${formatarMoeda(maisCaro.valorImobilizado)}</b>`;
+        }
+        else if (q.includes('obsoleto') || q.includes('parado') || q.includes('sem giro')) {
+            let obs = itensFiltrados.filter(i => i.status.includes('Obsoleto'));
+            let valObs = formatarMoeda(obs.reduce((acc, i) => acc + i.valorImobilizado, 0));
+            resp = `Encontrei <b>${obs.length} itens obsoletos</b> (Sem consumo no período).<br>Isso representa <b>${valObs}</b> em capital travado.`;
+        }
+        else if (q.includes('ajuda') || q.includes('o que você faz')) {
+            resp = "Sou sua IA de Estoque! Posso analisar a base atual. Tente perguntar:<br>• <i>Resumo</i><br>• <i>Quais os itens em ruptura?</i><br>• <i>Qual o item mais caro?</i><br>• <i>Valor obsoleto</i>";
+        }
+        else {
+            resp = "Desculpe, não entendi bem. Como sou uma IA baseada em análise dos seus CSVs locais, tente usar palavras como <b>'resumo'</b>, <b>'ruptura'</b>, <b>'obsoleto'</b> ou <b>'mais caro'</b>.";
+        }
+
+        addAIMessage(resp);
+    }
 
     // ==========================================================================
     // TELA DE CARREGAMENTO E LIGHTBOX
@@ -1273,10 +1399,12 @@
             
             const consumoFinanceiro = consumoMesAnteriorFisico * item.custoUnitario;
 
-            // NOVO CALCULO DE GIRO EM DIAS BASEADO EM VALOR (Saldo R$ / Consumo R$)
-            let diasGiro = 0;
-            if (consumoFinanceiro > 0) diasGiro = Math.round((valorImobilizado / consumoFinanceiro) * 30);
-            else if (valorImobilizado > 0) diasGiro = Infinity;
+            // CÁLCULO DE GIRO EM DIAS (Para uso no Modal/Dashboard)
+            let diasGiroMensal = Infinity;
+            if (consumoFinanceiro > 0) diasGiroMensal = Math.round((valorImobilizado / consumoFinanceiro) * 30);
+            
+            let diasGiroAnual = Infinity;
+            if (consumoFinanceiro > 0) diasGiroAnual = Math.round((valorImobilizado / (consumoFinanceiro * 12)) * 365);
 
             let isLocal299Macro = item.locais.some(l => l.is299 && l.saldo > 0);
 
@@ -1301,7 +1429,8 @@
 
             return {
                 ...item,
-                transito, consumo: consumoMesAnteriorFisico, consumoFinanceiro: consumoFinanceiro, diasGiro, valorImobilizado,
+                transito, consumo: consumoMesAnteriorFisico, consumoFinanceiro, 
+                diasGiroMensal, diasGiroAnual, valorImobilizado,
                 status, statusBadge, curva: 'C', searchString,
                 temImagem: mapeamentoDeImagemAtivo ? imagensMapeadas.has(item.codNorm) : null
             };
@@ -1416,16 +1545,9 @@
         const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
         if(!i) return;
 
-        let consumoFinanceiro = i.consumoFinanceiro;
-        let saldoFinanceiro = i.valorImobilizado;
-        
-        let giroMensalDias = consumoFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoFinanceiro) * 30) + ' dias' : 'Sem Consumo';
-        
-        let consumoAnualFinanceiro = consumoFinanceiro * 12;
-        let giroAnualDias = consumoAnualFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoAnualFinanceiro) * 365) + ' dias' : 'Sem Consumo';
-        
-        let giroText = i.diasGiro === Infinity ? 'Sem Consumo' : `${i.diasGiro} dias`;
-        let giroClass = i.diasGiro === Infinity ? 'metric-giro' : 'metric-default';
+        let giroMensalFormat = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal} dias`;
+        let giroAnualFormat = i.diasGiroAnual === Infinity ? 'Sem Consumo' : `${i.diasGiroAnual} dias`;
+        let giroText = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal} dias`;
         
         let imagensHTML = '';
         
@@ -1477,14 +1599,14 @@
             </div>
             
             <div class="item-metrics-grid" style="margin-bottom:20px;">
-                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(saldoFinanceiro)}</span></div>
-                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(consumoFinanceiro)}</span></div>
-                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal</span><span class="metric-value" style="font-size:20px;">${giroMensalDias}</span></div>
-                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado</span><span class="metric-value" style="font-size:20px;">${giroAnualDias}</span></div>
+                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(i.valorImobilizado)}</span></div>
+                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(i.consumoFinanceiro)}</span></div>
+                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal (Dias)</span><span class="metric-value" style="font-size:20px;">${giroMensalFormat}</span></div>
+                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado (Dias)</span><span class="metric-value" style="font-size:20px;">${giroAnualFormat}</span></div>
             </div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque (Física)</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
+                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Cobertura de Estoque Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${giroText}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unit. Médio</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
                 <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
             </div>
@@ -1513,12 +1635,8 @@
         let htmlLote = [];
         
         itensFiltrados.slice(0, 100).forEach(i => { 
-            let consumoFinanceiro = i.consumoFinanceiro;
-            let saldoFinanceiro = i.valorImobilizado;
-            
-            let giroMensalDias = consumoFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoFinanceiro) * 30) + 'd' : 'Sem Consumo';
-            let consumoAnualFinanceiro = consumoFinanceiro * 12;
-            let giroAnualDias = consumoAnualFinanceiro > 0 ? Math.round((saldoFinanceiro / consumoAnualFinanceiro) * 365) + 'd' : 'Sem Consumo';
+            let giroMensalDias = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal}d`;
+            let giroAnualDias = i.diasGiroAnual === Infinity ? 'Sem Consumo' : `${i.diasGiroAnual}d`;
 
             let imagemHTML = '';
             if (mapeamentoDeImagemAtivo) {
@@ -1530,7 +1648,7 @@
                               <div class="img-placeholder" style="display:none;"><span style="font-size:20px; margin-bottom:5px;">🚫</span>FOTO NÃO<br>ENCONTRADA</div>`;
             }
             
-            // Nova capa: Filiais com saldo dinâmicas
+            // Filiais com saldo dinâmicas
             let filiaisComSaldo = itensProcessados
                 .filter(x => x.codNorm === i.codNorm && x.saldo > 0)
                 .map(x => x.filialNm)
@@ -1567,10 +1685,10 @@
                             </div>
 
                             <div class="item-metrics-grid">
-                                <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual (Qtd)</span><span class="metric-value">${i.saldo} <span style="font-size:11px;">und</span></span></div>
-                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
+                                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo</span><span class="metric-value">${formatarMoeda(i.valorImobilizado)}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Custo Consumo</span><span class="metric-value">${formatarMoeda(i.consumoFinanceiro)}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
                                 <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value">${giroAnualDias}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${formatarMoeda(i.consumoFinanceiro)}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1690,7 +1808,7 @@
         }
 
         itensTabela.slice(0, 50).forEach(i => { 
-            let giroText = i.diasGiro === Infinity ? 'Obsoleto' : `${i.diasGiro}d`;
+            let giroText = i.diasGiroMensal === Infinity ? 'Obsoleto' : `${i.diasGiroMensal}d`;
             let locAbrev = i.locais.length > 1 ? `${i.locais.length} Locais` : `Rep ${i.reparticao} | Prat ${i.prateleira}`;
             htmlLote.push(`
                 <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
