@@ -262,6 +262,17 @@ async function processarInteligencia() {
     
     let mapCompras = new Map(), mapLead = new Map(), ordesAtivas = []; setStatusOFUnicos.clear();
     
+    // NOVO HELPER: Mapeia colunas difíceis ignorando espaços extras e caixa alta/baixa
+    const getValExt = (row, searchTerms) => {
+        let rKeys = Object.keys(row);
+        for(let t of searchTerms) {
+            let termNorm = normStr(t).replace(/\s+/g, '');
+            let fKey = rKeys.find(k => normStr(k).replace(/\s+/g, '') === termNorm || normStr(k).replace(/\s+/g, '').includes(termNorm));
+            if(fKey && row[fKey] && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
+        }
+        return '-';
+    };
+
     if (bases.compras.length) {
         let b = bases.compras[0], c = { cod: findKey(b, keys.cod), ofQtd: findKey(b, keys.ofQtd), recQtd: findKey(b, keys.recQtd), ofSit: findKey(b, keys.ofSit), scSit: findKey(b, keys.scSit), scCanc: findKey(b, keys.scCanc), compFb: findKey(b, keys.compFb), scDt: findKey(b, keys.scDt), recDt: findKey(b, keys.recDt), scCod: findKey(b, keys.scCod), ofCod: findKey(b, keys.ofCod), desc: findKey(b, keys.desc), forn: findKey(b, keys.ofForn), dtEnt: findKey(b, keys.ofDt) };
         bases.compras.forEach(i => {
@@ -273,7 +284,15 @@ async function processarInteligencia() {
             if(pendente > 0) {
                 mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
                 let sit = i[c.ofSit] || 'Pendente'; setStatusOFUnicos.add(sit);
-                ordesAtivas.push({ sc: i[c.scCod]||'-', of: i[c.ofCod]||'-', codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase() });
+                
+                ordesAtivas.push({ 
+                    sc: i[c.scCod]||'-', of: i[c.ofCod]||'-', codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
+                    
+                    // Extração avançada dos novos campos mapeados
+                    scSit_ext: getValExt(i, ['sc - situação']), scCC_ext: getValExt(i, ['sc - centro custo aprovador']), scDtCria_ext: getValExt(i, ['sc - data criação']), scSol_ext: getValExt(i, ['sc - nome solicitante']), scEmp_ext: getValExt(i, ['sc - empresa']), scFil_ext: getValExt(i, ['sc - filial']), scDescFil_ext: getValExt(i, ['sc - descr. filial']), scUM_ext: getValExt(i, ['sc - unid. medida']), scQtd_ext: getValExt(i, ['sc - quantidade']), scCat_ext: getValExt(i, ['sc - categoria']), scDtEnt_ext: getValExt(i, ['sc - dt entrega']), scReg_ext: getValExt(i, ['sc - regularização']), scObs_ext: getValExt(i, ['sc - obs']), scLocEst_ext: getValExt(i, ['sc - local estoque']), scCCUEtq_ext: getValExt(i, ['sc - ccu etq']), scAprov_ext: getValExt(i, ['sc - aprovador']),
+                    ofData_ext: getValExt(i, ['of - data']), ofQtdSol_ext: getValExt(i, ['of - qtd. solicitada']), ofSaldo_ext: getValExt(i, ['of - saldo']), ofQtdEnt_ext: getValExt(i, ['of - qtd. entregue']), ofFechado_ext: getValExt(i, ['of - fechado']), ofBloqueado_ext: getValExt(i, ['of - bloqueado']), ofDtEnt_ext: getValExt(i, ['of - data entrega']), ofFrete_ext: getValExt(i, ['of - frete']), ofMoeda_ext: getValExt(i, ['of - moeda']), ofTipo_ext: getValExt(i, ['of - tipo']), ofEmail_ext: getValExt(i, ['of - email fornecedor']), ofObs_ext: getValExt(i, ['of - obs']),
+                    recNF_ext: getValExt(i, ['rec - nr nf']), recSerie_ext: getValExt(i, ['rec - série']), recDtEmissao_ext: getValExt(i, ['rec - dt emissão']), recDtEntrada_ext: getValExt(i, ['rec - dt entrada']), recUM_ext: getValExt(i, ['rec - unid. medida']), recQtd_ext: getValExt(i, ['rec - quantidade']), recValUn_ext: getValExt(i, ['rec - valor un. fiscal'])
+                });
             }
             if(c.scDt && c.recDt && i[c.scDt] && i[c.recDt]) {
                 let pD = s => { let p = String(s).trim().split('/'); return p.length===3 ? new Date(p[2].split(' ')[0], p[1]-1, p[0]) : new Date(s); };
@@ -328,10 +347,8 @@ async function processarInteligencia() {
     setProgress(98, "Calculando KPIs..."); await new Promise(r => setTimeout(r, 50)); 
     
     let baseProc = Array.from(mapCon.values()).map(i => {
-        // Correção Passo 1: Trazemos o cálculo de trânsito e consumo para ANTES da verificação
         let trans = mapCompras.get(i.codNorm) || 0, consF = Math.abs(mapConsumo.get(i.codNorm)) || 0;
         
-        // Agora, se o item possuir trânsito (SC aberta), ele NÃO será descartado
         if (!i.saldo && !i.minimo && !i.maximo && !trans && !consF) return null;
         
         i.custoUnitario = (i.saldo > 0 && i.valorTotalGlobal > 0) ? i.valorTotalGlobal / i.saldo : i.locais[0]?.custoUnitario || 0;
@@ -469,7 +486,6 @@ const renderGestaoCompras = (tSplit, fFil) => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        // Correção Passo 2: Adicionado '${o.sc}' no evento onclick
         return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')"><td><strong>${o.of}</strong><br><span style="font-size:10px;">SC: ${o.sc}</span></td><td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td><td>${o.fornecedor}</td><td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td><td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td><td>${o.dataEntrega}</td></tr>`;
     }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem OFs pendentes.</td></tr>`;
     
@@ -549,29 +565,118 @@ window.abrirModalDetalhes = (codNorm, fId) => {
     $('modal-item').style.display = 'flex';
 };
 
-// Correção Passo 3: Adicionado o parâmetro scId e gerado fallback para evitar quebra.
 window.abrirModalOF = (ofId, codProd, scId) => {
     let c = normCod(codProd), 
-        // Agora a busca valida Produto + OF + SC
+        // O sistema valida Produto + OF + SC de forma exata: Impossível pegar outro item da mesma nota!
         o = ordesAtivasFiltradas.find(x => x.of === ofId && x.sc === scId && normCod(x.codProd) === c), 
         i = itensProcessados.find(x => x.codNorm === c);
 
     if (!o) return mostrarToast("Erro ao carregar OF.", "error");
 
-    // Fallback de segurança: Se o item estiver em Compras mas não existir na Base Mestre de Itens
-    if (!i) {
-        i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
+    if (!i) i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
+
+    // Calcula de forma inteligente o status de atraso:
+    let dataAlvo = o.scDtEnt_ext !== '-' ? o.scDtEnt_ext : (o.ofDtEnt_ext !== '-' ? o.ofDtEnt_ext : o.dataEntrega);
+    let badgeAtraso = `<span class="badge-status badge-normal" style="background:#f3f4f6; color:#64748b;">⚪ Sem Previsão</span>`;
+
+    if (dataAlvo && dataAlvo !== '-') {
+        let p = dataAlvo.split('/');
+        if (p.length === 3) {
+            let dia = parseInt(p[0]), mes = parseInt(p[1])-1, ano = parseInt(p[2].split(' ')[0]);
+            if (ano < 100) ano += 2000;
+            let dtObj = new Date(ano, mes, dia);
+            let hoje = new Date(); hoje.setHours(0,0,0,0);
+            
+            let diffDays = Math.ceil((dtObj - hoje) / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) badgeAtraso = `<span class="badge-status badge-ruptura-critica">🔴 Atrasado (${Math.abs(diffDays)} dias)</span>`;
+            else if (diffDays === 0) badgeAtraso = `<span class="badge-status badge-transito">🟡 Entrega Hoje</span>`;
+            else badgeAtraso = `<span class="badge-status badge-normal">🟢 No Prazo (Faltam ${diffDays} dias)</span>`;
+        }
     }
 
-    // Só permite ver o contexto se o item realmente existir na inteligência do painel
     let btnContexto = itensProcessados.some(x => x.codNorm === c) 
         ? `<button class="theme-btn active" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')" style="padding:12px 24px;border-radius:8px;">Ver Contexto Completo do Item</button>`
         : `<button class="theme-btn" style="padding:12px 24px;border-radius:8px; opacity:0.5; cursor:not-allowed;" title="Sem cadastro na Base">Contexto Indisponível (Sem Base)</button>`;
 
+    const rowRender = (label, val) => `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="color:var(--text-secondary); font-weight:700;">${label}:</span> <span style="text-align:right; font-weight:600; color:var(--text-primary); max-width:65%; word-break:break-word;">${val}</span></div>`;
+
     $('modal-body-content').innerHTML = `
-        <div class="modal-header-section"><div style="flex-grow:1;"><h2 style="font-size:20px;font-weight:800;margin-bottom:8px;">Gestão de OF: <span style="color:var(--primary-color);">${o.of}</span></h2><h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">#${o.codProd} - ${o.descProd}</h3>
-        <div class="item-category" style="margin-bottom:20px;"><span class="chip-category">SC: <strong>${o.sc}</strong></span><span class="chip-category">Forn.: <strong>${o.fornecedor}</strong></span><span class="chip-category">Entrega: <strong>${o.dataEntrega}</strong></span><span class="badge-status badge-transito">${o.sitOFOriginal||'Pendente'}</span></div>
-        <div class="item-metrics-grid"><div class="metric-box metric-saldo"><span class="metric-label">Saldo Físico</span><span class="metric-value">${i.saldo}</span></div><div class="metric-box metric-default"><span class="metric-label">Min/Max</span><span class="metric-value">${i.minimo} / ${i.maximo}</span></div><div class="metric-box metric-transito"><span class="metric-label">Qtd Solicitada</span><span class="metric-value">${o.qtdPedidaOriginal}</span></div><div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div></div></div></div>
-        <div style="text-align:center;padding:10px;"><p style="font-size:13px;color:var(--text-secondary);margin-bottom:15px;">Aprofundar a análise de consumo?</p>${btnContexto}</div>`;
+        <div class="modal-header-section" style="border-bottom:none; margin-bottom:10px; padding-bottom:0;">
+            <div style="flex-grow:1;">
+                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">OF ${o.of}</span> / <span style="color:var(--text-info);">SC ${o.sc}</span></h2>
+                <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">Produto #${o.codProd} - ${o.descProd}</h3>
+                
+                <div class="item-metrics-grid" style="margin-bottom:24px;">
+                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo Físico Atual</span><span class="metric-value">${i.saldo}</span></div>
+                    <div class="metric-box metric-transito"><span class="metric-label">Quantidade Original</span><span class="metric-value">${o.qtdPedidaOriginal}</span></div>
+                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Trânsito (Falta Entregar)</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Previsão Entrega</span><span class="metric-value" style="font-size:14px; margin-top:5px; display:flex; flex-direction:column; gap:5px;">${dataAlvo} <div>${badgeAtraso}</div></span></div>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="font-size:14px; font-weight:900; color:var(--text-secondary); margin-bottom:15px; border-bottom: 1px solid var(--border-color); padding-bottom:8px; text-transform:uppercase;">Contexto Completo da Ordem</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            
+            <div style="background:var(--bg-subcard); padding:16px; border-radius:12px; border:1px solid var(--border-color);">
+                <h4 style="color:var(--primary-color); margin-bottom:12px; font-weight:800; font-size:13px; text-transform:uppercase;">📄 Solicitação (SC)</h4>
+                <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                    ${rowRender('Cód SC', o.sc)}
+                    ${rowRender('Situação', o.scSit_ext)}
+                    ${rowRender('Solicitante', o.scSol_ext)}
+                    ${rowRender('Aprovador', o.scAprov_ext)}
+                    ${rowRender('CC Aprovador', o.scCC_ext)}
+                    ${rowRender('Data Criação', o.scDtCria_ext)}
+                    ${rowRender('Empresa', o.scEmp_ext)}
+                    ${rowRender('Filial', (o.scFil_ext !== '-' && o.scDescFil_ext !== '-') ? `${o.scFil_ext} - ${o.scDescFil_ext}` : o.scFil_ext)}
+                    ${rowRender('Local Estoque', o.scLocEst_ext)}
+                    ${rowRender('CCU Etq', o.scCCUEtq_ext)}
+                    ${rowRender('Categoria', o.scCat_ext)}
+                    ${rowRender('Qtd / UM', (o.scQtd_ext !== '-' ? o.scQtd_ext : '') + ' ' + (o.scUM_ext !== '-' ? o.scUM_ext : ''))}
+                    ${rowRender('Regularização', o.scReg_ext)}
+                    ${rowRender('OBS SC', o.scObs_ext)}
+                </div>
+            </div>
+
+            <div style="background:var(--bg-subcard); padding:16px; border-radius:12px; border:1px solid var(--border-color);">
+                <h4 style="color:var(--text-info); margin-bottom:12px; font-weight:800; font-size:13px; text-transform:uppercase;">📦 Fornecimento (OF)</h4>
+                <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                    ${rowRender('Cód OF', o.of)}
+                    ${rowRender('Fornecedor', o.fornecedor)}
+                    ${rowRender('Email', o.ofEmail_ext)}
+                    ${rowRender('Data OF', o.ofData_ext)}
+                    ${rowRender('Situação', o.sitOFOriginal)}
+                    ${rowRender('Fechado', o.ofFechado_ext)}
+                    ${rowRender('Bloqueado', o.ofBloqueado_ext)}
+                    ${rowRender('Tipo', o.ofTipo_ext)}
+                    ${rowRender('Qtd Solicitada', o.ofQtdSol_ext)}
+                    ${rowRender('Qtd Entregue', o.ofQtdEnt_ext)}
+                    ${rowRender('Saldo Pendente', o.ofSaldo_ext)}
+                    ${rowRender('Frete', o.ofFrete_ext)}
+                    ${rowRender('Moeda', o.ofMoeda_ext)}
+                    ${rowRender('OBS OF', o.ofObs_ext)}
+                </div>
+            </div>
+
+            <div style="background:var(--bg-subcard); padding:16px; border-radius:12px; border:1px solid var(--border-color);">
+                <h4 style="color:var(--text-success); margin-bottom:12px; font-weight:800; font-size:13px; text-transform:uppercase;">📥 Recebimento (REC)</h4>
+                <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                    ${rowRender('Número NF', o.recNF_ext)}
+                    ${rowRender('Série NF', o.recSerie_ext)}
+                    ${rowRender('Data Emissão', o.recDtEmissao_ext)}
+                    ${rowRender('Data Entrada', o.recDtEntrada_ext)}
+                    ${rowRender('Qtd Recebida', (o.recQtd_ext !== '-' ? o.recQtd_ext : '') + ' ' + (o.recUM_ext !== '-' ? o.recUM_ext : ''))}
+                    ${rowRender('Valor Unitário Fiscal', o.recValUn_ext !== '-' ? `R$ ${o.recValUn_ext}` : '-')}
+                </div>
+            </div>
+
+        </div>
+        
+        <div style="text-align:center;padding:10px; border-top: 1px solid var(--border-color); padding-top:20px;">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:15px;">Aprofundar a análise de histórico e consumo deste material?</p>
+            ${btnContexto}
+        </div>`;
     $('modal-item').style.display = 'flex';
 };
