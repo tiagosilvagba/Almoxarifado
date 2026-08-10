@@ -5,7 +5,7 @@ const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [], itensFiltrados = [], ordesAtivasFiltradas = [];
 let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS", curMonthGlobal = 12;
 let chartABC, chartStatus, chartFiliais;
-let filtroABC = null, filtroStatus = null, filtroFilial = new Set();
+let filtroABC = null, filtroStatus = null, filtroFilial = new Set(); // Alterado para Set para suportar múltiplas filiais
 let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true, mapeamentoAtivo = false;
 const imagensMapeadas = new Set(), setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
 let lbImages = [], lbIndex = 0, timerBusca;
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const thOFs = document.querySelector('#view-gestao-compras thead tr');
     if (thOFs) {
-        thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão Entrega</th><th>Status / Filial</th>`;
+        thOFs.innerHTML = `<th>SC - Empresa</th><th>SC - Filial</th><th>SC - Descr. Filial</th><th>SC - Cód. Produto</th><th>SC - Nome Produto</th><th>SC - Unid. Medida</th><th>SC - Quantidade</th><th>SC - Categoria</th><th>SC - DT Entrega</th><th>SC - Regularização</th><th>SC - OBS</th><th>SC - Local Estoque</th><th>SC - CCU Etq</th><th>SC - Aprovador</th><th>OF - Codigo</th><th>OF - Data</th><th>OF - Nome Fornecedor</th><th>OF - Qtd. Solicitada</th><th>OF - Saldo</th><th>OF - Qtd. Entregue</th><th>OF - Fechado</th><th>OF - Bloqueado</th><th>OF - Data Entrega</th><th>OF - Frete</th><th>OF - Moeda</th><th>OF - Situação OF</th><th>OF - Tipo</th><th>OF - Email Fornecedor</th><th>OF - OBS</th><th>REC - Nr NF</th><th>REC - Série</th><th>REC - DT Emissão</th><th>REC - DT Entrada</th><th>REC - Unid. Medida</th><th>REC - Quantidade</th><th>REC - Valor Un. Fiscal</th>`;
     }
 
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
@@ -223,17 +223,11 @@ const baixarExcel = (csv, nome) => {
 };
 
 window.exportarComprasExcel = () => {
-    const list = itensFiltrados.filter(i => {
-        let saldoDisponivel = i.saldo + i.transito;
-        return (saldoDisponivel <= 0 || saldoDisponivel < i.minimo) && i.minimo > 0 && i.maximo > 0;
-    }).sort((a,b) => a.saldo - b.saldo);
+    const list = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0).sort((a,b) => a.saldo - b.saldo);
     if (!list.length) return mostrarToast("Nenhum dado crítico para exportar.", "warning");
     
-    let csv = "Código;Descrição;Filial;Saldo Atual;Trânsito (OF/SC);Saldo Disponível;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n" + 
-        list.map(i => {
-            let sug = Math.max(0, i.maximo - (i.saldo + i.transito));
-            return `${i.cod};${i.desc.replace(/;/g, ',')};${i.filialNm.replace(/;/g, ',')};${i.saldo};${i.transito};${i.saldo + i.transito};${i.minimo};${i.maximo};${sug};${i.custoUnitario.toFixed(2)};${(sug * i.custoUnitario).toFixed(2)}`;
-        }).join('\n');
+    let csv = "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n" + 
+        list.map(i => `${i.cod};${i.desc.replace(/;/g, ',')};${i.filialNm.replace(/;/g, ',')};${i.saldo};${i.minimo};${i.maximo};${i.maximo - i.saldo};${i.custoUnitario.toFixed(2)};${((i.maximo - i.saldo) * i.custoUnitario).toFixed(2)}`).join('\n');
     baixarExcel(csv, "Necessidade_Compra");
 };
 
@@ -295,29 +289,15 @@ async function processarInteligencia() {
         bases.compras.forEach(i => {
             let cod = normCod(i[c.cod]); if(!cod) return;
             let sitOF = normStr(i[c.ofSit]), sitSC = normStr(i[c.scSit]), cSC = normStr(i[c.scCanc]);
-            let ofCodVal = String(i[c.ofCod]||'-').trim();
-            
             let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
-            let semOFGerada = (ofCodVal === '' || ofCodVal === '-');
+            let pendente = fechada ? 0 : c.ofQtd ? Math.max(0, convNum(i[c.ofQtd]) - convNum(i[c.recQtd])) : convNum(i[c.compFb]);
             
-            let pendente = 0;
-            if (!fechada) {
-                if (c.ofQtd && !semOFGerada) {
-                    pendente = Math.max(0, convNum(i[c.ofQtd]) - convNum(i[c.recQtd]));
-                } else {
-                    pendente = convNum(i[c.compFb]) || convNum(i['sc - quantidade']) || convNum(i['quantidade']);
-                }
-            }
-            
-            if(pendente > 0 || semOFGerada) {
-                if (pendente > 0) {
-                    mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
-                }
-                let sit = i[c.ofSit] || (semOFGerada ? 'SC Pendente (Sem OF)' : 'Pendente'); 
-                setStatusOFUnicos.add(sit);
+            if(pendente > 0) {
+                mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
+                let sit = i[c.ofSit] || 'Pendente'; setStatusOFUnicos.add(sit);
                 
                 ordesAtivas.push({ 
-                    sc: i[c.scCod]||'-', of: ofCodVal, codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente > 0 ? pendente : convNum(i['sc - quantidade']), sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
+                    sc: i[c.scCod]||'-', of: i[c.ofCod]||'-', codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
                     
                     scSit_ext: getValExt(i, ['sc - situação']), scCC_ext: getValExt(i, ['sc - centro custo aprovador']), scDtCria_ext: getValExt(i, ['sc - data criação']), scSol_ext: getValExt(i, ['sc - nome solicitante']), scEmp_ext: getValExt(i, ['sc - empresa']), scFil_ext: getValExt(i, ['sc - filial']), scDescFil_ext: getValExt(i, ['sc - descr. filial']), scUM_ext: getValExt(i, ['sc - unid. medida']), scQtd_ext: getValExt(i, ['sc - quantidade']), scCat_ext: getValExt(i, ['sc - categoria']), scDtEnt_ext: getValExt(i, ['sc - dt entrega']), scReg_ext: getValExt(i, ['sc - regularização']), scObs_ext: getValExt(i, ['sc - obs']), scLocEst_ext: getValExt(i, ['sc - local estoque']), scCCUEtq_ext: getValExt(i, ['sc - ccu etq']), scAprov_ext: getValExt(i, ['sc - aprovador']),
                     ofData_ext: getValExt(i, ['of - data']), ofQtdSol_ext: getValExt(i, ['of - qtd. solicitada']), ofSaldo_ext: getValExt(i, ['of - saldo']), ofQtdEnt_ext: getValExt(i, ['of - qtd. entregue']), ofFechado_ext: getValExt(i, ['of - fechado']), ofBloqueado_ext: getValExt(i, ['of - bloqueado']), ofDtEnt_ext: getValExt(i, ['of - data entrega']), ofFrete_ext: getValExt(i, ['of - frete']), ofMoeda_ext: getValExt(i, ['of - moeda']), ofTipo_ext: getValExt(i, ['of - tipo']), ofEmail_ext: getValExt(i, ['of - email fornecedor']), ofObs_ext: getValExt(i, ['of - obs']),
@@ -392,9 +372,11 @@ async function processarInteligencia() {
         o.locais.push({ filialNm: fNm, localId: lId, localNm: lNm, reparticao: rep, prateleira: prat, divisao: div, saldo: sld, custoUnitario: cst, isCritico: crit });
     });
 
+    // Renderiza o seletor de filiais atualizado para permitir múltiplas escolhas baseadas em checkboxes
     const containerFilial = $('select-filial');
     if(containerFilial) {
         if(containerFilial.tagName === 'SELECT') {
+            // Substitui o select por um container interativo de checkboxes para múltipla seleção
             let parentDiv = containerFilial.parentNode;
             let multiDiv = document.createElement('div');
             multiDiv.id = 'select-filial';
@@ -449,19 +431,11 @@ async function processarInteligencia() {
     itemsABC.forEach(i => { if (tFin > 0 && i.consumoFinanceiro > 0) { cAcum += i.consumoFinanceiro; let p = cAcum / tFin; i.curva = p <= 0.8 ? 'A' : p <= 0.95 ? 'B' : 'C'; } });
 
     itensProcessados = baseProc;
-    
-    // Associa cada ordem ativa ao seu item correspondente na base para herdar Filial e Local exatos
-    ordesAtivasFiltradas = ordesAtivas.map(o => {
-        let matchItem = mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`) || Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd));
-        return { 
-            ...o, 
-            filial: matchItem ? matchItem.filialNm : 'Geral',
-            locaisItem: matchItem ? matchItem.locais : []
-        };
-    });
+    ordesAtivasFiltradas = ordesAtivas.map(o => ({ ...o, filial: mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`)?.filialNm || 'Geral' }));
     
     if($('select-status-of')) $('select-status-of').innerHTML = '<option value="">Todos os Status</option>' + Array.from(setStatusOFUnicos).sort().map(s => `<option value="${s}">${s}</option>`).join('');
 
+    // Preenche inicialmente todas as filiais no Set de filtro múltiplo
     filtroFilial.clear();
     document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
 
@@ -537,7 +511,7 @@ window.dispararFiltros = () => {
     if (vistaAtual === 'pesquisa') renderPesquisa();
     else if (vistaAtual === 'dashboard') renderDashboard();
     else if (vistaAtual === 'compras') renderCompras();
-    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray, lFil);
+    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray);
     else if (vistaAtual === 'revisao') renderRevisao();
 };
 
@@ -596,70 +570,65 @@ const renderRevisao = () => {
 };
 
 const renderCompras = () => {
-    let list = itensFiltrados.filter(i => {
-        let saldoDisponivel = i.saldo + i.transito;
-        return (saldoDisponivel <= 0 || saldoDisponivel < i.minimo) && i.minimo > 0 && i.maximo > 0;
-    }).sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito));
-
+    let list = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0).sort((a,b) => a.saldo - b.saldo);
     let tQtd = 0, tVal = 0;
     $('compras-table-body').innerHTML = list.map(i => {
-        let saldoDisponivel = i.saldo + i.transito;
-        let sug = Math.max(0, i.maximo - saldoDisponivel); 
-        tQtd += sug; tVal += (sug * i.custoUnitario);
-        return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-            <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td>
-            <td>${i.filialNm}</td>
-            <td style="font-weight:900;">${i.saldo} <span style="font-size:10px; color:var(--text-info); font-weight:normal;">(+${i.transito} trânsito)</span></td>
-            <td style="font-weight:700;color:var(--text-warning);">${i.minimo}</td>
-            <td style="font-weight:700;color:var(--primary-color);">${i.maximo}</td>
-            <td style="font-weight:900;color:var(--text-success);">COMPRAR +${sug}</td>
-        </tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem necessidade de compras críticas (considerando o trânsito de SCs/OFs).</td></tr>`;
-    
+        let sug = i.maximo - i.saldo; tQtd += sug; tVal += (sug * i.custoUnitario);
+        return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td>${i.filialNm}</td><td style="font-weight:900;color:var(--text-critical);">${i.saldo}</td><td style="font-weight:700;color:var(--text-warning);">${i.minimo}</td><td style="font-weight:700;color:var(--primary-color);">${i.maximo}</td><td style="font-weight:900;color:var(--text-success);">COMPRAR +${sug}</td></tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem necessidade de compras críticas.</td></tr>`;
     if($('resumo-necessidade')) $('resumo-necessidade').innerHTML = `<div class="kpi-card border-warning"><span class="kpi-title">Reposição (Qtd)</span><span class="kpi-value color-warning">${tQtd}</span></div><div class="kpi-card border-success"><span class="kpi-title">Valor Estimado</span><span class="kpi-value color-success">${fmtMoeda(tVal)}</span></div>`;
 };
 
-// GESTÃO DE COMPRAS (OFs) FILTRADA POR FILIAL E LOCAL SELECIONADOS
-const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
+const renderGestaoCompras = (tSplit, filiaisArray) => {
     let sOF = $('select-status-of')?.value;
-    
-    let list = ordesAtivasFiltradas.filter(o => {
-        let matchBusca = (!tSplit.length || tSplit.some(t => o.searchStr.includes(t)));
-        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral');
-        let matchStatus = (!sOF || o.sitOFOriginal === sOF);
-        
-        let matchLocal = true;
-        if (lFil) {
-            let [fNomeFiltro, localParteFiltro] = lFil.split(' | ');
-            let matchFilialLocal = (o.filial === fNomeFiltro || o.filial === 'Geral');
-            let matchLocalItem = o.locaisItem && o.locaisItem.some(l => {
-                let fmt = l.localId ? `${l.localId} - ${l.localNm}` : l.localNm;
-                return `${l.filialNm} | ${fmt}` === lFil;
-            });
-            matchLocal = matchFilialLocal && matchLocalItem;
-        }
-
-        return matchBusca && matchFilial && matchStatus && matchLocal;
-    });
-
+    let list = ordesAtivasFiltradas.filter(o => (!tSplit.length || tSplit.some(t => o.searchStr.includes(t))) && (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral') && (!sOF || o.sitOFOriginal === sOF));
     let vT = 0, qT = 0, fSet = new Set(), oSet = new Set();
     
     $('ofs-table-body').innerHTML = list.slice(0, 100).map(o => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')">
-            <td><strong>${o.of !== '-' ? o.of : 'Sem OF'}</strong><br><span style="font-size:10px; color:var(--text-secondary);">SC: ${o.sc}</span></td>
-            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td>
+        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')" style="white-space: nowrap; font-size: 11px;">
+            <td>${o.scEmp_ext}</td>
+            <td>${o.scFil_ext}</td>
+            <td>${o.scDescFil_ext}</td>
+            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong></td>
+            <td>${o.descProd}</td>
+            <td>${o.scUM_ext}</td>
+            <td>${o.scQtd_ext}</td>
+            <td>${o.scCat_ext}</td>
+            <td>${o.scDtEnt_ext}</td>
+            <td>${o.scReg_ext}</td>
+            <td>${o.scObs_ext}</td>
+            <td>${o.scLocEst_ext}</td>
+            <td>${o.scCCUEtq_ext}</td>
+            <td>${o.scAprov_ext}</td>
+            <td><strong>${o.of}</strong></td>
+            <td>${o.ofData_ext}</td>
             <td>${o.fornecedor}</td>
-            <td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td>
+            <td>${o.ofQtdSol_ext}</td>
             <td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td>
-            <td>${o.dataEntrega}</td>
-            <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span><br><span style="font-size:10px; color:var(--text-secondary);">${o.filial}</span></td>
+            <td>${o.ofQtdEnt_ext}</td>
+            <td>${o.ofFechado_ext}</td>
+            <td>${o.ofBloqueado_ext}</td>
+            <td>${o.ofDtEnt_ext}</td>
+            <td>${o.ofFrete_ext}</td>
+            <td>${o.ofMoeda_ext}</td>
+            <td>${o.sitOFOriginal}</td>
+            <td>${o.ofTipo_ext}</td>
+            <td>${o.ofEmail_ext}</td>
+            <td>${o.ofObs_ext}</td>
+            <td>${o.recNF_ext}</td>
+            <td>${o.recSerie_ext}</td>
+            <td>${o.recDtEmissao_ext}</td>
+            <td>${o.recDtEntrada_ext}</td>
+            <td>${o.recUM_ext}</td>
+            <td>${o.recQtd_ext}</td>
+            <td>${o.recValUn_ext !== '-' ? 'R$ ' + o.recValUn_ext : '-'}</td>
         </tr>`;
-    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;font-size:14px;">Sem ordens pendentes correspondentes ao filtro.</td></tr>`;
+    }).join('') || `<tr><td colspan="36" style="text-align:center;padding:40px;font-size:14px;">Sem OFs pendentes correspondentes ao filtro.</td></tr>`;
     
-    if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">Ordens Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
+    if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">OFs Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
 };
 
 const renderDashboard = () => {
@@ -716,6 +685,7 @@ const atualizarGraficos = () => {
     chartStatus = new Chart(cS, { type: 'bar', data: { labels: ['Normal', 'Risco (Min)', 'Excesso', 'Rupturas', 'Obsoletos', 'Local 299/295'], datasets: [{ data: [cSt.N, cSt.R, cSt.E, cSt.RC, cSt.O, cSt.LC], backgroundColor: ['#10b981', '#f59e0b', '#0ea5e9', '#ef4444', '#64748b', '#8b5cf6'], borderRadius: 6 }] }, options: { ...gOpts('Distribuição Logística'), scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, border:{display:false} }, x: { grid: {display:false}, border:{display:false} } }, onClick: (e, el) => { if(el.length) { let s = ['Estoque Normal', 'Abaixo Mínimo', 'Excesso Estoque', 'Ruptura', 'Obsoleto', 'Normal/Local Crítico'][el[0].index]; filtroStatus = filtroStatus === s ? null : s; renderDashboard(); } } } });
     
     if(cF) chartFiliais = new Chart(cF, { type: 'doughnut', data: { labels: Object.keys(vF), datasets: [{ data: Object.values(vF), backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'], borderWidth: isDark?0:2, borderColor: isDark?'transparent':'#fff' }] }, options: { ...gOpts('Distribuição (R$)'), cutout: '75%', onClick: (e, el) => { if(el.length) { let f = Object.keys(vF)[el[0].index]; 
+        // Clique no gráfico de filiais adiciona/alterna a filial selecionada
         if(filtroFilial.has(f) && filtroFilial.size === 1) {
             document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
             if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
@@ -768,7 +738,7 @@ window.abrirModalDetalhes = (codNorm, fId) => {
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--text-info);">Min / Max (Sugestão)</span><span class="metric-value" style="color:var(--text-info);">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro / Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:14px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:10px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
-                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF/SC)</span><span class="metric-value">${item.transito}</span></div>
+                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF)</span><span class="metric-value">${item.transito}</span></div>
                 </div>
             </div>
         </div>
@@ -784,7 +754,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
         o = ordesAtivasFiltradas.find(x => x.of === ofId && x.sc === scId && normCod(x.codProd) === c), 
         i = itensProcessados.find(x => x.codNorm === c);
 
-    if (!o) return mostrarToast("Erro ao carregar ordem.", "error");
+    if (!o) return mostrarToast("Erro ao carregar OF.", "error");
 
     if (!i) i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
 
@@ -813,18 +783,16 @@ window.abrirModalOF = (ofId, codProd, scId) => {
 
     const rowRender = (label, val) => `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="color:var(--text-secondary); font-weight:700;">${label}:</span> <span style="text-align:right; font-weight:600; color:var(--text-primary); max-width:65%; word-break:break-word;">${val}</span></div>`;
 
-    let tituloCabecalho = o.of !== '-' ? `OF ${o.of} / SC ${o.sc}` : `SC ${o.sc} (Aguardando OF)`;
-
     $('modal-body-content').innerHTML = `
         <div class="modal-header-section" style="border-bottom:none; margin-bottom:10px; padding-bottom:0;">
             <div style="flex-grow:1;">
-                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">${tituloCabecalho}</span></h2>
+                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">OF ${o.of}</span> / <span style="color:var(--text-info);">SC ${o.sc}</span></h2>
                 <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">Produto #${o.codProd} - ${o.descProd}</h3>
                 
                 <div class="item-metrics-grid" style="margin-bottom:24px;">
                     <div class="metric-box metric-saldo"><span class="metric-label">Saldo Físico Atual</span><span class="metric-value">${i.saldo}</span></div>
                     <div class="metric-box metric-transito"><span class="metric-label">Quantidade Original</span><span class="metric-value">${o.qtdPedidaOriginal}</span></div>
-                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
+                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Trânsito (Falta Entregar)</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Previsão Entrega</span><span class="metric-value" style="font-size:14px; margin-top:5px; display:flex; flex-direction:column; gap:5px;">${dataAlvo} <div>${badgeAtraso}</div></span></div>
                 </div>
             </div>
@@ -857,7 +825,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
             <div style="background:var(--bg-subcard); padding:16px; border-radius:12px; border:1px solid var(--border-color);">
                 <h4 style="color:var(--text-info); margin-bottom:12px; font-weight:800; font-size:13px; text-transform:uppercase;">📦 Fornecimento (OF)</h4>
                 <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
-                    ${rowRender('Cód OF', o.of !== '-' ? o.of : 'Não Gerada')}
+                    ${rowRender('Cód OF', o.of)}
                     ${rowRender('Fornecedor', o.fornecedor)}
                     ${rowRender('Email', o.ofEmail_ext)}
                     ${rowRender('Data OF', o.ofData_ext)}
