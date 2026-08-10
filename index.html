@@ -337,7 +337,7 @@
         .modal-header-section { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 24px;}
         
         .modal-gallery-container {
-            display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; width: 100%; max-width: 600px;
+            display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; width: 100%; max-width: 100%;
             scroll-snap-type: x mandatory;
         }
         .modal-gallery-container::-webkit-scrollbar { height: 6px; }
@@ -482,6 +482,10 @@
                 <input type="file" webkitdirectory directory multiple style="display:none;" onchange="mapearImagensPasta(event)">
             </label>
 
+            <button class="btn-sidebar-action" onclick="toggleValoresFinanceiros()" style="border-color: var(--text-warning); background: transparent; margin-top: 5px;">
+                <span id="icone-valores" style="text-align: center; color: var(--text-warning); font-size: 12px;">👁️ Mostrar Valores R$</span>
+            </button>
+
             <button class="btn-sidebar-action" onclick="carregarArquivosAutomaticamente()" style="border-color: var(--text-secondary); background: transparent; margin-top: 5px;">
                 <span style="text-align: center; color: var(--text-secondary); font-size: 12px;">🔄 Sincronizar Arquivos</span>
             </button>
@@ -540,6 +544,13 @@
                     <option value="Obsoleto (Sem Consumo)">🛑 Obsoleto (Sem Consumo)</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label class="filter-label">Status da OF (Painel Gestão):</label>
+                <select id="select-status-of" class="segmentation-select" onchange="dispararFiltros()">
+                    <option value="">Todos os Status</option>
+                </select>
+            </div>
+            
             <button class="btn-reset-filters" onclick="limparFiltros()">🧹 Limpar Filtros</button>
         </div>
     </aside>
@@ -634,7 +645,7 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>📦 Gestão de Compras (OFs em Trânsito)</h1></header>
-                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo Ordens de Fornecimento aguardando entrega baseada na Qtd Solicitada vs Recebida.</p>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo Ordens de Fornecimento aguardando entrega baseada na Qtd Solicitada vs Recebida. <b>Clique na OF para visualizar o contexto.</b></p>
                 <input type="text" id="busca-ofs" class="search-box" placeholder="Busque OF, SC, Fornecedor ou Código..." oninput="dispararFiltrosDebounce()">
             </div>
             <div class="scrollable-results-section">
@@ -705,7 +716,7 @@
                 <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
                     <div class="kpi-card border-info">
                         <span class="kpi-title">Valor Imobilizado (Total)</span>
-                        <span class="kpi-value color-info" id="dash-kpi-valor-total">R$ 0,00</span>
+                        <span class="kpi-value color-info" id="dash-kpi-valor-total">R$ ***</span>
                         <span class="kpi-sub" id="dash-kpi-total-itens">Em 0 itens de estoque</span>
                     </div>
                     <div class="kpi-card border-success">
@@ -720,7 +731,7 @@
                     </div>
                     <div class="kpi-card" style="border-left-color: var(--text-secondary);">
                         <span class="kpi-title">Capital Obsoleto</span>
-                        <span class="kpi-value color-secondary" id="dash-kpi-valor-obsoleto">R$ 0,00</span>
+                        <span class="kpi-value color-secondary" id="dash-kpi-valor-obsoleto">R$ ***</span>
                         <span class="kpi-sub" id="dash-kpi-obsoleto-qtd">0 itens sem giro (Exceto 299/295)</span>
                     </div>
                 </div>
@@ -756,12 +767,12 @@
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title">Estoque Total (Valor)</span>
-                        <span class="kpi-value" id="dash-kpi-volume-fisico">R$ 0,00</span>
+                        <span class="kpi-value" id="dash-kpi-volume-fisico">R$ ***</span>
                         <span class="kpi-sub">Valor do saldo consolidado filtrado</span>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title" id="kpi-consumo-title">Custo do Consumo (Mês)</span>
-                        <span class="kpi-value" id="dash-kpi-consumo-financeiro">R$ 0,00</span>
+                        <span class="kpi-value" id="dash-kpi-consumo-financeiro">R$ ***</span>
                         <span class="kpi-sub">Valor das saídas no período filtrado</span>
                     </div>
                     <div class="kpi-card">
@@ -846,12 +857,72 @@
     let imagensMapeadas = new Set();
     let mapeamentoDeImagemAtivo = false;
     let setLocaisUnicos = new Set(); 
+    let setStatusOFUnicos = new Set(); // Filtro avançado de status OF
+
+    // NOVO: Controle de visualização de valores monetários (Ocultos por Padrão)
+    let ocultarValoresFinanceiros = true; 
 
     // Estado do Lightbox Nativo e Seguro
     let currentLightboxImages = [];
     let currentLightboxIndex = 0;
 
     if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+    // ==========================================================================
+    // FUNÇÕES ÚTEIS E PARSER
+    // ==========================================================================
+    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+    function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
+    function converterParaNumero(val) {
+        if (val === null || val === undefined || val === '') return 0;
+        if (typeof val === 'number') return val;
+        let str = String(val).trim().replace(/[R$\s]/g, '');
+        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+        let floatVal = parseFloat(str);
+        return isNaN(floatVal) ? 0 : floatVal;
+    }
+
+    function encontrarChave(objRef, termosChave) {
+        if (!objRef) return null;
+        const chaves = Object.keys(objRef);
+        for (const termo of termosChave) {
+            const termoBusca = normalizarString(termo);
+            for (const chave of chaves) {
+                if (normalizarString(chave) === termoBusca || normalizarString(chave).includes(termoBusca)) return chave;
+            }
+        }
+        return null;
+    }
+
+    function formatarMoeda(valor) { 
+        return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); 
+    }
+
+    // NOVO: Função para proteger os valores de fábrica sensíveis
+    function formatarMoedaMask(valor) {
+        if (ocultarValoresFinanceiros) return 'R$ ***';
+        return formatarMoeda(valor);
+    }
+
+    window.toggleValoresFinanceiros = function() {
+        ocultarValoresFinanceiros = !ocultarValoresFinanceiros;
+        const icone = document.getElementById('icone-valores');
+        if (icone) {
+            icone.innerText = ocultarValoresFinanceiros ? '👁️ Mostrar Valores R$' : '🙈 Ocultar Valores R$';
+        }
+        dispararFiltrosSemAtraso(); // Recarrega todas as telas pra atualizar as máscaras
+    }
+
+    function parseCSVFast(text) {
+        let lines = text.split(/\r?\n/);
+        let headerIndex = 0;
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].replace(/[;\s"]/g, '').length > 0) { headerIndex = i; break; }
+        }
+        let validText = lines.slice(headerIndex).join('\n');
+        let result = Papa.parse(validText, { header: true, skipEmptyLines: true, dynamicTyping: false });
+        return result.data;
+    }
 
     // ==========================================================================
     // TELA DE CARREGAMENTO E MENSAGENS
@@ -997,45 +1068,6 @@
 
     function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
     
-    // ==========================================================================
-    // FUNÇÕES ÚTEIS E PARSER
-    // ==========================================================================
-    function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
-    function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
-    function converterParaNumero(val) {
-        if (val === null || val === undefined || val === '') return 0;
-        if (typeof val === 'number') return val;
-        let str = String(val).trim().replace(/[R$\s]/g, '');
-        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
-        let floatVal = parseFloat(str);
-        return isNaN(floatVal) ? 0 : floatVal;
-    }
-
-    function encontrarChave(objRef, termosChave) {
-        if (!objRef) return null;
-        const chaves = Object.keys(objRef);
-        for (const termo of termosChave) {
-            const termoBusca = normalizarString(termo);
-            for (const chave of chaves) {
-                if (normalizarString(chave) === termoBusca || normalizarString(chave).includes(termoBusca)) return chave;
-            }
-        }
-        return null;
-    }
-
-    function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-
-    function parseCSVFast(text) {
-        let lines = text.split(/\r?\n/);
-        let headerIndex = 0;
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].replace(/[;\s"]/g, '').length > 0) { headerIndex = i; break; }
-        }
-        let validText = lines.slice(headerIndex).join('\n');
-        let result = Papa.parse(validText, { header: true, skipEmptyLines: true, dynamicTyping: false });
-        return result.data;
-    }
-
     // ==========================================================================
     // CARGA DE ARQUIVOS E IMAGENS
     // ==========================================================================
@@ -1212,6 +1244,7 @@
             let val = sug * i.custoUnitario;
             let descLimpa = i.desc.replace(/;/g, ',');
             let filialLimpa = i.filialNm.replace(/;/g, ',');
+            // Exporta valor real sempre para Excel
             csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.minimo};${i.maximo};${sug};${i.custoUnitario.toFixed(2)};${val.toFixed(2)}\n`;
         });
         
@@ -1231,7 +1264,6 @@
     // EXPORTAÇÃO PARA EXCEL (Botão Revisão Min/Max) - NOVO!
     // ==========================================================================
     window.exportarRevisaoExcel = function() {
-        // Usa a mesma regra de negócio da tabela visual de Revisão
         const itensRevisao = itensFiltrados.filter(i => {
             if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) return true;
             if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) return true;
@@ -1354,7 +1386,6 @@
                 const cod = normalizarCod(item[c_cod_compra]);
                 if (!cod) return;
 
-                // LÓGICA MATEMÁTICA E VALIDAÇÃO DE STATUS DA OF
                 let qtdPedida = c_of_qtd_pedida ? converterParaNumero(item[c_of_qtd_pedida]) : 0;
                 let qtdRecebida = c_rec_qtd ? converterParaNumero(item[c_rec_qtd]) : 0;
                 let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
@@ -1365,13 +1396,12 @@
 
                 if (c_of_qtd_pedida) {
                     if (sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's') {
-                        saldoPendente = 0; // Força zero se status mostrar que compra foi desativada/concluída
+                        saldoPendente = 0; 
                     } else {
                         saldoPendente = qtdPedida - qtdRecebida;
                         if (saldoPendente < 0) saldoPendente = 0; 
                     }
                 } else {
-                    // Fallback caso a planilha venha sem a estrutura nova
                     saldoPendente = c_qtd_compra_fallback ? converterParaNumero(item[c_qtd_compra_fallback]) : 0;
                 }
 
@@ -1379,7 +1409,6 @@
                     mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoPendente);
                 }
 
-                // Cálculo de Lead Time Histórico
                 if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
                     const parseData = (dStr) => {
                         const partes = String(dStr).trim().split('/');
@@ -1390,7 +1419,7 @@
                     let dtEntr = parseData(item[c_rec_dt]);
                     if (!isNaN(dtCria) && !isNaN(dtEntr)) {
                         let dias = Math.ceil(Math.abs(dtEntr - dtCria) / (1000 * 60 * 60 * 24));
-                        if(dias > 0 && dias < 300) { // Ignora dados sujos irreais
+                        if(dias > 0 && dias < 300) { 
                             if(!mapLeadTimeHistorico.has(cod)) mapLeadTimeHistorico.set(cod, []);
                             mapLeadTimeHistorico.get(cod).push(dias);
                         }
@@ -1470,7 +1499,6 @@
             const prateleira = item[b_prat] || '-';
             const divisao = item[b_div] || '-';
 
-            // REGRA: Rolândia (Ab. Aves vs Alp. Preparados) com trava anti-vazio
             if (filialIdBase === '704') {
                 let locNum = parseInt(localIdRaw, 10);
                 if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || localIdRaw === '295' || localIdRaw === '0295' || locNum >= 599) {
@@ -1501,7 +1529,6 @@
             const minimoLinha = converterParaNumero(item[b_min]);
             const maximoLinha = converterParaNumero(item[b_max]);
             
-            // REGRA DO LOCAL CRÍTICO 299 e 295
             let isCritico = false;
             if (['299', '0299', '295', '0295'].includes(localIdRaw) || localNm.includes('299') || localNm.includes('295')) {
                 isCritico = true;
@@ -1529,7 +1556,7 @@
                     saldo: 0, minimo: 0, maximo: 0, 
                     valorTotalGlobal: 0,
                     custoUnitario: 0,
-                    leadTime: mapLeadTimeMedio.get(codNorm) || 15, // Padrão de segurança se não houver no histórico
+                    leadTime: mapLeadTimeMedio.get(codNorm) || 15, 
                     locais: []
                 });
             }
@@ -1554,7 +1581,6 @@
             });
         });
 
-        // POPULANDO OS FILTROS LATERAIS INICIAIS
         const selectFilial = document.getElementById('select-filial');
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
@@ -1592,14 +1618,13 @@
 
             let isLocalCriticoMacro = item.locais.some(l => l.isCritico && l.saldo > 0);
 
-            // CÁLCULO DE SALDO ÚTIL E SUGESTÕES MIN/MAX
             let saldoCritico = item.locais.filter(l => l.isCritico).reduce((sum, l) => sum + l.saldo, 0);
             let saldoUtil = item.saldo - saldoCritico;
             item.saldoUtil = saldoUtil;
 
             let consumoFisicoDiario = consumoMesAnteriorFisico / 30;
             let minSugerido = Math.ceil(consumoFisicoDiario * item.leadTime);
-            let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); // Estoque Max = Seguranca + 1 Mês
+            let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); 
             if (consumoMesAnteriorFisico === 0) { minSugerido = 0; maxSugerido = 0; }
             
             item.sugestaoMin = minSugerido;
@@ -1655,6 +1680,8 @@
         
         // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs) COM VALIDAÇÃO DE STATUS
         ordesAtivasFiltradas = [];
+        setStatusOFUnicos.clear();
+
         if(bases.compras.length > 0) {
             const c_sc = encontrarChave(bases.compras[0], colScCodigo);
             const c_of = encontrarChave(bases.compras[0], colOfCodigo);
@@ -1667,6 +1694,7 @@
             bases.compras.forEach(linha => {
                 let qtdPedida = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
                 let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
+                let sitOFOriginal = c_of_sit ? linha[c_of_sit] : 'Pendente';
                 let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
                 let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
                 let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
@@ -1682,12 +1710,15 @@
                     }
                 } else {
                     saldoPendente = c_qtd_compra_fallback ? converterParaNumero(linha[c_qtd_compra_fallback]) : 0;
+                    qtdPedida = saldoPendente; // Fallback da coluna bruta
                 }
 
                 if(saldoPendente > 0) {
                     let cod = normalizarCod(linha[c_cod_compra]);
                     let objItem = mapaItensParaFilial.get(cod);
                     let filialDaOF = objItem ? objItem.filialNm : 'Geral';
+
+                    if (sitOFOriginal) setStatusOFUnicos.add(sitOFOriginal);
 
                     ordesAtivasFiltradas.push({
                         sc: linha[c_sc] || '-',
@@ -1698,10 +1729,20 @@
                         dataEntrega: linha[c_dt_ent] || 'Sem Data',
                         qtdPedidaOriginal: qtdPedida,
                         saldoOF: saldoPendente,
+                        sitOFOriginal: sitOFOriginal,
                         filial: filialDaOF,
                         searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn]).toLowerCase()
                     });
                 }
+            });
+        }
+
+        // Popula o novo Dropdown de Status da OF
+        const selectStatusOf = document.getElementById('select-status-of');
+        if (selectStatusOf) {
+            selectStatusOf.innerHTML = '<option value="">Todos os Status</option>';
+            Array.from(setStatusOFUnicos).sort().forEach(s => {
+                if(s) selectStatusOf.innerHTML += `<option value="${s}">${s}</option>`;
             });
         }
 
@@ -1824,6 +1865,7 @@
         document.getElementById('select-imagem').value = "";
         if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
         if(document.getElementById('select-local')) document.getElementById('select-local').value = "";
+        if(document.getElementById('select-status-of')) document.getElementById('select-status-of').value = "";
         document.getElementById('busca').value = "";
         document.getElementById('busca-compras').value = "";
         document.getElementById('busca-ofs').value = "";
@@ -1896,7 +1938,7 @@
                                 <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual (Qtd)</span><span class="metric-value">${i.saldo} <span style="font-size:11px;">und</span></span></div>
                                 <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
                                 <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value">${giroAnualDias}</span></div>
-                                <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${formatarMoeda(i.consumoFinanceiro)}</span></div>
+                                <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${formatarMoedaMask(i.consumoFinanceiro)}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1937,7 +1979,7 @@
                     <td style="font-size:12px; font-weight:600; color:var(--text-secondary);">${i.minimo} / ${i.maximo}</td>
                     <td style="font-size:14px; font-weight:900; color:var(--text-info);">${i.sugestaoMin}</td>
                     <td style="font-size:14px; font-weight:900; color:var(--text-info);">${i.sugestaoMax}</td>
-                    <td style="font-size:12px; font-weight:600; color:var(--text-primary);">${formatarMoeda(i.consumoFinanceiro)}</td>
+                    <td style="font-size:12px; font-weight:600; color:var(--text-primary);">${formatarMoedaMask(i.consumoFinanceiro)}</td>
                     <td style="font-size:13px; font-weight:800; color:${colorAcao};">${acao}</td>
                 </tr>
             `);
@@ -1975,7 +2017,7 @@
         if (divResumo) {
             divResumo.innerHTML = `
                 <div class="kpi-card border-warning"><span class="kpi-title">Total de Itens (Qtd Reposição)</span><span class="kpi-value color-warning">${totalQtd.toLocaleString('pt-BR')}</span></div>
-                <div class="kpi-card border-success"><span class="kpi-title">Valor Estimado de Compras</span><span class="kpi-value color-success">${formatarMoeda(totalValor)}</span></div>
+                <div class="kpi-card border-success"><span class="kpi-title">Valor Estimado de Compras</span><span class="kpi-value color-success">${formatarMoedaMask(totalValor)}</span></div>
             `;
         }
 
@@ -1987,10 +2029,13 @@
         const divResumo = document.getElementById('resumo-ofs');
         let htmlLote = [];
         
+        const statusOfFiltro = document.getElementById('select-status-of').value;
+
         let ofsExibir = ordesAtivasFiltradas.filter(of => {
             let bateTermo = termosSplit.length === 0 || termosSplit.some(t => of.searchStr.includes(t));
             let bateFilial = !filialFiltro || of.filial === filialFiltro || of.filial === 'Geral';
-            return bateTermo && bateFilial;
+            let bateStatus = !statusOfFiltro || of.sitOFOriginal === statusOfFiltro;
+            return bateTermo && bateFilial && bateStatus;
         });
 
         let valTransitoTotal = 0;
@@ -2001,9 +2046,7 @@
         const mapaItens = new Map(itensProcessados.map(i => [i.codNorm, i]));
 
         ofsExibir.forEach(of => {
-            let codBusca = normalizarCod(of.codProd);
-            let itemRef = mapaItens.get(codBusca); 
-            
+            let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
             let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
             valTransitoTotal += val;
             qtdTransitoTotal += of.saldoOF;
@@ -2013,8 +2056,10 @@
 
         ofsExibir.slice(0, 100).forEach(of => {
             let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
+            
+            // NOVO: Clique na OF para abrir modal específico
             htmlLote.push(`
-                <tr class="fade-in">
+                <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
                     <td><strong style="color:var(--text-primary);">${of.of}</strong><br><span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span></td>
                     <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
                     <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
@@ -2027,7 +2072,7 @@
         
         if (divResumo) {
             divResumo.innerHTML = `
-                <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF</span><span class="kpi-value color-info">${formatarMoeda(valTransitoTotal)}</span></div>
+                <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
                 <div class="kpi-card"><span class="kpi-title">Saldo Físico a Receber</span><span class="kpi-value">${qtdTransitoTotal}</span></div>
                 <div class="kpi-card"><span class="kpi-title">OFs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
                 <div class="kpi-card"><span class="kpi-title">Fornecedores Diferentes</span><span class="kpi-value">${fornSet.size}</span></div>
@@ -2068,7 +2113,7 @@
 
         const safeSetText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
-        safeSetText('dash-kpi-valor-total', formatarMoeda(valorTotal));
+        safeSetText('dash-kpi-valor-total', formatarMoedaMask(valorTotal));
         safeSetText('dash-kpi-total-itens', `Em ${itensFiltrados.length} SKUs`);
         
         safeSetText('dash-kpi-giro-anual', totalConsumoMensalFinanceiro > 0 ? `${giroAnualDias} dias` : 'Sem Consumo');
@@ -2078,12 +2123,12 @@
         safeSetText('dash-kpi-risco-minimo', qtdRiscoMinimo);
         safeSetText('dash-kpi-excesso', qtdExcesso);
         safeSetText('dash-kpi-ruptura-transito', qtdRupturaTransito);
-        safeSetText('dash-kpi-valor-obsoleto', formatarMoeda(valorObsoleto));
+        safeSetText('dash-kpi-valor-obsoleto', formatarMoedaMask(valorObsoleto));
         safeSetText('dash-kpi-obsoleto-qtd', `${qtdObsoleto} itens`);
         safeSetText('dash-kpi-skus-ativos', skusAtivos);
         
-        safeSetText('dash-kpi-volume-fisico', formatarMoeda(totalSaldoFinanceiro));
-        safeSetText('dash-kpi-consumo-financeiro', formatarMoeda(totalConsumoMensalFinanceiro));
+        safeSetText('dash-kpi-volume-fisico', formatarMoedaMask(totalSaldoFinanceiro));
+        safeSetText('dash-kpi-consumo-financeiro', formatarMoedaMask(totalConsumoMensalFinanceiro));
         safeSetText('dash-kpi-total-itens-proc', itensProcessados.length);
 
         atualizarGraficos(); 
@@ -2136,7 +2181,7 @@
                     <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
                     <td style="font-size:11px; font-weight:600; color:var(--text-info);">${locAbrev}</td>
                     <td style="font-size:14px; font-weight:800; color:var(--text-primary);">${i.saldo}</td>
-                    <td style="color:var(--text-primary); font-weight:600;">${formatarMoeda(i.consumoFinanceiro)}</td>
+                    <td style="color:var(--text-primary); font-weight:600;">${formatarMoedaMask(i.consumoFinanceiro)}</td>
                     <td style="font-weight:700; color:var(--text-primary);">${giroText}</td>
                     <td><span class="badge-status ${i.statusBadge}">${i.status}</span></td>
                 </tr>
@@ -2306,6 +2351,9 @@
             </tr>
         `).join('');
 
+        let giroMensalTexto = item.diasGiroMensal === Infinity ? 'Sem Consumo/Obsoleto' : `${item.diasGiroMensal} Dias`;
+        let giroAnualTexto = item.diasGiroAnual === Infinity ? 'Sem Consumo/Obsoleto' : `${item.diasGiroAnual} Dias`;
+
         const content = `
             <div class="modal-header-section">
                 <div style="flex-grow: 1;">
@@ -2320,9 +2368,14 @@
                     </div>
                     <div class="item-metrics-grid">
                         <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${item.saldo}</span></div>
-                        <div class="metric-box metric-default"><span class="metric-label">Custo Unitário</span><span class="metric-value">${formatarMoeda(item.custoUnitario)}</span></div>
-                        <div class="metric-box metric-default"><span class="metric-label">Valor Imobilizado</span><span class="metric-value">${formatarMoeda(item.valorImobilizado)}</span></div>
+                        <div class="metric-box metric-default"><span class="metric-label">Custo Unitário</span><span class="metric-value">${formatarMoedaMask(item.custoUnitario)}</span></div>
+                        <div class="metric-box metric-default"><span class="metric-label">Valor Imobilizado</span><span class="metric-value">${formatarMoedaMask(item.valorImobilizado)}</span></div>
                         <div class="metric-box metric-default"><span class="metric-label">Sugestão Mín / Máx</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
+                        
+                        <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value" style="font-size: 15px;">${giroMensalTexto}</span></div>
+                        <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value" style="font-size: 15px;">${giroAnualTexto}</span></div>
+                        <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF)</span><span class="metric-value">${item.transito}</span></div>
+                        <div class="metric-box metric-default"><span class="metric-label">Lead Time Medido</span><span class="metric-value">${item.leadTime} Dias</span></div>
                     </div>
                 </div>
             </div>
@@ -2349,6 +2402,52 @@
                         ${linhasLocais}
                     </tbody>
                 </table>
+            </div>
+        `;
+
+        document.getElementById('modal-body-content').innerHTML = content;
+        document.getElementById('modal-item').style.display = 'flex';
+    };
+
+    // NOVO: Modal Exclusivo para Análise de Gestão de OF
+    window.abrirModalOF = function(ofId, codProd) {
+        let codNorm = normalizarCod(codProd);
+        const of = ordesAtivasFiltradas.find(o => o.of === ofId && normalizarCod(o.codProd) === codNorm);
+        const item = itensProcessados.find(i => i.codNorm === codNorm);
+
+        if (!of || !item) {
+            mostrarToast("Erro: Detalhes da OF ou do Item não encontrados.", "error");
+            return;
+        }
+
+        const content = `
+            <div class="modal-header-section">
+                <div style="flex-grow: 1;">
+                    <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; line-height: 1.2;">
+                        Gestão de OF: <span style="color: var(--primary-color);">${of.of}</span>
+                    </h2>
+                    <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
+                        Item: #${of.codProd} - ${of.descProd}
+                    </h3>
+                    <div class="item-category" style="margin-bottom: 20px;">
+                        <span class="chip-category">SC Relacionada: <strong>${of.sc}</strong></span>
+                        <span class="chip-category">Fornecedor: <strong>${of.fornecedor}</strong></span>
+                        <span class="chip-category">Entrega Prevista: <strong>${of.dataEntrega}</strong></span>
+                        <span class="badge-status badge-transito">Status: ${of.sitOFOriginal || 'Pendente'}</span>
+                    </div>
+                    <div class="item-metrics-grid">
+                        <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual (Físico)</span><span class="metric-value">${item.saldo}</span></div>
+                        <div class="metric-box metric-default"><span class="metric-label">Mínimo / Máximo (Global)</span><span class="metric-value" style="font-size: 15px;">${item.minimo} / ${item.maximo}</span></div>
+                        <div class="metric-box metric-transito"><span class="metric-label">Quantidade Original Solicitada</span><span class="metric-value">${of.qtdPedidaOriginal}</span></div>
+                        <div class="metric-box metric-default" style="border-color: var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente de Entrega</span><span class="metric-value" style="color:var(--text-warning);">${of.saldoOF}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; padding: 10px;">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, locais e histórico de entrega desse item?</p>
+                <button class="theme-btn active" onclick="abrirModalDetalhes('${item.codNorm}', '${item.filialIdBase}')" style="padding: 12px 24px; font-size: 14px; margin: 0 auto; border-radius: 8px;">
+                    Ver Contexto Completo do Item Analisado
+                </button>
             </div>
         `;
 
