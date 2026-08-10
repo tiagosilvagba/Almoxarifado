@@ -92,7 +92,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* TELA DE CARREGAMENTO HIGH-TECH */
         #tech-loader {
             position: fixed; inset: 0; background: #020617; z-index: 999999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -167,7 +166,7 @@
         .btn-sidebar-action:hover { border-color: var(--primary-color); background: var(--bg-subcard); }
 
         /* ==========================================================================
-           4. PAINEL DE FILTROS (ESQUERDA)
+           4. PAINEL DE FILTROS AVANÇADOS (ESQUERDA)
            ========================================================================== */
         .filter-panel-left {
             width: 280px; background: var(--bg-card); border-right: 1px solid var(--border-color);
@@ -212,7 +211,7 @@
         .scrollable-results-section { flex-grow: 1; overflow-y: auto; padding-right: 15px; padding-top: 5px; padding-bottom: 30px;}
 
         /* ==========================================================================
-           6. CARTÕES DO CATÁLOGO E MÉTRICAS
+           6. CARTÕES DO CATÁLOGO (PREVIEW)
            ========================================================================== */
         .item-card {
             background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
@@ -276,11 +275,6 @@
         .metric-label { font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;}
         .metric-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px;}
 
-        .item-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-top: 14px; border-top: 1px dashed var(--border-color); flex-wrap: wrap; gap: 10px;
-        }
-
         /* ==========================================================================
            7. DASHBOARD E KPIs 
            ========================================================================== */
@@ -324,7 +318,7 @@
         .badge-acima { background: var(--badge-acima-bg); color: var(--badge-acima-text); }
 
         /* ==========================================================================
-           8. MODAL DE DETALHES, GALERIA E LIGHTBOX
+           8. MODAL DE DETALHES, GALERIA E LIGHTBOX NATIVO
            ========================================================================== */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000;
@@ -356,7 +350,7 @@
         .modal-locais-table th { background: var(--bg-subcard); padding: 10px; color: var(--text-secondary); text-align: left; text-transform: uppercase; font-size: 11px;}
         .modal-locais-table td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500;}
 
-        /* CSS LIGHTBOX (Zoom NATIVO) */
+        /* CSS LIGHTBOX (Zoom NATIVO com Setas) */
         .lightbox-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999999;
             display: none; align-items: center; justify-content: center; flex-direction: column;
@@ -382,51 +376,7 @@
         .lb-counter { position: absolute; bottom: 20px; color: white; font-size: 16px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px;}
 
         /* ==========================================================================
-           9. AI ASSISTANT (CHATBOT)
-           ========================================================================== */
-        .ai-chat-btn {
-            position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-            color: white; padding: 14px 24px; border-radius: 30px; font-weight: 800; font-size: 14px;
-            cursor: pointer; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4); z-index: 99999;
-            display: flex; align-items: center; gap: 8px; transition: all 0.3s; border: none;
-        }
-        .ai-chat-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 30px rgba(139, 92, 246, 0.6); }
-        
-        .ai-chat-window {
-            position: fixed; bottom: 85px; right: 24px; width: 350px; height: 500px;
-            background: var(--bg-card); border-radius: 20px; box-shadow: var(--shadow-hover);
-            border: 1px solid var(--border-color); z-index: 99999; display: none;
-            flex-direction: column; overflow: hidden; animation: fadeIn 0.3s ease;
-        }
-        .ai-header {
-            background: linear-gradient(135deg, #8b5cf6, #3b82f6); padding: 16px 20px;
-            color: white; font-weight: 800; display: flex; justify-content: space-between; align-items: center;
-        }
-        .ai-close { cursor: pointer; font-size: 20px; opacity: 0.8; }
-        .ai-close:hover { opacity: 1; }
-        .ai-messages {
-            flex-grow: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
-            background: var(--bg-body); font-size: 13px;
-        }
-        .ai-msg { padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.5; }
-        .ai-msg-user { background: var(--primary-color); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .ai-msg-bot { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .ai-input-area {
-            padding: 15px; background: var(--bg-card); border-top: 1px solid var(--border-color);
-            display: flex; gap: 10px;
-        }
-        .ai-input {
-            flex-grow: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid var(--border-color);
-            background: var(--bg-subcard); color: var(--text-primary); font-size: 13px; outline: none;
-        }
-        .ai-input:focus { border-color: #8b5cf6; }
-        .ai-send {
-            background: #8b5cf6; color: white; border: none; width: 36px; height: 36px; border-radius: 50%;
-            cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* ==========================================================================
-           10. TOASTS E INSTRUÇÕES
+           9. TOASTS E INSTRUÇÕES
            ========================================================================== */
         .toast-container { position: fixed; bottom: 24px; left: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100000; }
         .toast { padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease-in 4s forwards; }
@@ -478,21 +428,6 @@
     </div>
 </div>
 
-<button class="ai-chat-btn" onclick="toggleAIChat()">💬 Seara AI</button>
-<div class="ai-chat-window" id="ai-chat-window">
-    <div class="ai-header">
-        <span>🤖 Copilot de Estoque</span>
-        <span class="ai-close" onclick="toggleAIChat()">×</span>
-    </div>
-    <div class="ai-messages" id="ai-messages">
-        <div class="ai-msg ai-msg-bot">Olá! Sou sua Inteligência Artificial local. Pergunte-me sobre os dados do seu catálogo atual (ex: <i>"resumo"</i>, <i>"itens em ruptura"</i>, <i>"item mais caro"</i>, <i>"valor obsoleto"</i>).</div>
-    </div>
-    <div class="ai-input-area">
-        <input type="text" id="ai-input" class="ai-input" placeholder="Pergunte sobre os dados..." onkeypress="if(event.key === 'Enter') enviarMensagemAI()">
-        <button class="ai-send" onclick="enviarMensagemAI()">➤</button>
-    </div>
-</div>
-
 <div class="app-layout segmentation-hidden" id="app-layout" style="opacity: 0;">
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -516,6 +451,9 @@
             </a>
             <a href="#" class="nav-item" id="nav-compras" onclick="navegarPara('compras')">
                 <span style="font-size: 18px;">🛒</span><span>Necessidade Compra</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-gestao-compras" onclick="navegarPara('gestao-compras')">
+                <span style="font-size: 18px;">📦</span><span>Gestão de Compras (OFs)</span>
             </a>
             <a href="#" class="nav-item" id="nav-instrucoes" onclick="navegarPara('instrucoes')">
                 <span style="font-size: 18px;">📖</span><span>Como Utilizar</span>
@@ -562,7 +500,7 @@
         <div class="filter-panel-body">
             <div class="filter-group">
                 <label class="filter-label">Filial:</label>
-                <select id="select-filial" class="segmentation-select" onchange="dispararFiltros()">
+                <select id="select-filial" class="segmentation-select" onchange="atualizarFiltroLocais()">
                     <option value="">Todas as Filiais</option>
                 </select>
             </div>
@@ -621,7 +559,7 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>⚖️ Revisão de Parâmetros (Mínimo/Máximo)</h1></header>
-                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo itens com discrepância de configuração. <b>Nota:</b> O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295).</p>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo itens com discrepância de configuração. O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295). As sugestões utilizam o Lead Time real medido nos arquivos de compra/recebimento.</p>
             </div>
             <div class="scrollable-results-section">
                 <div class="dash-section-box">
@@ -631,16 +569,15 @@
                                 <tr>
                                     <th>Código / Descrição</th>
                                     <th>Filial</th>
-                                    <th>Saldo Total</th>
                                     <th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th>
-                                    <th>Mín Global</th>
-                                    <th>Máx Global</th>
-                                    <th>Consumo Mês (R$)</th>
-                                    <th style="color: var(--text-danger);">Ação Recomendada</th>
+                                    <th>Mín / Máx Atual</th>
+                                    <th style="color: var(--text-info);">Sugestão Novo Mín</th>
+                                    <th style="color: var(--text-info);">Sugestão Novo Máx</th>
+                                    <th style="color: var(--text-danger);">Alerta do Sistema</th>
                                 </tr>
                             </thead>
                             <tbody id="revisao-table-body">
-                                <tr><td colspan="8" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
+                                <tr><td colspan="7" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -652,15 +589,19 @@
     <main class="main-content" id="view-compras" style="display: none;">
         <div class="container">
             <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
-                <div>
+                <div style="flex-grow: 1; padding-right: 20px;">
                     <header><h1 style="margin-bottom: 10px;">Necessidade de Compra (Críticos)</h1></header>
                     <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens em ruptura ou abaixo do mínimo com política ativa (Min/Max > 0).</p>
+                    <input type="text" id="busca-compras" class="search-box" style="margin-top:10px;" placeholder="Pesquisar necessidades por código ou nome..." oninput="dispararFiltrosDebounce()">
                 </div>
                 <button class="theme-btn active" onclick="exportarComprasExcel()" style="padding: 10px 20px; font-size: 14px; border-radius: 12px; cursor: pointer;">
-                    📥 Baixar Excel
+                    📥 Baixar Planilha
                 </button>
             </div>
             <div class="scrollable-results-section">
+                <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;" id="resumo-necessidade">
+                    </div>
+                
                 <div class="dash-section-box">
                     <div class="dash-table-container">
                         <table class="dash-table">
@@ -684,6 +625,39 @@
         </div>
     </main>
 
+    <main class="main-content" id="view-gestao-compras" style="display: none;">
+        <div class="container">
+            <div class="fixed-top-section">
+                <header><h1>📦 Gestão de Compras (OFs em Trânsito)</h1></header>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo Ordens de Fornecimento com Saldo > 0 aguardando entrega.</p>
+                <input type="text" id="busca-ofs" class="search-box" placeholder="Busque OF, SC, Fornecedor ou Código..." oninput="dispararFiltrosDebounce()">
+            </div>
+            <div class="scrollable-results-section">
+                <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;" id="resumo-ofs"></div>
+
+                <div class="dash-section-box">
+                    <div class="dash-table-container">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>SC / OF</th>
+                                    <th>Código / Produto</th>
+                                    <th>Fornecedor</th>
+                                    <th>Qtd Pedida</th>
+                                    <th style="color: var(--text-warning);">Saldo Pendente</th>
+                                    <th>Data Prevista</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ofs-table-body">
+                                <tr><td colspan="6" style="text-align:center; padding: 40px;">Aguardando leitura de Compras...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
     <main class="main-content" id="view-instrucoes" style="display: none;">
         <div class="container">
             <div class="fixed-top-section">
@@ -694,20 +668,23 @@
                     <h3>1. Sincronização Automática vs Manual</h3>
                     <p>Ao abrir o painel, ele buscará os arquivos <b>01 - Compras.csv, 02 - Consumos.csv e 03 - Base_Itens.csv</b> na raiz do seu repositório. O GitHub é <i>Case Sensitive</i>, portanto, respeite letras maiúsculas e minúsculas exatas no nome do arquivo. Se houver falha de rede ou CORS, utilize o botão de "Upload Manual" na tela inicial.</p>
                     
-                    <h3>2. Cálculo de Custo Unitário Dinâmico</h3>
-                    <p>O custo unitário de um item não é lido apenas de forma estática do ERP. O sistema o calcula inteligentemente através da fórmula: <code>Valor Total Financeiro da Linha / Quantidade Física de Peças</code>. Isso garante que as frações de preço sejam precisas. Essa regra é aplicada globalmente (no total do item consolidado) e no detalhe de cada local de estoque.</p>
+                    <h3>2. Lead Time e Revisão de Min/Max</h3>
+                    <p>O sistema mede automaticamente a diferença de dias entre a Criação da SC e a Entrada Física (REC) de cada item. Com base na média de entrega do fornecedor e do consumo diário, a aba de <b>Revisão Min/Max</b> vai te dar <i>sugestões matemáticas</i> precisas de qual deveria ser o novo Mínimo (Estoque de Segurança) e Máximo de cada item.</p>
 
-                    <h3>3. Regra de Reserva Estratégica: Locais 299 e 295</h3>
-                    <p>Se o sistema detectar que o material possui saldo nos locais <code>299</code> ou <code>295</code>, esse item recebe uma "blindagem". Mesmo sem consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299/295)</b>.</p>
+                    <h3>3. Giro de Estoque Financeiro (Em Dias)</h3>
+                    <ul>
+                        <li><b>No Dashboard (Macro):</b> O Giro de Período e a Cobertura Financeira (Dias) são calculados pelo <b>peso financeiro</b> (Soma em R$ do Consumo / Soma em R$ do Saldo).</li>
+                        <li><b>No Catálogo e Modal (Micro):</b> A conversão para dias é aplicada individualmente. Fórmula: <code>(Saldo R$ / Consumo R$) * 30</code>.</li>
+                    </ul>
 
-                    <h3>4. Revisão de Mínimo e Máximo (Saldo Útil)</h3>
-                    <p>Na aba de <b>Revisão Min/Max</b>, o painel subtrai o saldo dos locais estratégicos (299/295) para encontrar o <b>"Saldo Útil"</b> que realmente gira na fábrica. Com base nisso, ele sugere alertas como "Aumentar Mínimo (Risco)", "Reduzir Máximo (Excesso)" ou "Revisar Parâmetros (Item Sem Consumo com Máximo Ativo)".</p>
+                    <h3>4. Regra de Reserva Estratégica: Locais 299 e 295</h3>
+                    <p>Se o material possui saldo nos locais <code>299</code> ou <code>295</code>, esse item recebe uma "blindagem". Mesmo sem consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299/295)</b>. Na aba de Revisão, esse saldo estratégico é subtraído, exibindo apenas o <b>Saldo Útil</b> da fábrica.</p>
 
                     <h3>5. Consolidação de Múltiplos Locais e Filiais 704</h3>
-                    <p>Itens duplicados em prateleiras são fundidos em um <b>"Super Cartão"</b> para cálculo preciso. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b>: locais de estoque abaixo de 599 (exceto os protegidos 101, 299, 295) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>.</p>
+                    <p>Itens duplicados em prateleiras são fundidos em um <b>"Super Cartão"</b> para cálculo preciso. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b>: locais de estoque abaixo de 599 (exceto os protegidos 101, 299, 295) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>. Use os "Filtros Avançados" em cascata para isolar Filiais e Locais específicos!</p>
 
-                    <h3>6. Tratamento de Múltiplas Imagens e Lightbox</h3>
-                    <p>Para associar imagens ao catálogo com velocidade ultrarrápida, clique em <b>"Mapear Pasta de Imagens"</b> no menu lateral. O sistema permite carregar até 6 fotos em formato carrossel no Modal do item (<code>[código] - 01.jpg</code> a <code>06.jpg</code>). Você pode clicar nas fotos dentro do Modal para expandi-las no nosso Lightbox nativo seguro.</p>
+                    <h3>6. Tratamento de Imagens e Exportação Excel</h3>
+                    <p>Clique em <b>"Mapear Pasta de Imagens"</b> para carregar até 6 fotos por item. Ao clicar na foto dentro do item, uma galeria (Lightbox) tela cheia se abrirá. Em "Necessidades de Compra", clique no botão verde para exportar os itens críticos imediatamente para o Excel (CSV UTF-8).</p>
                 </div>
             </div>
         </div>
@@ -845,6 +822,10 @@
     const bases = { baseItens: [], compras: [], consumos: [] };
     let itensProcessados = [];
     let itensFiltrados = [];
+    
+    // Nova estrutura armazenar as OFs ativas extraidas de compras.csv
+    let ordesAtivasFiltradas = [];
+
     let vistaAtual = 'dashboard';
     let chartABCInstance = null;
     let chartStatusInstance = null;
@@ -859,6 +840,7 @@
 
     let imagensMapeadas = new Set();
     let mapeamentoDeImagemAtivo = false;
+    let setLocaisUnicos = new Set(); 
 
     // Estado do Lightbox Nativo e Seguro
     let currentLightboxImages = [];
@@ -867,78 +849,7 @@
     if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
     // ==========================================================================
-    // SEARA AI ASSISTANT (COPILOTO DE DADOS)
-    // ==========================================================================
-    function toggleAIChat() {
-        const win = document.getElementById('ai-chat-window');
-        win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
-        if(win.style.display === 'flex') document.getElementById('ai-input').focus();
-    }
-
-    function addAIMessage(msg, isUser = false) {
-        const container = document.getElementById('ai-messages');
-        const div = document.createElement('div');
-        div.className = 'ai-msg ' + (isUser ? 'ai-msg-user' : 'ai-msg-bot');
-        div.innerHTML = msg;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
-
-    function enviarMensagemAI() {
-        const input = document.getElementById('ai-input');
-        const text = input.value.trim();
-        if(!text) return;
-        
-        addAIMessage(text, true);
-        input.value = '';
-        
-        setTimeout(() => processarRespostaAI(text), 600);
-    }
-
-    function processarRespostaAI(query) {
-        if(itensFiltrados.length === 0) {
-            addAIMessage("No momento o catálogo está vazio ou filtrado sem resultados. Sincronize a base de dados primeiro.");
-            return;
-        }
-
-        let q = normalizarString(query);
-        let resp = "";
-
-        if (q.includes('resumo') || q.includes('total') || q.includes('estoque')) {
-            let valTotal = formatarMoeda(itensFiltrados.reduce((acc, i) => acc + i.valorImobilizado, 0));
-            let consumo = formatarMoeda(itensFiltrados.reduce((acc, i) => acc + i.consumoFinanceiro, 0));
-            resp = `Atualmente, temos <b>${itensFiltrados.length} itens</b> listados na visão atual.<br><br>💰 <b>Valor Imobilizado:</b> ${valTotal}<br>📉 <b>Consumo (${mesConsumoAtual}):</b> ${consumo}`;
-        } 
-        else if (q.includes('ruptura') || q.includes('faltando') || q.includes('zerado')) {
-            let rupturas = itensFiltrados.filter(i => i.status.includes('Ruptura')).sort((a,b) => b.consumoFinanceiro - a.consumoFinanceiro);
-            if(rupturas.length > 0) {
-                resp = `Encontrei <b>${rupturas.length} itens em ruptura</b>.<br><br>🔴 <b>Top 3 mais críticos (Por Consumo):</b><br>`;
-                rupturas.slice(0, 3).forEach(i => resp += `- #${i.cod} (${i.desc})<br>`);
-            } else {
-                resp = "✅ Ótimas notícias! Não encontrei itens em ruptura na seleção atual.";
-            }
-        }
-        else if (q.includes('caro') || q.includes('maior valor') || q.includes('topo')) {
-            let maisCaro = [...itensFiltrados].sort((a,b) => b.valorImobilizado - a.valorImobilizado)[0];
-            resp = `O item com maior dinheiro travado em estoque é o:<br><br>💎 <b>#${maisCaro.cod} - ${maisCaro.desc}</b><br>Valor: <b>${formatarMoeda(maisCaro.valorImobilizado)}</b>`;
-        }
-        else if (q.includes('obsoleto') || q.includes('parado') || q.includes('sem giro')) {
-            let obs = itensFiltrados.filter(i => i.status.includes('Obsoleto'));
-            let valObs = formatarMoeda(obs.reduce((acc, i) => acc + i.valorImobilizado, 0));
-            resp = `Encontrei <b>${obs.length} itens obsoletos</b> (Sem consumo no período).<br>Isso representa <b>${valObs}</b> em capital travado.`;
-        }
-        else if (q.includes('ajuda') || q.includes('o que você faz')) {
-            resp = "Sou sua IA de Estoque! Posso analisar a base atual. Tente perguntar:<br>• <i>Resumo</i><br>• <i>Quais os itens em ruptura?</i><br>• <i>Qual o item mais caro?</i><br>• <i>Valor obsoleto</i>";
-        }
-        else {
-            resp = "Desculpe, não entendi bem. Como sou uma IA baseada em análise dos seus CSVs locais, tente usar palavras como <b>'resumo'</b>, <b>'ruptura'</b>, <b>'obsoleto'</b> ou <b>'mais caro'</b>.";
-        }
-
-        addAIMessage(resp);
-    }
-
-    // ==========================================================================
-    // TELA DE CARREGAMENTO E LIGHTBOX NATIVO E SEGURO
+    // TELA DE CARREGAMENTO E MENSAGENS
     // ==========================================================================
     function setProgress(percent, msg, type='info') {
         loaderProgress = percent;
@@ -985,6 +896,9 @@
         setTimeout(() => { toast.remove(); }, 5000);
     }
 
+    // ==========================================================================
+    // LIGHTBOX SEGURO E NATIVO (Zoom Imagens)
+    // ==========================================================================
     window.abrirLightboxArray = function(imageArrayString, index, event) {
         if(event) event.stopPropagation();
         currentLightboxImages = imageArrayString.split(',');
@@ -1033,8 +947,16 @@
         document.querySelectorAll('.theme-btn').forEach(btn => {
             if(btn.getAttribute('data-theme-val') === temaLocal) btn.classList.add('active');
         });
-        const campoBusca = document.getElementById('busca');
-        if (campoBusca) campoBusca.addEventListener('input', dispararFiltrosDebounce);
+        
+        // Listeners das Caixas de Busca
+        const bsCatalog = document.getElementById('busca');
+        if(bsCatalog) bsCatalog.addEventListener('input', dispararFiltrosDebounce);
+        
+        const bsCompras = document.getElementById('busca-compras');
+        if(bsCompras) bsCompras.addEventListener('input', dispararFiltrosDebounce);
+
+        const bsOFs = document.getElementById('busca-ofs');
+        if(bsOFs) bsOFs.addEventListener('input', dispararFiltrosDebounce);
         
         setTimeout(() => {
             if (!isFetchingData) carregarArquivosAutomaticamente();
@@ -1056,7 +978,7 @@
 
     function navegarPara(view) {
         vistaAtual = view;
-        ['pesquisa', 'dashboard', 'compras', 'instrucoes', 'revisao'].forEach(v => {
+        ['pesquisa', 'dashboard', 'compras', 'gestao-compras', 'instrucoes', 'revisao'].forEach(v => {
             const el = document.getElementById(`view-${v}`);
             const nav = document.getElementById(`nav-${v}`);
             if(el) el.style.display = (v === view) ? 'flex' : 'none';
@@ -1064,6 +986,7 @@
         });
         if(view === 'pesquisa' || view === 'dashboard') dispararFiltrosSemAtraso();
         if(view === 'compras') renderizarCompras();
+        if(view === 'gestao-compras') renderizarGestaoDeCompras();
         if(view === 'revisao') renderizarRevisao();
     }
 
@@ -1106,38 +1029,6 @@
         let validText = lines.slice(headerIndex).join('\n');
         let result = Papa.parse(validText, { header: true, skipEmptyLines: true, dynamicTyping: false });
         return result.data;
-    }
-
-    // ==========================================================================
-    // EXPORTAÇÃO PARA EXCEL
-    // ==========================================================================
-    window.exportarComprasExcel = function() {
-        const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
-        if(necessitaCompra.length === 0) {
-            mostrarToast("Nenhum dado na tela para exportar.", "warning");
-            return;
-        }
-        
-        // UTF-8 BOM para o Excel abrir direto sem quebrar acentos
-        let csvContent = "\uFEFF"; 
-        csvContent += "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra\n";
-        
-        necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
-            let sug = i.maximo - i.saldo;
-            let descLimpa = i.desc.replace(/;/g, ','); // Evita quebrar as colunas do CSV
-            let filialLimpa = i.filialNm.replace(/;/g, ',');
-            csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.minimo};${i.maximo};${sug}\n`;
-        });
-        
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Necessidade_Compra_${new Date().toISOString().slice(0,10)}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 
     // ==========================================================================
@@ -1280,7 +1171,7 @@
 
         for(let i = 0; i < files.length; i++) {
             let fileName = files[i].name.toLowerCase();
-            // Aceitar do 01 ao 06 para o mapeador geral
+            // Mapeador até a foto 6 para alimentar o Carrossel
             if(fileName.includes(' - 01.') || fileName.includes(' - 02.') || fileName.includes(' - 03.') || fileName.includes(' - 04.') || fileName.includes(' - 05.') || fileName.includes(' - 06.')) {
                 let codBruto = fileName.split(' - ')[0];
                 let codNorm = normalizarCod(codBruto);
@@ -1298,6 +1189,40 @@
     }
 
     // ==========================================================================
+    // EXPORTAÇÃO PARA EXCEL (Botão)
+    // ==========================================================================
+    window.exportarComprasExcel = function() {
+        const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
+        if(necessitaCompra.length === 0) {
+            mostrarToast("Nenhum dado crítico na tela para exportar.", "warning");
+            return;
+        }
+        
+        // UTF-8 BOM para garantir acentos perfeitos no Excel Windows
+        let csvContent = "\uFEFF"; 
+        csvContent += "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n";
+        
+        necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
+            let sug = i.maximo - i.saldo;
+            let val = sug * i.custoUnitario;
+            let descLimpa = i.desc.replace(/;/g, ',');
+            let filialLimpa = i.filialNm.replace(/;/g, ',');
+            csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.minimo};${i.maximo};${sug};${i.custoUnitario.toFixed(2)};${val.toFixed(2)}\n`;
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Necessidade_Compra_${new Date().toISOString().slice(0,10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        mostrarToast("Arquivo Excel baixado com sucesso!", "success");
+    }
+
+    // ==========================================================================
     // MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
     // ==========================================================================
     async function processarInteligencia() {
@@ -1308,16 +1233,17 @@
             isFetchingData = false; return; 
         }
 
-        const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item'];
-        const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc'];
+        // ================= COLUNAS MAIS RECENTES DA JBS =================
+        const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto'];
+        const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'];
         const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
         const colQtdConsumo = ['qt movimento', 'quantidade consumida', 'quantidade'];
-        const colQtdCompra = ['quantidade', 'qtde', 'saldo aberto'];
+        const colQtdCompra = ['quantidade', 'qtde', 'saldo aberto', 'of - saldo', 'sc - quantidade'];
         const colCusto = ['vl custo unitario atual', 'custo unitario', 'custo'];
         const colMin = ['qt minimo', 'minimo', 'min'];
         const colMax = ['qt maximo', 'maximo', 'max'];
         const colFilialId = ['cd filial']; 
-        const colFilialNm = ['nm filial', 'filial'];
+        const colFilialNm = ['nm filial', 'filial', 'of - filial entrega', 'sc - filial'];
         const colGrupo = ['nm grupo', 'grupo', 'categoria'];
         const colClasse = ['nm classe', 'classe'];
         const colReparticao = ['cd reparticao', 'reparticao'];
@@ -1325,11 +1251,17 @@
         const colDivisao = ['cd divisao', 'divisao'];
         const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
         const colUM = ['cd unidade medida', 'un', 'um'];
-        
-        // LOCAIS E VALORES (PARA CUSTO MÉDIO REAL E REGRA 299)
         const colLocalId = ['cd local', 'cod local', 'local'];
         const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
         const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
+        
+        // COLUNAS DE PRAZO (LEAD TIME) E ACOMPANHAMENTO
+        const colScDataCriacao = ['sc - data criação', 'data criacao sc', 'data criacao'];
+        const colRecDataEntrada = ['rec - dt entrada', 'dt entrada', 'data entrada'];
+        const colOfDataEntrega = ['of - data entrega', 'data entrega of', 'dt entrega of'];
+        const colScCodigo = ['sc - código', 'sc codigo', 'sc'];
+        const colOfCodigo = ['of - codigo', 'of codigo', 'ordem fornecimento'];
+        const colOfNomeFornecedor = ['of - nome fornecedor', 'fornecedor'];
 
         const dataAtual = new Date();
         let mesAnteriorNum = dataAtual.getMonth(); 
@@ -1339,19 +1271,56 @@
         mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
         const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-        setProgress(92, "Processando Compras e Consumos...");
+        setProgress(92, "Processando Compras (OFs em Trânsito) e Lead Time...");
         await new Promise(r => setTimeout(r, 50)); 
 
-        const mapCompras = new Map();
+        const mapComprasTransito = new Map(); // Soma de OF - Saldo
+        const mapLeadTimeHistorico = new Map(); // Para sugerir na revisão min/max
+        
         if(bases.compras.length > 0) {
             const c_cod = encontrarChave(bases.compras[0], colCod);
-            const c_qtd = encontrarChave(bases.compras[0], colQtdCompra);
+            const c_of_saldo = encontrarChave(bases.compras[0], colQtdCompra);
+            const c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
+            const c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
+            
             bases.compras.forEach(item => {
                 const cod = normalizarCod(item[c_cod]);
-                const qtd = converterParaNumero(item[c_qtd]);
-                if (cod) mapCompras.set(cod, (mapCompras.get(cod) || 0) + qtd);
+                if (!cod) return;
+
+                const saldoOf = converterParaNumero(item[c_of_saldo]);
+                if (saldoOf > 0) {
+                    mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoOf);
+                }
+
+                // Cálculo de Lead Time Histórico
+                if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
+                    const parseData = (dStr) => {
+                        const partes = String(dStr).trim().split('/');
+                        if (partes.length === 3) return new Date(partes[2].split(' ')[0], partes[1] - 1, partes[0]);
+                        return new Date(dStr);
+                    };
+                    let dtCria = parseData(item[c_sc_dt]);
+                    let dtEntr = parseData(item[c_rec_dt]);
+                    if (!isNaN(dtCria) && !isNaN(dtEntr)) {
+                        let dias = Math.ceil(Math.abs(dtEntr - dtCria) / (1000 * 60 * 60 * 24));
+                        if(dias > 0 && dias < 300) { // Ignora dados sujos irreais
+                            if(!mapLeadTimeHistorico.has(cod)) mapLeadTimeHistorico.set(cod, []);
+                            mapLeadTimeHistorico.get(cod).push(dias);
+                        }
+                    }
+                }
             });
         }
+        
+        // Média de Lead Time por Item
+        const mapLeadTimeMedio = new Map();
+        for (let [k, v] of mapLeadTimeHistorico) {
+            let media = Math.round(v.reduce((a,b)=>a+b,0) / v.length);
+            mapLeadTimeMedio.set(k, media);
+        }
+
+        setProgress(93, "Apurando Consumo Real do Mês...");
+        await new Promise(r => setTimeout(r, 50));
 
         let cs_mes = encontrarChave(bases.consumos[0], colMesMovimento);
         let cs_cod = encontrarChave(bases.consumos[0], colCod);
@@ -1376,7 +1345,7 @@
             });
         }
 
-        setProgress(95, "Consolidando Base Mestre, Regras de Filial e Custos Dinâmicos...");
+        setProgress(95, "Consolidando Base Mestre e Locais de Estoque...");
         await new Promise(r => setTimeout(r, 50)); 
 
         const b_cod = encontrarChave(bases.baseItens[0], colCod);
@@ -1393,14 +1362,13 @@
         const b_rep = encontrarChave(bases.baseItens[0], colReparticao);
         const b_prat = encontrarChave(bases.baseItens[0], colPrateleira);
         const b_div = encontrarChave(bases.baseItens[0], colDivisao);
-        
         const b_localId = encontrarChave(bases.baseItens[0], colLocalId);
         const b_localNm = encontrarChave(bases.baseItens[0], colLocalNm);
         const b_valorTotal = encontrarChave(bases.baseItens[0], colValorTotal);
 
         const mapConsolidado = new Map();
+        setLocaisUnicos.clear();
         const setFiliaisUnicas = new Set(); 
-        const setLocaisUnicos = new Set(); // NOVO FILTRO DE LOCAL
 
         bases.baseItens.forEach(item => {
             let codBruto = String(item[b_cod] || '').replace(/\./g, '');
@@ -1415,7 +1383,7 @@
             const prateleira = item[b_prat] || '-';
             const divisao = item[b_div] || '-';
 
-            // REGRA: Rolândia (Ab. Aves vs Alp. Preparados)
+            // REGRA: Rolândia (Ab. Aves vs Alp. Preparados) com trava anti-vazio
             if (filialIdBase === '704') {
                 let locNum = parseInt(localIdRaw, 10);
                 if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || localIdRaw === '295' || localIdRaw === '0295' || locNum >= 599) {
@@ -1437,7 +1405,6 @@
             
             if (filialNm && filialNm !== '-') setFiliaisUnicas.add(filialNm);
             
-            // Popula lista de locais de estoque mapeados para o filtro avançado
             let localNameCompleto = localIdRaw ? `${localIdRaw} - ${localNm}` : localNm;
             if (localNameCompleto && localNameCompleto !== '-' && localNameCompleto !== '') {
                 setLocaisUnicos.add(`${filialNm} | ${localNameCompleto}`);
@@ -1475,6 +1442,7 @@
                     saldo: 0, minimo: 0, maximo: 0, 
                     valorTotalGlobal: 0,
                     custoUnitario: 0,
+                    leadTime: mapLeadTimeMedio.get(codNorm) || 15, // Padrão de segurança se não houver no histórico
                     locais: []
                 });
             }
@@ -1499,20 +1467,19 @@
             });
         });
 
-        // POPULANDO OS FILTROS LATERAIS
+        // POPULANDO OS FILTROS LATERAIS INICIAIS
         const selectFilial = document.getElementById('select-filial');
         if (selectFilial) {
             selectFilial.innerHTML = '<option value="">Todas as Filiais</option>';
             Array.from(setFiliaisUnicas).sort().forEach(f => { selectFilial.innerHTML += `<option value="${f}">${f}</option>`; });
         }
-        
         const selectLocal = document.getElementById('select-local');
         if (selectLocal) {
             selectLocal.innerHTML = '<option value="">Todos os Locais</option>';
             Array.from(setLocaisUnicos).sort().forEach(l => { selectLocal.innerHTML += `<option value="${l}">${l}</option>`; });
         }
 
-        setProgress(98, "Calculando Curvas Financeiras e Status Logístico...");
+        setProgress(98, "Calculando KPIs e Recomendações...");
         await new Promise(r => setTimeout(r, 50)); 
 
         let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
@@ -1524,12 +1491,11 @@
                 item.custoUnitario = item.locais[0].custoUnitario;
             }
 
-            const transito = mapCompras.get(item.codNorm) || 0;
+            const transito = mapComprasTransito.get(item.codNorm) || 0;
             const consumoMesAnteriorFisico = Math.abs(mapConsumosTotais.get(item.codNorm)) || 0;
             const valorImobilizado = item.valorTotalGlobal > 0 ? item.valorTotalGlobal : (item.saldo * item.custoUnitario);
             const consumoFinanceiro = consumoMesAnteriorFisico * item.custoUnitario;
 
-            // NOVO CALCULO DE GIRO EM DIAS BASEADO EM VALOR (Saldo R$ / Consumo R$)
             let diasGiroMensal = Infinity;
             if (consumoFinanceiro > 0) diasGiroMensal = Math.round((valorImobilizado / consumoFinanceiro) * 30);
             
@@ -1539,10 +1505,18 @@
 
             let isLocalCriticoMacro = item.locais.some(l => l.isCritico && l.saldo > 0);
 
-            // CÁLCULO DE SALDO ÚTIL
+            // CÁLCULO DE SALDO ÚTIL E SUGESTÕES MIN/MAX
             let saldoCritico = item.locais.filter(l => l.isCritico).reduce((sum, l) => sum + l.saldo, 0);
             let saldoUtil = item.saldo - saldoCritico;
             item.saldoUtil = saldoUtil;
+
+            let consumoFisicoDiario = consumoMesAnteriorFisico / 30;
+            let minSugerido = Math.ceil(consumoFisicoDiario * item.leadTime);
+            let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); // Estoque Max = Seguranca + 1 Mês
+            if (consumoMesAnteriorFisico === 0) { minSugerido = 0; maxSugerido = 0; }
+            
+            item.sugestaoMin = minSugerido;
+            item.sugestaoMax = maxSugerido;
 
             let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
             if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
@@ -1576,7 +1550,6 @@
 
         baseSujaProcessada.sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
-        // CURVA ABC FINANCEIRA REAL
         const itemsParaABC = [...baseSujaProcessada].sort((a, b) => b.consumoFinanceiro - a.consumoFinanceiro);
         const consumoTotalFinanceiroGlobal = itemsParaABC.reduce((acc, curr) => acc + curr.consumoFinanceiro, 0);
         let consumoAcumulado = 0;
@@ -1592,6 +1565,40 @@
         });
 
         itensProcessados = baseSujaProcessada;
+        
+        // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs)
+        ordesAtivasFiltradas = [];
+        if(bases.compras.length > 0) {
+            const c_sc = encontrarChave(bases.compras[0], colScCodigo);
+            const c_of = encontrarChave(bases.compras[0], colOfCodigo);
+            const c_cod = encontrarChave(bases.compras[0], colCod);
+            const c_desc = encontrarChave(bases.compras[0], colDesc);
+            const c_forn = encontrarChave(bases.compras[0], colOfNomeFornecedor);
+            const c_dt_ent = encontrarChave(bases.compras[0], colOfDataEntrega);
+            const c_qtd = encontrarChave(bases.compras[0], colQtdCompra);
+            
+            bases.compras.forEach(linha => {
+                let saldo = converterParaNumero(linha[c_qtd]);
+                if(saldo > 0) {
+                    let cod = normalizarCod(linha[c_cod]);
+                    let objItem = itensProcessados.find(i => i.codNorm === cod); // Cruza p/ pegar filial certa
+                    let filialDaOF = objItem ? objItem.filialNm : 'Geral';
+
+                    ordesAtivasFiltradas.push({
+                        sc: linha[c_sc] || '-',
+                        of: linha[c_of] || '-',
+                        codProd: linha[c_cod] || '-',
+                        descProd: linha[c_desc] || '-',
+                        fornecedor: linha[c_forn] || 'Não Informado',
+                        dataEntrega: linha[c_dt_ent] || 'Sem Data',
+                        saldoOF: saldo,
+                        filial: filialDaOF,
+                        searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod] + " " + linha[c_forn]).toLowerCase()
+                    });
+                }
+            });
+        }
+
         setProgress(100, "Renderizando Interface...", "success");
         
         const elTitleConsumo = document.getElementById('kpi-consumo-title');
@@ -1602,9 +1609,9 @@
         setTimeout(() => {
             dispararFiltrosSemAtraso();
             if(!encontrouConsumoNoMesAlvo && bases.consumos.length > 0) {
-                mostrarToast(`Atenção: Não detectamos saídas para o mês de ${mesConsumoAtual} no arquivo de consumos.`, "warning");
+                mostrarToast(`Atenção: Não detectamos saídas de ${mesConsumoAtual} no arquivo de consumos.`, "warning");
             } else {
-                mostrarToast(`Inteligência Financeira Ativada. Consumo travado em ${mesConsumoAtual}.`, "success");
+                mostrarToast(`Inteligência Ativada. Consumo travado em ${mesConsumoAtual}.`, "success");
             }
             fecharLoader();
             isFetchingData = false; 
@@ -1612,7 +1619,7 @@
     }
 
     // ==========================================================================
-    // BUSCA INTELIGENTE (MÚLTIPLA POR VÍRGULA E DEBOUNCE)
+    // BUSCA INTELIGENTE, FILTRO CASCATA E RENDERIZAÇÃO
     // ==========================================================================
     let timerBusca;
     function dispararFiltrosDebounce() {
@@ -1620,11 +1627,45 @@
         timerBusca = setTimeout(dispararFiltrosSemAtraso, 300); 
     }
 
+    // ATUALIZA O DROPDOWN DE LOCAIS DEPENDENDO DA FILIAL SELECIONADA
+    window.atualizarFiltroLocais = function() {
+        const filialEscolhida = document.getElementById('select-filial').value;
+        const selectLocal = document.getElementById('select-local');
+        const localAtual = selectLocal.value;
+
+        selectLocal.innerHTML = '<option value="">Todos os Locais</option>';
+
+        let locaisValidos = Array.from(setLocaisUnicos);
+        if (filialEscolhida) {
+            locaisValidos = locaisValidos.filter(l => l.startsWith(filialEscolhida + ' |'));
+        }
+
+        locaisValidos.sort().forEach(l => {
+            selectLocal.innerHTML += `<option value="${l}">${l}</option>`;
+        });
+
+        if (locaisValidos.includes(localAtual)) selectLocal.value = localAtual;
+        else selectLocal.value = "";
+        
+        dispararFiltrosSemAtraso();
+    }
+
     window.dispararFiltros = function() { dispararFiltrosSemAtraso(); } 
 
     function dispararFiltrosSemAtraso() {
-        const termoBruto = normalizarString(document.getElementById('busca')?.value);
-        const termosSplit = termoBruto ? termoBruto.split(',').map(t => t.trim()).filter(t => t) : [];
+        // Pega as buscas das 3 caixas diferentes
+        let valCatalogo = document.getElementById('busca')?.value || "";
+        let valCompras = document.getElementById('busca-compras')?.value || "";
+        let valGestao = document.getElementById('busca-ofs')?.value || "";
+        
+        // Aplica a busca respectiva dependendo da tela aberta
+        let termoBruto = "";
+        if (vistaAtual === 'pesquisa') termoBruto = valCatalogo;
+        else if (vistaAtual === 'compras') termoBruto = valCompras;
+        else if (vistaAtual === 'gestao-compras') termoBruto = valGestao;
+        else termoBruto = valCatalogo; 
+
+        const termosSplit = termoBruto ? normalizarString(termoBruto).split(',').map(t => t.trim()).filter(t => t) : [];
         
         const statusFiltro = document.getElementById('select-saldo-status').value;
         const curvaFiltro = document.getElementById('select-curva').value;
@@ -1644,7 +1685,6 @@
             const bateStatus = !statusFiltro || i.status === statusFiltro;
             const bateFilial = !filialFiltro || i.filialNm === filialFiltro;
             
-            // Filtro por local exato (Ex: Rolândia | 101 - Almox)
             const bateLocal = !localFiltro || i.locais.some(loc => {
                 let ln = loc.localId ? `${loc.localId} - ${loc.localNm}` : loc.localNm;
                 return `${loc.filialNm} | ${ln}` === localFiltro;
@@ -1661,6 +1701,7 @@
         if (vistaAtual === 'pesquisa') renderizarPesquisa();
         else if (vistaAtual === 'dashboard') renderizarDashboard();
         else if (vistaAtual === 'compras') renderizarCompras();
+        else if (vistaAtual === 'gestao-compras') renderizarGestaoDeCompras(termosSplit, filialFiltro);
         else if (vistaAtual === 'revisao') renderizarRevisao();
     }
 
@@ -1678,116 +1719,18 @@
         if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
         if(document.getElementById('select-local')) document.getElementById('select-local').value = "";
         document.getElementById('busca').value = "";
+        document.getElementById('busca-compras').value = "";
+        document.getElementById('busca-ofs').value = "";
+        
         filtroGraficoABC = null; filtroGraficoStatus = null; filtroGraficoFilial = null;
         document.getElementById('filtro-abc-aviso').style.display = 'none';
         document.getElementById('filtro-status-aviso').style.display = 'none';
         document.getElementById('filtro-filial-aviso').style.display = 'none';
-        dispararFiltrosSemAtraso();
+        atualizarFiltroLocais(); // Reseta a cascata
     }
 
     // ==========================================================================
-    // MODAL INTERATIVO (COM GALERIA DE FOTOS CORRIGIDA)
-    // ==========================================================================
-    window.abrirModalDetalhes = function(codNorm, filialId) {
-        const i = itensProcessados.find(item => item.codNorm === codNorm && item.filialIdBase === filialId);
-        if(!i) return;
-
-        let consumoFinanceiro = i.consumoFinanceiro;
-        let saldoFinanceiro = i.valorImobilizado;
-        
-        let giroMensalDias = i.diasGiroMensal === Infinity ? 'Sem Consumo' : `${i.diasGiroMensal} dias`;
-        let giroAnualDias = i.diasGiroAnual === Infinity ? 'Sem Consumo' : `${i.diasGiroAnual} dias`;
-        
-        // Constrói array de imagens válidas para o lightbox sem quebrar o navegador com loops de onerror
-        let arrayDeImagens = [];
-        for(let n=1; n<=6; n++) {
-            let nStr = n < 10 ? '0'+n : n;
-            arrayDeImagens.push(`imagens/${i.cod} - ${nStr}.jpg`);
-        }
-        // Passamos o array como string separada por virgula para a funcao do lightbox
-        let imgArrayStr = arrayDeImagens.join(',');
-        
-        let imagemHTML = '';
-        if (mapeamentoDeImagemAtivo && !i.temImagem) {
-             imagemHTML = `<div class="img-placeholder" style="border-radius:12px; font-size:14px; width:100%; height:100%;"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
-        } else {
-            // Apenas a primeira foto aparece na interface, o onclick abre a galeria toda
-            imagemHTML = `<img src="imagens/${i.cod} - 01.jpg" onclick="abrirLightboxArray('${imgArrayStr}', 0, event)" style="width:100%; height:100%; object-fit:cover; border-radius:12px; cursor:zoom-in;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                          <div class="img-placeholder" style="display:none; border-radius:12px; font-size:14px; width:100%; height:100%;"><span style="font-size:30px; margin-bottom:10px;">🚫</span>FOTO NÃO ENCONTRADA</div>`;
-        }
-
-        let linhasLocais = i.locais.map(loc => {
-            let locName = loc.localId ? `${loc.localId} - ${loc.localNm}` : loc.localNm || '-';
-            return `
-            <tr>
-                <td>${loc.filialNm}</td>
-                <td><b>${locName}</b></td>
-                <td>${loc.reparticao}</td>
-                <td>${loc.prateleira}</td>
-                <td>${loc.divisao}</td>
-                <td style="color:var(--text-info); font-weight:800;">${loc.saldo}</td>
-                <td>${formatarMoeda(loc.custoUnitario)}</td>
-            </tr>
-        `}).join('');
-
-        let tabelaLocais = i.locais.length > 0 ? `
-            <h3 style="font-size:14px; margin-top:20px; color:var(--text-secondary); text-transform:uppercase;">📍 Detalhamento de Locais / Prateleiras</h3>
-            <div style="overflow-x:auto;">
-            <table class="modal-locais-table" style="min-width:600px;">
-                <thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prat</th><th>Divisão</th><th>Saldo Físico</th><th>Custo Unit. Real</th></tr></thead>
-                <tbody>${linhasLocais}</tbody>
-            </table>
-            </div>
-        ` : '';
-
-        const html = `
-            <div class="modal-header-section" style="flex-wrap:wrap;">
-                <div style="width:180px; height:180px; flex-shrink:0; background:var(--bg-subcard); border:1px solid var(--border-color); border-radius:12px;">
-                    ${imagemHTML}
-                </div>
-                <div style="display:flex; flex-direction:column; justify-content:center; flex-grow:1;">
-                    <div style="font-size:12px; color:var(--text-secondary); font-weight:700; margin-bottom:4px;">${i.grupo} &nbsp;|&nbsp; ${i.classe}</div>
-                    <div style="font-size:24px; font-weight:900; color:var(--text-primary); line-height:1.2; margin-bottom:10px;">
-                        <span style="color:var(--primary-color);">#${i.cod}</span><br>${i.desc}
-                    </div>
-                    <span class="badge-status ${i.statusBadge}" style="align-self:flex-start; font-size:12px; padding:6px 14px;">${i.status}</span>
-                </div>
-            </div>
-            
-            <div class="item-metrics-grid" style="margin-bottom:20px;">
-                <div class="metric-box metric-saldo"><span class="metric-label">Valor do Saldo Atual</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(saldoFinanceiro)}</span></div>
-                <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Custo Consumo (${mesConsumoAtual})</span><span class="metric-value" style="font-size:20px;">${formatarMoeda(consumoFinanceiro)}</span></div>
-                <div class="metric-box metric-giro"><span class="metric-label">Giro Mensal (Dias)</span><span class="metric-value" style="font-size:20px;">${giroMensalDias}</span></div>
-                <div class="metric-box metric-transito"><span class="metric-label">Giro Anual Estimado (Dias)</span><span class="metric-value" style="font-size:20px;">${giroAnualDias}</span></div>
-            </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:10px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Saldo Útil (Sem Reserva)</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.saldoUtil} und</div></div>
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Custo Unit. Médio</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${formatarMoeda(i.custoUnitario)}</div></div>
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Unidade Física</div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">${i.um}</div></div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; background:var(--bg-subcard); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Mínimo Global (Qtd Física)</div><div style="font-size:16px; font-weight:800; color:var(--text-warning);">${i.minimo}</div></div>
-                <div><div style="font-size:11px; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Máximo Global (Qtd Física)</div><div style="font-size:16px; font-weight:800; color:var(--primary-hover);">${i.maximo}</div></div>
-            </div>
-
-            ${tabelaLocais}
-        `;
-        document.getElementById('modal-body-content').innerHTML = html;
-        document.getElementById('modal-item').style.display = 'flex';
-    }
-
-    window.fecharModal = function() { document.getElementById('modal-item').style.display = 'none'; }
-    
-    // Evita travamento garantindo que o click fora feche sem loop
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('modal-item');
-        if (event.target === modal) fecharModal();
-    });
-
-    // ==========================================================================
-    // RENDERIZAÇÃO DOM: CATÁLOGO
+    // RENDERIZAÇÃO DAS TELAS E TABELAS
     // ==========================================================================
     function renderizarPesquisa() {
         const container = document.getElementById('resultados');
@@ -1858,9 +1801,6 @@
         container.innerHTML = htmlLote.join('');
     }
 
-    // ==========================================================================
-    // RENDERIZAÇÃO DOM: REVISÃO DE MIN/MAX
-    // ==========================================================================
     function renderizarRevisao() {
         const tbody = document.getElementById('revisao-table-body');
         let htmlLote = [];
@@ -1876,7 +1816,7 @@
             let acao = "";
             let colorAcao = "";
             if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) {
-                acao = "Revisar Parâmetros (Sem Consumo)"; colorAcao = "var(--text-warning)";
+                acao = "Revisar/Zerar (Sem Consumo)"; colorAcao = "var(--text-warning)";
             } else if (i.saldoUtil > i.maximo && i.maximo > 0) {
                 acao = "Reduzir Máximo (Excesso)"; colorAcao = "var(--primary-color)";
             } else if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) {
@@ -1887,11 +1827,11 @@
                 <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
                     <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
                     <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
-                    <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${i.saldo}</td>
                     <td style="font-size:14px; font-weight:900; color:var(--primary-color);">${i.saldoUtil}</td>
-                    <td style="font-size:12px; font-weight:700; color:var(--text-secondary);">${i.minimo}</td>
-                    <td style="font-size:12px; font-weight:700; color:var(--text-secondary);">${i.maximo}</td>
-                    <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${formatarMoeda(i.consumoFinanceiro)}</td>
+                    <td style="font-size:12px; font-weight:600; color:var(--text-secondary);">${i.minimo} / ${i.maximo}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-info);">${i.sugestaoMin}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-info);">${i.sugestaoMax}</td>
+                    <td style="font-size:12px; font-weight:600; color:var(--text-primary);">${formatarMoeda(i.consumoFinanceiro)}</td>
                     <td style="font-size:13px; font-weight:800; color:${colorAcao};">${acao}</td>
                 </tr>
             `);
@@ -1900,17 +1840,20 @@
         tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="8" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Nenhum item exige revisão de parâmetros nos filtros atuais.</td></tr>`;
     }
 
-    // ==========================================================================
-    // RENDERIZAÇÃO DOM: COMPRAS E DASHBOARD
-    // ==========================================================================
     function renderizarCompras() {
         const tbody = document.getElementById('compras-table-body');
+        const divResumo = document.getElementById('resumo-necessidade');
         let htmlLote = [];
+        let totalQtd = 0;
+        let totalValor = 0;
         
         const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
         
         necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
             let sug = i.maximo - i.saldo;
+            totalQtd += sug;
+            totalValor += (sug * i.custoUnitario);
+
             htmlLote.push(`
                 <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
                     <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
@@ -1923,7 +1866,62 @@
             `);
         });
         
+        if (divResumo) {
+            divResumo.innerHTML = `
+                <div class="kpi-card border-warning"><span class="kpi-title">Total de Itens (Qtd Reposição)</span><span class="kpi-value color-warning">${totalQtd.toLocaleString('pt-BR')}</span></div>
+                <div class="kpi-card border-success"><span class="kpi-title">Valor Estimado de Compras</span><span class="kpi-value color-success">${formatarMoeda(totalValor)}</span></div>
+            `;
+        }
+
         tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras críticas para os filtros atuais.</td></tr>`;
+    }
+
+    function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
+        const tbody = document.getElementById('ofs-table-body');
+        const divResumo = document.getElementById('resumo-ofs');
+        let htmlLote = [];
+        
+        let ofsExibir = ordesAtivasFiltradas.filter(of => {
+            let bateTermo = termosSplit.length === 0 || termosSplit.some(t => of.searchStr.includes(t));
+            let bateFilial = !filialFiltro || of.filial === filialFiltro || of.filial === 'Geral';
+            return bateTermo && bateFilial;
+        });
+
+        let valTransitoTotal = 0;
+        let qtdTransitoTotal = 0;
+        let fornSet = new Set();
+        let ofSet = new Set();
+
+        ofsExibir.forEach(of => {
+            let itemRef = itensProcessados.find(i => i.codNorm === normalizarCod(of.codProd));
+            let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
+            valTransitoTotal += val;
+            qtdTransitoTotal += of.saldoOF;
+            fornSet.add(of.fornecedor);
+            ofSet.add(of.of);
+
+            htmlLote.push(`
+                <tr class="fade-in">
+                    <td><strong style="color:var(--text-primary);">${of.of}</strong><br><span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span></td>
+                    <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
+                    <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
+                    <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${of.saldoOF}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${of.dataEntrega}</td>
+                </tr>
+            `);
+        });
+        
+        if (divResumo) {
+            divResumo.innerHTML = `
+                <div class="kpi-card border-info"><span class="kpi-title">Valor em OF (Estimado)</span><span class="kpi-value color-info">${formatarMoeda(valTransitoTotal)}</span></div>
+                <div class="kpi-card"><span class="kpi-title">Peças Físicas em OF</span><span class="kpi-value">${qtdTransitoTotal}</span></div>
+                <div class="kpi-card"><span class="kpi-title">OFs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
+                <div class="kpi-card"><span class="kpi-title">Fornecedores Diferentes</span><span class="kpi-value">${fornSet.size}</span></div>
+            `;
+        }
+
+        tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
     }
 
     function renderizarDashboard() {
