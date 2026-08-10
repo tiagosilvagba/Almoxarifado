@@ -29,7 +29,7 @@
         <div>> Sistema inicializado... aguardando comando de leitura.</div>
     </div>
     <label id="btn-fallback" class="btn-upload-fallback">
-        📁 SELECIONAR ARQUIVOS CSV (COMPRAS, CONSUMOS, BASE)
+        FAZER UPLOAD MANUAL DOS ARQUIVOS CSV
         <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
     </label>
 </div>
@@ -99,8 +99,13 @@
             </div>
 
             <span class="nav-section-title" style="margin-top: 10px;">Ações Rápidas</span>
+            
+            <label class="btn-sidebar-action" style="cursor:pointer; border-color: var(--primary-color); background: rgba(14, 165, 233, 0.05);">
+                <span style="color: var(--primary-color);">🖼️ Mapear Pasta de Imagens</span>
+                <input type="file" webkitdirectory directory multiple style="display:none;" onchange="mapearImagensPasta(event)">
+            </label>
 
-            <button class="btn-sidebar-action" onclick="toggleValoresFinanceiros()" style="border-color: var(--text-warning); background: transparent;">
+            <button class="btn-sidebar-action" onclick="toggleValoresFinanceiros()" style="border-color: var(--text-warning); background: transparent; margin-top: 5px;">
                 <span id="icone-valores" style="text-align: center; color: var(--text-warning); font-size: 12px;">👁️ Mostrar Valores R$</span>
             </button>
 
@@ -130,6 +135,14 @@
                 <label class="filter-label">Local de Estoque:</label>
                 <select id="select-local" class="segmentation-select" onchange="dispararFiltros()">
                     <option value="">Todos os Locais</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Filtro de Imagem:</label>
+                <select id="select-imagem" class="segmentation-select" onchange="dispararFiltros()">
+                    <option value="">Todos os Itens</option>
+                    <option value="com_imagem">🖼️ Imagem Encontrada</option>
+                    <option value="sem_imagem">🚫 Imagem Não Encontrada</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -169,7 +182,7 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>Catálogo Analítico</h1></header>
-                <input type="text" id="busca" class="search-box" placeholder="Busque códigos separados por vírgula (ex: 5555, manutenção, 1234)..." oninput="dispararFiltros()">
+                <input type="text" id="busca" class="search-box" placeholder="Busque códigos separados por vírgula (ex: 5555, manutenção, 1234)..." oninput="dispararFiltrosDebounce()">
                 <div class="status"><span id="contador-itens">Aguardando sincronização...</span></div>
             </div>
             <div class="scrollable-results-section" id="resultados"></div>
@@ -181,7 +194,7 @@
             <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
                 <div style="flex-grow: 1; padding-right: 20px;">
                     <header><h1 style="margin-bottom: 10px;">⚖️ Revisão de Parâmetros (Mínimo/Máximo)</h1></header>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens com discrepância de configuração. O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295).</p>
+                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens com discrepância de configuração. O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295). As sugestões utilizam o Lead Time real medido nos arquivos de compra/recebimento.</p>
                 </div>
                 <button class="theme-btn active" onclick="exportarRevisaoExcel()" style="padding: 10px 20px; font-size: 14px; border-radius: 12px; cursor: pointer;">
                     📥 Baixar Planilha
@@ -199,12 +212,11 @@
                                     <th>Mín / Máx Atual</th>
                                     <th style="color: var(--text-info);">Sugestão Novo Mín</th>
                                     <th style="color: var(--text-info);">Sugestão Novo Máx</th>
-                                    <th>Custo Consumo</th>
                                     <th style="color: var(--text-danger);">Alerta do Sistema</th>
                                 </tr>
                             </thead>
                             <tbody id="revisao-table-body">
-                                <tr><td colspan="8" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
+                                <tr><td colspan="7" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -218,15 +230,16 @@
             <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
                 <div style="flex-grow: 1; padding-right: 20px;">
                     <header><h1 style="margin-bottom: 10px;">Necessidade de Compra (Críticos)</h1></header>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens em ruptura ou abaixo do mínimo com política ativa.</p>
-                    <input type="text" id="busca-compras" class="search-box" style="margin-top:10px;" placeholder="Pesquisar necessidades por código ou nome..." oninput="dispararFiltros()">
+                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens em ruptura ou abaixo do mínimo com política ativa (Min/Max > 0).</p>
+                    <input type="text" id="busca-compras" class="search-box" style="margin-top:10px;" placeholder="Pesquisar necessidades por código ou nome..." oninput="dispararFiltrosDebounce()">
                 </div>
                 <button class="theme-btn active" onclick="exportarComprasExcel()" style="padding: 10px 20px; font-size: 14px; border-radius: 12px; cursor: pointer;">
                     📥 Baixar Planilha
                 </button>
             </div>
             <div class="scrollable-results-section">
-                <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;" id="resumo-necessidade"></div>
+                <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;" id="resumo-necessidade">
+                    </div>
                 
                 <div class="dash-section-box">
                     <div class="dash-table-container">
@@ -255,8 +268,8 @@
         <div class="container">
             <div class="fixed-top-section">
                 <header><h1>📦 Gestão de Compras (OFs em Trânsito)</h1></header>
-                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo Ordens de Fornecimento e SCs pendentes. <b>Clique na linha para visualizar o contexto completo.</b></p>
-                <input type="text" id="busca-ofs" class="search-box" placeholder="Busque OF, SC, Fornecedor ou Código..." oninput="dispararFiltros()">
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Exibindo Ordens de Fornecimento aguardando entrega baseada na Qtd Solicitada vs Recebida. <b>Clique na OF para visualizar o contexto.</b></p>
+                <input type="text" id="busca-ofs" class="search-box" placeholder="Busque OF, SC, Fornecedor ou Código..." oninput="dispararFiltrosDebounce()">
             </div>
             <div class="scrollable-results-section">
                 <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;" id="resumo-ofs"></div>
@@ -271,12 +284,11 @@
                                     <th>Fornecedor</th>
                                     <th>Qtd Original</th>
                                     <th style="color: var(--text-warning);">Saldo Pendente</th>
-                                    <th>Previsão / Dias s/ OF</th>
-                                    <th>Status / Filial</th>
+                                    <th>Data Prevista</th>
                                 </tr>
                             </thead>
                             <tbody id="ofs-table-body">
-                                <tr><td colspan="7" style="text-align:center; padding: 40px;">Aguardando leitura de Compras...</td></tr>
+                                <tr><td colspan="6" style="text-align:center; padding: 40px;">Aguardando leitura de Compras...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -311,7 +323,7 @@
                     <p>Itens duplicados em prateleiras são fundidos em um <b>"Super Cartão"</b> para cálculo preciso. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b>: locais de estoque abaixo de 599 (exceto os protegidos 101, 299, 295) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>. Use os "Filtros Avançados" em cascata para isolar Filiais e Locais específicos!</p>
 
                     <h3>6. Tratamento de Imagens e Exportação Excel</h3>
-                    <p>As imagens serão carregadas nativamente procurando pelos ficheiros numerados de <code>- 01</code> até <code>- 06</code>. Em "Necessidades de Compra", clique no botão verde para exportar os itens críticos imediatamente para o Excel (CSV UTF-8).</p>
+                    <p>Clique em <b>"Mapear Pasta de Imagens"</b> para carregar até 6 fotos por item. Ao clicar na foto dentro do item, uma galeria (Lightbox) tela cheia se abrirá. Em "Necessidades de Compra", clique no botão verde para exportar os itens críticos imediatamente para o Excel (CSV UTF-8).</p>
                 </div>
             </div>
         </div>
