@@ -29,7 +29,7 @@
         <div>> Sistema inicializado... aguardando comando de leitura.</div>
     </div>
     <label id="btn-fallback" class="btn-upload-fallback">
-        FAZER UPLOAD MANUAL DOS ARQUIVOS CSV
+        📁 SELECIONAR ARQUIVOS CSV (COMPRAS, CONSUMOS, BASE)
         <input type="file" multiple accept=".csv" style="display:none;" onchange="uploadManualMultiplo(event)">
     </label>
 </div>
@@ -181,7 +181,7 @@
             <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
                 <div style="flex-grow: 1; padding-right: 20px;">
                     <header><h1 style="margin-bottom: 10px;">⚖️ Revisão de Parâmetros (Mínimo/Máximo)</h1></header>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens com discrepância de configuração. O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295). As sugestões utilizam o Lead Time real medido nos arquivos de compra/recebimento.</p>
+                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens com discrepância de configuração. O <i>Saldo Útil</i> desconsidera os locais estratégicos (299/295).</p>
                 </div>
                 <button class="theme-btn active" onclick="exportarRevisaoExcel()" style="padding: 10px 20px; font-size: 14px; border-radius: 12px; cursor: pointer;">
                     📥 Baixar Planilha
@@ -218,7 +218,7 @@
             <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
                 <div style="flex-grow: 1; padding-right: 20px;">
                     <header><h1 style="margin-bottom: 10px;">Necessidade de Compra (Críticos)</h1></header>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens em ruptura ou abaixo do mínimo com política ativa (Min/Max > 0).</p>
+                    <p style="color: var(--text-secondary); font-size: 14px;">Exibindo itens em ruptura ou abaixo do mínimo com política ativa.</p>
                     <input type="text" id="busca-compras" class="search-box" style="margin-top:10px;" placeholder="Pesquisar necessidades por código ou nome..." oninput="dispararFiltros()">
                 </div>
                 <button class="theme-btn active" onclick="exportarComprasExcel()" style="padding: 10px 20px; font-size: 14px; border-radius: 12px; cursor: pointer;">
@@ -310,8 +310,8 @@
                     <h3>5. Consolidação de Múltiplos Locais e Filiais 704</h3>
                     <p>Itens duplicados em prateleiras são fundidos em um <b>"Super Cartão"</b> para cálculo preciso. Adicionalmente, <b>a Filial 704 possui um desdobramento de negócio</b>: locais de estoque abaixo de 599 (exceto os protegidos 101, 299, 295) são lidos como <i>Rolândia - Ab. Aves</i>, enquanto os demais tornam-se <i>Rolândia - Alp. Preparados</i>. Use os "Filtros Avançados" em cascata para isolar Filiais e Locais específicos!</p>
 
-                    <h3>6. Exportação Excel</h3>
-                    <p>Em "Necessidades de Compra", clique no botão verde para exportar os itens críticos imediatamente para o Excel (CSV UTF-8).</p>
+                    <h3>6. Tratamento de Imagens e Exportação Excel</h3>
+                    <p>As imagens serão carregadas nativamente procurando pelos ficheiros numerados de <code>- 01</code> até <code>- 06</code>. Em "Necessidades de Compra", clique no botão verde para exportar os itens críticos imediatamente para o Excel (CSV UTF-8).</p>
                 </div>
             </div>
         </div>
