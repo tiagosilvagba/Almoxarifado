@@ -123,10 +123,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.alterarTema(localStorage.getItem('temaAlmoxarifado') || 'light');
     ['busca', 'busca-compras', 'busca-ofs'].forEach(id => $(id)?.addEventListener('input', () => { clearTimeout(timerBusca); timerBusca = setTimeout(window.dispararFiltros, 300); }));
     
-    // Injeção automática para corrigir o cabeçalho da Revisão Min/Max sem tocar no HTML
     const thRevisao = document.querySelector('#view-revisao thead tr');
     if (thRevisao) {
         thRevisao.innerHTML = `<th>Código / Descrição</th><th>Filial</th><th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th><th>Mín / Máx Atual</th><th style="color: var(--text-info);">Sugestão Novo Mín</th><th style="color: var(--text-info);">Sugestão Novo Máx</th><th>Custo Consumo</th><th style="color: var(--text-danger);">Alerta do Sistema</th>`;
+    }
+
+    const thOFs = document.querySelector('#view-gestao-compras thead tr');
+    if (thOFs) {
+        thOFs.innerHTML = `<th>SC - Empresa</th><th>SC - Filial</th><th>SC - Descr. Filial</th><th>SC - Cód. Produto</th><th>SC - Nome Produto</th><th>SC - Unid. Medida</th><th>SC - Quantidade</th><th>SC - Categoria</th><th>SC - DT Entrega</th><th>SC - Regularização</th><th>SC - OBS</th><th>SC - Local Estoque</th><th>SC - CCU Etq</th><th>SC - Aprovador</th><th>OF - Codigo</th><th>OF - Data</th><th>OF - Nome Fornecedor</th><th>OF - Qtd. Solicitada</th><th>OF - Saldo</th><th>OF - Qtd. Entregue</th><th>OF - Fechado</th><th>OF - Bloqueado</th><th>OF - Data Entrega</th><th>OF - Frete</th><th>OF - Moeda</th><th>OF - Situação OF</th><th>OF - Tipo</th><th>OF - Email Fornecedor</th><th>OF - OBS</th><th>REC - Nr NF</th><th>REC - Série</th><th>REC - DT Emissão</th><th>REC - DT Entrada</th><th>REC - Unid. Medida</th><th>REC - Quantidade</th><th>REC - Valor Un. Fiscal</th>`;
     }
 
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
@@ -328,13 +332,11 @@ async function processarInteligencia() {
             let locIdStr = String(cLoc ? i[cLoc] : '').trim();
             let isLocCritico = ['299', '0299', '295', '0295'].includes(locIdStr);
 
-            // Mapeia o histórico geral: Guarda o último mês em que a peça teve saída maior que 0
             if (qtd > 0 && mesNum) {
                 let maxMes = mapUltimoMes.get(cod) || 0;
                 if (mesNum > maxMes) mapUltimoMes.set(cod, mesNum);
             }
 
-            // Exclusão Estratégica: Para a sugestão de Min/Max, o algoritmo DESCARTA os locais 299/295
             if (mesNum === curMonth && !isLocCritico) {
                 hasConsumo = true; 
                 mapConsumo.set(cod, (mapConsumo.get(cod) || 0) + qtd); 
@@ -385,7 +387,6 @@ async function processarInteligencia() {
         let vImob = i.valorTotalGlobal > 0 ? i.valorTotalGlobal : (i.saldo * i.custoUnitario), cFin = consF * i.custoUnitario;
         let gMes = cFin > 0 ? Math.round((vImob / cFin) * 30) : Infinity, gAno = (cFin * 12) > 0 ? Math.round((vImob / (cFin * 12)) * 365) : Infinity;
         
-        // Histórico de inatividade
         let ultMesNum = mapUltimoMes.get(i.codNorm) || 0;
         let nomeUltMes = ultMesNum > 0 ? ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][ultMesNum] : 'Sem Registro';
         let mesesSemConsumo = ultMesNum > 0 ? (curMonth >= ultMesNum ? curMonth - ultMesNum : (12 - ultMesNum + curMonth)) : Infinity;
@@ -480,10 +481,10 @@ const renderPesquisa = () => {
             <div class="item-media"><div class="abc-badge curva-${i.curva}">${i.curva}</div><div class="item-image-container">${mapeamentoAtivo ? (i.temImagem ? `<img src="imagens/${i.cod} - 01.jpg">` : `<div class="img-placeholder">🚫<br>SEM FOTO</div>`) : `<img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>`}</div></div>
             <div class="item-info">
                 <div class="item-header"><div class="item-title"><span class="item-title-cod">#${i.cod}</span> ${i.desc}</div><span class="badge-status ${i.statusBadge}">${i.status}</span></div>
-                <div class="item-category"><span class="chip-category">${i.grupo||'Geral'}</span><span class="chip-category">${i.classe||'N/A'}</span><span class="chip-category">UN: ${i.um||'UN'}</span></div>
-                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;background:var(--bg-subcard);padding:8px;border-radius:8px;"><div>🏢 <strong>Filiais:</strong> ${itensProcessados.filter(x=>x.codNorm===i.codNorm&&x.saldo>0).map(x=>x.filialNm).filter((v,i,a)=>a.indexOf(v)===i).join(', ') || 'Nenhuma'}</div><div>📍 <strong>Local:</strong> ${i.locais.length>1 ? 'Múltiplos (Ver detalhes)' : `Rep: ${i.reparticao} • Prat: ${i.prateleira} • Div: ${i.divisao}`}</div></div>
+                <div class="item-category"><span class="chip-category">${i.filialNm}</span><span class="chip-category">${i.grupo||'Geral'}</span><span class="chip-category">${i.classe||'N/A'}</span><span class="chip-category">UN: ${i.um||'UN'}</span></div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;background:var(--bg-subcard);padding:8px;border-radius:8px;"><div>🏢 <strong>Filial Consolidada:</strong> ${i.filialNm}</div><div>📍 <strong>Endereço(s):</strong> ${i.locais.length > 1 ? `${i.locais.length} locais de estoque (Clique para ver detalhes)` : `Rep: ${i.reparticao} • Prat: ${i.prateleira} • Div: ${i.divisao}`}</div></div>
                 <div class="item-metrics-grid">
-                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo</span><span class="metric-value">${i.saldo}</span></div>
+                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo Consolidado</span><span class="metric-value">${i.saldo}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro Mês</span><span class="metric-value">${i.diasGiroMensal===Infinity?'Obsoleto':i.diasGiroMensal+'d'}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Giro Ano</span><span class="metric-value">${i.diasGiroAnual===Infinity?'Obsoleto':i.diasGiroAnual+'d'}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${fmtMoeda(i.consumoFinanceiro)}</span></div>
@@ -520,8 +521,45 @@ const renderGestaoCompras = (tSplit, fFil) => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')"><td><strong>${o.of}</strong><br><span style="font-size:10px;">SC: ${o.sc}</span></td><td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td><td>${o.fornecedor}</td><td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td><td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td><td>${o.dataEntrega}</td></tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem OFs pendentes.</td></tr>`;
+        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')" style="white-space: nowrap; font-size: 11px;">
+            <td>${o.scEmp_ext}</td>
+            <td>${o.scFil_ext}</td>
+            <td>${o.scDescFil_ext}</td>
+            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong></td>
+            <td>${o.descProd}</td>
+            <td>${o.scUM_ext}</td>
+            <td>${o.scQtd_ext}</td>
+            <td>${o.scCat_ext}</td>
+            <td>${o.scDtEnt_ext}</td>
+            <td>${o.scReg_ext}</td>
+            <td>${o.scObs_ext}</td>
+            <td>${o.scLocEst_ext}</td>
+            <td>${o.scCCUEtq_ext}</td>
+            <td>${o.scAprov_ext}</td>
+            <td><strong>${o.of}</strong></td>
+            <td>${o.ofData_ext}</td>
+            <td>${o.fornecedor}</td>
+            <td>${o.ofQtdSol_ext}</td>
+            <td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td>
+            <td>${o.ofQtdEnt_ext}</td>
+            <td>${o.ofFechado_ext}</td>
+            <td>${o.ofBloqueado_ext}</td>
+            <td>${o.ofDtEnt_ext}</td>
+            <td>${o.ofFrete_ext}</td>
+            <td>${o.ofMoeda_ext}</td>
+            <td>${o.sitOFOriginal}</td>
+            <td>${o.ofTipo_ext}</td>
+            <td>${o.ofEmail_ext}</td>
+            <td>${o.ofObs_ext}</td>
+            <td>${o.recNF_ext}</td>
+            <td>${o.recSerie_ext}</td>
+            <td>${o.recDtEmissao_ext}</td>
+            <td>${o.recDtEntrada_ext}</td>
+            <td>${o.recUM_ext}</td>
+            <td>${o.recQtd_ext}</td>
+            <td>${o.recValUn_ext !== '-' ? 'R$ ' + o.recValUn_ext : '-'}</td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="36" style="text-align:center;padding:40px;font-size:14px;">Sem OFs pendentes correspondentes ao filtro.</td></tr>`;
     
     if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">OFs Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
 };
@@ -594,17 +632,31 @@ window.abrirModalDetalhes = (codNorm, fId) => {
     let labelHistorico = item.mesesSemConsumo === 0 ? '(Neste Mês)' : item.mesesSemConsumo === Infinity ? '(Sem Histórico)' : `Há ${item.mesesSemConsumo} meses`;
 
     $('modal-body-content').innerHTML = `
-        <div class="modal-header-section"><div style="flex-grow:1;"><h2 style="font-size:24px;font-weight:800;margin-bottom:8px;"><span style="color:var(--primary-color);">#${item.cod}</span> - ${item.desc}</h2><div class="item-category" style="margin-bottom:20px;"><span class="chip-category">${item.grupo||'Geral'}</span><span class="chip-category">${item.classe||'N/A'}</span><span class="chip-category">Medida: <strong>${item.um}</strong></span><span class="badge-status ${item.statusBadge}">${item.status}</span></div>
-        <div class="item-metrics-grid">
-            <div class="metric-box metric-saldo"><span class="metric-label">Saldo</span><span class="metric-value">${item.saldo}</span></div>
-            <div class="metric-box metric-default"><span class="metric-label">Custo Un.</span><span class="metric-value">${fmtMoeda(item.custoUnitario)}</span></div>
-            <div class="metric-box metric-default"><span class="metric-label">Min/Max</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
-            <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro/Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
-            <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:15px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:11px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
-            <div class="metric-box metric-transito"><span class="metric-label">Em OF</span><span class="metric-value">${item.transito}</span></div>
-        </div></div></div>
-        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria</h3><div class="modal-gallery-container" style="margin-bottom:24px;">${imgsHTML}</div>
-        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Detalhamento de Locais</h3><div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);"><table class="modal-locais-table"><thead><tr><th>Filial</th><th>Local</th><th>Rep.</th><th>Prat.</th><th>Div.</th><th>Saldo</th></tr></thead><tbody>${locs}</tbody></table></div>`;
+        <div class="modal-header-section">
+            <div style="flex-grow:1;">
+                <h2 style="font-size:24px;font-weight:800;margin-bottom:8px;"><span style="color:var(--primary-color);">#${item.cod}</span> - ${item.desc}</h2>
+                <div class="item-category" style="margin-bottom:20px;">
+                    <span class="chip-category">${item.filialNm}</span>
+                    <span class="chip-category">${item.grupo||'Geral'}</span>
+                    <span class="chip-category">${item.classe||'N/A'}</span>
+                    <span class="chip-category">Medida: <strong>${item.um}</strong></span>
+                    <span class="badge-status ${item.statusBadge}">${item.status}</span>
+                </div>
+                <div class="item-metrics-grid">
+                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo Consolidado</span><span class="metric-value">${item.saldo}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Custo Un. (Médio)</span><span class="metric-value">${fmtMoeda(item.custoUnitario)}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Valor Imob. Total</span><span class="metric-value">${fmtMoeda(item.valorImobilizado)}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Min / Max (Global)</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro / Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:14px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:10px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
+                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF)</span><span class="metric-value">${item.transito}</span></div>
+                </div>
+            </div>
+        </div>
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos</h3>
+        <div class="modal-gallery-container" style="margin-bottom:24px;">${imgsHTML}</div>
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Detalhamento de Endereços e Prateleiras (Locais)</h3>
+        <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);"><table class="modal-locais-table"><thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prateleira</th><th>Divisão</th><th>Saldo Local</th></tr></thead><tbody>${locs}</tbody></table></div>`;
     $('modal-item').style.display = 'flex';
 };
 
