@@ -1,6 +1,41 @@
 import { state } from './state.js';
 import { formatarMoedaMask, mostrarToast, normalizarCod } from './utils.js';
 
+// --- FUNÇÕES DE LOADER E NOTIFICAÇÕES TELA ---
+export function setProgress(percent, msg, type='info') {
+    state.loaderProgress = percent;
+    const bar = document.getElementById('loader-bar');
+    const text = document.getElementById('loader-percent');
+    if(bar) bar.style.width = `${percent}%`;
+    if(text) text.innerText = `${Math.round(percent)}%`;
+    if(msg) addLog(msg, type);
+}
+
+export function addLog(msg, type='info') {
+    const logs = document.getElementById('loader-logs');
+    if(logs) {
+        let classe = type === 'error' ? 'class="error"' : type === 'success' ? 'class="success"' : type === 'warning' ? 'class="warning"' : '';
+        logs.innerHTML += `<div ${classe}>> ${msg}</div>`;
+        logs.scrollTop = logs.scrollHeight;
+    }
+}
+
+export function mostrarErroLoaderFatal() {
+    const btn = document.getElementById('btn-fallback');
+    if(btn) btn.style.display = 'block';
+}
+
+export function fecharLoader() {
+    const loader = document.getElementById('tech-loader');
+    const app = document.getElementById('app-layout');
+    if(loader && app) {
+        loader.style.opacity = '0';
+        app.style.opacity = '1';
+        setTimeout(() => loader.style.display = 'none', 600);
+    }
+}
+
+// --- RENDERIZAÇÃO DE TELAS ---
 export function renderizarPesquisa() {
     const container = document.getElementById('resultados');
     document.getElementById('contador-itens').innerText = `${state.itensFiltrados.length} itens encontrados.`;
@@ -86,7 +121,7 @@ export function renderizarTabelaDashboard() {
     itensTabela.slice(0, 50).forEach(i => { 
         htmlLote.push(`
             <tr onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-                <td><div class="abc-badge curva-${i.curva}">${i.curva}</div></td>
+                <td><div class="abc-badge curva-${i.curva}" style="position:static; width:28px; height:28px; font-size:12px;">${i.curva}</div></td>
                 <td><strong>#${i.cod}</strong><br><small>${i.desc}</small></td>
                 <td>Rep ${i.reparticao} | Prat ${i.prateleira}</td>
                 <td>${i.saldo}</td>
@@ -120,6 +155,7 @@ export function atualizarGraficos() {
     });
 }
 
+// --- MODAIS E LIGHTBOX ---
 export function abrirModalDetalhes(codNorm, filialIdBase) {
     const item = state.itensProcessados.find(i => i.codNorm === codNorm && i.filialIdBase === filialIdBase);
     if (!item) return;
@@ -128,6 +164,27 @@ export function abrirModalDetalhes(codNorm, filialIdBase) {
         <h2>#${item.cod} - ${item.desc}</h2>
         <p><strong>Saldo Atual:</strong> ${item.saldo}</p>
         <p><strong>Valor Imobilizado:</strong> ${formatarMoedaMask(item.valorImobilizado)}</p>
+    `;
+
+    document.getElementById('modal-body-content').innerHTML = content;
+    document.getElementById('modal-item').style.display = 'flex';
+}
+
+export function abrirModalOF(ofId, codProd) {
+    let codNorm = normalizarCod(codProd);
+    const of = state.ordesAtivasFiltradas.find(o => o.of === ofId && normalizarCod(o.codProd) === codNorm);
+    const item = state.itensProcessados.find(i => i.codNorm === codNorm);
+
+    if (!of || !item) {
+        mostrarToast("Erro: Detalhes da OF ou do Item não encontrados.", "error");
+        return;
+    }
+
+    const content = `
+        <h2>Gestão de OF: <span style="color: var(--primary-color);">${of.of}</span></h2>
+        <p>Item: #${of.codProd} - ${of.descProd}</p>
+        <p>Fornecedor: <strong>${of.fornecedor}</strong></p>
+        <p>Saldo Pendente: <strong style="color:var(--text-warning);">${of.saldoOF}</strong></p>
     `;
 
     document.getElementById('modal-body-content').innerHTML = content;

@@ -1,39 +1,7 @@
 import { state } from './state.js';
 import { parseCSVFast, normalizarCod, mostrarToast } from './utils.js';
 import { processarInteligencia } from './estoque.js';
-
-export function setProgress(percent, msg, type='info') {
-    state.loaderProgress = percent;
-    const bar = document.getElementById('loader-bar');
-    const text = document.getElementById('loader-percent');
-    if(bar) bar.style.width = `${percent}%`;
-    if(text) text.innerText = `${Math.round(percent)}%`;
-    if(msg) addLog(msg, type);
-}
-
-export function addLog(msg, type='info') {
-    const logs = document.getElementById('loader-logs');
-    if(logs) {
-        let classe = type === 'error' ? 'class="error"' : type === 'success' ? 'class="success"' : type === 'warning' ? 'class="warning"' : '';
-        logs.innerHTML += `<div ${classe}>> ${msg}</div>`;
-        logs.scrollTop = logs.scrollHeight;
-    }
-}
-
-export function mostrarErroLoaderFatal() {
-    const btn = document.getElementById('btn-fallback');
-    if(btn) btn.style.display = 'block';
-}
-
-export function fecharLoader() {
-    const loader = document.getElementById('tech-loader');
-    const app = document.getElementById('app-layout');
-    if(loader && app) {
-        loader.style.opacity = '0';
-        app.style.opacity = '1';
-        setTimeout(() => loader.style.display = 'none', 600);
-    }
-}
+import { setProgress, mostrarErroLoaderFatal, fecharLoader } from './ui.js'; // <- Agora vem do UI.js
 
 export async function carregarArquivosAutomaticamente() {
     if (state.isFetchingData) return; 

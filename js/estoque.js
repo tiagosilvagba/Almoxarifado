@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { normalizarString, normalizarCod, converterParaNumero, encontrarChave, mostrarToast } from './utils.js';
-import { setProgress, fecharLoader, mostrarErroLoaderFatal } from './loader.js';
+import { setProgress, fecharLoader, mostrarErroLoaderFatal } from './ui.js'; // <- Puxando do UI, resolvendo dependência
 
 export async function processarInteligencia() {
     if (state.bases.baseItens.length === 0) { 
@@ -377,7 +377,7 @@ export async function processarInteligencia() {
     setProgress(100, "Renderizando Interface...", "success");
 
     setTimeout(() => {
-        window.dispararFiltrosSemAtraso();
+        window.dispararFiltrosSemAtraso(); // Chama do window que faremos no main.js
         fecharLoader();
         state.isFetchingData = false; 
     }, 600);
