@@ -297,10 +297,7 @@ async function processarInteligencia() {
             let sitOF = normStr(i[c.ofSit]), sitSC = normStr(i[c.scSit]), cSC = normStr(i[c.scCanc]);
             let ofCodVal = String(i[c.ofCod]||'-').trim();
             
-            // Verifica se está cancelada ou fechada
             let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
-            
-            // Regra atualizada: Se OF estiver vazia ou '-', considera o saldo pendente da SC como compra ativa (desde que não cancelada/fechada)
             let semOFGerada = (ofCodVal === '' || ofCodVal === '-');
             
             let pendente = 0;
@@ -308,7 +305,6 @@ async function processarInteligencia() {
                 if (c.ofQtd && !semOFGerada) {
                     pendente = Math.max(0, convNum(i[c.ofQtd]) - convNum(i[c.recQtd]));
                 } else {
-                    // Caso não tenha OF ou use o campo de quantidade genérica da SC
                     pendente = convNum(i[c.compFb]) || convNum(i['sc - quantidade']) || convNum(i['quantidade']);
                 }
             }
@@ -453,7 +449,16 @@ async function processarInteligencia() {
     itemsABC.forEach(i => { if (tFin > 0 && i.consumoFinanceiro > 0) { cAcum += i.consumoFinanceiro; let p = cAcum / tFin; i.curva = p <= 0.8 ? 'A' : p <= 0.95 ? 'B' : 'C'; } });
 
     itensProcessados = baseProc;
-    ordesAtivasFiltradas = ordesAtivas.map(o => ({ ...o, filial: mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`)?.filialNm || 'Geral' }));
+    
+    // Associa cada ordem ativa ao seu item correspondente na base para herdar Filial e Local exatos
+    ordesAtivasFiltradas = ordesAtivas.map(o => {
+        let matchItem = mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`) || Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd));
+        return { 
+            ...o, 
+            filial: matchItem ? matchItem.filialNm : 'Geral',
+            locaisItem: matchItem ? matchItem.locais : []
+        };
+    });
     
     if($('select-status-of')) $('select-status-of').innerHTML = '<option value="">Todos os Status</option>' + Array.from(setStatusOFUnicos).sort().map(s => `<option value="${s}">${s}</option>`).join('');
 
@@ -532,7 +537,7 @@ window.dispararFiltros = () => {
     if (vistaAtual === 'pesquisa') renderPesquisa();
     else if (vistaAtual === 'dashboard') renderDashboard();
     else if (vistaAtual === 'compras') renderCompras();
-    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray);
+    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray, lFil);
     else if (vistaAtual === 'revisao') renderRevisao();
 };
 
@@ -590,7 +595,6 @@ const renderRevisao = () => {
     }).join('') || `<tr><td colspan="8" style="text-align:center;padding:40px;">Nenhum item exige revisão.</td></tr>`;
 };
 
-// RENDERIZAÇÃO DE COMPRAS CONSIDERANDO O SALDO DISPONÍVEL (SALDO + TRÂNSITO)
 const renderCompras = () => {
     let list = itensFiltrados.filter(i => {
         let saldoDisponivel = i.saldo + i.transito;
@@ -615,9 +619,29 @@ const renderCompras = () => {
     if($('resumo-necessidade')) $('resumo-necessidade').innerHTML = `<div class="kpi-card border-warning"><span class="kpi-title">Reposição (Qtd)</span><span class="kpi-value color-warning">${tQtd}</span></div><div class="kpi-card border-success"><span class="kpi-title">Valor Estimado</span><span class="kpi-value color-success">${fmtMoeda(tVal)}</span></div>`;
 };
 
-const renderGestaoCompras = (tSplit, filiaisArray) => {
+// GESTÃO DE COMPRAS (OFs) FILTRADA POR FILIAL E LOCAL SELECIONADOS
+const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
     let sOF = $('select-status-of')?.value;
-    let list = ordesAtivasFiltradas.filter(o => (!tSplit.length || tSplit.some(t => o.searchStr.includes(t))) && (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral') && (!sOF || o.sitOFOriginal === sOF));
+    
+    let list = ordesAtivasFiltradas.filter(o => {
+        let matchBusca = (!tSplit.length || tSplit.some(t => o.searchStr.includes(t)));
+        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral');
+        let matchStatus = (!sOF || o.sitOFOriginal === sOF);
+        
+        let matchLocal = true;
+        if (lFil) {
+            let [fNomeFiltro, localParteFiltro] = lFil.split(' | ');
+            let matchFilialLocal = (o.filial === fNomeFiltro || o.filial === 'Geral');
+            let matchLocalItem = o.locaisItem && o.locaisItem.some(l => {
+                let fmt = l.localId ? `${l.localId} - ${l.localNm}` : l.localNm;
+                return `${l.filialNm} | ${fmt}` === lFil;
+            });
+            matchLocal = matchFilialLocal && matchLocalItem;
+        }
+
+        return matchBusca && matchFilial && matchStatus && matchLocal;
+    });
+
     let vT = 0, qT = 0, fSet = new Set(), oSet = new Set();
     
     $('ofs-table-body').innerHTML = list.slice(0, 100).map(o => {
