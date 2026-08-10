@@ -328,10 +328,14 @@ async function processarInteligencia() {
     setProgress(98, "Calculando KPIs..."); await new Promise(r => setTimeout(r, 50)); 
     
     let baseProc = Array.from(mapCon.values()).map(i => {
-        if (!i.saldo && !i.minimo && !i.maximo) return null;
+        // Correção Passo 1: Trazemos o cálculo de trânsito e consumo para ANTES da verificação
+        let trans = mapCompras.get(i.codNorm) || 0, consF = Math.abs(mapConsumo.get(i.codNorm)) || 0;
+        
+        // Agora, se o item possuir trânsito (SC aberta), ele NÃO será descartado
+        if (!i.saldo && !i.minimo && !i.maximo && !trans && !consF) return null;
+        
         i.custoUnitario = (i.saldo > 0 && i.valorTotalGlobal > 0) ? i.valorTotalGlobal / i.saldo : i.locais[0]?.custoUnitario || 0;
         
-        let trans = mapCompras.get(i.codNorm) || 0, consF = Math.abs(mapConsumo.get(i.codNorm)) || 0;
         let vImob = i.valorTotalGlobal > 0 ? i.valorTotalGlobal : (i.saldo * i.custoUnitario), cFin = consF * i.custoUnitario;
         let gMes = cFin > 0 ? Math.round((vImob / cFin) * 30) : Infinity, gAno = (cFin * 12) > 0 ? Math.round((vImob / (cFin * 12)) * 365) : Infinity;
         
@@ -464,7 +468,9 @@ const renderGestaoCompras = (tSplit, fFil) => {
     $('ofs-table-body').innerHTML = list.slice(0, 100).map(o => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
-        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}')"><td><strong>${o.of}</strong><br><span style="font-size:10px;">SC: ${o.sc}</span></td><td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td><td>${o.fornecedor}</td><td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td><td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td><td>${o.dataEntrega}</td></tr>`;
+        
+        // Correção Passo 2: Adicionado '${o.sc}' no evento onclick
+        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')"><td><strong>${o.of}</strong><br><span style="font-size:10px;">SC: ${o.sc}</span></td><td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td><td>${o.fornecedor}</td><td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td><td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td><td>${o.dataEntrega}</td></tr>`;
     }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem OFs pendentes.</td></tr>`;
     
     if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">OFs Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
@@ -543,14 +549,29 @@ window.abrirModalDetalhes = (codNorm, fId) => {
     $('modal-item').style.display = 'flex';
 };
 
-window.abrirModalOF = (ofId, codProd) => {
-    let c = normCod(codProd), o = ordesAtivasFiltradas.find(x => x.of === ofId && normCod(x.codProd) === c), i = itensProcessados.find(x => x.codNorm === c);
-    if (!o || !i) return mostrarToast("Erro ao carregar OF.", "error");
+// Correção Passo 3: Adicionado o parâmetro scId e gerado fallback para evitar quebra.
+window.abrirModalOF = (ofId, codProd, scId) => {
+    let c = normCod(codProd), 
+        // Agora a busca valida Produto + OF + SC
+        o = ordesAtivasFiltradas.find(x => x.of === ofId && x.sc === scId && normCod(x.codProd) === c), 
+        i = itensProcessados.find(x => x.codNorm === c);
+
+    if (!o) return mostrarToast("Erro ao carregar OF.", "error");
+
+    // Fallback de segurança: Se o item estiver em Compras mas não existir na Base Mestre de Itens
+    if (!i) {
+        i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
+    }
+
+    // Só permite ver o contexto se o item realmente existir na inteligência do painel
+    let btnContexto = itensProcessados.some(x => x.codNorm === c) 
+        ? `<button class="theme-btn active" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')" style="padding:12px 24px;border-radius:8px;">Ver Contexto Completo do Item</button>`
+        : `<button class="theme-btn" style="padding:12px 24px;border-radius:8px; opacity:0.5; cursor:not-allowed;" title="Sem cadastro na Base">Contexto Indisponível (Sem Base)</button>`;
 
     $('modal-body-content').innerHTML = `
         <div class="modal-header-section"><div style="flex-grow:1;"><h2 style="font-size:20px;font-weight:800;margin-bottom:8px;">Gestão de OF: <span style="color:var(--primary-color);">${o.of}</span></h2><h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">#${o.codProd} - ${o.descProd}</h3>
         <div class="item-category" style="margin-bottom:20px;"><span class="chip-category">SC: <strong>${o.sc}</strong></span><span class="chip-category">Forn.: <strong>${o.fornecedor}</strong></span><span class="chip-category">Entrega: <strong>${o.dataEntrega}</strong></span><span class="badge-status badge-transito">${o.sitOFOriginal||'Pendente'}</span></div>
         <div class="item-metrics-grid"><div class="metric-box metric-saldo"><span class="metric-label">Saldo Físico</span><span class="metric-value">${i.saldo}</span></div><div class="metric-box metric-default"><span class="metric-label">Min/Max</span><span class="metric-value">${i.minimo} / ${i.maximo}</span></div><div class="metric-box metric-transito"><span class="metric-label">Qtd Solicitada</span><span class="metric-value">${o.qtdPedidaOriginal}</span></div><div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div></div></div></div>
-        <div style="text-align:center;padding:10px;"><p style="font-size:13px;color:var(--text-secondary);margin-bottom:15px;">Aprofundar a análise de consumo?</p><button class="theme-btn active" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')" style="padding:12px 24px;border-radius:8px;">Ver Contexto Completo do Item</button></div>`;
+        <div style="text-align:center;padding:10px;"><p style="font-size:13px;color:var(--text-secondary);margin-bottom:15px;">Aprofundar a análise de consumo?</p>${btnContexto}</div>`;
     $('modal-item').style.display = 'flex';
 };
