@@ -1812,7 +1812,8 @@
             return false;
         });
 
-        itensRevisao.forEach(i => {
+        // CORREÇÃO DE PERFORMANCE: Renderiza os 100 primeiros itens visualmente para manter a interface fluida.
+        itensRevisao.slice(0, 100).forEach(i => {
             let acao = "";
             let colorAcao = "";
             if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) {
@@ -1892,14 +1893,22 @@
         let fornSet = new Set();
         let ofSet = new Set();
 
+        // CORREÇÃO DE PERFORMANCE 1: Mapa para busca instantânea (O(1))
+        const mapaItens = new Map(itensProcessados.map(i => [i.codNorm, i]));
+
         ofsExibir.forEach(of => {
-            let itemRef = itensProcessados.find(i => i.codNorm === normalizarCod(of.codProd));
+            let codBusca = normalizarCod(of.codProd);
+            let itemRef = mapaItens.get(codBusca); 
+            
             let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
             valTransitoTotal += val;
             qtdTransitoTotal += of.saldoOF;
             fornSet.add(of.fornecedor);
             ofSet.add(of.of);
+        });
 
+        // CORREÇÃO DE PERFORMANCE 2: Limitação de desenho visual ao carregar a página
+        ofsExibir.slice(0, 100).forEach(of => {
             htmlLote.push(`
                 <tr class="fade-in">
                     <td><strong style="color:var(--text-primary);">${of.of}</strong><br><span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span></td>
