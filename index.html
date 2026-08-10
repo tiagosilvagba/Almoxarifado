@@ -1261,7 +1261,7 @@
     }
 
     // ==========================================================================
-    // EXPORTAÇÃO PARA EXCEL (Botão Revisão Min/Max) - NOVO!
+    // EXPORTAÇÃO PARA EXCEL (Botão Revisão Min/Max)
     // ==========================================================================
     window.exportarRevisaoExcel = function() {
         const itensRevisao = itensFiltrados.filter(i => {
@@ -1276,7 +1276,6 @@
             return;
         }
 
-        // UTF-8 BOM
         let csvContent = "\uFEFF"; 
         csvContent += "Código;Descrição;Filial;Saldo Útil;Mínimo Atual;Máximo Atual;Sugestão Novo Mín;Sugestão Novo Máx;Custo Consumo Mês;Ação Recomendada\n";
 
@@ -1392,15 +1391,15 @@
                 let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
                 let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
 
+                // VERIFICAÇÃO ABSOLUTA: Ignorar tudo se o Status indicar fechamento/cancelamento
+                let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
                 let saldoPendente = 0;
 
-                if (c_of_qtd_pedida) {
-                    if (sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's') {
-                        saldoPendente = 0; 
-                    } else {
-                        saldoPendente = qtdPedida - qtdRecebida;
-                        if (saldoPendente < 0) saldoPendente = 0; 
-                    }
+                if (isFechadaOuCancelada) {
+                    saldoPendente = 0; // Regra de Ouro: Se a OF está fechada, ela NUNCA está em trânsito.
+                } else if (c_of_qtd_pedida) {
+                    saldoPendente = qtdPedida - qtdRecebida;
+                    if (saldoPendente < 0) saldoPendente = 0; 
                 } else {
                     saldoPendente = c_qtd_compra_fallback ? converterParaNumero(item[c_qtd_compra_fallback]) : 0;
                 }
@@ -1409,6 +1408,7 @@
                     mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoPendente);
                 }
 
+                // Cálculo de Lead Time Histórico
                 if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
                     const parseData = (dStr) => {
                         const partes = String(dStr).trim().split('/');
@@ -1499,6 +1499,7 @@
             const prateleira = item[b_prat] || '-';
             const divisao = item[b_div] || '-';
 
+            // REGRA: Rolândia (Ab. Aves vs Alp. Preparados) com trava anti-vazio
             if (filialIdBase === '704') {
                 let locNum = parseInt(localIdRaw, 10);
                 if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || localIdRaw === '295' || localIdRaw === '0295' || locNum >= 599) {
@@ -1529,6 +1530,7 @@
             const minimoLinha = converterParaNumero(item[b_min]);
             const maximoLinha = converterParaNumero(item[b_max]);
             
+            // REGRA DO LOCAL CRÍTICO 299 e 295
             let isCritico = false;
             if (['299', '0299', '295', '0295'].includes(localIdRaw) || localNm.includes('299') || localNm.includes('295')) {
                 isCritico = true;
@@ -1556,7 +1558,7 @@
                     saldo: 0, minimo: 0, maximo: 0, 
                     valorTotalGlobal: 0,
                     custoUnitario: 0,
-                    leadTime: mapLeadTimeMedio.get(codNorm) || 15, 
+                    leadTime: mapLeadTimeMedio.get(codNorm) || 15, // Padrão de segurança se não houver no histórico
                     locais: []
                 });
             }
@@ -1618,13 +1620,14 @@
 
             let isLocalCriticoMacro = item.locais.some(l => l.isCritico && l.saldo > 0);
 
+            // CÁLCULO DE SALDO ÚTIL E SUGESTÕES MIN/MAX
             let saldoCritico = item.locais.filter(l => l.isCritico).reduce((sum, l) => sum + l.saldo, 0);
             let saldoUtil = item.saldo - saldoCritico;
             item.saldoUtil = saldoUtil;
 
             let consumoFisicoDiario = consumoMesAnteriorFisico / 30;
             let minSugerido = Math.ceil(consumoFisicoDiario * item.leadTime);
-            let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); 
+            let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); // Estoque Max = Seguranca + 1 Mês
             if (consumoMesAnteriorFisico === 0) { minSugerido = 0; maxSugerido = 0; }
             
             item.sugestaoMin = minSugerido;
@@ -1699,18 +1702,18 @@
                 let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
                 let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
                 
+                // VERIFICAÇÃO ABSOLUTA (Regra de Ouro): Ignorar trânsito se o Status indicar fechamento/cancelamento
+                let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
                 let saldoPendente = 0;
 
-                if (c_of_qtd_pedida) {
-                    if (sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's') {
-                        saldoPendente = 0;
-                    } else {
-                        saldoPendente = qtdPedida - qtdRecebida;
-                        if(saldoPendente < 0) saldoPendente = 0;
-                    }
+                if (isFechadaOuCancelada) {
+                    saldoPendente = 0; 
+                } else if (c_of_qtd_pedida) {
+                    saldoPendente = qtdPedida - qtdRecebida;
+                    if(saldoPendente < 0) saldoPendente = 0;
                 } else {
                     saldoPendente = c_qtd_compra_fallback ? converterParaNumero(linha[c_qtd_compra_fallback]) : 0;
-                    qtdPedida = saldoPendente; // Fallback da coluna bruta
+                    qtdPedida = saldoPendente; // Fallback
                 }
 
                 if(saldoPendente > 0) {
