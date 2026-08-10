@@ -3,7 +3,7 @@
 // ==========================================================================
 const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [], itensFiltrados = [], ordesAtivasFiltradas = [];
-let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS";
+let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS", curMonthGlobal = 12;
 let chartABC, chartStatus, chartFiliais;
 let filtroABC = null, filtroStatus = null, filtroFilial = null;
 let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true, mapeamentoAtivo = false;
@@ -122,6 +122,13 @@ $('modal-item')?.addEventListener('click', function(e) { if (e.target === this) 
 document.addEventListener('DOMContentLoaded', () => {
     window.alterarTema(localStorage.getItem('temaAlmoxarifado') || 'light');
     ['busca', 'busca-compras', 'busca-ofs'].forEach(id => $(id)?.addEventListener('input', () => { clearTimeout(timerBusca); timerBusca = setTimeout(window.dispararFiltros, 300); }));
+    
+    // Injeção automática para corrigir o cabeçalho da Revisão Min/Max sem tocar no HTML
+    const thRevisao = document.querySelector('#view-revisao thead tr');
+    if (thRevisao) {
+        thRevisao.innerHTML = `<th>Código / Descrição</th><th>Filial</th><th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th><th>Mín / Máx Atual</th><th style="color: var(--text-info);">Sugestão Novo Mín</th><th style="color: var(--text-info);">Sugestão Novo Máx</th><th>Custo Consumo</th><th style="color: var(--text-danger);">Alerta do Sistema</th>`;
+    }
+
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
 });
 
@@ -255,6 +262,7 @@ async function processarInteligencia() {
     };
 
     let curMonth = new Date().getMonth() || 12;
+    curMonthGlobal = curMonth;
     mesConsumoAtual = ['', 'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'][curMonth];
     const orderMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
@@ -262,7 +270,6 @@ async function processarInteligencia() {
     
     let mapCompras = new Map(), mapLead = new Map(), ordesAtivas = []; setStatusOFUnicos.clear();
     
-    // NOVO HELPER: Mapeia colunas difíceis ignorando espaços extras e caixa alta/baixa
     const getValExt = (row, searchTerms) => {
         let rKeys = Object.keys(row);
         for(let t of searchTerms) {
@@ -288,7 +295,6 @@ async function processarInteligencia() {
                 ordesAtivas.push({ 
                     sc: i[c.scCod]||'-', of: i[c.ofCod]||'-', codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
                     
-                    // Extração avançada dos novos campos mapeados
                     scSit_ext: getValExt(i, ['sc - situação']), scCC_ext: getValExt(i, ['sc - centro custo aprovador']), scDtCria_ext: getValExt(i, ['sc - data criação']), scSol_ext: getValExt(i, ['sc - nome solicitante']), scEmp_ext: getValExt(i, ['sc - empresa']), scFil_ext: getValExt(i, ['sc - filial']), scDescFil_ext: getValExt(i, ['sc - descr. filial']), scUM_ext: getValExt(i, ['sc - unid. medida']), scQtd_ext: getValExt(i, ['sc - quantidade']), scCat_ext: getValExt(i, ['sc - categoria']), scDtEnt_ext: getValExt(i, ['sc - dt entrega']), scReg_ext: getValExt(i, ['sc - regularização']), scObs_ext: getValExt(i, ['sc - obs']), scLocEst_ext: getValExt(i, ['sc - local estoque']), scCCUEtq_ext: getValExt(i, ['sc - ccu etq']), scAprov_ext: getValExt(i, ['sc - aprovador']),
                     ofData_ext: getValExt(i, ['of - data']), ofQtdSol_ext: getValExt(i, ['of - qtd. solicitada']), ofSaldo_ext: getValExt(i, ['of - saldo']), ofQtdEnt_ext: getValExt(i, ['of - qtd. entregue']), ofFechado_ext: getValExt(i, ['of - fechado']), ofBloqueado_ext: getValExt(i, ['of - bloqueado']), ofDtEnt_ext: getValExt(i, ['of - data entrega']), ofFrete_ext: getValExt(i, ['of - frete']), ofMoeda_ext: getValExt(i, ['of - moeda']), ofTipo_ext: getValExt(i, ['of - tipo']), ofEmail_ext: getValExt(i, ['of - email fornecedor']), ofObs_ext: getValExt(i, ['of - obs']),
                     recNF_ext: getValExt(i, ['rec - nr nf']), recSerie_ext: getValExt(i, ['rec - série']), recDtEmissao_ext: getValExt(i, ['rec - dt emissão']), recDtEntrada_ext: getValExt(i, ['rec - dt entrada']), recUM_ext: getValExt(i, ['rec - unid. medida']), recQtd_ext: getValExt(i, ['rec - quantidade']), recValUn_ext: getValExt(i, ['rec - valor un. fiscal'])
@@ -306,11 +312,34 @@ async function processarInteligencia() {
     }
     let mapLeadMedio = new Map(); mapLead.forEach((v, k) => mapLeadMedio.set(k, Math.round(v.reduce((a,b)=>a+b,0)/v.length)));
 
-    setProgress(93, "Apurando Consumo..."); await new Promise(r => setTimeout(r, 50));
-    let mapConsumo = new Map(), hasConsumo = false;
+    setProgress(93, "Apurando Consumo e Histórico..."); await new Promise(r => setTimeout(r, 50));
+    let mapConsumo = new Map(), mapUltimoMes = new Map(), hasConsumo = false;
+    
     if (bases.consumos.length) {
-        let b = bases.consumos[0], cm = findKey(b, keys.mesMov), cc = findKey(b, keys.cod), cq = findKey(b, keys.cons);
-        if(cm) bases.consumos.forEach(i => { if (orderMeses[normStr(i[cm])] === curMonth) { hasConsumo = true; let cod = normCod(i[cc]); cod && mapConsumo.set(cod, (mapConsumo.get(cod) || 0) + convNum(i[cq])); } });
+        let b = bases.consumos[0], cm = findKey(b, keys.mesMov), cc = findKey(b, keys.cod), cq = findKey(b, keys.cons), cLoc = findKey(b, keys.locId);
+        
+        bases.consumos.forEach(i => { 
+            let cod = normCod(i[cc]);
+            if(!cod) return;
+            
+            let mesNorm = normStr(i[cm]);
+            let mesNum = orderMeses[mesNorm];
+            let qtd = convNum(i[cq]);
+            let locIdStr = String(cLoc ? i[cLoc] : '').trim();
+            let isLocCritico = ['299', '0299', '295', '0295'].includes(locIdStr);
+
+            // Mapeia o histórico geral: Guarda o último mês em que a peça teve saída maior que 0
+            if (qtd > 0 && mesNum) {
+                let maxMes = mapUltimoMes.get(cod) || 0;
+                if (mesNum > maxMes) mapUltimoMes.set(cod, mesNum);
+            }
+
+            // Exclusão Estratégica: Para a sugestão de Min/Max, o algoritmo DESCARTA os locais 299/295
+            if (mesNum === curMonth && !isLocCritico) {
+                hasConsumo = true; 
+                mapConsumo.set(cod, (mapConsumo.get(cod) || 0) + qtd); 
+            } 
+        });
     }
 
     setProgress(95, "Consolidando Base..."); await new Promise(r => setTimeout(r, 50));
@@ -356,6 +385,11 @@ async function processarInteligencia() {
         let vImob = i.valorTotalGlobal > 0 ? i.valorTotalGlobal : (i.saldo * i.custoUnitario), cFin = consF * i.custoUnitario;
         let gMes = cFin > 0 ? Math.round((vImob / cFin) * 30) : Infinity, gAno = (cFin * 12) > 0 ? Math.round((vImob / (cFin * 12)) * 365) : Infinity;
         
+        // Histórico de inatividade
+        let ultMesNum = mapUltimoMes.get(i.codNorm) || 0;
+        let nomeUltMes = ultMesNum > 0 ? ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][ultMesNum] : 'Sem Registro';
+        let mesesSemConsumo = ultMesNum > 0 ? (curMonth >= ultMesNum ? curMonth - ultMesNum : (12 - ultMesNum + curMonth)) : Infinity;
+
         i.saldoUtil = i.saldo - i.locais.filter(l => l.isCritico).reduce((s, l) => s + l.saldo, 0);
         i.sugestaoMin = consF === 0 ? 0 : Math.ceil((consF / 30) * i.leadTime);
         i.sugestaoMax = consF === 0 ? 0 : Math.ceil(i.sugestaoMin + consF);
@@ -368,7 +402,7 @@ async function processarInteligencia() {
         else if (i.maximo > 0 && i.saldo > i.maximo) { st = 'Excesso Estoque'; bd = 'badge-acima'; }
 
         i.reparticao = i.locais[0]?.reparticao || '-'; i.prateleira = i.locais[0]?.prateleira || '-'; i.divisao = i.locais[0]?.divisao || '-';
-        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: mapeamentoAtivo ? imagensMapeadas.has(i.codNorm) : null, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
+        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: mapeamentoAtivo ? imagensMapeadas.has(i.codNorm) : null, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
     }).filter(Boolean).sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
     if (!baseProc.length) return (fecharLoader(), isFetchingData = false);
@@ -557,9 +591,18 @@ window.abrirModalDetalhes = (codNorm, fId) => {
 
     let locs = item.locais.map(l => `<tr><td>${l.filialNm}</td><td><strong style="color:var(--primary-color);">${l.localId||'-'}</strong> - ${l.localNm}</td><td>${l.reparticao}</td><td>${l.prateleira}</td><td>${l.divisao}</td><td style="font-weight:800;">${l.saldo}</td></tr>`).join('');
 
+    let labelHistorico = item.mesesSemConsumo === 0 ? '(Neste Mês)' : item.mesesSemConsumo === Infinity ? '(Sem Histórico)' : `Há ${item.mesesSemConsumo} meses`;
+
     $('modal-body-content').innerHTML = `
         <div class="modal-header-section"><div style="flex-grow:1;"><h2 style="font-size:24px;font-weight:800;margin-bottom:8px;"><span style="color:var(--primary-color);">#${item.cod}</span> - ${item.desc}</h2><div class="item-category" style="margin-bottom:20px;"><span class="chip-category">${item.grupo||'Geral'}</span><span class="chip-category">${item.classe||'N/A'}</span><span class="chip-category">Medida: <strong>${item.um}</strong></span><span class="badge-status ${item.statusBadge}">${item.status}</span></div>
-        <div class="item-metrics-grid"><div class="metric-box metric-saldo"><span class="metric-label">Saldo</span><span class="metric-value">${item.saldo}</span></div><div class="metric-box metric-default"><span class="metric-label">Custo Un.</span><span class="metric-value">${fmtMoeda(item.custoUnitario)}</span></div><div class="metric-box metric-default"><span class="metric-label">Valor Imob.</span><span class="metric-value">${fmtMoeda(item.valorImobilizado)}</span></div><div class="metric-box metric-default"><span class="metric-label">Min/Max</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div><div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro Mês</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+'d'}</span></div><div class="metric-box metric-transito"><span class="metric-label">Em OF</span><span class="metric-value">${item.transito}</span></div></div></div></div>
+        <div class="item-metrics-grid">
+            <div class="metric-box metric-saldo"><span class="metric-label">Saldo</span><span class="metric-value">${item.saldo}</span></div>
+            <div class="metric-box metric-default"><span class="metric-label">Custo Un.</span><span class="metric-value">${fmtMoeda(item.custoUnitario)}</span></div>
+            <div class="metric-box metric-default"><span class="metric-label">Min/Max</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
+            <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro/Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
+            <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:15px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:11px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
+            <div class="metric-box metric-transito"><span class="metric-label">Em OF</span><span class="metric-value">${item.transito}</span></div>
+        </div></div></div>
         <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria</h3><div class="modal-gallery-container" style="margin-bottom:24px;">${imgsHTML}</div>
         <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Detalhamento de Locais</h3><div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);"><table class="modal-locais-table"><thead><tr><th>Filial</th><th>Local</th><th>Rep.</th><th>Prat.</th><th>Div.</th><th>Saldo</th></tr></thead><tbody>${locs}</tbody></table></div>`;
     $('modal-item').style.display = 'flex';
@@ -567,7 +610,6 @@ window.abrirModalDetalhes = (codNorm, fId) => {
 
 window.abrirModalOF = (ofId, codProd, scId) => {
     let c = normCod(codProd), 
-        // O sistema valida Produto + OF + SC de forma exata: Impossível pegar outro item da mesma nota!
         o = ordesAtivasFiltradas.find(x => x.of === ofId && x.sc === scId && normCod(x.codProd) === c), 
         i = itensProcessados.find(x => x.codNorm === c);
 
@@ -575,7 +617,6 @@ window.abrirModalOF = (ofId, codProd, scId) => {
 
     if (!i) i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
 
-    // Calcula de forma inteligente o status de atraso:
     let dataAlvo = o.scDtEnt_ext !== '-' ? o.scDtEnt_ext : (o.ofDtEnt_ext !== '-' ? o.ofDtEnt_ext : o.dataEntrega);
     let badgeAtraso = `<span class="badge-status badge-normal" style="background:#f3f4f6; color:#64748b;">⚪ Sem Previsão</span>`;
 
