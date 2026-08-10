@@ -6,8 +6,8 @@ let itensProcessados = [], itensFiltrados = [], ordesAtivasFiltradas = [];
 let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS", curMonthGlobal = 12;
 let chartABC, chartStatus, chartFiliais;
 let filtroABC = null, filtroStatus = null, filtroFilial = new Set();
-let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true;
-const setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
+let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true, mapeamentoAtivo = false;
+const imagensMapeadas = new Set(), setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
 let lbImages = [], lbIndex = 0, timerBusca;
 
 Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
@@ -94,7 +94,7 @@ window.navegarPara = view => {
 window.toggleSegmentacao = () => $('app-layout')?.classList.toggle('segmentation-hidden');
 
 // ==========================================================================
-// LIGHTBOX E MODAIS DE IMAGEM
+// LIGHTBOX E MODAIS
 // ==========================================================================
 const atualizarLightbox = () => {
     if($('lightbox-img') && lbImages.length > 0) {
@@ -145,11 +145,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 <option value="sem_of">Apenas SCs (Sem OF)</option>
             </select>
         `;
-        painelFiltros.insertBefore(divTipo, painelFiltros.children[4]);
+        painelFiltros.insertBefore(divTipo, painelFiltros.children[5]);
     }
 
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
 });
+
+window.mapearImagensPasta = e => {
+    const files = e.target.files;
+    if (!files.length) return;
+    imagensMapeadas.clear();
+    let count = 0;
+    Array.from(files).forEach(f => {
+        let fn = f.name.toLowerCase();
+        if (/( - 0[1-6]\.)/.test(fn)) { imagensMapeadas.add(normCod(fn.split(' - ')[0])); count++; }
+    });
+    mapeamentoAtivo = true;
+    if (itensProcessados.length > 0) {
+        itensProcessados.forEach(i => i.temImagem = imagensMapeadas.has(i.codNorm));
+        window.dispararFiltros();
+    }
+    mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
+};
 
 // ==========================================================================
 // CARGA DE DADOS (FETCH & UPLOAD MANUAL)
@@ -378,7 +395,7 @@ async function processarInteligencia() {
 
     setProgress(95, "Consolidando Base..."); await new Promise(r => setTimeout(r, 50));
     let mapCon = new Map(); setLocaisUnicos.clear(); let setFil = new Set();
-    let b0 = bases.baseItens[0], b = { cod: findKey(b0, keys.cod), desc: findKey(b0, keys.desc), saldo: findKey(b0, keys.saldo), min: findKey(b0, keys.min), max: findKey(b0, keys.max), custo: findKey(b0, keys.custo), um: findKey(b0, keys.um), fNm: findKey(b0, keys.filNm), fId: findKey(b0, keys.filId), grp: findKey(b0, keys.grp), cls: findKey(b0, keys.classe), rep: findKey(b0, keys.rep), prat: findKey(b0, keys.prat), div: findKey(b0, keys.div), lId: findKey(b0, keys.locId), lNm: findKey(b0, keys.locNm), vTot: findKey(b0, keys.vTot) };
+    let b0 = bases.baseItens[0], b = { cod: findKey(b0, keys.cod), desc: findKey(b0, keys.desc), saldo: findKey(b0, keys.saldo), min: findKey(b0, keys.min), max: findKey(b0, keys.max), custo: findKey(b0, keys.custo), um: findKey(b0, keys.um), fNm: findKey(b0, keys.filNm), fId: findKey(b0, keys.filId), grp: findKey(b0, keys.grp), cls: findKey(b0, keys.cls), rep: findKey(b0, keys.rep), prat: findKey(b0, keys.prat), div: findKey(b0, keys.div), lId: findKey(b0, keys.locId), lNm: findKey(b0, keys.locNm), vTot: findKey(b0, keys.vTot) };
 
     bases.baseItens.forEach(i => {
         let cB = String(i[b.cod]||'').replace(/\./g, ''), cN = normCod(cB); if(!cN) return;
@@ -452,7 +469,7 @@ async function processarInteligencia() {
         else if (i.maximo > 0 && i.saldo > i.maximo) { st = 'Excesso Estoque'; bd = 'badge-acima'; }
 
         i.reparticao = i.locais[0]?.reparticao || '-'; i.prateleira = i.locais[0]?.prateleira || '-'; i.divisao = i.locais[0]?.divisao || '-';
-        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: false, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
+        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: mapeamentoAtivo ? imagensMapeadas.has(i.codNorm) : null, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
     }).filter(Boolean).sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
     if (!baseProc.length) return (fecharLoader(), isFetchingData = false);
@@ -531,18 +548,22 @@ window.atualizarFiltroLocais = () => {
 window.dispararFiltros = () => {
     let tRaw = vistaAtual === 'pesquisa' ? $('busca')?.value : vistaAtual === 'compras' ? $('busca-compras')?.value : vistaAtual === 'gestao-compras' ? $('busca-ofs')?.value : $('busca')?.value;
     let tSplit = (tRaw||'').split(',').map(t => normStr(t)).filter(Boolean);
-    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, lFil = $('select-local')?.value || "";
+    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, imgFil = $('select-imagem')?.value, lFil = $('select-local')?.value || "";
+
+    if (imgFil && !mapeamentoAtivo) { mostrarToast("Mapeie a pasta de imagens primeiro.", "warning"); $('select-imagem').value = ""; return; }
 
     let filiaisArray = Array.from(filtroFilial);
 
+    // Motor de filtragem unificado para os itens globais do sistema
     itensFiltrados = itensProcessados.filter(i => {
         let matchBusca = (!tSplit.length || tSplit.some(t => i.searchString.includes(t)));
         let matchCurva = (!cFil || i.curva === cFil);
         let matchStatus = (!sFil || i.status === sFil);
         let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm));
         let matchLocal = (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil));
+        let matchImg = (!imgFil || (imgFil === 'com_imagem' ? i.temImagem : !i.temImagem));
 
-        return matchBusca && matchCurva && matchStatus && matchFilial && matchLocal;
+        return matchBusca && matchCurva && matchStatus && matchFilial && matchLocal && matchImg;
     });
 
     if (vistaAtual === 'pesquisa') renderPesquisa();
@@ -566,7 +587,7 @@ window.limparFiltroGrafico = tipo => {
 };
 
 window.limparFiltros = () => {
-    ['select-curva', 'select-saldo-status', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
+    ['select-curva', 'select-saldo-status', 'select-imagem', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
     if($('select-tipo-ordem')) $('select-tipo-ordem').value = "";
     filtroABC = filtroStatus = null;
     document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
@@ -581,19 +602,9 @@ window.limparFiltros = () => {
 // ================= RENDERIZADORES =================
 const renderPesquisa = () => {
     setTxt('contador-itens', `${itensFiltrados.length} itens encontrados.`);
-    $('resultados').innerHTML = itensFiltrados.slice(0, 100).map(i => {
-        let lbArr = [];
-        for(let k = 1; k <= 6; k++) { lbArr.push(`imagens/${i.cod} - 0${k}.jpg`); }
-
-        return `
+    $('resultados').innerHTML = itensFiltrados.slice(0, 100).map(i => `
         <div class="item-card fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-            <div class="item-media">
-                <div class="abc-badge curva-${i.curva}">${i.curva}</div>
-                <div class="item-image-container" onclick="window.abrirLightboxArray('${lbArr.join(',')}', 0, event)">
-                    <img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                    <div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>
-                </div>
-            </div>
+            <div class="item-media"><div class="abc-badge curva-${i.curva}">${i.curva}</div><div class="item-image-container">${mapeamentoAtivo ? (i.temImagem ? `<img src="imagens/${i.cod} - 01.jpg">` : `<div class="img-placeholder">🚫<br>SEM FOTO</div>`) : `<img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>`}</div></div>
             <div class="item-info">
                 <div class="item-header"><div class="item-title"><span class="item-title-cod">#${i.cod}</span> ${i.desc}</div><span class="badge-status ${i.statusBadge}">${i.status}</span></div>
                 <div class="item-category"><span class="chip-category">${i.filialNm}</span><span class="chip-category">${i.grupo||'Geral'}</span><span class="chip-category">${i.classe||'N/A'}</span><span class="chip-category">UN: ${i.um||'UN'}</span></div>
@@ -605,8 +616,7 @@ const renderPesquisa = () => {
                     <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${fmtMoeda(i.consumoFinanceiro)}</span></div>
                 </div>
             </div>
-        </div>`;
-    }).join('');
+        </div>`).join('');
 };
 
 const renderRevisao = () => {
@@ -788,26 +798,12 @@ window.abrirModalDetalhes = (codNorm, fId) => {
     let item = itensProcessados.find(i => i.codNorm === codNorm && i.filialIdBase === fId);
     if (!item) return mostrarToast("Erro ao abrir.", "error");
 
-    let lbArr = [];
-    for(let k = 1; k <= 6; k++) { lbArr.push(`imagens/${item.cod} - 0${k}.jpg`); }
-
-    let imgsHTML = lbArr.map((path, idx) => `
-        <img src="${path}" style="height:150px;min-width:150px;border-radius:12px;object-fit:cover;cursor:zoom-in;" onclick="window.abrirLightboxArray('${lbArr.join(',')}', ${idx}, event)" onerror="this.style.display='none'">
-    `).join('');
+    let imgsHTML = '', lbArr = [];
+    if (mapeamentoAtivo && item.temImagem) {
+        for(let k = 1; k <= 6; k++) { let p = `imagens/${item.cod} - 0${k}.jpg`; lbArr.push(p); imgsHTML += `<img src="${p}" style="height:150px;min-width:150px;border-radius:12px;object-fit:cover;" onclick="window.abrirLightboxArray('${lbArr.join(',')}', ${k-1}, event)" onerror="this.style.display='none'">`; }
+    } else { imgsHTML = `<img src="imagens/${item.cod} - 01.jpg" style="height:150px;border-radius:12px;object-fit:cover;" onclick="window.abrirLightboxArray('imagens/${item.cod} - 01.jpg', 0, event)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;width:150px;height:150px;">🚫<br>SEM FOTO</div>`; }
 
     let locs = item.locais.map(l => `<tr><td>${l.filialNm}</td><td><strong style="color:var(--primary-color);">${l.localId||'-'}</strong> - ${l.localNm}</td><td>${l.reparticao}</td><td>${l.prateleira}</td><td>${l.divisao}</td><td style="font-weight:800;">${l.saldo}</td></tr>`).join('');
-
-    let ordensDoItem = ordesAtivasFiltradas.filter(o => normCod(o.codProd) === item.codNorm);
-    let transitoHTML = ordensDoItem.length > 0 ? ordensDoItem.map(o => `
-        <tr>
-            <td><strong>${o.sc}</strong></td>
-            <td><strong>${o.of !== '-' ? o.of : 'Sem OF (SC Pendente)'}</strong></td>
-            <td>${o.fornecedor}</td>
-            <td style="font-weight:800; color:var(--text-warning);">${o.saldoOF}</td>
-            <td>${o.dataEntrega !== '-' ? o.dataEntrega : 'Não informada'}</td>
-            <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span></td>
-        </tr>
-    `).join('') : `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">Nenhum pedido em trânsito no momento.</td></tr>`;
 
     let labelHistorico = item.mesesSemConsumo === 0 ? '(Neste Mês)' : item.mesesSemConsumo === Infinity ? '(Sem Histórico)' : `Há ${item.mesesSemConsumo} meses`;
 
@@ -834,18 +830,8 @@ window.abrirModalDetalhes = (codNorm, fId) => {
                 </div>
             </div>
         </div>
-
-        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">📦 Pedidos e SCs em Trânsito para este Item</h3>
-        <div style="overflow-x:auto; margin-bottom:24px; border-radius:12px; border:1px solid var(--border-color);">
-            <table class="modal-locais-table">
-                <thead><tr><th>SC</th><th>OF</th><th>Fornecedor</th><th>Qtd Pendente</th><th>Previsão Entrega</th><th>Status</th></tr></thead>
-                <tbody>${transitoHTML}</tbody>
-            </table>
-        </div>
-
-        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos (Até 6 Imagens Automáticas)</h3>
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos</h3>
         <div class="modal-gallery-container" style="margin-bottom:24px;">${imgsHTML}</div>
-        
         <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Detalhamento de Endereços e Prateleiras (Locais)</h3>
         <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);"><table class="modal-locais-table"><thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prateleira</th><th>Divisão</th><th>Saldo Local</th></tr></thead><tbody>${locs}</tbody></table></div>`;
     $('modal-item').style.display = 'flex';
