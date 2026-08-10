@@ -5,7 +5,7 @@ const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [], itensFiltrados = [], ordesAtivasFiltradas = [];
 let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS", curMonthGlobal = 12;
 let chartABC, chartStatus, chartFiliais;
-let filtroABC = null, filtroStatus = null, filtroFilial = null;
+let filtroABC = null, filtroStatus = null, filtroFilial = new Set();
 let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true, mapeamentoAtivo = false;
 const imagensMapeadas = new Set(), setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
 let lbImages = [], lbIndex = 0, timerBusca;
@@ -128,9 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
         thRevisao.innerHTML = `<th>Código / Descrição</th><th>Filial</th><th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th><th>Mín / Máx Atual</th><th style="color: var(--text-info);">Sugestão Novo Mín</th><th style="color: var(--text-info);">Sugestão Novo Máx</th><th>Custo Consumo</th><th style="color: var(--text-danger);">Alerta do Sistema</th>`;
     }
 
+    // Cabeçalho otimizado e visual para a Gestão de Compras (OFs)
     const thOFs = document.querySelector('#view-gestao-compras thead tr');
     if (thOFs) {
-        thOFs.innerHTML = `<th>SC - Empresa</th><th>SC - Filial</th><th>SC - Descr. Filial</th><th>SC - Cód. Produto</th><th>SC - Nome Produto</th><th>SC - Unid. Medida</th><th>SC - Quantidade</th><th>SC - Categoria</th><th>SC - DT Entrega</th><th>SC - Regularização</th><th>SC - OBS</th><th>SC - Local Estoque</th><th>SC - CCU Etq</th><th>SC - Aprovador</th><th>OF - Codigo</th><th>OF - Data</th><th>OF - Nome Fornecedor</th><th>OF - Qtd. Solicitada</th><th>OF - Saldo</th><th>OF - Qtd. Entregue</th><th>OF - Fechado</th><th>OF - Bloqueado</th><th>OF - Data Entrega</th><th>OF - Frete</th><th>OF - Moeda</th><th>OF - Situação OF</th><th>OF - Tipo</th><th>OF - Email Fornecedor</th><th>OF - OBS</th><th>REC - Nr NF</th><th>REC - Série</th><th>REC - DT Emissão</th><th>REC - DT Entrada</th><th>REC - Unid. Medida</th><th>REC - Quantidade</th><th>REC - Valor Un. Fiscal</th>`;
+        thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão Entrega</th><th>Status / Filial</th>`;
     }
 
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
@@ -372,7 +373,24 @@ async function processarInteligencia() {
         o.locais.push({ filialNm: fNm, localId: lId, localNm: lNm, reparticao: rep, prateleira: prat, divisao: div, saldo: sld, custoUnitario: cst, isCritico: crit });
     });
 
-    if($('select-filial')) $('select-filial').innerHTML = '<option value="">Todas as Filiais</option>' + Array.from(setFil).sort().map(f => `<option value="${f}">${f}</option>`).join('');
+    const containerFilial = $('select-filial');
+    if(containerFilial) {
+        if(containerFilial.tagName === 'SELECT') {
+            let parentDiv = containerFilial.parentNode;
+            let multiDiv = document.createElement('div');
+            multiDiv.id = 'select-filial';
+            multiDiv.className = 'segmentation-select';
+            multiDiv.style.cssText = 'max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px;';
+            
+            let htmlChecks = `<label style="font-weight:700; cursor:pointer;"><input type="checkbox" id="chk-all-filiais" checked onchange="toggleTodasFiliais(this)"> Todas as Filiais</label><hr style="border:0; border-top:1px solid var(--border-color); margin:4px 0;">`;
+            Array.from(setFil).sort().forEach(f => {
+                htmlChecks += `<label style="cursor:pointer; font-weight:normal;"><input type="checkbox" class="chk-filial-item" value="${f}" checked onchange="atualizarFiltroFiliaisMultiplas()"> ${f}</label>`;
+            });
+            multiDiv.innerHTML = htmlChecks;
+            parentDiv.replaceChild(multiDiv, containerFilial);
+        }
+    }
+
     if($('select-local')) $('select-local').innerHTML = '<option value="">Todos os Locais</option>' + Array.from(setLocaisUnicos).sort().map(l => `<option value="${l}">${l}</option>`).join('');
 
     setProgress(98, "Calculando KPIs..."); await new Promise(r => setTimeout(r, 50)); 
@@ -416,6 +434,9 @@ async function processarInteligencia() {
     
     if($('select-status-of')) $('select-status-of').innerHTML = '<option value="">Todos os Status</option>' + Array.from(setStatusOFUnicos).sort().map(s => `<option value="${s}">${s}</option>`).join('');
 
+    filtroFilial.clear();
+    document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
+
     setProgress(100, "Renderizando Interface...", "success");
     setTxt('kpi-consumo-title', `Custo do Consumo (${mesConsumoAtual})`);
     setTxt('th-consumo', `Custo Consumo (${mesConsumoAtual})`);
@@ -430,10 +451,40 @@ async function processarInteligencia() {
 // ==========================================================================
 // FILTROS, BUSCA E RENDERIZAÇÃO 
 // ==========================================================================
+window.toggleTodasFiliais = masterChk => {
+    let status = masterChk.checked;
+    document.querySelectorAll('.chk-filial-item').forEach(chk => {
+        chk.checked = status;
+    });
+    window.atualizarFiltroFiliaisMultiplas();
+};
+
+window.atualizarFiltroFiliaisMultiplas = () => {
+    filtroFilial.clear();
+    let todasMarcadas = true;
+    document.querySelectorAll('.chk-filial-item').forEach(chk => {
+        if(chk.checked) {
+            filtroFilial.add(chk.value);
+        } else {
+            todasMarcadas = false;
+        }
+    });
+    let master = $('chk-all-filiais');
+    if(master) master.checked = todasMarcadas;
+
+    window.atualizarFiltroLocais();
+};
+
 window.atualizarFiltroLocais = () => {
-    let fVal = $('select-filial')?.value, lEl = $('select-local'), lAtual = lEl?.value;
+    let lEl = $('select-local'), lAtual = lEl?.value;
     if(!lEl) return;
-    lEl.innerHTML = '<option value="">Todos os Locais</option>' + Array.from(setLocaisUnicos).filter(l => !fVal || l.startsWith(fVal + ' |')).sort().map(l => `<option value="${l}">${l}</option>`).join('');
+    
+    let filiaisArray = Array.from(filtroFilial);
+    lEl.innerHTML = '<option value="">Todos os Locais</option>' + Array.from(setLocaisUnicos).filter(l => {
+        if (filiaisArray.length === 0) return false;
+        return filiaisArray.some(f => l.startsWith(f + ' |'));
+    }).sort().map(l => `<option value="${l}">${l}</option>`).join('');
+    
     lEl.value = Array.from(lEl.options).some(o => o.value === lAtual) ? lAtual : "";
     window.dispararFiltros();
 };
@@ -441,13 +492,16 @@ window.atualizarFiltroLocais = () => {
 window.dispararFiltros = () => {
     let tRaw = vistaAtual === 'pesquisa' ? $('busca')?.value : vistaAtual === 'compras' ? $('busca-compras')?.value : vistaAtual === 'gestao-compras' ? $('busca-ofs')?.value : $('busca')?.value;
     let tSplit = (tRaw||'').split(',').map(t => normStr(t)).filter(Boolean);
-    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, imgFil = $('select-imagem')?.value, fFil = $('select-filial')?.value || filtroFilial || "", lFil = $('select-local')?.value || "";
+    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, imgFil = $('select-imagem')?.value, lFil = $('select-local')?.value || "";
 
     if (imgFil && !mapeamentoAtivo) { mostrarToast("Mapeie a pasta de imagens primeiro.", "warning"); $('select-imagem').value = ""; return; }
 
+    let filiaisArray = Array.from(filtroFilial);
+
     itensFiltrados = itensProcessados.filter(i => 
         (!tSplit.length || tSplit.some(t => i.searchString.includes(t))) && 
-        (!cFil || i.curva === cFil) && (!sFil || i.status === sFil) && (!fFil || i.filialNm === fFil) &&
+        (!cFil || i.curva === cFil) && (!sFil || i.status === sFil) && 
+        (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm)) &&
         (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil)) &&
         (!imgFil || (imgFil === 'com_imagem' ? i.temImagem : !i.temImagem))
     );
@@ -455,20 +509,31 @@ window.dispararFiltros = () => {
     if (vistaAtual === 'pesquisa') renderPesquisa();
     else if (vistaAtual === 'dashboard') renderDashboard();
     else if (vistaAtual === 'compras') renderCompras();
-    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, fFil);
+    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray);
     else if (vistaAtual === 'revisao') renderRevisao();
 };
 
 window.limparFiltroGrafico = tipo => {
     if(tipo === 'abc') { filtroABC = null; $('filtro-abc-aviso').style.display = 'none'; }
     if(tipo === 'status') { filtroStatus = null; $('filtro-status-aviso').style.display = 'none'; }
-    if(tipo === 'filial') { filtroFilial = null; $('filtro-filial-aviso').style.display = 'none'; }
+    if(tipo === 'filial') { 
+        document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
+        if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
+        filtroFilial.clear();
+        document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
+        $('filtro-filial-aviso').style.display = 'none'; 
+    }
     window.dispararFiltros();
 };
 
 window.limparFiltros = () => {
-    ['select-curva', 'select-saldo-status', 'select-imagem', 'select-filial', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
-    filtroABC = filtroStatus = filtroFilial = null;
+    ['select-curva', 'select-saldo-status', 'select-imagem', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
+    filtroABC = filtroStatus = null;
+    document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
+    if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
+    filtroFilial.clear();
+    document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
+
     ['filtro-abc-aviso', 'filtro-status-aviso', 'filtro-filial-aviso'].forEach(id => { if($(id)) $(id).style.display = 'none'; });
     window.atualizarFiltroLocais();
 };
@@ -512,54 +577,27 @@ const renderCompras = () => {
     if($('resumo-necessidade')) $('resumo-necessidade').innerHTML = `<div class="kpi-card border-warning"><span class="kpi-title">Reposição (Qtd)</span><span class="kpi-value color-warning">${tQtd}</span></div><div class="kpi-card border-success"><span class="kpi-title">Valor Estimado</span><span class="kpi-value color-success">${fmtMoeda(tVal)}</span></div>`;
 };
 
-const renderGestaoCompras = (tSplit, fFil) => {
+// VISÃO RESUMIDA E VISUAL NA TELA DE GESTÃO DE COMPRAS (OFs)
+const renderGestaoCompras = (tSplit, filiaisArray) => {
     let sOF = $('select-status-of')?.value;
-    let list = ordesAtivasFiltradas.filter(o => (!tSplit.length || tSplit.some(t => o.searchStr.includes(t))) && (!fFil || o.filial === fFil || o.filial === 'Geral') && (!sOF || o.sitOFOriginal === sOF));
+    let list = ordesAtivasFiltradas.filter(o => (!tSplit.length || tSplit.some(t => o.searchStr.includes(t))) && (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral') && (!sOF || o.sitOFOriginal === sOF));
     let vT = 0, qT = 0, fSet = new Set(), oSet = new Set();
     
     $('ofs-table-body').innerHTML = list.slice(0, 100).map(o => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')" style="white-space: nowrap; font-size: 11px;">
-            <td>${o.scEmp_ext}</td>
-            <td>${o.scFil_ext}</td>
-            <td>${o.scDescFil_ext}</td>
-            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong></td>
-            <td>${o.descProd}</td>
-            <td>${o.scUM_ext}</td>
-            <td>${o.scQtd_ext}</td>
-            <td>${o.scCat_ext}</td>
-            <td>${o.scDtEnt_ext}</td>
-            <td>${o.scReg_ext}</td>
-            <td>${o.scObs_ext}</td>
-            <td>${o.scLocEst_ext}</td>
-            <td>${o.scCCUEtq_ext}</td>
-            <td>${o.scAprov_ext}</td>
-            <td><strong>${o.of}</strong></td>
-            <td>${o.ofData_ext}</td>
+        // Linha limpa e visual mostrando os dados essenciais na primeira visão
+        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')">
+            <td><strong>${o.of}</strong><br><span style="font-size:10px; color:var(--text-secondary);">SC: ${o.sc}</span></td>
+            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td>
             <td>${o.fornecedor}</td>
-            <td>${o.ofQtdSol_ext}</td>
+            <td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td>
             <td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td>
-            <td>${o.ofQtdEnt_ext}</td>
-            <td>${o.ofFechado_ext}</td>
-            <td>${o.ofBloqueado_ext}</td>
-            <td>${o.ofDtEnt_ext}</td>
-            <td>${o.ofFrete_ext}</td>
-            <td>${o.ofMoeda_ext}</td>
-            <td>${o.sitOFOriginal}</td>
-            <td>${o.ofTipo_ext}</td>
-            <td>${o.ofEmail_ext}</td>
-            <td>${o.ofObs_ext}</td>
-            <td>${o.recNF_ext}</td>
-            <td>${o.recSerie_ext}</td>
-            <td>${o.recDtEmissao_ext}</td>
-            <td>${o.recDtEntrada_ext}</td>
-            <td>${o.recUM_ext}</td>
-            <td>${o.recQtd_ext}</td>
-            <td>${o.recValUn_ext !== '-' ? 'R$ ' + o.recValUn_ext : '-'}</td>
+            <td>${o.dataEntrega}</td>
+            <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span><br><span style="font-size:10px; color:var(--text-secondary);">${o.filial}</span></td>
         </tr>`;
-    }).join('') || `<tr><td colspan="36" style="text-align:center;padding:40px;font-size:14px;">Sem OFs pendentes correspondentes ao filtro.</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;font-size:14px;">Sem OFs pendentes correspondentes ao filtro.</td></tr>`;
     
     if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">OFs Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
 };
@@ -588,7 +626,12 @@ const renderDashboard = () => {
     let tb = itensFiltrados;
     if(filtroABC) { tb = tb.filter(i=>i.curva===filtroABC); $('filtro-abc-aviso').style.display='inline-block'; setTxt('filtro-abc-aviso', `✖ ABC: ${filtroABC}`); } else if($('filtro-abc-aviso')) $('filtro-abc-aviso').style.display='none';
     if(filtroStatus) { tb = tb.filter(i=> filtroStatus==='Ruptura' ? i.status.includes('Ruptura') : filtroStatus==='Obsoleto' ? i.status.includes('Obsoleto') : i.status===filtroStatus); $('filtro-status-aviso').style.display='inline-block'; setTxt('filtro-status-aviso', `✖ Status: ${filtroStatus}`); } else if($('filtro-status-aviso')) $('filtro-status-aviso').style.display='none';
-    if(filtroFilial) { tb = tb.filter(i=>i.filialNm===filtroFilial); $('filtro-filial-aviso').style.display='inline-block'; setTxt('filtro-filial-aviso', `✖ Filial: ${filtroFilial}`); } else if($('filtro-filial-aviso')) $('filtro-filial-aviso').style.display='none';
+    
+    let filiaisArray = Array.from(filtroFilial);
+    if(filtroFilial.size > 0 && filiaisArray.length < document.querySelectorAll('.chk-filial-item').length) {
+        $('filtro-filial-aviso').style.display='inline-block';
+        setTxt('filtro-filial-aviso', `✖ Filiais (${filtroFilial.size})`);
+    } else if($('filtro-filial-aviso')) $('filtro-filial-aviso').style.display='none';
 
     if($('dash-table-body')) $('dash-table-body').innerHTML = tb.slice(0, 50).map(i => `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><div class="abc-badge curva-${i.curva}" style="width:28px;height:28px;font-size:13px;position:static;">${i.curva}</div></td><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td style="font-size:11px;">${i.locais.length>1 ? i.locais.length+' Locais' : `Rep ${i.reparticao} | Prat ${i.prateleira}`}</td><td style="font-weight:800;">${i.saldo}</td><td style="font-weight:600;">${fmtMoeda(i.consumoFinanceiro)}</td><td style="font-weight:700;">${i.diasGiroMensal===Infinity?'Obsoleto':i.diasGiroMensal+'d'}</td><td><span class="badge-status ${i.statusBadge}">${i.status}</span></td></tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;">Nenhum dado encontrado.</td></tr>`;
 };
@@ -612,7 +655,22 @@ const atualizarGraficos = () => {
     
     chartStatus = new Chart(cS, { type: 'bar', data: { labels: ['Normal', 'Risco (Min)', 'Excesso', 'Rupturas', 'Obsoletos', 'Local 299/295'], datasets: [{ data: [cSt.N, cSt.R, cSt.E, cSt.RC, cSt.O, cSt.LC], backgroundColor: ['#10b981', '#f59e0b', '#0ea5e9', '#ef4444', '#64748b', '#8b5cf6'], borderRadius: 6 }] }, options: { ...gOpts('Distribuição Logística'), scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, border:{display:false} }, x: { grid: {display:false}, border:{display:false} } }, onClick: (e, el) => { if(el.length) { let s = ['Estoque Normal', 'Abaixo Mínimo', 'Excesso Estoque', 'Ruptura', 'Obsoleto', 'Normal/Local Crítico'][el[0].index]; filtroStatus = filtroStatus === s ? null : s; renderDashboard(); } } } });
     
-    if(cF) chartFiliais = new Chart(cF, { type: 'doughnut', data: { labels: Object.keys(vF), datasets: [{ data: Object.values(vF), backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'], borderWidth: isDark?0:2, borderColor: isDark?'transparent':'#fff' }] }, options: { ...gOpts('Distribuição (R$)'), cutout: '75%', onClick: (e, el) => { if(el.length) { let f = Object.keys(vF)[el[0].index]; filtroFilial = filtroFilial === f ? null : f; renderDashboard(); } } } });
+    if(cF) chartFiliais = new Chart(cF, { type: 'doughnut', data: { labels: Object.keys(vF), datasets: [{ data: Object.values(vF), backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'], borderWidth: isDark?0:2, borderColor: isDark?'transparent':'#fff' }] }, options: { ...gOpts('Distribuição (R$)'), cutout: '75%', onClick: (e, el) => { if(el.length) { let f = Object.keys(vF)[el[0].index]; 
+        if(filtroFilial.has(f) && filtroFilial.size === 1) {
+            document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
+            if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
+            filtroFilial.clear();
+            document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
+        } else {
+            filtroFilial.clear();
+            filtroFilial.add(f);
+            document.querySelectorAll('.chk-filial-item').forEach(chk => {
+                chk.checked = (chk.value === f);
+            });
+            if($('chk-all-filiais')) $('chk-all-filiais').checked = false;
+        }
+        renderDashboard(); 
+    } } });
 };
 
 // ==========================================================================
