@@ -130,22 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const thOFs = document.querySelector('#view-gestao-compras thead tr');
     if (thOFs) {
-        thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão / Dias s/ OF</th><th>Status / Filial</th>`;
-    }
-
-    const painelFiltros = document.querySelector('.filter-panel-body');
-    if (painelFiltros && !$('#select-tipo-ordem')) {
-        let divTipo = document.createElement('div');
-        divTipo.className = 'filter-group';
-        divTipo.innerHTML = `
-            <label class="filter-label">Tipo de Ordem (Gestão Compras):</label>
-            <select id="select-tipo-ordem" class="segmentation-select" onchange="dispararFiltros()">
-                <option value="">Todas (OFs e SCs)</option>
-                <option value="com_of">Apenas com OF Gerada</option>
-                <option value="sem_of">Apenas SCs (Sem OF)</option>
-            </select>
-        `;
-        painelFiltros.insertBefore(divTipo, painelFiltros.children[5]);
+        thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão Entrega</th><th>Status / Filial</th>`;
     }
 
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
@@ -268,17 +253,22 @@ window.exportarRevisaoExcel = () => {
 // INTELIGÊNCIA E CONSOLIDAÇÃO DE DADOS
 // ==========================================================================
 async function processarInteligencia() {
-    if (!bases.baseItens.length) return (mostrarToast("Base Mestre ausente.", "error"), setProgress(loaderProgress, "Base Mestre ausente ou vazia.", 'error'), $('loader-ring')?.classList.add('error'), $('btn-fallback').style.display = 'block', isFetchingData = false);
+    if (!bases.baseItens.length) return (mostrarToast("Base Mestre ausente.", "error"), setProgress(loaderProgress, "Erro Crítico", 'error'), $('loader-ring')?.classList.add('error'), $('btn-fallback').style.display = 'block', isFetchingData = false);
 
     const keys = {
         cod: ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto'],
         desc: ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'],
         saldo: ['qt saldo atual', 'saldo livre', 'saldo'], cons: ['qt movimento', 'quantidade consumida', 'quantidade'],
+        compFb: ['quantidade', 'qtde', 'saldo aberto', 'of - saldo', 'sc - quantidade'],
         custo: ['vl custo unitario atual', 'custo unitario', 'custo'], min: ['qt minimo', 'minimo', 'min'], max: ['qt maximo', 'maximo', 'max'],
         filId: ['cd filial'], filNm: ['nm filial', 'filial', 'of - filial entrega', 'sc - filial'],
         grp: ['nm grupo', 'grupo', 'categoria'], cls: ['nm classe', 'classe'], rep: ['cd reparticao', 'reparticao'], prat: ['cd prateleira', 'prateleira'], div: ['cd divisao', 'divisao'],
         mesMov: ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'], um: ['cd unidade medida', 'un', 'um'],
-        locId: ['cd local', 'cod local', 'local'], locNm: ['nm local', 'nome local', 'estoque', 'desc local'], vTot: ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo']
+        locId: ['cd local', 'cod local', 'local'], locNm: ['nm local', 'nome local', 'estoque', 'desc local'], vTot: ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo'],
+        scDt: ['sc - data criação', 'data criacao sc', 'data criacao'], recDt: ['rec - dt entrada', 'dt entrada', 'data entrada'], ofDt: ['of - data entrega', 'data entrega of', 'dt entrega of'],
+        scCod: ['sc - código', 'sc codigo', 'sc'], ofCod: ['of - codigo', 'of codigo', 'ordem fornecimento'], ofForn: ['of - nome fornecedor', 'fornecedor'],
+        ofQtd: ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'], recQtd: ['rec - quantidade', 'quantidade recebida', 'qtd recebida', 'quantidade rec'],
+        ofSit: ['of - situação of', 'situacao of', 'status of'], scSit: ['sc - situação', 'situacao sc'], scCanc: ['sc - cancelado', 'sc cancelado', 'cancelado']
     };
 
     let curMonth = new Date().getMonth() || 12;
@@ -295,39 +285,27 @@ async function processarInteligencia() {
         for(let t of searchTerms) {
             let termNorm = normStr(t).replace(/\s+/g, '');
             let fKey = rKeys.find(k => normStr(k).replace(/\s+/g, '') === termNorm || normStr(k).replace(/\s+/g, '').includes(termNorm));
-            if(fKey && row[fKey] !== undefined && row[fKey] !== null && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
+            if(fKey && row[fKey] && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
         }
         return '-';
     };
 
-    if (bases.compras && bases.compras.length > 0) {
-        let b = bases.compras[0];
-        let cCod = findKey(b, keys.cod);
-        
+    if (bases.compras.length) {
+        let b = bases.compras[0], c = { cod: findKey(b, keys.cod), ofQtd: findKey(b, keys.ofQtd), recQtd: findKey(b, keys.recQtd), ofSit: findKey(b, keys.ofSit), scSit: findKey(b, keys.scSit), scCanc: findKey(b, keys.scCanc), compFb: findKey(b, keys.compFb), scDt: findKey(b, keys.scDt), recDt: findKey(b, keys.recDt), scCod: findKey(b, keys.scCod), ofCod: findKey(b, keys.ofCod), desc: findKey(b, keys.desc), forn: findKey(b, keys.ofForn), dtEnt: findKey(b, keys.ofDt) };
         bases.compras.forEach(i => {
-            let rawCod = cCod ? i[cCod] : (i['CD ITEM'] || i['Cod Produto'] || i['Código']);
-            let cod = normCod(rawCod); 
-            if(!cod) return;
-            
-            let sitOF = normStr(getValExt(i, ['of - situação of', 'situacao of', 'status of', 'situação']));
-            let sitSC = normStr(getValExt(i, ['sc - situação', 'situacao sc']));
-            let cSC = normStr(getValExt(i, ['sc - cancelado', 'sc cancelado', 'cancelado']));
-            let ofCodVal = getValExt(i, ['of - codigo', 'of codigo', 'ordem fornecimento', 'of']);
+            let cod = normCod(i[c.cod]); if(!cod) return;
+            let sitOF = normStr(i[c.ofSit]), sitSC = normStr(i[c.scSit]), cSC = normStr(i[c.scCanc]);
+            let ofCodVal = String(i[c.ofCod]||'-').trim();
             
             let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
             let semOFGerada = (ofCodVal === '' || ofCodVal === '-');
             
             let pendente = 0;
             if (!fechada) {
-                let valOfSaldo = convNum(getValExt(i, ['of - saldo', 'saldo of', 'of saldo']));
-                let valScQtd = convNum(getValExt(i, ['sc - quantidade', 'quantidade', 'qtde', 'saldo aberto']));
-                
-                if (!semOFGerada && valOfSaldo > 0) {
-                    pendente = valOfSaldo;
-                } else if (semOFGerada) {
-                    pendente = valScQtd > 0 ? valScQtd : 1;
+                if (c.ofQtd && !semOFGerada) {
+                    pendente = Math.max(0, convNum(i[c.ofQtd]) - convNum(i[c.recQtd]));
                 } else {
-                    pendente = valOfSaldo > 0 ? valOfSaldo : valScQtd;
+                    pendente = convNum(i[c.compFb]) || convNum(i['sc - quantidade']) || convNum(i['quantidade']);
                 }
             }
             
@@ -335,27 +313,20 @@ async function processarInteligencia() {
                 if (pendente > 0) {
                     mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
                 }
-                let sit = getValExt(i, ['of - situação of', 'situacao of']) || (semOFGerada ? 'SC Pendente (Sem OF)' : 'Pendente'); 
+                let sit = i[c.ofSit] || (semOFGerada ? 'SC Pendente (Sem OF)' : 'Pendente'); 
                 setStatusOFUnicos.add(sit);
                 
-                let descProdVal = getValExt(i, ['nome do item detalhado', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto']);
-                let fornVal = getValExt(i, ['of - nome fornecedor', 'fornecedor']);
-                let dtEntVal = getValExt(i, ['of - data entrega', 'data entrega of', 'dt entrega of', 'sc - dt entrega']);
-                let scCodVal = getValExt(i, ['sc - código', 'sc codigo', 'sc']);
-
                 ordesAtivas.push({ 
-                    sc: scCodVal, of: ofCodVal, codProd: rawCod, descProd: descProdVal, fornecedor: fornVal, dataEntrega: dtEntVal, qtdPedidaOriginal: pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${ofCodVal} ${scCodVal} ${rawCod} ${fornVal}`.toLowerCase(),
+                    sc: i[c.scCod]||'-', of: ofCodVal, codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente > 0 ? pendente : convNum(i['sc - quantidade']), sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
                     
                     scSit_ext: getValExt(i, ['sc - situação']), scCC_ext: getValExt(i, ['sc - centro custo aprovador']), scDtCria_ext: getValExt(i, ['sc - data criação']), scSol_ext: getValExt(i, ['sc - nome solicitante']), scEmp_ext: getValExt(i, ['sc - empresa']), scFil_ext: getValExt(i, ['sc - filial']), scDescFil_ext: getValExt(i, ['sc - descr. filial']), scUM_ext: getValExt(i, ['sc - unid. medida']), scQtd_ext: getValExt(i, ['sc - quantidade']), scCat_ext: getValExt(i, ['sc - categoria']), scDtEnt_ext: getValExt(i, ['sc - dt entrega']), scReg_ext: getValExt(i, ['sc - regularização']), scObs_ext: getValExt(i, ['sc - obs']), scLocEst_ext: getValExt(i, ['sc - local estoque']), scCCUEtq_ext: getValExt(i, ['sc - ccu etq']), scAprov_ext: getValExt(i, ['sc - aprovador']),
                     ofData_ext: getValExt(i, ['of - data']), ofQtdSol_ext: getValExt(i, ['of - qtd. solicitada']), ofSaldo_ext: getValExt(i, ['of - saldo']), ofQtdEnt_ext: getValExt(i, ['of - qtd. entregue']), ofFechado_ext: getValExt(i, ['of - fechado']), ofBloqueado_ext: getValExt(i, ['of - bloqueado']), ofDtEnt_ext: getValExt(i, ['of - data entrega']), ofFrete_ext: getValExt(i, ['of - frete']), ofMoeda_ext: getValExt(i, ['of - moeda']), ofTipo_ext: getValExt(i, ['of - tipo']), ofEmail_ext: getValExt(i, ['of - email fornecedor']), ofObs_ext: getValExt(i, ['of - obs']),
                     recNF_ext: getValExt(i, ['rec - nr nf']), recSerie_ext: getValExt(i, ['rec - série']), recDtEmissao_ext: getValExt(i, ['rec - dt emissão']), recDtEntrada_ext: getValExt(i, ['rec - dt entrada']), recUM_ext: getValExt(i, ['rec - unid. medida']), recQtd_ext: getValExt(i, ['rec - quantidade']), recValUn_ext: getValExt(i, ['rec - valor un. fiscal'])
                 });
             }
-
-            let scDtKey = findKey(i, keys.scDt), recDtKey = findKey(i, keys.recDt);
-            if(scDtKey && recDtKey && i[scDtKey] && i[recDtKey]) {
+            if(c.scDt && c.recDt && i[c.scDt] && i[c.recDt]) {
                 let pD = s => { let p = String(s).trim().split('/'); return p.length===3 ? new Date(p[2].split(' ')[0], p[1]-1, p[0]) : new Date(s); };
-                let dtC = pD(i[scDtKey]), dtE = pD(i[recDtKey]);
+                let dtC = pD(i[c.scDt]), dtE = pD(i[c.recDt]);
                 if(!isNaN(dtC) && !isNaN(dtE)) {
                     let d = Math.ceil(Math.abs(dtE - dtC) / 86400000);
                     if(d > 0 && d < 300) { if(!mapLead.has(cod)) mapLead.set(cod, []); mapLead.get(cod).push(d); }
@@ -368,7 +339,7 @@ async function processarInteligencia() {
     setProgress(93, "Apurando Consumo e Histórico..."); await new Promise(r => setTimeout(r, 50));
     let mapConsumo = new Map(), mapUltimoMes = new Map(), hasConsumo = false;
     
-    if (bases.consumos && bases.consumos.length > 0) {
+    if (bases.consumos.length) {
         let b = bases.consumos[0], cm = findKey(b, keys.mesMov), cc = findKey(b, keys.cod), cq = findKey(b, keys.cons), cLoc = findKey(b, keys.locId);
         
         bases.consumos.forEach(i => { 
@@ -479,6 +450,7 @@ async function processarInteligencia() {
 
     itensProcessados = baseProc;
     
+    // Associa cada ordem ativa ao seu item correspondente na base para herdar Filial e Local exatos
     ordesAtivasFiltradas = ordesAtivas.map(o => {
         let matchItem = mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`) || Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd));
         return { 
@@ -505,7 +477,7 @@ async function processarInteligencia() {
 }
 
 // ==========================================================================
-// FILTROS, BUSCA E RENDERIZAÇÃO UNIFICADA EM TODAS AS ABAS
+// FILTROS, BUSCA E RENDERIZAÇÃO 
 // ==========================================================================
 window.toggleTodasFiliais = masterChk => {
     let status = masterChk.checked;
@@ -554,17 +526,13 @@ window.dispararFiltros = () => {
 
     let filiaisArray = Array.from(filtroFilial);
 
-    // Motor de filtragem unificado para os itens globais do sistema
-    itensFiltrados = itensProcessados.filter(i => {
-        let matchBusca = (!tSplit.length || tSplit.some(t => i.searchString.includes(t)));
-        let matchCurva = (!cFil || i.curva === cFil);
-        let matchStatus = (!sFil || i.status === sFil);
-        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm));
-        let matchLocal = (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil));
-        let matchImg = (!imgFil || (imgFil === 'com_imagem' ? i.temImagem : !i.temImagem));
-
-        return matchBusca && matchCurva && matchStatus && matchFilial && matchLocal && matchImg;
-    });
+    itensFiltrados = itensProcessados.filter(i => 
+        (!tSplit.length || tSplit.some(t => i.searchString.includes(t))) && 
+        (!cFil || i.curva === cFil) && (!sFil || i.status === sFil) && 
+        (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm)) &&
+        (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil)) &&
+        (!imgFil || (imgFil === 'com_imagem' ? i.temImagem : !i.temImagem))
+    );
 
     if (vistaAtual === 'pesquisa') renderPesquisa();
     else if (vistaAtual === 'dashboard') renderDashboard();
@@ -588,7 +556,6 @@ window.limparFiltroGrafico = tipo => {
 
 window.limparFiltros = () => {
     ['select-curva', 'select-saldo-status', 'select-imagem', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
-    if($('select-tipo-ordem')) $('select-tipo-ordem').value = "";
     filtroABC = filtroStatus = null;
     document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
     if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
@@ -652,20 +619,15 @@ const renderCompras = () => {
     if($('resumo-necessidade')) $('resumo-necessidade').innerHTML = `<div class="kpi-card border-warning"><span class="kpi-title">Reposição (Qtd)</span><span class="kpi-value color-warning">${tQtd}</span></div><div class="kpi-card border-success"><span class="kpi-title">Valor Estimado</span><span class="kpi-value color-success">${fmtMoeda(tVal)}</span></div>`;
 };
 
+// GESTÃO DE COMPRAS (OFs) FILTRADA POR FILIAL E LOCAL SELECIONADOS
 const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
     let sOF = $('select-status-of')?.value;
-    let tipoOrdem = $('select-tipo-ordem')?.value || "";
     
     let list = ordesAtivasFiltradas.filter(o => {
         let matchBusca = (!tSplit.length || tSplit.some(t => o.searchStr.includes(t)));
         let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral');
         let matchStatus = (!sOF || o.sitOFOriginal === sOF);
         
-        let temOF = (o.of !== '' && o.of !== '-');
-        let matchTipo = true;
-        if (tipoOrdem === 'com_of') matchTipo = temOF;
-        if (tipoOrdem === 'sem_of') matchTipo = !temOF;
-
         let matchLocal = true;
         if (lFil) {
             let [fNomeFiltro, localParteFiltro] = lFil.split(' | ');
@@ -677,7 +639,7 @@ const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
             matchLocal = matchFilialLocal && matchLocalItem;
         }
 
-        return matchBusca && matchFilial && matchStatus && matchTipo && matchLocal;
+        return matchBusca && matchFilial && matchStatus && matchLocal;
     });
 
     let vT = 0, qT = 0, fSet = new Set(), oSet = new Set();
@@ -686,33 +648,13 @@ const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        let infoTime = o.dataEntrega;
-        if (o.of === '-' || o.of === '') {
-            let dtCriaStr = o.scDtCria_ext;
-            if (dtCriaStr && dtCriaStr !== '-') {
-                let p = dtCriaStr.split('/');
-                if (p.length === 3) {
-                    let dia = parseInt(p[0]), mes = parseInt(p[1])-1, ano = parseInt(p[2].split(' ')[0]);
-                    if (ano < 100) ano += 2000;
-                    let dtCria = new Date(ano, mes, dia);
-                    let hoje = new Date(); hoje.setHours(0,0,0,0);
-                    let diffDias = Math.floor((hoje - dtCria) / (1000 * 60 * 60 * 24));
-                    infoTime = `Sem OF (Aberta há ${diffDias >= 0 ? diffDias : 0} dias)`;
-                } else {
-                    infoTime = `Sem OF (Criada em ${dtCriaStr})`;
-                }
-            } else {
-                infoTime = `Sem OF Gerada`;
-            }
-        }
-
         return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')">
             <td><strong>${o.of !== '-' ? o.of : 'Sem OF'}</strong><br><span style="font-size:10px; color:var(--text-secondary);">SC: ${o.sc}</span></td>
             <td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td>
             <td>${o.fornecedor}</td>
             <td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td>
             <td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td>
-            <td>${infoTime}</td>
+            <td>${o.dataEntrega}</td>
             <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span><br><span style="font-size:10px; color:var(--text-secondary);">${o.filial}</span></td>
         </tr>`;
     }).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;font-size:14px;">Sem ordens pendentes correspondentes ao filtro.</td></tr>`;
