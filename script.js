@@ -646,7 +646,8 @@ window.abrirModalDetalhes = (codNorm, fId) => {
                     <div class="metric-box metric-saldo"><span class="metric-label">Saldo Consolidado</span><span class="metric-value">${item.saldo}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Custo Un. (Médio)</span><span class="metric-value">${fmtMoeda(item.custoUnitario)}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Valor Imob. Total</span><span class="metric-value">${fmtMoeda(item.valorImobilizado)}</span></div>
-                    <div class="metric-box metric-default"><span class="metric-label">Min / Max (Global)</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Min / Max (Atual)</span><span class="metric-value">${item.minimo} / ${item.maximo}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label" style="color:var(--text-info);">Min / Max (Sugestão)</span><span class="metric-value" style="color:var(--text-info);">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro / Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:14px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:10px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
                     <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF)</span><span class="metric-value">${item.transito}</span></div>
