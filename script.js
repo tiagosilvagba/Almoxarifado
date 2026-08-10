@@ -5,9 +5,9 @@ const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [], itensFiltrados = [], ordesAtivasFiltradas = [];
 let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS", curMonthGlobal = 12;
 let chartABC, chartStatus, chartFiliais;
-let filtroABC = null, filtroStatus = null, filtroFilial = new Set(); // Alterado para Set para suportar múltiplas filiais
-let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true, mapeamentoAtivo = false;
-const imagensMapeadas = new Set(), setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
+let filtroABC = null, filtroStatus = null, filtroFilial = new Set();
+let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true;
+const setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
 let lbImages = [], lbIndex = 0, timerBusca;
 
 Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
@@ -94,7 +94,7 @@ window.navegarPara = view => {
 window.toggleSegmentacao = () => $('app-layout')?.classList.toggle('segmentation-hidden');
 
 // ==========================================================================
-// LIGHTBOX E MODAIS
+// LIGHTBOX E MODAIS DE IMAGEM
 // ==========================================================================
 const atualizarLightbox = () => {
     if($('lightbox-img') && lbImages.length > 0) {
@@ -130,28 +130,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const thOFs = document.querySelector('#view-gestao-compras thead tr');
     if (thOFs) {
-        thOFs.innerHTML = `<th>SC - Empresa</th><th>SC - Filial</th><th>SC - Descr. Filial</th><th>SC - Cód. Produto</th><th>SC - Nome Produto</th><th>SC - Unid. Medida</th><th>SC - Quantidade</th><th>SC - Categoria</th><th>SC - DT Entrega</th><th>SC - Regularização</th><th>SC - OBS</th><th>SC - Local Estoque</th><th>SC - CCU Etq</th><th>SC - Aprovador</th><th>OF - Codigo</th><th>OF - Data</th><th>OF - Nome Fornecedor</th><th>OF - Qtd. Solicitada</th><th>OF - Saldo</th><th>OF - Qtd. Entregue</th><th>OF - Fechado</th><th>OF - Bloqueado</th><th>OF - Data Entrega</th><th>OF - Frete</th><th>OF - Moeda</th><th>OF - Situação OF</th><th>OF - Tipo</th><th>OF - Email Fornecedor</th><th>OF - OBS</th><th>REC - Nr NF</th><th>REC - Série</th><th>REC - DT Emissão</th><th>REC - DT Entrada</th><th>REC - Unid. Medida</th><th>REC - Quantidade</th><th>REC - Valor Un. Fiscal</th>`;
+        thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão / Dias s/ OF</th><th>Status / Filial</th>`;
+    }
+
+    const painelFiltros = document.querySelector('.filter-panel-body');
+    if (painelFiltros && !$('#select-tipo-ordem')) {
+        let divTipo = document.createElement('div');
+        divTipo.className = 'filter-group';
+        divTipo.innerHTML = `
+            <label class="filter-label">Tipo de Ordem (Gestão Compras):</label>
+            <select id="select-tipo-ordem" class="segmentation-select" onchange="dispararFiltros()">
+                <option value="">Todas (OFs e SCs)</option>
+                <option value="com_of">Apenas com OF Gerada</option>
+                <option value="sem_of">Apenas SCs (Sem OF)</option>
+            </select>
+        `;
+        painelFiltros.insertBefore(divTipo, painelFiltros.children[4]);
     }
 
     setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
 });
-
-window.mapearImagensPasta = e => {
-    const files = e.target.files;
-    if (!files.length) return;
-    imagensMapeadas.clear();
-    let count = 0;
-    Array.from(files).forEach(f => {
-        let fn = f.name.toLowerCase();
-        if (/( - 0[1-6]\.)/.test(fn)) { imagensMapeadas.add(normCod(fn.split(' - ')[0])); count++; }
-    });
-    mapeamentoAtivo = true;
-    if (itensProcessados.length > 0) {
-        itensProcessados.forEach(i => i.temImagem = imagensMapeadas.has(i.codNorm));
-        window.dispararFiltros();
-    }
-    mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
-};
 
 // ==========================================================================
 // CARGA DE DADOS (FETCH & UPLOAD MANUAL)
@@ -223,11 +221,17 @@ const baixarExcel = (csv, nome) => {
 };
 
 window.exportarComprasExcel = () => {
-    const list = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0).sort((a,b) => a.saldo - b.saldo);
+    const list = itensFiltrados.filter(i => {
+        let saldoDisponivel = i.saldo + i.transito;
+        return (saldoDisponivel <= 0 || saldoDisponivel < i.minimo) && i.minimo > 0 && i.maximo > 0;
+    }).sort((a,b) => a.saldo - b.saldo);
     if (!list.length) return mostrarToast("Nenhum dado crítico para exportar.", "warning");
     
-    let csv = "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n" + 
-        list.map(i => `${i.cod};${i.desc.replace(/;/g, ',')};${i.filialNm.replace(/;/g, ',')};${i.saldo};${i.minimo};${i.maximo};${i.maximo - i.saldo};${i.custoUnitario.toFixed(2)};${((i.maximo - i.saldo) * i.custoUnitario).toFixed(2)}`).join('\n');
+    let csv = "Código;Descrição;Filial;Saldo Atual;Trânsito (OF/SC);Saldo Disponível;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n" + 
+        list.map(i => {
+            let sug = Math.max(0, i.maximo - (i.saldo + i.transito));
+            return `${i.cod};${i.desc.replace(/;/g, ',')};${i.filialNm.replace(/;/g, ',')};${i.saldo};${i.transito};${i.saldo + i.transito};${i.minimo};${i.maximo};${sug};${i.custoUnitario.toFixed(2)};${(sug * i.custoUnitario).toFixed(2)}`;
+        }).join('\n');
     baixarExcel(csv, "Necessidade_Compra");
 };
 
@@ -247,22 +251,17 @@ window.exportarRevisaoExcel = () => {
 // INTELIGÊNCIA E CONSOLIDAÇÃO DE DADOS
 // ==========================================================================
 async function processarInteligencia() {
-    if (!bases.baseItens.length) return (mostrarToast("Base Mestre ausente.", "error"), setProgress(loaderProgress, "Erro Crítico", 'error'), $('loader-ring')?.classList.add('error'), $('btn-fallback').style.display = 'block', isFetchingData = false);
+    if (!bases.baseItens.length) return (mostrarToast("Base Mestre ausente.", "error"), setProgress(loaderProgress, "Base Mestre ausente ou vazia.", 'error'), $('loader-ring')?.classList.add('error'), $('btn-fallback').style.display = 'block', isFetchingData = false);
 
     const keys = {
         cod: ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto'],
         desc: ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'],
         saldo: ['qt saldo atual', 'saldo livre', 'saldo'], cons: ['qt movimento', 'quantidade consumida', 'quantidade'],
-        compFb: ['quantidade', 'qtde', 'saldo aberto', 'of - saldo', 'sc - quantidade'],
         custo: ['vl custo unitario atual', 'custo unitario', 'custo'], min: ['qt minimo', 'minimo', 'min'], max: ['qt maximo', 'maximo', 'max'],
         filId: ['cd filial'], filNm: ['nm filial', 'filial', 'of - filial entrega', 'sc - filial'],
         grp: ['nm grupo', 'grupo', 'categoria'], cls: ['nm classe', 'classe'], rep: ['cd reparticao', 'reparticao'], prat: ['cd prateleira', 'prateleira'], div: ['cd divisao', 'divisao'],
         mesMov: ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'], um: ['cd unidade medida', 'un', 'um'],
-        locId: ['cd local', 'cod local', 'local'], locNm: ['nm local', 'nome local', 'estoque', 'desc local'], vTot: ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo'],
-        scDt: ['sc - data criação', 'data criacao sc', 'data criacao'], recDt: ['rec - dt entrada', 'dt entrada', 'data entrada'], ofDt: ['of - data entrega', 'data entrega of', 'dt entrega of'],
-        scCod: ['sc - código', 'sc codigo', 'sc'], ofCod: ['of - codigo', 'of codigo', 'ordem fornecimento'], ofForn: ['of - nome fornecedor', 'fornecedor'],
-        ofQtd: ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'], recQtd: ['rec - quantidade', 'quantidade recebida', 'qtd recebida', 'quantidade rec'],
-        ofSit: ['of - situação of', 'situacao of', 'status of'], scSit: ['sc - situação', 'situacao sc'], scCanc: ['sc - cancelado', 'sc cancelado', 'cancelado']
+        locId: ['cd local', 'cod local', 'local'], locNm: ['nm local', 'nome local', 'estoque', 'desc local'], vTot: ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo']
     };
 
     let curMonth = new Date().getMonth() || 12;
@@ -279,34 +278,67 @@ async function processarInteligencia() {
         for(let t of searchTerms) {
             let termNorm = normStr(t).replace(/\s+/g, '');
             let fKey = rKeys.find(k => normStr(k).replace(/\s+/g, '') === termNorm || normStr(k).replace(/\s+/g, '').includes(termNorm));
-            if(fKey && row[fKey] && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
+            if(fKey && row[fKey] !== undefined && row[fKey] !== null && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
         }
         return '-';
     };
 
-    if (bases.compras.length) {
-        let b = bases.compras[0], c = { cod: findKey(b, keys.cod), ofQtd: findKey(b, keys.ofQtd), recQtd: findKey(b, keys.recQtd), ofSit: findKey(b, keys.ofSit), scSit: findKey(b, keys.scSit), scCanc: findKey(b, keys.scCanc), compFb: findKey(b, keys.compFb), scDt: findKey(b, keys.scDt), recDt: findKey(b, keys.recDt), scCod: findKey(b, keys.scCod), ofCod: findKey(b, keys.ofCod), desc: findKey(b, keys.desc), forn: findKey(b, keys.ofForn), dtEnt: findKey(b, keys.ofDt) };
+    if (bases.compras && bases.compras.length > 0) {
+        let b = bases.compras[0];
+        let cCod = findKey(b, keys.cod);
+        
         bases.compras.forEach(i => {
-            let cod = normCod(i[c.cod]); if(!cod) return;
-            let sitOF = normStr(i[c.ofSit]), sitSC = normStr(i[c.scSit]), cSC = normStr(i[c.scCanc]);
-            let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
-            let pendente = fechada ? 0 : c.ofQtd ? Math.max(0, convNum(i[c.ofQtd]) - convNum(i[c.recQtd])) : convNum(i[c.compFb]);
+            let rawCod = cCod ? i[cCod] : (i['CD ITEM'] || i['Cod Produto'] || i['Código']);
+            let cod = normCod(rawCod); 
+            if(!cod) return;
             
-            if(pendente > 0) {
-                mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
-                let sit = i[c.ofSit] || 'Pendente'; setStatusOFUnicos.add(sit);
+            let sitOF = normStr(getValExt(i, ['of - situação of', 'situacao of', 'status of', 'situação']));
+            let sitSC = normStr(getValExt(i, ['sc - situação', 'situacao sc']));
+            let cSC = normStr(getValExt(i, ['sc - cancelado', 'sc cancelado', 'cancelado']));
+            let ofCodVal = getValExt(i, ['of - codigo', 'of codigo', 'ordem fornecimento', 'of']);
+            
+            let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
+            let semOFGerada = (ofCodVal === '' || ofCodVal === '-');
+            
+            let pendente = 0;
+            if (!fechada) {
+                let valOfSaldo = convNum(getValExt(i, ['of - saldo', 'saldo of', 'of saldo']));
+                let valScQtd = convNum(getValExt(i, ['sc - quantidade', 'quantidade', 'qtde', 'saldo aberto']));
                 
+                if (!semOFGerada && valOfSaldo > 0) {
+                    pendente = valOfSaldo;
+                } else if (semOFGerada) {
+                    pendente = valScQtd > 0 ? valScQtd : 1;
+                } else {
+                    pendente = valOfSaldo > 0 ? valOfSaldo : valScQtd;
+                }
+            }
+            
+            if(pendente > 0 || semOFGerada) {
+                if (pendente > 0) {
+                    mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
+                }
+                let sit = getValExt(i, ['of - situação of', 'situacao of']) || (semOFGerada ? 'SC Pendente (Sem OF)' : 'Pendente'); 
+                setStatusOFUnicos.add(sit);
+                
+                let descProdVal = getValExt(i, ['nome do item detalhado', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto']);
+                let fornVal = getValExt(i, ['of - nome fornecedor', 'fornecedor']);
+                let dtEntVal = getValExt(i, ['of - data entrega', 'data entrega of', 'dt entrega of', 'sc - dt entrega']);
+                let scCodVal = getValExt(i, ['sc - código', 'sc codigo', 'sc']);
+
                 ordesAtivas.push({ 
-                    sc: i[c.scCod]||'-', of: i[c.ofCod]||'-', codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
+                    sc: scCodVal, of: ofCodVal, codProd: rawCod, descProd: descProdVal, fornecedor: fornVal, dataEntrega: dtEntVal, qtdPedidaOriginal: pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${ofCodVal} ${scCodVal} ${rawCod} ${fornVal}`.toLowerCase(),
                     
                     scSit_ext: getValExt(i, ['sc - situação']), scCC_ext: getValExt(i, ['sc - centro custo aprovador']), scDtCria_ext: getValExt(i, ['sc - data criação']), scSol_ext: getValExt(i, ['sc - nome solicitante']), scEmp_ext: getValExt(i, ['sc - empresa']), scFil_ext: getValExt(i, ['sc - filial']), scDescFil_ext: getValExt(i, ['sc - descr. filial']), scUM_ext: getValExt(i, ['sc - unid. medida']), scQtd_ext: getValExt(i, ['sc - quantidade']), scCat_ext: getValExt(i, ['sc - categoria']), scDtEnt_ext: getValExt(i, ['sc - dt entrega']), scReg_ext: getValExt(i, ['sc - regularização']), scObs_ext: getValExt(i, ['sc - obs']), scLocEst_ext: getValExt(i, ['sc - local estoque']), scCCUEtq_ext: getValExt(i, ['sc - ccu etq']), scAprov_ext: getValExt(i, ['sc - aprovador']),
                     ofData_ext: getValExt(i, ['of - data']), ofQtdSol_ext: getValExt(i, ['of - qtd. solicitada']), ofSaldo_ext: getValExt(i, ['of - saldo']), ofQtdEnt_ext: getValExt(i, ['of - qtd. entregue']), ofFechado_ext: getValExt(i, ['of - fechado']), ofBloqueado_ext: getValExt(i, ['of - bloqueado']), ofDtEnt_ext: getValExt(i, ['of - data entrega']), ofFrete_ext: getValExt(i, ['of - frete']), ofMoeda_ext: getValExt(i, ['of - moeda']), ofTipo_ext: getValExt(i, ['of - tipo']), ofEmail_ext: getValExt(i, ['of - email fornecedor']), ofObs_ext: getValExt(i, ['of - obs']),
                     recNF_ext: getValExt(i, ['rec - nr nf']), recSerie_ext: getValExt(i, ['rec - série']), recDtEmissao_ext: getValExt(i, ['rec - dt emissão']), recDtEntrada_ext: getValExt(i, ['rec - dt entrada']), recUM_ext: getValExt(i, ['rec - unid. medida']), recQtd_ext: getValExt(i, ['rec - quantidade']), recValUn_ext: getValExt(i, ['rec - valor un. fiscal'])
                 });
             }
-            if(c.scDt && c.recDt && i[c.scDt] && i[c.recDt]) {
+
+            let scDtKey = findKey(i, keys.scDt), recDtKey = findKey(i, keys.recDt);
+            if(scDtKey && recDtKey && i[scDtKey] && i[recDtKey]) {
                 let pD = s => { let p = String(s).trim().split('/'); return p.length===3 ? new Date(p[2].split(' ')[0], p[1]-1, p[0]) : new Date(s); };
-                let dtC = pD(i[c.scDt]), dtE = pD(i[c.recDt]);
+                let dtC = pD(i[scDtKey]), dtE = pD(i[recDtKey]);
                 if(!isNaN(dtC) && !isNaN(dtE)) {
                     let d = Math.ceil(Math.abs(dtE - dtC) / 86400000);
                     if(d > 0 && d < 300) { if(!mapLead.has(cod)) mapLead.set(cod, []); mapLead.get(cod).push(d); }
@@ -319,7 +351,7 @@ async function processarInteligencia() {
     setProgress(93, "Apurando Consumo e Histórico..."); await new Promise(r => setTimeout(r, 50));
     let mapConsumo = new Map(), mapUltimoMes = new Map(), hasConsumo = false;
     
-    if (bases.consumos.length) {
+    if (bases.consumos && bases.consumos.length > 0) {
         let b = bases.consumos[0], cm = findKey(b, keys.mesMov), cc = findKey(b, keys.cod), cq = findKey(b, keys.cons), cLoc = findKey(b, keys.locId);
         
         bases.consumos.forEach(i => { 
@@ -346,7 +378,7 @@ async function processarInteligencia() {
 
     setProgress(95, "Consolidando Base..."); await new Promise(r => setTimeout(r, 50));
     let mapCon = new Map(); setLocaisUnicos.clear(); let setFil = new Set();
-    let b0 = bases.baseItens[0], b = { cod: findKey(b0, keys.cod), desc: findKey(b0, keys.desc), saldo: findKey(b0, keys.saldo), min: findKey(b0, keys.min), max: findKey(b0, keys.max), custo: findKey(b0, keys.custo), um: findKey(b0, keys.um), fNm: findKey(b0, keys.filNm), fId: findKey(b0, keys.filId), grp: findKey(b0, keys.grp), cls: findKey(b0, keys.cls), rep: findKey(b0, keys.rep), prat: findKey(b0, keys.prat), div: findKey(b0, keys.div), lId: findKey(b0, keys.locId), lNm: findKey(b0, keys.locNm), vTot: findKey(b0, keys.vTot) };
+    let b0 = bases.baseItens[0], b = { cod: findKey(b0, keys.cod), desc: findKey(b0, keys.desc), saldo: findKey(b0, keys.saldo), min: findKey(b0, keys.min), max: findKey(b0, keys.max), custo: findKey(b0, keys.custo), um: findKey(b0, keys.um), fNm: findKey(b0, keys.filNm), fId: findKey(b0, keys.filId), grp: findKey(b0, keys.grp), cls: findKey(b0, keys.classe), rep: findKey(b0, keys.rep), prat: findKey(b0, keys.prat), div: findKey(b0, keys.div), lId: findKey(b0, keys.locId), lNm: findKey(b0, keys.locNm), vTot: findKey(b0, keys.vTot) };
 
     bases.baseItens.forEach(i => {
         let cB = String(i[b.cod]||'').replace(/\./g, ''), cN = normCod(cB); if(!cN) return;
@@ -372,11 +404,9 @@ async function processarInteligencia() {
         o.locais.push({ filialNm: fNm, localId: lId, localNm: lNm, reparticao: rep, prateleira: prat, divisao: div, saldo: sld, custoUnitario: cst, isCritico: crit });
     });
 
-    // Renderiza o seletor de filiais atualizado para permitir múltiplas escolhas baseadas em checkboxes
     const containerFilial = $('select-filial');
     if(containerFilial) {
         if(containerFilial.tagName === 'SELECT') {
-            // Substitui o select por um container interativo de checkboxes para múltipla seleção
             let parentDiv = containerFilial.parentNode;
             let multiDiv = document.createElement('div');
             multiDiv.id = 'select-filial';
@@ -422,7 +452,7 @@ async function processarInteligencia() {
         else if (i.maximo > 0 && i.saldo > i.maximo) { st = 'Excesso Estoque'; bd = 'badge-acima'; }
 
         i.reparticao = i.locais[0]?.reparticao || '-'; i.prateleira = i.locais[0]?.prateleira || '-'; i.divisao = i.locais[0]?.divisao || '-';
-        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: mapeamentoAtivo ? imagensMapeadas.has(i.codNorm) : null, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
+        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: false, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
     }).filter(Boolean).sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
     if (!baseProc.length) return (fecharLoader(), isFetchingData = false);
@@ -431,11 +461,18 @@ async function processarInteligencia() {
     itemsABC.forEach(i => { if (tFin > 0 && i.consumoFinanceiro > 0) { cAcum += i.consumoFinanceiro; let p = cAcum / tFin; i.curva = p <= 0.8 ? 'A' : p <= 0.95 ? 'B' : 'C'; } });
 
     itensProcessados = baseProc;
-    ordesAtivasFiltradas = ordesAtivas.map(o => ({ ...o, filial: mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`)?.filialNm || 'Geral' }));
+    
+    ordesAtivasFiltradas = ordesAtivas.map(o => {
+        let matchItem = mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`) || Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd));
+        return { 
+            ...o, 
+            filial: matchItem ? matchItem.filialNm : 'Geral',
+            locaisItem: matchItem ? matchItem.locais : []
+        };
+    });
     
     if($('select-status-of')) $('select-status-of').innerHTML = '<option value="">Todos os Status</option>' + Array.from(setStatusOFUnicos).sort().map(s => `<option value="${s}">${s}</option>`).join('');
 
-    // Preenche inicialmente todas as filiais no Set de filtro múltiplo
     filtroFilial.clear();
     document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
 
@@ -451,7 +488,7 @@ async function processarInteligencia() {
 }
 
 // ==========================================================================
-// FILTROS, BUSCA E RENDERIZAÇÃO 
+// FILTROS, BUSCA E RENDERIZAÇÃO UNIFICADA EM TODAS AS ABAS
 // ==========================================================================
 window.toggleTodasFiliais = masterChk => {
     let status = masterChk.checked;
@@ -494,24 +531,24 @@ window.atualizarFiltroLocais = () => {
 window.dispararFiltros = () => {
     let tRaw = vistaAtual === 'pesquisa' ? $('busca')?.value : vistaAtual === 'compras' ? $('busca-compras')?.value : vistaAtual === 'gestao-compras' ? $('busca-ofs')?.value : $('busca')?.value;
     let tSplit = (tRaw||'').split(',').map(t => normStr(t)).filter(Boolean);
-    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, imgFil = $('select-imagem')?.value, lFil = $('select-local')?.value || "";
-
-    if (imgFil && !mapeamentoAtivo) { mostrarToast("Mapeie a pasta de imagens primeiro.", "warning"); $('select-imagem').value = ""; return; }
+    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, lFil = $('select-local')?.value || "";
 
     let filiaisArray = Array.from(filtroFilial);
 
-    itensFiltrados = itensProcessados.filter(i => 
-        (!tSplit.length || tSplit.some(t => i.searchString.includes(t))) && 
-        (!cFil || i.curva === cFil) && (!sFil || i.status === sFil) && 
-        (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm)) &&
-        (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil)) &&
-        (!imgFil || (imgFil === 'com_imagem' ? i.temImagem : !i.temImagem))
-    );
+    itensFiltrados = itensProcessados.filter(i => {
+        let matchBusca = (!tSplit.length || tSplit.some(t => i.searchString.includes(t)));
+        let matchCurva = (!cFil || i.curva === cFil);
+        let matchStatus = (!sFil || i.status === sFil);
+        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm));
+        let matchLocal = (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil));
+
+        return matchBusca && matchCurva && matchStatus && matchFilial && matchLocal;
+    });
 
     if (vistaAtual === 'pesquisa') renderPesquisa();
     else if (vistaAtual === 'dashboard') renderDashboard();
     else if (vistaAtual === 'compras') renderCompras();
-    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray);
+    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray, lFil);
     else if (vistaAtual === 'revisao') renderRevisao();
 };
 
@@ -529,7 +566,8 @@ window.limparFiltroGrafico = tipo => {
 };
 
 window.limparFiltros = () => {
-    ['select-curva', 'select-saldo-status', 'select-imagem', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
+    ['select-curva', 'select-saldo-status', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
+    if($('select-tipo-ordem')) $('select-tipo-ordem').value = "";
     filtroABC = filtroStatus = null;
     document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
     if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
@@ -543,9 +581,19 @@ window.limparFiltros = () => {
 // ================= RENDERIZADORES =================
 const renderPesquisa = () => {
     setTxt('contador-itens', `${itensFiltrados.length} itens encontrados.`);
-    $('resultados').innerHTML = itensFiltrados.slice(0, 100).map(i => `
+    $('resultados').innerHTML = itensFiltrados.slice(0, 100).map(i => {
+        let lbArr = [];
+        for(let k = 1; k <= 6; k++) { lbArr.push(`imagens/${i.cod} - 0${k}.jpg`); }
+
+        return `
         <div class="item-card fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-            <div class="item-media"><div class="abc-badge curva-${i.curva}">${i.curva}</div><div class="item-image-container">${mapeamentoAtivo ? (i.temImagem ? `<img src="imagens/${i.cod} - 01.jpg">` : `<div class="img-placeholder">🚫<br>SEM FOTO</div>`) : `<img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>`}</div></div>
+            <div class="item-media">
+                <div class="abc-badge curva-${i.curva}">${i.curva}</div>
+                <div class="item-image-container" onclick="window.abrirLightboxArray('${lbArr.join(',')}', 0, event)">
+                    <img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                    <div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>
+                </div>
+            </div>
             <div class="item-info">
                 <div class="item-header"><div class="item-title"><span class="item-title-cod">#${i.cod}</span> ${i.desc}</div><span class="badge-status ${i.statusBadge}">${i.status}</span></div>
                 <div class="item-category"><span class="chip-category">${i.filialNm}</span><span class="chip-category">${i.grupo||'Geral'}</span><span class="chip-category">${i.classe||'N/A'}</span><span class="chip-category">UN: ${i.um||'UN'}</span></div>
@@ -557,7 +605,8 @@ const renderPesquisa = () => {
                     <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${fmtMoeda(i.consumoFinanceiro)}</span></div>
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 };
 
 const renderRevisao = () => {
@@ -570,65 +619,95 @@ const renderRevisao = () => {
 };
 
 const renderCompras = () => {
-    let list = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0).sort((a,b) => a.saldo - b.saldo);
+    let list = itensFiltrados.filter(i => {
+        let saldoDisponivel = i.saldo + i.transito;
+        return (saldoDisponivel <= 0 || saldoDisponivel < i.minimo) && i.minimo > 0 && i.maximo > 0;
+    }).sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito));
+
     let tQtd = 0, tVal = 0;
     $('compras-table-body').innerHTML = list.map(i => {
-        let sug = i.maximo - i.saldo; tQtd += sug; tVal += (sug * i.custoUnitario);
-        return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td>${i.filialNm}</td><td style="font-weight:900;color:var(--text-critical);">${i.saldo}</td><td style="font-weight:700;color:var(--text-warning);">${i.minimo}</td><td style="font-weight:700;color:var(--primary-color);">${i.maximo}</td><td style="font-weight:900;color:var(--text-success);">COMPRAR +${sug}</td></tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem necessidade de compras críticas.</td></tr>`;
+        let saldoDisponivel = i.saldo + i.transito;
+        let sug = Math.max(0, i.maximo - saldoDisponivel); 
+        tQtd += sug; tVal += (sug * i.custoUnitario);
+        return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
+            <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td>
+            <td>${i.filialNm}</td>
+            <td style="font-weight:900;">${i.saldo} <span style="font-size:10px; color:var(--text-info); font-weight:normal;">(+${i.transito} trânsito)</span></td>
+            <td style="font-weight:700;color:var(--text-warning);">${i.minimo}</td>
+            <td style="font-weight:700;color:var(--primary-color);">${i.maximo}</td>
+            <td style="font-weight:900;color:var(--text-success);">COMPRAR +${sug}</td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem necessidade de compras críticas (considerando o trânsito de SCs/OFs).</td></tr>`;
+    
     if($('resumo-necessidade')) $('resumo-necessidade').innerHTML = `<div class="kpi-card border-warning"><span class="kpi-title">Reposição (Qtd)</span><span class="kpi-value color-warning">${tQtd}</span></div><div class="kpi-card border-success"><span class="kpi-title">Valor Estimado</span><span class="kpi-value color-success">${fmtMoeda(tVal)}</span></div>`;
 };
 
-const renderGestaoCompras = (tSplit, filiaisArray) => {
+const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
     let sOF = $('select-status-of')?.value;
-    let list = ordesAtivasFiltradas.filter(o => (!tSplit.length || tSplit.some(t => o.searchStr.includes(t))) && (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral') && (!sOF || o.sitOFOriginal === sOF));
+    let tipoOrdem = $('select-tipo-ordem')?.value || "";
+    
+    let list = ordesAtivasFiltradas.filter(o => {
+        let matchBusca = (!tSplit.length || tSplit.some(t => o.searchStr.includes(t)));
+        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral');
+        let matchStatus = (!sOF || o.sitOFOriginal === sOF);
+        
+        let temOF = (o.of !== '' && o.of !== '-');
+        let matchTipo = true;
+        if (tipoOrdem === 'com_of') matchTipo = temOF;
+        if (tipoOrdem === 'sem_of') matchTipo = !temOF;
+
+        let matchLocal = true;
+        if (lFil) {
+            let [fNomeFiltro, localParteFiltro] = lFil.split(' | ');
+            let matchFilialLocal = (o.filial === fNomeFiltro || o.filial === 'Geral');
+            let matchLocalItem = o.locaisItem && o.locaisItem.some(l => {
+                let fmt = l.localId ? `${l.localId} - ${l.localNm}` : l.localNm;
+                return `${l.filialNm} | ${fmt}` === lFil;
+            });
+            matchLocal = matchFilialLocal && matchLocalItem;
+        }
+
+        return matchBusca && matchFilial && matchStatus && matchTipo && matchLocal;
+    });
+
     let vT = 0, qT = 0, fSet = new Set(), oSet = new Set();
     
     $('ofs-table-body').innerHTML = list.slice(0, 100).map(o => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')" style="white-space: nowrap; font-size: 11px;">
-            <td>${o.scEmp_ext}</td>
-            <td>${o.scFil_ext}</td>
-            <td>${o.scDescFil_ext}</td>
-            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong></td>
-            <td>${o.descProd}</td>
-            <td>${o.scUM_ext}</td>
-            <td>${o.scQtd_ext}</td>
-            <td>${o.scCat_ext}</td>
-            <td>${o.scDtEnt_ext}</td>
-            <td>${o.scReg_ext}</td>
-            <td>${o.scObs_ext}</td>
-            <td>${o.scLocEst_ext}</td>
-            <td>${o.scCCUEtq_ext}</td>
-            <td>${o.scAprov_ext}</td>
-            <td><strong>${o.of}</strong></td>
-            <td>${o.ofData_ext}</td>
+        let infoTime = o.dataEntrega;
+        if (o.of === '-' || o.of === '') {
+            let dtCriaStr = o.scDtCria_ext;
+            if (dtCriaStr && dtCriaStr !== '-') {
+                let p = dtCriaStr.split('/');
+                if (p.length === 3) {
+                    let dia = parseInt(p[0]), mes = parseInt(p[1])-1, ano = parseInt(p[2].split(' ')[0]);
+                    if (ano < 100) ano += 2000;
+                    let dtCria = new Date(ano, mes, dia);
+                    let hoje = new Date(); hoje.setHours(0,0,0,0);
+                    let diffDias = Math.floor((hoje - dtCria) / (1000 * 60 * 60 * 24));
+                    infoTime = `Sem OF (Aberta há ${diffDias >= 0 ? diffDias : 0} dias)`;
+                } else {
+                    infoTime = `Sem OF (Criada em ${dtCriaStr})`;
+                }
+            } else {
+                infoTime = `Sem OF Gerada`;
+            }
+        }
+
+        return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')">
+            <td><strong>${o.of !== '-' ? o.of : 'Sem OF'}</strong><br><span style="font-size:10px; color:var(--text-secondary);">SC: ${o.sc}</span></td>
+            <td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td>
             <td>${o.fornecedor}</td>
-            <td>${o.ofQtdSol_ext}</td>
+            <td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td>
             <td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td>
-            <td>${o.ofQtdEnt_ext}</td>
-            <td>${o.ofFechado_ext}</td>
-            <td>${o.ofBloqueado_ext}</td>
-            <td>${o.ofDtEnt_ext}</td>
-            <td>${o.ofFrete_ext}</td>
-            <td>${o.ofMoeda_ext}</td>
-            <td>${o.sitOFOriginal}</td>
-            <td>${o.ofTipo_ext}</td>
-            <td>${o.ofEmail_ext}</td>
-            <td>${o.ofObs_ext}</td>
-            <td>${o.recNF_ext}</td>
-            <td>${o.recSerie_ext}</td>
-            <td>${o.recDtEmissao_ext}</td>
-            <td>${o.recDtEntrada_ext}</td>
-            <td>${o.recUM_ext}</td>
-            <td>${o.recQtd_ext}</td>
-            <td>${o.recValUn_ext !== '-' ? 'R$ ' + o.recValUn_ext : '-'}</td>
+            <td>${infoTime}</td>
+            <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span><br><span style="font-size:10px; color:var(--text-secondary);">${o.filial}</span></td>
         </tr>`;
-    }).join('') || `<tr><td colspan="36" style="text-align:center;padding:40px;font-size:14px;">Sem OFs pendentes correspondentes ao filtro.</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;font-size:14px;">Sem ordens pendentes correspondentes ao filtro.</td></tr>`;
     
-    if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">OFs Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
+    if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">Ordens Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
 };
 
 const renderDashboard = () => {
@@ -685,7 +764,6 @@ const atualizarGraficos = () => {
     chartStatus = new Chart(cS, { type: 'bar', data: { labels: ['Normal', 'Risco (Min)', 'Excesso', 'Rupturas', 'Obsoletos', 'Local 299/295'], datasets: [{ data: [cSt.N, cSt.R, cSt.E, cSt.RC, cSt.O, cSt.LC], backgroundColor: ['#10b981', '#f59e0b', '#0ea5e9', '#ef4444', '#64748b', '#8b5cf6'], borderRadius: 6 }] }, options: { ...gOpts('Distribuição Logística'), scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, border:{display:false} }, x: { grid: {display:false}, border:{display:false} } }, onClick: (e, el) => { if(el.length) { let s = ['Estoque Normal', 'Abaixo Mínimo', 'Excesso Estoque', 'Ruptura', 'Obsoleto', 'Normal/Local Crítico'][el[0].index]; filtroStatus = filtroStatus === s ? null : s; renderDashboard(); } } } });
     
     if(cF) chartFiliais = new Chart(cF, { type: 'doughnut', data: { labels: Object.keys(vF), datasets: [{ data: Object.values(vF), backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'], borderWidth: isDark?0:2, borderColor: isDark?'transparent':'#fff' }] }, options: { ...gOpts('Distribuição (R$)'), cutout: '75%', onClick: (e, el) => { if(el.length) { let f = Object.keys(vF)[el[0].index]; 
-        // Clique no gráfico de filiais adiciona/alterna a filial selecionada
         if(filtroFilial.has(f) && filtroFilial.size === 1) {
             document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
             if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
@@ -710,12 +788,26 @@ window.abrirModalDetalhes = (codNorm, fId) => {
     let item = itensProcessados.find(i => i.codNorm === codNorm && i.filialIdBase === fId);
     if (!item) return mostrarToast("Erro ao abrir.", "error");
 
-    let imgsHTML = '', lbArr = [];
-    if (mapeamentoAtivo && item.temImagem) {
-        for(let k = 1; k <= 6; k++) { let p = `imagens/${item.cod} - 0${k}.jpg`; lbArr.push(p); imgsHTML += `<img src="${p}" style="height:150px;min-width:150px;border-radius:12px;object-fit:cover;" onclick="window.abrirLightboxArray('${lbArr.join(',')}', ${k-1}, event)" onerror="this.style.display='none'">`; }
-    } else { imgsHTML = `<img src="imagens/${item.cod} - 01.jpg" style="height:150px;border-radius:12px;object-fit:cover;" onclick="window.abrirLightboxArray('imagens/${item.cod} - 01.jpg', 0, event)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;width:150px;height:150px;">🚫<br>SEM FOTO</div>`; }
+    let lbArr = [];
+    for(let k = 1; k <= 6; k++) { lbArr.push(`imagens/${item.cod} - 0${k}.jpg`); }
+
+    let imgsHTML = lbArr.map((path, idx) => `
+        <img src="${path}" style="height:150px;min-width:150px;border-radius:12px;object-fit:cover;cursor:zoom-in;" onclick="window.abrirLightboxArray('${lbArr.join(',')}', ${idx}, event)" onerror="this.style.display='none'">
+    `).join('');
 
     let locs = item.locais.map(l => `<tr><td>${l.filialNm}</td><td><strong style="color:var(--primary-color);">${l.localId||'-'}</strong> - ${l.localNm}</td><td>${l.reparticao}</td><td>${l.prateleira}</td><td>${l.divisao}</td><td style="font-weight:800;">${l.saldo}</td></tr>`).join('');
+
+    let ordensDoItem = ordesAtivasFiltradas.filter(o => normCod(o.codProd) === item.codNorm);
+    let transitoHTML = ordensDoItem.length > 0 ? ordensDoItem.map(o => `
+        <tr>
+            <td><strong>${o.sc}</strong></td>
+            <td><strong>${o.of !== '-' ? o.of : 'Sem OF (SC Pendente)'}</strong></td>
+            <td>${o.fornecedor}</td>
+            <td style="font-weight:800; color:var(--text-warning);">${o.saldoOF}</td>
+            <td>${o.dataEntrega !== '-' ? o.dataEntrega : 'Não informada'}</td>
+            <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span></td>
+        </tr>
+    `).join('') : `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">Nenhum pedido em trânsito no momento.</td></tr>`;
 
     let labelHistorico = item.mesesSemConsumo === 0 ? '(Neste Mês)' : item.mesesSemConsumo === Infinity ? '(Sem Histórico)' : `Há ${item.mesesSemConsumo} meses`;
 
@@ -738,12 +830,22 @@ window.abrirModalDetalhes = (codNorm, fId) => {
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--text-info);">Min / Max (Sugestão)</span><span class="metric-value" style="color:var(--text-info);">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro / Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:14px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:10px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
-                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF)</span><span class="metric-value">${item.transito}</span></div>
+                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF/SC)</span><span class="metric-value">${item.transito}</span></div>
                 </div>
             </div>
         </div>
-        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos</h3>
+
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">📦 Pedidos e SCs em Trânsito para este Item</h3>
+        <div style="overflow-x:auto; margin-bottom:24px; border-radius:12px; border:1px solid var(--border-color);">
+            <table class="modal-locais-table">
+                <thead><tr><th>SC</th><th>OF</th><th>Fornecedor</th><th>Qtd Pendente</th><th>Previsão Entrega</th><th>Status</th></tr></thead>
+                <tbody>${transitoHTML}</tbody>
+            </table>
+        </div>
+
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos (Até 6 Imagens Automáticas)</h3>
         <div class="modal-gallery-container" style="margin-bottom:24px;">${imgsHTML}</div>
+        
         <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Detalhamento de Endereços e Prateleiras (Locais)</h3>
         <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);"><table class="modal-locais-table"><thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prateleira</th><th>Divisão</th><th>Saldo Local</th></tr></thead><tbody>${locs}</tbody></table></div>`;
     $('modal-item').style.display = 'flex';
@@ -754,7 +856,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
         o = ordesAtivasFiltradas.find(x => x.of === ofId && x.sc === scId && normCod(x.codProd) === c), 
         i = itensProcessados.find(x => x.codNorm === c);
 
-    if (!o) return mostrarToast("Erro ao carregar OF.", "error");
+    if (!o) return mostrarToast("Erro ao carregar ordem.", "error");
 
     if (!i) i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
 
@@ -783,16 +885,18 @@ window.abrirModalOF = (ofId, codProd, scId) => {
 
     const rowRender = (label, val) => `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="color:var(--text-secondary); font-weight:700;">${label}:</span> <span style="text-align:right; font-weight:600; color:var(--text-primary); max-width:65%; word-break:break-word;">${val}</span></div>`;
 
+    let tituloCabecalho = o.of !== '-' ? `OF ${o.of} / SC ${o.sc}` : `SC ${o.sc} (Aguardando OF)`;
+
     $('modal-body-content').innerHTML = `
         <div class="modal-header-section" style="border-bottom:none; margin-bottom:10px; padding-bottom:0;">
             <div style="flex-grow:1;">
-                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">OF ${o.of}</span> / <span style="color:var(--text-info);">SC ${o.sc}</span></h2>
+                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">${tituloCabecalho}</span></h2>
                 <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">Produto #${o.codProd} - ${o.descProd}</h3>
                 
                 <div class="item-metrics-grid" style="margin-bottom:24px;">
                     <div class="metric-box metric-saldo"><span class="metric-label">Saldo Físico Atual</span><span class="metric-value">${i.saldo}</span></div>
                     <div class="metric-box metric-transito"><span class="metric-label">Quantidade Original</span><span class="metric-value">${o.qtdPedidaOriginal}</span></div>
-                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Trânsito (Falta Entregar)</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
+                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Previsão Entrega</span><span class="metric-value" style="font-size:14px; margin-top:5px; display:flex; flex-direction:column; gap:5px;">${dataAlvo} <div>${badgeAtraso}</div></span></div>
                 </div>
             </div>
@@ -825,7 +929,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
             <div style="background:var(--bg-subcard); padding:16px; border-radius:12px; border:1px solid var(--border-color);">
                 <h4 style="color:var(--text-info); margin-bottom:12px; font-weight:800; font-size:13px; text-transform:uppercase;">📦 Fornecimento (OF)</h4>
                 <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
-                    ${rowRender('Cód OF', o.of)}
+                    ${rowRender('Cód OF', o.of !== '-' ? o.of : 'Não Gerada')}
                     ${rowRender('Fornecedor', o.fornecedor)}
                     ${rowRender('Email', o.ofEmail_ext)}
                     ${rowRender('Data OF', o.ofData_ext)}
