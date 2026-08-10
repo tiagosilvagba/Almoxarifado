@@ -6,17 +6,17 @@ let itensProcessados = [], itensFiltrados = [], ordesAtivasFiltradas = [];
 let vistaAtual = 'dashboard', mesConsumoAtual = "MÊS", curMonthGlobal = 12;
 let chartABC, chartStatus, chartFiliais;
 let filtroABC = null, filtroStatus = null, filtroFilial = new Set();
-let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true, mapeamentoAtivo = false;
-const imagensMapeadas = new Set(), setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
+let isFetchingData = false, loaderProgress = 0, ocultarValoresFinanceiros = true;
+const setLocaisUnicos = new Set(), setStatusOFUnicos = new Set();
 let lbImages = [], lbIndex = 0, timerBusca;
 
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
 // ==========================================================================
-// HELPERS E UTILITÁRIOS
+// HELPERS E UTILITÁRIOS BLINDADOS
 // ==========================================================================
 const $ = id => document.getElementById(id);
-const setTxt = (id, txt) => { if($(id)) $(id).innerText = txt; };
+const setTxt = (id, txt) => { let el = $(id); if(el) el.innerText = txt; };
 const normStr = v => String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const normCod = v => String(v||'').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, '');
 const convNum = v => {
@@ -35,7 +35,6 @@ const findKey = (obj, keys) => {
     return null;
 };
 const fmtMoeda = v => ocultarValoresFinanceiros ? 'R$ ***' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const parseCSV = txt => Papa.parse(txt.slice(txt.search(/[^\r\n]/)), { header: true, skipEmptyLines: true }).data;
 
 // ==========================================================================
 // INTERFACE E COMPORTAMENTOS GERAIS
@@ -48,222 +47,277 @@ window.toggleValoresFinanceiros = () => {
 
 const setProgress = (pct, msg, type = 'info') => {
     loaderProgress = pct;
-    if($('loader-bar')) $('loader-bar').style.width = `${pct}%`;
+    let bar = $('loader-bar');
+    if(bar) bar.style.width = `${pct}%`;
     setTxt('loader-percent', `${Math.round(pct)}%`);
-    if(msg && $('loader-logs')) {
+    let logs = $('loader-logs');
+    if(logs && msg) {
         let cls = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
-        $('loader-logs').innerHTML += `<div class="${cls}">> ${msg}</div>`;
-        $('loader-logs').scrollTop = $('loader-logs').scrollHeight;
+        logs.innerHTML += `<div class="${cls}">> ${msg}</div>`;
+        logs.scrollTop = logs.scrollHeight;
     }
 };
 
 const fecharLoader = () => {
-    if($('tech-loader') && $('app-layout')) {
-        $('tech-loader').style.opacity = '0';
-        $('app-layout').style.opacity = '1';
-        setTimeout(() => $('tech-loader').style.display = 'none', 600);
+    let loader = $('tech-loader'), layout = $('app-layout');
+    if(loader && layout) {
+        loader.style.opacity = '0';
+        layout.style.opacity = '1';
+        setTimeout(() => loader.style.display = 'none', 600);
     }
 };
 
 const mostrarToast = (msg, tipo = 'info') => {
-    if(!$('toast-container')) return;
+    let container = $('toast-container');
+    if(!container) return;
     const t = document.createElement('div');
     t.className = `toast toast-${tipo}`;
     t.innerText = msg;
-    $('toast-container').appendChild(t);
+    container.appendChild(t);
     setTimeout(() => t.remove(), 5000);
 };
 
 window.alterarTema = tema => {
     if (!tema) return;
-    tema === 'light' ? document.documentElement.removeAttribute('data-theme') : document.documentElement.setAttribute('data-theme', tema);
-    localStorage.setItem('temaAlmoxarifado', tema);
-    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-theme-val') === tema));
-    if (itensProcessados.length > 0) atualizarGraficos();
+    try {
+        tema === 'light' ? document.documentElement.removeAttribute('data-theme') : document.documentElement.setAttribute('data-theme', tema);
+        localStorage.setItem('temaAlmoxarifado', tema);
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-theme-val') === tema));
+        if (itensProcessados.length > 0) atualizarGraficos();
+    } catch(e) {} // Previne erro de LocalStorage em modo anônimo
 };
 
 window.navegarPara = view => {
     vistaAtual = view;
     ['pesquisa', 'dashboard', 'compras', 'gestao-compras', 'instrucoes', 'revisao'].forEach(v => {
-        if($(`view-${v}`)) $(`view-${v}`).style.display = (v === view) ? 'flex' : 'none';
-        if($(`nav-${v}`)) $(`nav-${v}`).classList.toggle('active', v === view);
+        let elView = $(`view-${v}`), elNav = $(`nav-${v}`);
+        if(elView) elView.style.display = (v === view) ? 'flex' : 'none';
+        if(elNav) elNav.classList.toggle('active', v === view);
     });
     window.dispararFiltros();
 };
 
-window.toggleSegmentacao = () => $('app-layout')?.classList.toggle('segmentation-hidden');
+window.toggleSegmentacao = () => {
+    let layout = $('app-layout');
+    if(layout) layout.classList.toggle('segmentation-hidden');
+};
 
 // ==========================================================================
-// LIGHTBOX E MODAIS
+// LIGHTBOX E MODAIS DE IMAGEM
 // ==========================================================================
 const atualizarLightbox = () => {
-    if($('lightbox-img') && lbImages.length > 0) {
-        $('lightbox-img').src = lbImages[lbIndex];
+    let lbImg = $('lightbox-img');
+    if(lbImg && lbImages.length > 0) {
+        lbImg.src = lbImages[lbIndex];
         setTxt('lightbox-counter', `${lbIndex + 1} / ${lbImages.length}`);
     }
 };
-window.abrirLightboxArray = (imgs, idx, e) => { e?.stopPropagation(); lbImages = imgs.split(','); lbIndex = idx; atualizarLightbox(); $('lightbox-overlay').style.display = 'flex'; };
-window.navegarLightbox = (dir, e) => { e?.stopPropagation(); lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length; atualizarLightbox(); };
-window.fecharLightbox = () => { if($('lightbox-overlay')) $('lightbox-overlay').style.display = 'none'; lbImages = []; };
+window.abrirLightboxArray = (imgs, idx, e) => { 
+    e?.stopPropagation(); 
+    lbImages = imgs.split(','); lbIndex = idx; 
+    atualizarLightbox(); 
+    let overlay = $('lightbox-overlay');
+    if(overlay) overlay.style.display = 'flex'; 
+};
+window.navegarLightbox = (dir, e) => { 
+    e?.stopPropagation(); 
+    if(lbImages.length > 0) {
+        lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length; 
+        atualizarLightbox(); 
+    }
+};
+window.fecharLightbox = () => { 
+    let overlay = $('lightbox-overlay');
+    if(overlay) overlay.style.display = 'none'; 
+    lbImages = []; 
+};
 document.addEventListener('keydown', e => {
-    if ($('lightbox-overlay')?.style.display === 'flex') {
+    let overlay = $('lightbox-overlay');
+    if (overlay && overlay.style.display === 'flex') {
         if (e.key === 'ArrowRight') window.navegarLightbox(1);
         if (e.key === 'ArrowLeft') window.navegarLightbox(-1);
         if (e.key === 'Escape') window.fecharLightbox();
     }
 });
 
-window.fecharModal = () => { $('modal-item').style.display = 'none'; $('modal-body-content').innerHTML = ''; };
+window.fecharModal = () => { 
+    let modal = $('modal-item');
+    if(modal) modal.style.display = 'none'; 
+    let content = $('modal-body-content');
+    if(content) content.innerHTML = ''; 
+};
 $('modal-item')?.addEventListener('click', function(e) { if (e.target === this) window.fecharModal(); });
 
 // ==========================================================================
-// INICIALIZAÇÃO E EVENTOS
+// INICIALIZAÇÃO BLINDADA
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    window.alterarTema(localStorage.getItem('temaAlmoxarifado') || 'light');
-    ['busca', 'busca-compras', 'busca-ofs'].forEach(id => $(id)?.addEventListener('input', () => { clearTimeout(timerBusca); timerBusca = setTimeout(window.dispararFiltros, 300); }));
-    
-    const thRevisao = document.querySelector('#view-revisao thead tr');
-    if (thRevisao) {
-        thRevisao.innerHTML = `<th>Código / Descrição</th><th>Filial</th><th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th><th>Mín / Máx Atual</th><th style="color: var(--text-info);">Sugestão Novo Mín</th><th style="color: var(--text-info);">Sugestão Novo Máx</th><th>Custo Consumo</th><th style="color: var(--text-danger);">Alerta do Sistema</th>`;
-    }
+    try {
+        let temaSalvo = 'light';
+        try { temaSalvo = localStorage.getItem('temaAlmoxarifado') || 'light'; } catch(e) {}
+        window.alterarTema(temaSalvo);
+        
+        ['busca', 'busca-compras', 'busca-ofs'].forEach(id => {
+            let el = $(id);
+            if(el) el.addEventListener('input', () => { clearTimeout(timerBusca); timerBusca = setTimeout(window.dispararFiltros, 300); });
+        });
+        
+        const thRevisao = document.querySelector('#view-revisao thead tr');
+        if (thRevisao) {
+            thRevisao.innerHTML = `<th>Código / Descrição</th><th>Filial</th><th style="color: var(--primary-color);">Saldo Útil (S/ Reserva)</th><th>Mín / Máx Atual</th><th style="color: var(--text-info);">Sugestão Novo Mín</th><th style="color: var(--text-info);">Sugestão Novo Máx</th><th>Custo Consumo</th><th style="color: var(--text-danger);">Alerta do Sistema</th>`;
+        }
 
-    // Cabeçalho otimizado e visual para a Gestão de Compras (OFs)
-    const thOFs = document.querySelector('#view-gestao-compras thead tr');
-    if (thOFs) {
-        thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão Entrega</th><th>Status / Filial</th>`;
-    }
+        const thOFs = document.querySelector('#view-gestao-compras thead tr');
+        if (thOFs) {
+            thOFs.innerHTML = `<th>SC / OF</th><th>Código / Produto</th><th>Fornecedor</th><th>Qtd Original</th><th style="color: var(--text-warning);">Saldo Pendente</th><th>Previsão / Dias s/ OF</th><th>Status / Filial</th>`;
+        }
 
-    setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
+        const painelFiltros = document.querySelector('.filter-panel-body');
+        if (painelFiltros && !$('#select-tipo-ordem')) {
+            let divTipo = document.createElement('div');
+            divTipo.className = 'filter-group';
+            divTipo.innerHTML = `
+                <label class="filter-label">Tipo de Ordem (Gestão Compras):</label>
+                <select id="select-tipo-ordem" class="segmentation-select" onchange="window.dispararFiltros()">
+                    <option value="">Todas (OFs e SCs)</option>
+                    <option value="com_of">Apenas com OF Gerada</option>
+                    <option value="sem_of">Apenas SCs (Sem OF)</option>
+                </select>
+            `;
+            let btnReset = document.querySelector('.btn-reset-filters');
+            if(btnReset) painelFiltros.insertBefore(divTipo, btnReset);
+            else painelFiltros.appendChild(divTipo);
+        }
+
+        setTimeout(() => { if (!isFetchingData) window.carregarArquivosAutomaticamente(); }, 100);
+    } catch(err) {
+        if($('loader-logs')) $('loader-logs').innerHTML += `<div class="error">> Erro na inicialização: ${err.message}</div>`;
+    }
 });
 
-window.mapearImagensPasta = e => {
-    const files = e.target.files;
-    if (!files.length) return;
-    imagensMapeadas.clear();
-    let count = 0;
-    Array.from(files).forEach(f => {
-        let fn = f.name.toLowerCase();
-        if (/( - 0[1-6]\.)/.test(fn)) { imagensMapeadas.add(normCod(fn.split(' - ')[0])); count++; }
-    });
-    mapeamentoAtivo = true;
-    if (itensProcessados.length > 0) {
-        itensProcessados.forEach(i => i.temImagem = imagensMapeadas.has(i.codNorm));
-        window.dispararFiltros();
-    }
-    mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
-};
-
 // ==========================================================================
-// CARGA DE DADOS (FETCH & UPLOAD MANUAL)
+// CARGA DE DADOS OTIMIZADA (EVITA TRAVAMENTO)
 // ==========================================================================
 window.carregarArquivosAutomaticamente = async () => {
-    if (isFetchingData) return;
-    isFetchingData = true;
-    
-    $('tech-loader').style.display = 'flex'; $('tech-loader').style.opacity = '1';
-    $('loader-ring')?.classList.remove('error'); $('btn-fallback').style.display = 'none';
-    if($('loader-logs')) $('loader-logs').innerHTML = '';
-    
-    setProgress(5, "Iniciando sincronização via Fetch API...");
-    const files = [{ id: 'baseItens', url: '03 - Base_Itens.csv' }, { id: 'compras', url: '01 - Compras.csv' }, { id: 'consumos', url: '02 - Consumos.csv' }];
-    let loaded = 0, error = false, decoder = new TextDecoder('windows-1252');
+    try {
+        if (isFetchingData) return;
+        isFetchingData = true;
+        
+        let loader = $('tech-loader'), fallbackBtn = $('btn-fallback');
+        if(loader) { loader.style.display = 'flex'; loader.style.opacity = '1'; }
+        if(fallbackBtn) fallbackBtn.style.display = 'none';
+        if($('loader-logs')) $('loader-logs').innerHTML = '';
+        
+        setProgress(5, "Verificando módulos de inteligência...");
 
-    for (let i = 0; i < files.length; i++) {
-        let { id, url } = files[i];
-        setProgress(10 + (i * 20), `Buscando arquivo: ${url}...`);
-        try {
-            let res = await fetch(url, { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            setProgress(15 + (i * 20), `Extraindo dados de ${url}...`);
-            bases[id] = parseCSV(decoder.decode(await res.arrayBuffer()));
-            setProgress(30 + (i * 20), `✓ ${url} (Lido com Sucesso)`, 'success');
-            if($(`status-${id === 'baseItens'?'base':id}`)) { $(`status-${id === 'baseItens'?'base':id}`).innerText = `✅ ${url}`; $(`status-${id === 'baseItens'?'base':id}`).className = 'status-item status-ok'; }
-            loaded++;
-        } catch (err) {
-            setProgress(loaderProgress, `[ERRO ${url}] ${err.message.includes('fetch') ? 'Falha de rede/CORS' : err.message}`, 'error');
-            if($(`status-${id === 'baseItens'?'base':id}`)) { $(`status-${id === 'baseItens'?'base':id}`).innerText = `❌ Falha: ${url}`; $(`status-${id === 'baseItens'?'base':id}`).className = 'status-item status-erro'; }
-            error = true;
+        if (typeof Papa === 'undefined') {
+            setProgress(10, "[ERRO] Módulo PapaParse ausente. Por favor, conecte à internet para baixar a biblioteca ou faça o upload manual.", "error");
+            if(fallbackBtn) fallbackBtn.style.display = 'block';
+            isFetchingData = false;
+            return;
         }
+
+        setProgress(15, "Iniciando sincronização via Fetch API...");
+        const files = [{ id: 'baseItens', url: '03 - Base_Itens.csv' }, { id: 'compras', url: '01 - Compras.csv' }, { id: 'consumos', url: '02 - Consumos.csv' }];
+        let loaded = 0, decoder = new TextDecoder('windows-1252');
+
+        for (let i = 0; i < files.length; i++) {
+            let { id, url } = files[i];
+            setProgress(20 + (i * 20), `Buscando arquivo: ${url}...`);
+            try {
+                let res = await fetch(url, { cache: "no-store" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                setProgress(25 + (i * 20), `Processando dados de ${url}...`);
+                
+                let buffer = await res.arrayBuffer();
+                let txt = decoder.decode(buffer);
+                bases[id] = Papa.parse(txt.slice(txt.search(/[^\r\n]/)), { header: true, skipEmptyLines: true }).data;
+                
+                setProgress(35 + (i * 20), `✓ ${url} (Lido com Sucesso)`, 'success');
+                loaded++;
+            } catch (err) {
+                setProgress(loaderProgress, `[AVISO] Não foi possível ler ${url} automaticamente (CORS ou Ausente).`, 'warning');
+            }
+        }
+        
+        if (loaded > 0) {
+            setProgress(90, "Arquivos identificados. Acionando inteligência...", 'info');
+            setTimeout(processarInteligencia, 500);
+        } else {
+            setProgress(loaderProgress, "Leitura automática bloqueada pelo navegador. Use o botão abaixo para anexar manualmente.", 'warning');
+            if(fallbackBtn) fallbackBtn.style.display = 'block';
+            isFetchingData = false;
+        }
+    } catch(globalErr) {
+        setProgress(loaderProgress, `[ERRO FATAL] ${globalErr.message}`, 'error');
+        if($('btn-fallback')) $('btn-fallback').style.display = 'block';
+        isFetchingData = false;
     }
-    loaded === 3 ? setTimeout(processarInteligencia, 500) : error && (setProgress(loaderProgress, "Erro. Use o Upload Manual.", 'warning'), $('loader-ring')?.classList.add('error'), $('btn-fallback').style.display = 'block', isFetchingData = false);
 };
 
 window.uploadManualMultiplo = e => {
     if (isFetchingData) return;
     isFetchingData = true;
-    $('tech-loader').style.display = 'flex'; $('tech-loader').style.opacity = '1'; $('btn-fallback').style.display = 'none';
+    
+    let loader = $('tech-loader'), fallbackBtn = $('btn-fallback');
+    if(loader) { loader.style.display = 'flex'; loader.style.opacity = '1'; }
+    if(fallbackBtn) fallbackBtn.style.display = 'none';
     if($('loader-logs')) $('loader-logs').innerHTML = '';
     
-    let files = Array.from(e.target.files), loaded = 0, decoder = new TextDecoder('windows-1252');
+    let files = Array.from(e.target.files);
+    if (!files.length) { isFetchingData = false; fecharLoader(); return; }
+
+    if (typeof Papa === 'undefined') {
+        setProgress(10, "[ERRO] Módulo PapaParse ausente. Por favor, conecte à internet primeiro.", "error");
+        if(fallbackBtn) fallbackBtn.style.display = 'block';
+        isFetchingData = false;
+        return;
+    }
+
+    let loaded = 0, decoder = new TextDecoder('windows-1252');
+    
     files.forEach((f, i) => {
         let reader = new FileReader();
-        reader.onload = e => {
-            let n = f.name.toLowerCase(), id = n.includes('base') ? 'baseItens' : n.includes('compras') ? 'compras' : n.includes('consumos') ? 'consumos' : null;
-            if (id) {
-                bases[id] = parseCSV(decoder.decode(e.target.result));
-                setProgress(20 + (i * 20), `✓ ${f.name} Importado.`, 'success');
-                if($(`status-${id === 'baseItens'?'base':id}`)) { $(`status-${id === 'baseItens'?'base':id}`).innerText = `✅ ${f.name}`; $(`status-${id === 'baseItens'?'base':id}`).className = 'status-item status-ok'; }
-                if (++loaded === files.length) setTimeout(processarInteligencia, 500);
+        reader.onload = evt => {
+            try {
+                let n = f.name.toLowerCase(), id = n.includes('base') ? 'baseItens' : n.includes('compras') ? 'compras' : n.includes('consumos') ? 'consumos' : null;
+                if (id) {
+                    let txt = decoder.decode(evt.target.result);
+                    bases[id] = Papa.parse(txt.slice(txt.search(/[^\r\n]/)), { header: true, skipEmptyLines: true }).data;
+                    setProgress(20 + (i * 20), `✓ ${f.name} Importado e Lógico.`, 'success');
+                    if (++loaded === files.length) setTimeout(processarInteligencia, 500);
+                } else {
+                    setProgress(loaderProgress, `[AVISO] Arquivo ignorado (Nome inválido): ${f.name}`, 'warning');
+                    if (++loaded === files.length) setTimeout(processarInteligencia, 500);
+                }
+            } catch(err) {
+                setProgress(loaderProgress, `[ERRO] Falha ao processar ${f.name}.`, 'error');
             }
         };
         reader.readAsArrayBuffer(f);
     });
-    if (!files.length) { isFetchingData = false; fecharLoader(); }
-};
-
-// ==========================================================================
-// EXPORTAÇÕES EXCEL
-// ==========================================================================
-const baixarExcel = (csv, nome) => {
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = `${nome}_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    mostrarToast("Arquivo Excel baixado com sucesso!", "success");
-};
-
-window.exportarComprasExcel = () => {
-    const list = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0).sort((a,b) => a.saldo - b.saldo);
-    if (!list.length) return mostrarToast("Nenhum dado crítico para exportar.", "warning");
-    
-    let csv = "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n" + 
-        list.map(i => `${i.cod};${i.desc.replace(/;/g, ',')};${i.filialNm.replace(/;/g, ',')};${i.saldo};${i.minimo};${i.maximo};${i.maximo - i.saldo};${i.custoUnitario.toFixed(2)};${((i.maximo - i.saldo) * i.custoUnitario).toFixed(2)}`).join('\n');
-    baixarExcel(csv, "Necessidade_Compra");
-};
-
-window.exportarRevisaoExcel = () => {
-    const list = itensFiltrados.filter(i => (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) || (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) || (i.saldoUtil > i.maximo && i.maximo > 0));
-    if (!list.length) return mostrarToast("Nenhum dado de revisão para exportar.", "warning");
-
-    let csv = "Código;Descrição;Filial;Saldo Útil;Mínimo Atual;Máximo Atual;Sugestão Novo Mín;Sugestão Novo Máx;Custo Consumo Mês;Ação Recomendada\n" + 
-        list.map(i => {
-            let acao = (i.consumoFinanceiro === 0) ? "Revisar/Zerar (Sem Consumo)" : (i.saldoUtil > i.maximo) ? "Reduzir Máximo (Excesso)" : "Aumentar Mínimo (Risco)";
-            return `${i.cod};${i.desc.replace(/;/g, ',')};${i.filialNm.replace(/;/g, ',')};${i.saldoUtil};${i.minimo};${i.maximo};${i.sugestaoMin};${i.sugestaoMax};${i.consumoFinanceiro.toFixed(2)};${acao}`;
-        }).join('\n');
-    baixarExcel(csv, "Revisao_MinMax");
 };
 
 // ==========================================================================
 // INTELIGÊNCIA E CONSOLIDAÇÃO DE DADOS
 // ==========================================================================
 async function processarInteligencia() {
-    if (!bases.baseItens.length) return (mostrarToast("Base Mestre ausente.", "error"), setProgress(loaderProgress, "Erro Crítico", 'error'), $('loader-ring')?.classList.add('error'), $('btn-fallback').style.display = 'block', isFetchingData = false);
+    if (!bases.baseItens || bases.baseItens.length === 0) {
+        setProgress(loaderProgress, "ERRO CRÍTICO: Arquivo da Base de Itens não fornecido ou vazio.", 'error');
+        if($('btn-fallback')) $('btn-fallback').style.display = 'block';
+        isFetchingData = false;
+        return;
+    }
 
     const keys = {
         cod: ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto'],
         desc: ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'],
         saldo: ['qt saldo atual', 'saldo livre', 'saldo'], cons: ['qt movimento', 'quantidade consumida', 'quantidade'],
-        compFb: ['quantidade', 'qtde', 'saldo aberto', 'of - saldo', 'sc - quantidade'],
         custo: ['vl custo unitario atual', 'custo unitario', 'custo'], min: ['qt minimo', 'minimo', 'min'], max: ['qt maximo', 'maximo', 'max'],
         filId: ['cd filial'], filNm: ['nm filial', 'filial', 'of - filial entrega', 'sc - filial'],
         grp: ['nm grupo', 'grupo', 'categoria'], cls: ['nm classe', 'classe'], rep: ['cd reparticao', 'reparticao'], prat: ['cd prateleira', 'prateleira'], div: ['cd divisao', 'divisao'],
         mesMov: ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'], um: ['cd unidade medida', 'un', 'um'],
-        locId: ['cd local', 'cod local', 'local'], locNm: ['nm local', 'nome local', 'estoque', 'desc local'], vTot: ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo'],
-        scDt: ['sc - data criação', 'data criacao sc', 'data criacao'], recDt: ['rec - dt entrada', 'dt entrada', 'data entrada'], ofDt: ['of - data entrega', 'data entrega of', 'dt entrega of'],
-        scCod: ['sc - código', 'sc codigo', 'sc'], ofCod: ['of - codigo', 'of codigo', 'ordem fornecimento'], ofForn: ['of - nome fornecedor', 'fornecedor'],
-        ofQtd: ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'], recQtd: ['rec - quantidade', 'quantidade recebida', 'qtd recebida', 'quantidade rec'],
-        ofSit: ['of - situação of', 'situacao of', 'status of'], scSit: ['sc - situação', 'situacao sc'], scCanc: ['sc - cancelado', 'sc cancelado', 'cancelado']
+        locId: ['cd local', 'cod local', 'local'], locNm: ['nm local', 'nome local', 'estoque', 'desc local'], vTot: ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo']
     };
 
     let curMonth = new Date().getMonth() || 12;
@@ -276,38 +330,72 @@ async function processarInteligencia() {
     let mapCompras = new Map(), mapLead = new Map(), ordesAtivas = []; setStatusOFUnicos.clear();
     
     const getValExt = (row, searchTerms) => {
+        if(!row) return '-';
         let rKeys = Object.keys(row);
         for(let t of searchTerms) {
             let termNorm = normStr(t).replace(/\s+/g, '');
             let fKey = rKeys.find(k => normStr(k).replace(/\s+/g, '') === termNorm || normStr(k).replace(/\s+/g, '').includes(termNorm));
-            if(fKey && row[fKey] && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
+            if(fKey && row[fKey] !== undefined && row[fKey] !== null && String(row[fKey]).trim() !== '') return String(row[fKey]).trim();
         }
         return '-';
     };
 
-    if (bases.compras.length) {
-        let b = bases.compras[0], c = { cod: findKey(b, keys.cod), ofQtd: findKey(b, keys.ofQtd), recQtd: findKey(b, keys.recQtd), ofSit: findKey(b, keys.ofSit), scSit: findKey(b, keys.scSit), scCanc: findKey(b, keys.scCanc), compFb: findKey(b, keys.compFb), scDt: findKey(b, keys.scDt), recDt: findKey(b, keys.recDt), scCod: findKey(b, keys.scCod), ofCod: findKey(b, keys.ofCod), desc: findKey(b, keys.desc), forn: findKey(b, keys.ofForn), dtEnt: findKey(b, keys.ofDt) };
+    if (bases.compras && bases.compras.length > 0) {
+        let b = bases.compras[0];
+        let cCod = findKey(b, keys.cod);
+        
         bases.compras.forEach(i => {
-            let cod = normCod(i[c.cod]); if(!cod) return;
-            let sitOF = normStr(i[c.ofSit]), sitSC = normStr(i[c.scSit]), cSC = normStr(i[c.scCanc]);
-            let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
-            let pendente = fechada ? 0 : c.ofQtd ? Math.max(0, convNum(i[c.ofQtd]) - convNum(i[c.recQtd])) : convNum(i[c.compFb]);
+            let rawCod = cCod ? i[cCod] : (i['CD ITEM'] || i['Cod Produto'] || i['Código']);
+            let cod = normCod(rawCod); 
+            if(!cod) return;
             
-            if(pendente > 0) {
-                mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
-                let sit = i[c.ofSit] || 'Pendente'; setStatusOFUnicos.add(sit);
+            let sitOF = normStr(getValExt(i, ['of - situação of', 'situacao of', 'status of', 'situação']));
+            let sitSC = normStr(getValExt(i, ['sc - situação', 'situacao sc']));
+            let cSC = normStr(getValExt(i, ['sc - cancelado', 'sc cancelado', 'cancelado']));
+            let ofCodVal = getValExt(i, ['of - codigo', 'of codigo', 'ordem fornecimento', 'of']);
+            
+            let fechada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cSC === 'sim' || cSC === 's';
+            let semOFGerada = (ofCodVal === '' || ofCodVal === '-');
+            
+            let pendente = 0;
+            if (!fechada) {
+                let valOfSaldo = convNum(getValExt(i, ['of - saldo', 'saldo of', 'of saldo']));
+                let valScQtd = convNum(getValExt(i, ['sc - quantidade', 'quantidade', 'qtde', 'saldo aberto']));
                 
+                if (!semOFGerada && valOfSaldo > 0) {
+                    pendente = valOfSaldo;
+                } else if (semOFGerada) {
+                    pendente = valScQtd > 0 ? valScQtd : 1;
+                } else {
+                    pendente = valOfSaldo > 0 ? valOfSaldo : valScQtd;
+                }
+            }
+            
+            if(pendente > 0 || semOFGerada) {
+                if (pendente > 0) {
+                    mapCompras.set(cod, (mapCompras.get(cod) || 0) + pendente);
+                }
+                let sit = getValExt(i, ['of - situação of', 'situacao of']) || (semOFGerada ? 'SC Pendente (Sem OF)' : 'Pendente'); 
+                setStatusOFUnicos.add(sit);
+                
+                let descProdVal = getValExt(i, ['nome do item detalhado', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto']);
+                let fornVal = getValExt(i, ['of - nome fornecedor', 'fornecedor']);
+                let dtEntVal = getValExt(i, ['of - data entrega', 'data entrega of', 'dt entrega of', 'sc - dt entrega']);
+                let scCodVal = getValExt(i, ['sc - código', 'sc codigo', 'sc']);
+
                 ordesAtivas.push({ 
-                    sc: i[c.scCod]||'-', of: i[c.ofCod]||'-', codProd: i[c.cod]||'-', descProd: i[c.desc]||'-', fornecedor: i[c.forn]||'ND', dataEntrega: i[c.dtEnt]||'-', qtdPedidaOriginal: c.ofQtd ? convNum(i[c.ofQtd]) : pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${i[c.ofCod]} ${i[c.scCod]} ${i[c.cod]} ${i[c.forn]}`.toLowerCase(),
+                    sc: scCodVal, of: ofCodVal, codProd: rawCod, descProd: descProdVal, fornecedor: fornVal, dataEntrega: dtEntVal, qtdPedidaOriginal: pendente, saldoOF: pendente, sitOFOriginal: sit, searchStr: `${ofCodVal} ${scCodVal} ${rawCod} ${fornVal}`.toLowerCase(),
                     
                     scSit_ext: getValExt(i, ['sc - situação']), scCC_ext: getValExt(i, ['sc - centro custo aprovador']), scDtCria_ext: getValExt(i, ['sc - data criação']), scSol_ext: getValExt(i, ['sc - nome solicitante']), scEmp_ext: getValExt(i, ['sc - empresa']), scFil_ext: getValExt(i, ['sc - filial']), scDescFil_ext: getValExt(i, ['sc - descr. filial']), scUM_ext: getValExt(i, ['sc - unid. medida']), scQtd_ext: getValExt(i, ['sc - quantidade']), scCat_ext: getValExt(i, ['sc - categoria']), scDtEnt_ext: getValExt(i, ['sc - dt entrega']), scReg_ext: getValExt(i, ['sc - regularização']), scObs_ext: getValExt(i, ['sc - obs']), scLocEst_ext: getValExt(i, ['sc - local estoque']), scCCUEtq_ext: getValExt(i, ['sc - ccu etq']), scAprov_ext: getValExt(i, ['sc - aprovador']),
                     ofData_ext: getValExt(i, ['of - data']), ofQtdSol_ext: getValExt(i, ['of - qtd. solicitada']), ofSaldo_ext: getValExt(i, ['of - saldo']), ofQtdEnt_ext: getValExt(i, ['of - qtd. entregue']), ofFechado_ext: getValExt(i, ['of - fechado']), ofBloqueado_ext: getValExt(i, ['of - bloqueado']), ofDtEnt_ext: getValExt(i, ['of - data entrega']), ofFrete_ext: getValExt(i, ['of - frete']), ofMoeda_ext: getValExt(i, ['of - moeda']), ofTipo_ext: getValExt(i, ['of - tipo']), ofEmail_ext: getValExt(i, ['of - email fornecedor']), ofObs_ext: getValExt(i, ['of - obs']),
                     recNF_ext: getValExt(i, ['rec - nr nf']), recSerie_ext: getValExt(i, ['rec - série']), recDtEmissao_ext: getValExt(i, ['rec - dt emissão']), recDtEntrada_ext: getValExt(i, ['rec - dt entrada']), recUM_ext: getValExt(i, ['rec - unid. medida']), recQtd_ext: getValExt(i, ['rec - quantidade']), recValUn_ext: getValExt(i, ['rec - valor un. fiscal'])
                 });
             }
-            if(c.scDt && c.recDt && i[c.scDt] && i[c.recDt]) {
+
+            let scDtKey = findKey(i, keys.scDt), recDtKey = findKey(i, keys.recDt);
+            if(scDtKey && recDtKey && i[scDtKey] && i[recDtKey]) {
                 let pD = s => { let p = String(s).trim().split('/'); return p.length===3 ? new Date(p[2].split(' ')[0], p[1]-1, p[0]) : new Date(s); };
-                let dtC = pD(i[c.scDt]), dtE = pD(i[c.recDt]);
+                let dtC = pD(i[scDtKey]), dtE = pD(i[recDtKey]);
                 if(!isNaN(dtC) && !isNaN(dtE)) {
                     let d = Math.ceil(Math.abs(dtE - dtC) / 86400000);
                     if(d > 0 && d < 300) { if(!mapLead.has(cod)) mapLead.set(cod, []); mapLead.get(cod).push(d); }
@@ -320,7 +408,7 @@ async function processarInteligencia() {
     setProgress(93, "Apurando Consumo e Histórico..."); await new Promise(r => setTimeout(r, 50));
     let mapConsumo = new Map(), mapUltimoMes = new Map(), hasConsumo = false;
     
-    if (bases.consumos.length) {
+    if (bases.consumos && bases.consumos.length > 0) {
         let b = bases.consumos[0], cm = findKey(b, keys.mesMov), cc = findKey(b, keys.cod), cq = findKey(b, keys.cons), cLoc = findKey(b, keys.locId);
         
         bases.consumos.forEach(i => { 
@@ -347,7 +435,8 @@ async function processarInteligencia() {
 
     setProgress(95, "Consolidando Base..."); await new Promise(r => setTimeout(r, 50));
     let mapCon = new Map(); setLocaisUnicos.clear(); let setFil = new Set();
-    let b0 = bases.baseItens[0], b = { cod: findKey(b0, keys.cod), desc: findKey(b0, keys.desc), saldo: findKey(b0, keys.saldo), min: findKey(b0, keys.min), max: findKey(b0, keys.max), custo: findKey(b0, keys.custo), um: findKey(b0, keys.um), fNm: findKey(b0, keys.filNm), fId: findKey(b0, keys.filId), grp: findKey(b0, keys.grp), cls: findKey(b0, keys.cls), rep: findKey(b0, keys.rep), prat: findKey(b0, keys.prat), div: findKey(b0, keys.div), lId: findKey(b0, keys.locId), lNm: findKey(b0, keys.locNm), vTot: findKey(b0, keys.vTot) };
+    let b0 = bases.baseItens[0];
+    let b = { cod: findKey(b0, keys.cod), desc: findKey(b0, keys.desc), saldo: findKey(b0, keys.saldo), min: findKey(b0, keys.min), max: findKey(b0, keys.max), custo: findKey(b0, keys.custo), um: findKey(b0, keys.um), fNm: findKey(b0, keys.filNm), fId: findKey(b0, keys.filId), grp: findKey(b0, keys.grp), cls: findKey(b0, keys.cls), rep: findKey(b0, keys.rep), prat: findKey(b0, keys.prat), div: findKey(b0, keys.div), lId: findKey(b0, keys.locId), lNm: findKey(b0, keys.locNm), vTot: findKey(b0, keys.vTot) };
 
     bases.baseItens.forEach(i => {
         let cB = String(i[b.cod]||'').replace(/\./g, ''), cN = normCod(cB); if(!cN) return;
@@ -374,30 +463,28 @@ async function processarInteligencia() {
     });
 
     const containerFilial = $('select-filial');
-    if(containerFilial) {
-        if(containerFilial.tagName === 'SELECT') {
-            let parentDiv = containerFilial.parentNode;
-            let multiDiv = document.createElement('div');
-            multiDiv.id = 'select-filial';
-            multiDiv.className = 'segmentation-select';
-            multiDiv.style.cssText = 'max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px;';
-            
-            let htmlChecks = `<label style="font-weight:700; cursor:pointer;"><input type="checkbox" id="chk-all-filiais" checked onchange="toggleTodasFiliais(this)"> Todas as Filiais</label><hr style="border:0; border-top:1px solid var(--border-color); margin:4px 0;">`;
-            Array.from(setFil).sort().forEach(f => {
-                htmlChecks += `<label style="cursor:pointer; font-weight:normal;"><input type="checkbox" class="chk-filial-item" value="${f}" checked onchange="atualizarFiltroFiliaisMultiplas()"> ${f}</label>`;
-            });
-            multiDiv.innerHTML = htmlChecks;
-            parentDiv.replaceChild(multiDiv, containerFilial);
-        }
+    if(containerFilial && containerFilial.tagName === 'SELECT') {
+        let parentDiv = containerFilial.parentNode;
+        let multiDiv = document.createElement('div');
+        multiDiv.id = 'select-filial';
+        multiDiv.className = 'segmentation-select';
+        multiDiv.style.cssText = 'max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px;';
+        
+        let htmlChecks = `<label style="font-weight:700; cursor:pointer;"><input type="checkbox" id="chk-all-filiais" checked onchange="window.toggleTodasFiliais(this)"> Todas as Filiais</label><hr style="border:0; border-top:1px solid var(--border-color); margin:4px 0;">`;
+        Array.from(setFil).sort().forEach(f => {
+            htmlChecks += `<label style="cursor:pointer; font-weight:normal;"><input type="checkbox" class="chk-filial-item" value="${f}" checked onchange="window.atualizarFiltroFiliaisMultiplas()"> ${f}</label>`;
+        });
+        multiDiv.innerHTML = htmlChecks;
+        parentDiv.replaceChild(multiDiv, containerFilial);
     }
 
-    if($('select-local')) $('select-local').innerHTML = '<option value="">Todos os Locais</option>' + Array.from(setLocaisUnicos).sort().map(l => `<option value="${l}">${l}</option>`).join('');
+    let selectLocal = $('select-local');
+    if(selectLocal) selectLocal.innerHTML = '<option value="">Todos os Locais</option>' + Array.from(setLocaisUnicos).sort().map(l => `<option value="${l}">${l}</option>`).join('');
 
     setProgress(98, "Calculando KPIs..."); await new Promise(r => setTimeout(r, 50)); 
     
     let baseProc = Array.from(mapCon.values()).map(i => {
         let trans = mapCompras.get(i.codNorm) || 0, consF = Math.abs(mapConsumo.get(i.codNorm)) || 0;
-        
         if (!i.saldo && !i.minimo && !i.maximo && !trans && !consF) return null;
         
         i.custoUnitario = (i.saldo > 0 && i.valorTotalGlobal > 0) ? i.valorTotalGlobal / i.saldo : i.locais[0]?.custoUnitario || 0;
@@ -421,7 +508,7 @@ async function processarInteligencia() {
         else if (i.maximo > 0 && i.saldo > i.maximo) { st = 'Excesso Estoque'; bd = 'badge-acima'; }
 
         i.reparticao = i.locais[0]?.reparticao || '-'; i.prateleira = i.locais[0]?.prateleira || '-'; i.divisao = i.locais[0]?.divisao || '-';
-        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: mapeamentoAtivo ? imagensMapeadas.has(i.codNorm) : null, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
+        return { ...i, transito: trans, consumo: consF, consumoFinanceiro: cFin, diasGiroMensal: gMes, diasGiroAnual: gAno, ultimoMesConsumoNome: nomeUltMes, mesesSemConsumo: mesesSemConsumo, valorImobilizado: vImob, status: st, statusBadge: bd, curva: 'C', temImagem: false, searchString: `${i.codNorm} ${normStr(i.desc)} ${normStr(i.grupo)} ${normStr(i.classe)} rep ${i.reparticao} prat ${i.prateleira} div ${i.divisao}`.toLowerCase() };
     }).filter(Boolean).sort((a, b) => parseFloat(a.codNorm) - parseFloat(b.codNorm));
 
     if (!baseProc.length) return (fecharLoader(), isFetchingData = false);
@@ -430,9 +517,18 @@ async function processarInteligencia() {
     itemsABC.forEach(i => { if (tFin > 0 && i.consumoFinanceiro > 0) { cAcum += i.consumoFinanceiro; let p = cAcum / tFin; i.curva = p <= 0.8 ? 'A' : p <= 0.95 ? 'B' : 'C'; } });
 
     itensProcessados = baseProc;
-    ordesAtivasFiltradas = ordesAtivas.map(o => ({ ...o, filial: mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`)?.filialNm || 'Geral' }));
     
-    if($('select-status-of')) $('select-status-of').innerHTML = '<option value="">Todos os Status</option>' + Array.from(setStatusOFUnicos).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+    ordesAtivasFiltradas = ordesAtivas.map(o => {
+        let matchItem = mapCon.get(`${normCod(o.codProd)}|${Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd))?.filialIdBase}`) || Array.from(mapCon.values()).find(x=>x.codNorm===normCod(o.codProd));
+        return { 
+            ...o, 
+            filial: matchItem ? matchItem.filialNm : 'Geral',
+            locaisItem: matchItem ? matchItem.locais : []
+        };
+    });
+    
+    let selectStatusOF = $('select-status-of');
+    if(selectStatusOF) selectStatusOF.innerHTML = '<option value="">Todos os Status</option>' + Array.from(setStatusOFUnicos).sort().map(s => `<option value="${s}">${s}</option>`).join('');
 
     filtroFilial.clear();
     document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
@@ -449,13 +545,11 @@ async function processarInteligencia() {
 }
 
 // ==========================================================================
-// FILTROS, BUSCA E RENDERIZAÇÃO 
+// FILTROS E RENDERIZAÇÃO 
 // ==========================================================================
 window.toggleTodasFiliais = masterChk => {
     let status = masterChk.checked;
-    document.querySelectorAll('.chk-filial-item').forEach(chk => {
-        chk.checked = status;
-    });
+    document.querySelectorAll('.chk-filial-item').forEach(chk => { chk.checked = status; });
     window.atualizarFiltroFiliaisMultiplas();
 };
 
@@ -463,15 +557,11 @@ window.atualizarFiltroFiliaisMultiplas = () => {
     filtroFilial.clear();
     let todasMarcadas = true;
     document.querySelectorAll('.chk-filial-item').forEach(chk => {
-        if(chk.checked) {
-            filtroFilial.add(chk.value);
-        } else {
-            todasMarcadas = false;
-        }
+        if(chk.checked) filtroFilial.add(chk.value);
+        else todasMarcadas = false;
     });
     let master = $('chk-all-filiais');
     if(master) master.checked = todasMarcadas;
-
     window.atualizarFiltroLocais();
 };
 
@@ -492,42 +582,42 @@ window.atualizarFiltroLocais = () => {
 window.dispararFiltros = () => {
     let tRaw = vistaAtual === 'pesquisa' ? $('busca')?.value : vistaAtual === 'compras' ? $('busca-compras')?.value : vistaAtual === 'gestao-compras' ? $('busca-ofs')?.value : $('busca')?.value;
     let tSplit = (tRaw||'').split(',').map(t => normStr(t)).filter(Boolean);
-    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, imgFil = $('select-imagem')?.value, lFil = $('select-local')?.value || "";
-
-    if (imgFil && !mapeamentoAtivo) { mostrarToast("Mapeie a pasta de imagens primeiro.", "warning"); $('select-imagem').value = ""; return; }
-
+    let sFil = $('select-saldo-status')?.value, cFil = $('select-curva')?.value, lFil = $('select-local')?.value || "";
     let filiaisArray = Array.from(filtroFilial);
 
-    itensFiltrados = itensProcessados.filter(i => 
-        (!tSplit.length || tSplit.some(t => i.searchString.includes(t))) && 
-        (!cFil || i.curva === cFil) && (!sFil || i.status === sFil) && 
-        (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm)) &&
-        (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil)) &&
-        (!imgFil || (imgFil === 'com_imagem' ? i.temImagem : !i.temImagem))
-    );
+    itensFiltrados = itensProcessados.filter(i => {
+        let matchBusca = (!tSplit.length || tSplit.some(t => i.searchString.includes(t)));
+        let matchCurva = (!cFil || i.curva === cFil);
+        let matchStatus = (!sFil || i.status === sFil);
+        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(i.filialNm));
+        let matchLocal = (!lFil || i.locais.some(l => `${l.filialNm} | ${l.localId ? l.localId+' - '+l.localNm : l.localNm}` === lFil));
+
+        return matchBusca && matchCurva && matchStatus && matchFilial && matchLocal;
+    });
 
     if (vistaAtual === 'pesquisa') renderPesquisa();
     else if (vistaAtual === 'dashboard') renderDashboard();
     else if (vistaAtual === 'compras') renderCompras();
-    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray);
+    else if (vistaAtual === 'gestao-compras') renderGestaoCompras(tSplit, filiaisArray, lFil);
     else if (vistaAtual === 'revisao') renderRevisao();
 };
 
 window.limparFiltroGrafico = tipo => {
-    if(tipo === 'abc') { filtroABC = null; $('filtro-abc-aviso').style.display = 'none'; }
-    if(tipo === 'status') { filtroStatus = null; $('filtro-status-aviso').style.display = 'none'; }
+    if(tipo === 'abc') { filtroABC = null; if($('filtro-abc-aviso')) $('filtro-abc-aviso').style.display = 'none'; }
+    if(tipo === 'status') { filtroStatus = null; if($('filtro-status-aviso')) $('filtro-status-aviso').style.display = 'none'; }
     if(tipo === 'filial') { 
         document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
         if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
         filtroFilial.clear();
         document.querySelectorAll('.chk-filial-item').forEach(chk => filtroFilial.add(chk.value));
-        $('filtro-filial-aviso').style.display = 'none'; 
+        if($('filtro-filial-aviso')) $('filtro-filial-aviso').style.display = 'none'; 
     }
     window.dispararFiltros();
 };
 
 window.limparFiltros = () => {
-    ['select-curva', 'select-saldo-status', 'select-imagem', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
+    ['select-curva', 'select-saldo-status', 'select-local', 'select-status-of', 'busca', 'busca-compras', 'busca-ofs'].forEach(id => { if($(id)) $(id).value = ""; });
+    if($('select-tipo-ordem')) $('select-tipo-ordem').value = "";
     filtroABC = filtroStatus = null;
     document.querySelectorAll('.chk-filial-item').forEach(chk => chk.checked = true);
     if($('chk-all-filiais')) $('chk-all-filiais').checked = true;
@@ -541,9 +631,20 @@ window.limparFiltros = () => {
 // ================= RENDERIZADORES =================
 const renderPesquisa = () => {
     setTxt('contador-itens', `${itensFiltrados.length} itens encontrados.`);
-    $('resultados').innerHTML = itensFiltrados.slice(0, 100).map(i => `
+    let resEl = $('resultados');
+    if(resEl) resEl.innerHTML = itensFiltrados.slice(0, 100).map(i => {
+        let lbArr = [];
+        for(let k = 1; k <= 6; k++) { lbArr.push(`imagens/${i.cod} - 0${k}.jpg`); }
+
+        return `
         <div class="item-card fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-            <div class="item-media"><div class="abc-badge curva-${i.curva}">${i.curva}</div><div class="item-image-container">${mapeamentoAtivo ? (i.temImagem ? `<img src="imagens/${i.cod} - 01.jpg">` : `<div class="img-placeholder">🚫<br>SEM FOTO</div>`) : `<img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>`}</div></div>
+            <div class="item-media">
+                <div class="abc-badge curva-${i.curva}">${i.curva}</div>
+                <div class="item-image-container" onclick="window.abrirLightboxArray('${lbArr.join(',')}', 0, event)">
+                    <img src="imagens/${i.cod} - 01.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                    <div class="img-placeholder" style="display:none;">🚫<br>SEM FOTO</div>
+                </div>
+            </div>
             <div class="item-info">
                 <div class="item-header"><div class="item-title"><span class="item-title-cod">#${i.cod}</span> ${i.desc}</div><span class="badge-status ${i.statusBadge}">${i.status}</span></div>
                 <div class="item-category"><span class="chip-category">${i.filialNm}</span><span class="chip-category">${i.grupo||'Geral'}</span><span class="chip-category">${i.classe||'N/A'}</span><span class="chip-category">UN: ${i.um||'UN'}</span></div>
@@ -555,12 +656,14 @@ const renderPesquisa = () => {
                     <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${fmtMoeda(i.consumoFinanceiro)}</span></div>
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 };
 
 const renderRevisao = () => {
     let rev = itensFiltrados.filter(i => (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) || (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) || (i.saldoUtil > i.maximo && i.maximo > 0));
-    $('revisao-table-body').innerHTML = rev.slice(0, 100).map(i => {
+    let revBody = $('revisao-table-body');
+    if(revBody) revBody.innerHTML = rev.slice(0, 100).map(i => {
         let acao = (i.consumoFinanceiro === 0) ? "Revisar/Zerar" : (i.saldoUtil > i.maximo) ? "Reduzir Máximo" : "Aumentar Mínimo";
         let cor = (i.consumoFinanceiro === 0) ? "var(--text-warning)" : (i.saldoUtil > i.maximo) ? "var(--primary-color)" : "var(--text-danger)";
         return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td>${i.filialNm}</td><td style="font-weight:900;color:var(--primary-color);">${i.saldoUtil}</td><td>${i.minimo} / ${i.maximo}</td><td style="font-weight:900;color:var(--text-info);">${i.sugestaoMin}</td><td style="font-weight:900;color:var(--text-info);">${i.sugestaoMax}</td><td>${fmtMoeda(i.consumoFinanceiro)}</td><td style="font-weight:800;color:${cor};">${acao}</td></tr>`;
@@ -568,38 +671,97 @@ const renderRevisao = () => {
 };
 
 const renderCompras = () => {
-    let list = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0).sort((a,b) => a.saldo - b.saldo);
+    let list = itensFiltrados.filter(i => {
+        let saldoDisponivel = i.saldo + i.transito;
+        return (saldoDisponivel <= 0 || saldoDisponivel < i.minimo) && i.minimo > 0 && i.maximo > 0;
+    }).sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito));
+
     let tQtd = 0, tVal = 0;
-    $('compras-table-body').innerHTML = list.map(i => {
-        let sug = i.maximo - i.saldo; tQtd += sug; tVal += (sug * i.custoUnitario);
-        return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td>${i.filialNm}</td><td style="font-weight:900;color:var(--text-critical);">${i.saldo}</td><td style="font-weight:700;color:var(--text-warning);">${i.minimo}</td><td style="font-weight:700;color:var(--primary-color);">${i.maximo}</td><td style="font-weight:900;color:var(--text-success);">COMPRAR +${sug}</td></tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem necessidade de compras críticas.</td></tr>`;
+    let comprasBody = $('compras-table-body');
+    if(comprasBody) comprasBody.innerHTML = list.map(i => {
+        let saldoDisponivel = i.saldo + i.transito;
+        let sug = Math.max(0, i.maximo - saldoDisponivel); 
+        tQtd += sug; tVal += (sug * i.custoUnitario);
+        return `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
+            <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td>
+            <td>${i.filialNm}</td>
+            <td style="font-weight:900;">${i.saldo} <span style="font-size:10px; color:var(--text-info); font-weight:normal;">(+${i.transito} trânsito)</span></td>
+            <td style="font-weight:700;color:var(--text-warning);">${i.minimo}</td>
+            <td style="font-weight:700;color:var(--primary-color);">${i.maximo}</td>
+            <td style="font-weight:900;color:var(--text-success);">COMPRAR +${sug}</td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:40px;">Sem necessidade de compras críticas (considerando o trânsito de SCs/OFs).</td></tr>`;
+    
     if($('resumo-necessidade')) $('resumo-necessidade').innerHTML = `<div class="kpi-card border-warning"><span class="kpi-title">Reposição (Qtd)</span><span class="kpi-value color-warning">${tQtd}</span></div><div class="kpi-card border-success"><span class="kpi-title">Valor Estimado</span><span class="kpi-value color-success">${fmtMoeda(tVal)}</span></div>`;
 };
 
-// VISÃO RESUMIDA E VISUAL NA TELA DE GESTÃO DE COMPRAS (OFs)
-const renderGestaoCompras = (tSplit, filiaisArray) => {
+const renderGestaoCompras = (tSplit, filiaisArray, lFil) => {
     let sOF = $('select-status-of')?.value;
-    let list = ordesAtivasFiltradas.filter(o => (!tSplit.length || tSplit.some(t => o.searchStr.includes(t))) && (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral') && (!sOF || o.sitOFOriginal === sOF));
+    let tipoOrdem = $('select-tipo-ordem')?.value || "";
+    
+    let list = ordesAtivasFiltradas.filter(o => {
+        let matchBusca = (!tSplit.length || tSplit.some(t => o.searchStr.includes(t)));
+        let matchFilial = (filiaisArray.length === 0 || filiaisArray.includes(o.filial) || o.filial === 'Geral');
+        let matchStatus = (!sOF || o.sitOFOriginal === sOF);
+        
+        let temOF = (o.of !== '' && o.of !== '-');
+        let matchTipo = true;
+        if (tipoOrdem === 'com_of') matchTipo = temOF;
+        if (tipoOrdem === 'sem_of') matchTipo = !temOF;
+
+        let matchLocal = true;
+        if (lFil) {
+            let [fNomeFiltro, localParteFiltro] = lFil.split(' | ');
+            let matchFilialLocal = (o.filial === fNomeFiltro || o.filial === 'Geral');
+            let matchLocalItem = o.locaisItem && o.locaisItem.some(l => {
+                let fmt = l.localId ? `${l.localId} - ${l.localNm}` : l.localNm;
+                return `${l.filialNm} | ${fmt}` === lFil;
+            });
+            matchLocal = matchFilialLocal && matchLocalItem;
+        }
+
+        return matchBusca && matchFilial && matchStatus && matchTipo && matchLocal;
+    });
+
     let vT = 0, qT = 0, fSet = new Set(), oSet = new Set();
     
-    $('ofs-table-body').innerHTML = list.slice(0, 100).map(o => {
+    let ofsBody = $('ofs-table-body');
+    if(ofsBody) ofsBody.innerHTML = list.slice(0, 100).map(o => {
         let cst = itensProcessados.find(i => i.codNorm === normCod(o.codProd))?.custoUnitario || 0;
         vT += o.saldoOF * cst; qT += o.saldoOF; fSet.add(o.fornecedor); oSet.add(o.of);
         
-        // Linha limpa e visual mostrando os dados essenciais na primeira visão
+        let infoTime = o.dataEntrega;
+        if (o.of === '-' || o.of === '') {
+            let dtCriaStr = o.scDtCria_ext;
+            if (dtCriaStr && dtCriaStr !== '-') {
+                let p = dtCriaStr.split('/');
+                if (p.length === 3) {
+                    let dia = parseInt(p[0]), mes = parseInt(p[1])-1, ano = parseInt(p[2].split(' ')[0]);
+                    if (ano < 100) ano += 2000;
+                    let dtCria = new Date(ano, mes, dia);
+                    let hoje = new Date(); hoje.setHours(0,0,0,0);
+                    let diffDias = Math.floor((hoje - dtCria) / (1000 * 60 * 60 * 24));
+                    infoTime = `Sem OF (Aberta há ${diffDias >= 0 ? diffDias : 0} dias)`;
+                } else {
+                    infoTime = `Sem OF (Criada em ${dtCriaStr})`;
+                }
+            } else {
+                infoTime = `Sem OF Gerada`;
+            }
+        }
+
         return `<tr class="fade-in" onclick="window.abrirModalOF('${o.of}', '${o.codProd}', '${o.sc}')">
-            <td><strong>${o.of}</strong><br><span style="font-size:10px; color:var(--text-secondary);">SC: ${o.sc}</span></td>
+            <td><strong>${o.of !== '-' ? o.of : 'Sem OF'}</strong><br><span style="font-size:10px; color:var(--text-secondary);">SC: ${o.sc}</span></td>
             <td><strong style="color:var(--primary-color);">#${o.codProd}</strong><br><span style="font-size:11px;">${o.descProd}</span></td>
             <td>${o.fornecedor}</td>
             <td>${o.qtdPedidaOriginal > 0 ? o.qtdPedidaOriginal : o.saldoOF}</td>
             <td style="font-weight:900;color:var(--text-warning);">${o.saldoOF}</td>
-            <td>${o.dataEntrega}</td>
+            <td>${infoTime}</td>
             <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span><br><span style="font-size:10px; color:var(--text-secondary);">${o.filial}</span></td>
         </tr>`;
-    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;font-size:14px;">Sem OFs pendentes correspondentes ao filtro.</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;font-size:14px;">Sem ordens pendentes correspondentes ao filtro.</td></tr>`;
     
-    if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">OFs Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
+    if($('resumo-ofs')) $('resumo-ofs').innerHTML = `<div class="kpi-card border-info"><span class="kpi-title">Valor Pendente</span><span class="kpi-value color-info">${fmtMoeda(vT)}</span></div><div class="kpi-card"><span class="kpi-title">Qtd Físico</span><span class="kpi-value">${qT}</span></div><div class="kpi-card"><span class="kpi-title">Ordens Abertas</span><span class="kpi-value">${oSet.size}</span></div><div class="kpi-card"><span class="kpi-title">Fornecedores</span><span class="kpi-value">${fSet.size}</span></div>`;
 };
 
 const renderDashboard = () => {
@@ -624,19 +786,21 @@ const renderDashboard = () => {
     atualizarGraficos();
     
     let tb = itensFiltrados;
-    if(filtroABC) { tb = tb.filter(i=>i.curva===filtroABC); $('filtro-abc-aviso').style.display='inline-block'; setTxt('filtro-abc-aviso', `✖ ABC: ${filtroABC}`); } else if($('filtro-abc-aviso')) $('filtro-abc-aviso').style.display='none';
-    if(filtroStatus) { tb = tb.filter(i=> filtroStatus==='Ruptura' ? i.status.includes('Ruptura') : filtroStatus==='Obsoleto' ? i.status.includes('Obsoleto') : i.status===filtroStatus); $('filtro-status-aviso').style.display='inline-block'; setTxt('filtro-status-aviso', `✖ Status: ${filtroStatus}`); } else if($('filtro-status-aviso')) $('filtro-status-aviso').style.display='none';
+    if(filtroABC) { tb = tb.filter(i=>i.curva===filtroABC); if($('filtro-abc-aviso')) { $('filtro-abc-aviso').style.display='inline-block'; setTxt('filtro-abc-aviso', `✖ ABC: ${filtroABC}`); } } else if($('filtro-abc-aviso')) $('filtro-abc-aviso').style.display='none';
+    if(filtroStatus) { tb = tb.filter(i=> filtroStatus==='Ruptura' ? i.status.includes('Ruptura') : filtroStatus==='Obsoleto' ? i.status.includes('Obsoleto') : i.status===filtroStatus); if($('filtro-status-aviso')) { $('filtro-status-aviso').style.display='inline-block'; setTxt('filtro-status-aviso', `✖ Status: ${filtroStatus}`); } } else if($('filtro-status-aviso')) $('filtro-status-aviso').style.display='none';
     
     let filiaisArray = Array.from(filtroFilial);
-    if(filtroFilial.size > 0 && filiaisArray.length < document.querySelectorAll('.chk-filial-item').length) {
-        $('filtro-filial-aviso').style.display='inline-block';
-        setTxt('filtro-filial-aviso', `✖ Filiais (${filtroFilial.size})`);
+    let chkFiliais = document.querySelectorAll('.chk-filial-item');
+    if(filtroFilial.size > 0 && chkFiliais.length > 0 && filiaisArray.length < chkFiliais.length) {
+        if($('filtro-filial-aviso')) { $('filtro-filial-aviso').style.display='inline-block'; setTxt('filtro-filial-aviso', `✖ Filiais (${filtroFilial.size})`); }
     } else if($('filtro-filial-aviso')) $('filtro-filial-aviso').style.display='none';
 
-    if($('dash-table-body')) $('dash-table-body').innerHTML = tb.slice(0, 50).map(i => `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><div class="abc-badge curva-${i.curva}" style="width:28px;height:28px;font-size:13px;position:static;">${i.curva}</div></td><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td style="font-size:11px;">${i.locais.length>1 ? i.locais.length+' Locais' : `Rep ${i.reparticao} | Prat ${i.prateleira}`}</td><td style="font-weight:800;">${i.saldo}</td><td style="font-weight:600;">${fmtMoeda(i.consumoFinanceiro)}</td><td style="font-weight:700;">${i.diasGiroMensal===Infinity?'Obsoleto':i.diasGiroMensal+'d'}</td><td><span class="badge-status ${i.statusBadge}">${i.status}</span></td></tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;">Nenhum dado encontrado.</td></tr>`;
+    let dashBody = $('dash-table-body');
+    if(dashBody) dashBody.innerHTML = tb.slice(0, 50).map(i => `<tr class="fade-in" onclick="window.abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')"><td><div class="abc-badge curva-${i.curva}" style="width:28px;height:28px;font-size:13px;position:static;">${i.curva}</div></td><td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;">${i.desc}</span></td><td style="font-size:11px;">${i.locais.length>1 ? i.locais.length+' Locais' : `Rep ${i.reparticao} | Prat ${i.prateleira}`}</td><td style="font-weight:800;">${i.saldo}</td><td style="font-weight:600;">${fmtMoeda(i.consumoFinanceiro)}</td><td style="font-weight:700;">${i.diasGiroMensal===Infinity?'Obsoleto':i.diasGiroMensal+'d'}</td><td><span class="badge-status ${i.statusBadge}">${i.status}</span></td></tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;">Nenhum dado encontrado.</td></tr>`;
 };
 
 const atualizarGraficos = () => {
+    if(typeof Chart === 'undefined') return;
     [chartABC, chartStatus, chartFiliais].forEach(c => c?.destroy());
     let cA = $('chartABC')?.getContext('2d'), cS = $('chartStatus')?.getContext('2d'), cF = $('chartFiliais')?.getContext('2d');
     if(!cA || !cS) return;
@@ -680,16 +844,31 @@ window.abrirModalDetalhes = (codNorm, fId) => {
     let item = itensProcessados.find(i => i.codNorm === codNorm && i.filialIdBase === fId);
     if (!item) return mostrarToast("Erro ao abrir.", "error");
 
-    let imgsHTML = '', lbArr = [];
-    if (mapeamentoAtivo && item.temImagem) {
-        for(let k = 1; k <= 6; k++) { let p = `imagens/${item.cod} - 0${k}.jpg`; lbArr.push(p); imgsHTML += `<img src="${p}" style="height:150px;min-width:150px;border-radius:12px;object-fit:cover;" onclick="window.abrirLightboxArray('${lbArr.join(',')}', ${k-1}, event)" onerror="this.style.display='none'">`; }
-    } else { imgsHTML = `<img src="imagens/${item.cod} - 01.jpg" style="height:150px;border-radius:12px;object-fit:cover;" onclick="window.abrirLightboxArray('imagens/${item.cod} - 01.jpg', 0, event)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="img-placeholder" style="display:none;width:150px;height:150px;">🚫<br>SEM FOTO</div>`; }
+    let lbArr = [];
+    for(let k = 1; k <= 6; k++) { lbArr.push(`imagens/${item.cod} - 0${k}.jpg`); }
+
+    let imgsHTML = lbArr.map((path, idx) => `
+        <img src="${path}" style="height:150px;min-width:150px;border-radius:12px;object-fit:cover;cursor:zoom-in;" onclick="window.abrirLightboxArray('${lbArr.join(',')}', ${idx}, event)" onerror="this.style.display='none'">
+    `).join('');
 
     let locs = item.locais.map(l => `<tr><td>${l.filialNm}</td><td><strong style="color:var(--primary-color);">${l.localId||'-'}</strong> - ${l.localNm}</td><td>${l.reparticao}</td><td>${l.prateleira}</td><td>${l.divisao}</td><td style="font-weight:800;">${l.saldo}</td></tr>`).join('');
 
+    let ordensDoItem = ordesAtivasFiltradas.filter(o => normCod(o.codProd) === item.codNorm);
+    let transitoHTML = ordensDoItem.length > 0 ? ordensDoItem.map(o => `
+        <tr>
+            <td><strong>${o.sc}</strong></td>
+            <td><strong>${o.of !== '-' ? o.of : 'Sem OF (SC Pendente)'}</strong></td>
+            <td>${o.fornecedor}</td>
+            <td style="font-weight:800; color:var(--text-warning);">${o.saldoOF}</td>
+            <td>${o.dataEntrega !== '-' ? o.dataEntrega : 'Não informada'}</td>
+            <td><span class="badge-status badge-transito">${o.sitOFOriginal || 'Pendente'}</span></td>
+        </tr>
+    `).join('') : `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">Nenhum pedido em trânsito no momento.</td></tr>`;
+
     let labelHistorico = item.mesesSemConsumo === 0 ? '(Neste Mês)' : item.mesesSemConsumo === Infinity ? '(Sem Histórico)' : `Há ${item.mesesSemConsumo} meses`;
 
-    $('modal-body-content').innerHTML = `
+    let modalBody = $('modal-body-content');
+    if(modalBody) modalBody.innerHTML = `
         <div class="modal-header-section">
             <div style="flex-grow:1;">
                 <h2 style="font-size:24px;font-weight:800;margin-bottom:8px;"><span style="color:var(--primary-color);">#${item.cod}</span> - ${item.desc}</h2>
@@ -708,15 +887,27 @@ window.abrirModalDetalhes = (codNorm, fId) => {
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--text-info);">Min / Max (Sugestão)</span><span class="metric-value" style="color:var(--text-info);">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label" style="color:var(--primary-color);">Giro / Cobertura</span><span class="metric-value">${item.diasGiroMensal===Infinity?'Obsoleto':item.diasGiroMensal+' dias'}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Último Consumo</span><span class="metric-value" style="font-size:14px; margin-top:2px;">${item.ultimoMesConsumoNome}<br><span style="font-size:10px; color:var(--text-secondary);">${labelHistorico}</span></span></div>
-                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF)</span><span class="metric-value">${item.transito}</span></div>
+                    <div class="metric-box metric-transito"><span class="metric-label">Em Trânsito (OF/SC)</span><span class="metric-value">${item.transito}</span></div>
                 </div>
             </div>
         </div>
-        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos</h3>
+
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">📦 Pedidos e SCs em Trânsito para este Item</h3>
+        <div style="overflow-x:auto; margin-bottom:24px; border-radius:12px; border:1px solid var(--border-color);">
+            <table class="modal-locais-table">
+                <thead><tr><th>SC</th><th>OF</th><th>Fornecedor</th><th>Qtd Pendente</th><th>Previsão Entrega</th><th>Status</th></tr></thead>
+                <tbody>${transitoHTML}</tbody>
+            </table>
+        </div>
+
+        <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Galeria de Fotos (Até 6 Imagens Automáticas)</h3>
         <div class="modal-gallery-container" style="margin-bottom:24px;">${imgsHTML}</div>
+        
         <h3 style="font-size:13px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;">Detalhamento de Endereços e Prateleiras (Locais)</h3>
         <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);"><table class="modal-locais-table"><thead><tr><th>Filial</th><th>Local de Estoque</th><th>Repartição</th><th>Prateleira</th><th>Divisão</th><th>Saldo Local</th></tr></thead><tbody>${locs}</tbody></table></div>`;
-    $('modal-item').style.display = 'flex';
+    
+    let modalItem = $('modal-item');
+    if(modalItem) modalItem.style.display = 'flex';
 };
 
 window.abrirModalOF = (ofId, codProd, scId) => {
@@ -724,7 +915,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
         o = ordesAtivasFiltradas.find(x => x.of === ofId && x.sc === scId && normCod(x.codProd) === c), 
         i = itensProcessados.find(x => x.codNorm === c);
 
-    if (!o) return mostrarToast("Erro ao carregar OF.", "error");
+    if (!o) return mostrarToast("Erro ao carregar ordem.", "error");
 
     if (!i) i = { saldo: 0, minimo: 0, maximo: 0, codNorm: c, filialIdBase: 'N/A' };
 
@@ -753,16 +944,19 @@ window.abrirModalOF = (ofId, codProd, scId) => {
 
     const rowRender = (label, val) => `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="color:var(--text-secondary); font-weight:700;">${label}:</span> <span style="text-align:right; font-weight:600; color:var(--text-primary); max-width:65%; word-break:break-word;">${val}</span></div>`;
 
-    $('modal-body-content').innerHTML = `
+    let tituloCabecalho = o.of !== '-' ? `OF ${o.of} / SC ${o.sc}` : `SC ${o.sc} (Aguardando OF)`;
+
+    let modalBody = $('modal-body-content');
+    if(modalBody) modalBody.innerHTML = `
         <div class="modal-header-section" style="border-bottom:none; margin-bottom:10px; padding-bottom:0;">
             <div style="flex-grow:1;">
-                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">OF ${o.of}</span> / <span style="color:var(--text-info);">SC ${o.sc}</span></h2>
+                <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Gestão Logística: <span style="color:var(--primary-color);">${tituloCabecalho}</span></h2>
                 <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">Produto #${o.codProd} - ${o.descProd}</h3>
                 
                 <div class="item-metrics-grid" style="margin-bottom:24px;">
                     <div class="metric-box metric-saldo"><span class="metric-label">Saldo Físico Atual</span><span class="metric-value">${i.saldo}</span></div>
                     <div class="metric-box metric-transito"><span class="metric-label">Quantidade Original</span><span class="metric-value">${o.qtdPedidaOriginal}</span></div>
-                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Trânsito (Falta Entregar)</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
+                    <div class="metric-box metric-default" style="border-color:var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente</span><span class="metric-value" style="color:var(--text-warning);">${o.saldoOF}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Previsão Entrega</span><span class="metric-value" style="font-size:14px; margin-top:5px; display:flex; flex-direction:column; gap:5px;">${dataAlvo} <div>${badgeAtraso}</div></span></div>
                 </div>
             </div>
@@ -795,7 +989,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
             <div style="background:var(--bg-subcard); padding:16px; border-radius:12px; border:1px solid var(--border-color);">
                 <h4 style="color:var(--text-info); margin-bottom:12px; font-weight:800; font-size:13px; text-transform:uppercase;">📦 Fornecimento (OF)</h4>
                 <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
-                    ${rowRender('Cód OF', o.of)}
+                    ${rowRender('Cód OF', o.of !== '-' ? o.of : 'Não Gerada')}
                     ${rowRender('Fornecedor', o.fornecedor)}
                     ${rowRender('Email', o.ofEmail_ext)}
                     ${rowRender('Data OF', o.ofData_ext)}
@@ -830,5 +1024,7 @@ window.abrirModalOF = (ofId, codProd, scId) => {
             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:15px;">Aprofundar a análise de histórico e consumo deste material?</p>
             ${btnContexto}
         </div>`;
-    $('modal-item').style.display = 'flex';
+    
+    let modalItem = $('modal-item');
+    if(modalItem) modalItem.style.display = 'flex';
 };
