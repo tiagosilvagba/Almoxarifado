@@ -1,0 +1,29 @@
+/* =========================================================================
+   2. ESTILOS GERAIS E TELA DE CARREGAMENTO
+   ========================================================================== */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+body { background-color: var(--bg-body); color: var(--text-primary); height: 100vh; overflow: hidden; display: flex; transition: background 0.3s ease, color 0.3s ease; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+#tech-loader {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--bg-card); z-index: 99999; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; transition: opacity 0.5s ease;
+}
+.loader-logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; color: var(--primary-color); margin-bottom: 20px; }
+.progress-container { width: 320px; height: 6px; background: var(--bg-subcard); border-radius: 3px; overflow: hidden; border: 1px solid var(--border-color); }
+.progress-bar { width: 0%; height: 100%; background: var(--primary-color); transition: width 0.3s ease; }
+.progress-text { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.loader-logs { margin-top: 20px; width: 450px; max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 11px; color: var(--text-secondary); background: var(--bg-subcard); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+.loader-logs div { margin-bottom: 3px; }
+.loader-logs .success { color: var(--text-success); font-weight: bold; }
+.loader-logs .error { color: var(--text-danger); font-weight: bold; }
+.loader-logs .warning { color: var(--text-warning); font-weight: bold; }
+.btn-upload-fallback { margin-top: 20px; padding: 10px 20px; background: var(--primary-color); color: white; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: none; transition: background 0.2s; }
+.btn-upload-fallback:hover { background: var(--primary-hover); }
+
+.app-layout { display: flex; width: 100vw; height: 100vh; overflow: hidden; position: relative; }

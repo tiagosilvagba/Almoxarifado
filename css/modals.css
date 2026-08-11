@@ -1,0 +1,24 @@
+/* =========================================================================
+   8. MODAL DE DETALHES, GALERIA E LIGHTBOX NATIVO
+   ========================================================================== */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-content { background: var(--bg-card); width: 100%; max-width: 900px; max-height: 90vh; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; position: relative; animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-close { position: absolute; top: 16px; right: 20px; font-size: 24px; font-weight: bold; color: var(--text-secondary); cursor: pointer; z-index: 10; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-subcard); transition: all 0.2s; }
+.modal-close:hover { background: var(--border-color); color: var(--text-primary); }
+
+.galeria-fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 10px; }
+.miniatura-container { position: relative; width: 100%; height: 100px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color); cursor: pointer; background: var(--bg-subcard); transition: transform 0.2s, border-color 0.2s; }
+.miniatura-container:hover { transform: scale(1.03); border-color: var(--primary-color); }
+.miniatura-container img { width: 100%; height: 100%; object-fit: cover; }
+
+/* CSS LIGHTBOX (Zoom NATIVO com Setas) */
+.lightbox-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 99999; display: none; align-items: center; justify-content: center; }
+.lightbox-wrapper { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+.lightbox-img { max-width: 85vw; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); cursor: zoom-in; transition: transform 0.3s ease; }
+.lightbox-img.zoomed { transform: scale(1.8); cursor: zoom-out; }
+.lightbox-close { position: absolute; top: 24px; right: 30px; font-size: 36px; color: white; cursor: pointer; z-index: 100000; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.lb-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: white; border: none; font-size: 24px; padding: 16px 20px; cursor: pointer; border-radius: 50%; z-index: 10000; transition: background 0.2s; }
+.lb-btn:hover { background: rgba(255,255,255,0.3); }
+.lb-prev { left: 5%; }
+.lb-next { right: 5%; }
+.lb-counter { position: absolute; bottom: 20px; color: white; font-size: 16px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; }
