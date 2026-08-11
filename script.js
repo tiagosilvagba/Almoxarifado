@@ -566,10 +566,10 @@ async function processarInteligencia() {
                 // Aguardando Aprovação (Somente SC)
                 saldoPendente = 1;
             } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
-                // Item Entregue
+                // Item Entregue (Saldo pendente = 0)
                 saldoPendente = 0;
             } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
-                // Entrega Parcial (considera o saldo restante em trânsito)
+                // Entrega Parcial (Saldo restante)
                 saldoPendente = qtdPedida - qtdRecebida;
             } else if (qtdPedida > 0 && qtdRecebida === 0) {
                 // Em Trânsito
@@ -628,7 +628,7 @@ async function processarInteligencia() {
 
                 if (cs_local) {
                     let localVal = String(item[cs_local]).trim();
-                    if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299') || localVal.includes('295')) {
+                    if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299' ) || localVal.includes('295')) {
                         return; 
                     }
                 }
@@ -884,17 +884,21 @@ async function processarInteligencia() {
             let saldoPendente = 0;
 
             if (isFechadaOuCancelada) {
-                return; // Ignora itens fechados/cancelados da gestão de trânsito
+                return; // Ignora fechadas ou canceladas
             } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
+                // Somente SC sem OF -> Aguardando Aprovação
                 statusCalculado = 'Aguardando Aprovação';
                 saldoPendente = 1;
             } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
+                // Qtd Entregue == Qtd Solicitada -> Item Entregue
                 statusCalculado = 'Item Entregue';
                 saldoPendente = 0;
             } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
+                // Qtd Entregue < Qtd Solicitada e > 0 -> Entrega Parcial (ex: SC 7255197 com 3,25 de 6000)
                 statusCalculado = 'Entrega Parcial';
                 saldoPendente = qtdPedida - qtdRecebida;
             } else if (qtdPedida > 0 && qtdRecebida === 0) {
+                // Solicitado > 0 e Entregue == 0 -> Em Trânsito
                 statusCalculado = 'Em Trânsito';
                 saldoPendente = qtdPedida;
             } else {
@@ -902,7 +906,7 @@ async function processarInteligencia() {
                 saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
             }
 
-            // Armazena no filtro dinâmico
+            // Armazena no filtro dinâmico de Status de OF
             setStatusOFUnicos.add(statusCalculado);
 
             let cod = normalizarCod(linha[c_cod_compra]);
