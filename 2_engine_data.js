@@ -1,242 +1,4 @@
 // ==========================================================================
-// 1. CARGA DE ARQUIVOS E IMAGENS
-// ==========================================================================
-async function carregarArquivosAutomaticamente() {
-    if (isFetchingData) return; 
-    isFetchingData = true;
-
-    const loader = document.getElementById('tech-loader');
-    if (loader) {
-        loader.style.display = 'flex';
-        loader.style.opacity = '1';
-    }
-    
-    const ring = document.getElementById('loader-ring');
-    if (ring) ring.classList.remove('error');
-    
-    const btnFallback = document.getElementById('btn-fallback');
-    if (btnFallback) btnFallback.style.display = 'none';
-    
-    const logs = document.getElementById('loader-logs');
-    if (logs) logs.innerHTML = '';
-    
-    setProgress(5, "Iniciando sincronização via Fetch API...");
-
-    const arquivos = [
-        { id: 'baseItens', url: '03 - Base_Itens.csv', statusId: 'status-base' },
-        { id: 'compras', url: '01 - Compras.csv', statusId: 'status-compras' },
-        { id: 'consumos', url: '02 - Consumos.csv', statusId: 'status-consumos' }
-    ];
-
-    let carregados = 0;
-    let errosCriticos = false;
-    const decoder = new TextDecoder('windows-1252'); 
-
-    for (let i=0; i<arquivos.length; i++) {
-        const arq = arquivos[i];
-        setProgress(10 + (i*20), `Buscando arquivo: ${arq.url}...`);
-        await new Promise(r => setTimeout(r, 100)); 
-        
-        const elStatus = document.getElementById(arq.statusId);
-        try {
-            if (typeof Papa === 'undefined') throw new Error("Biblioteca PapaParse offline ou não carregou.");
-            
-            const response = await fetch(arq.url, { cache: "no-store" });
-            if (!response.ok) throw new Error(`Arquivo não encontrado (Erro HTTP ${response.status}). Atenção à exatidão do nome.`);
-            
-            const arrayBuffer = await response.arrayBuffer();
-            const text = decoder.decode(arrayBuffer);
-            
-            setProgress(15 + (i*20), `Extraindo dados de ${arq.url}...`);
-            await new Promise(r => setTimeout(r, 50)); 
-            
-            bases[arq.id] = parseCSVFast(text);
-            
-            setProgress(30 + (i*20), `✓ ${arq.url} (Lido e Extraído com Sucesso)`, 'success');
-            if (elStatus) {
-                elStatus.innerText = `✅ ${arq.url}`;
-                elStatus.className = 'status-item status-ok';
-            }
-            carregados++;
-        } catch (error) {
-            let detalhe = error.message;
-            if (detalhe.includes('Failed to fetch') || detalhe.includes('NetworkError')) {
-                detalhe = "Falha de rede ou CORS. Você está rodando localmente sem servidor web?";
-            }
-            setProgress(loaderProgress, `[ERRO ${arq.url}] ${detalhe}`, 'error');
-            if (elStatus) {
-                elStatus.innerText = `❌ Falha: ${arq.url}`;
-                elStatus.className = 'status-item status-erro';
-            }
-            errosCriticos = true;
-        }
-    }
-
-    if (carregados === 3) {
-        setProgress(90, "Modelos carregados. Iniciando consolidação...", 'success');
-        setTimeout(processarInteligencia, 500);
-    } else if (errosCriticos) {
-        setProgress(loaderProgress, "Leitura automática interrompida por erro. Clique no botão de Upload Manual abaixo.", 'warning');
-        mostrarErroLoaderFatal();
-        isFetchingData = false;
-    }
-}
-
-window.uploadManualMultiplo = function(event) {
-    if (isFetchingData) return;
-    isFetchingData = true;
-
-    document.getElementById('loader-ring')?.classList.remove('error');
-    document.getElementById('btn-fallback').style.display = 'none';
-    document.getElementById('tech-loader').style.display = 'flex';
-    document.getElementById('tech-loader').style.opacity = '1';
-    document.getElementById('loader-logs').innerHTML = '';
-    setProgress(10, "Iniciando processamento manual FileReader...");
-
-    const files = event.target.files;
-    let carregados = 0;
-    const decoder = new TextDecoder('windows-1252');
-
-    Array.from(files).forEach((file, idx) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const text = decoder.decode(e.target.result);
-            const nomeLower = file.name.toLowerCase();
-            
-            let alvoId = null;
-            if (nomeLower.includes('base')) alvoId = 'baseItens';
-            else if (nomeLower.includes('compras')) alvoId = 'compras';
-            else if (nomeLower.includes('consumos')) alvoId = 'consumos';
-
-            if (alvoId) {
-                bases[alvoId] = parseCSVFast(text);
-                setProgress(20 + (idx*20), `✓ ${file.name} Importado com Sucesso.`, 'success');
-                carregados++;
-                if(carregados === files.length) {
-                    setProgress(90, "Todos os arquivos manuais carregados. Iniciando Inteligência...", 'success');
-                    setTimeout(processarInteligencia, 500);
-                }
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    });
-    
-    if (files.length === 0) { isFetchingData = false; fecharLoader(); }
-}
-
-window.mapearImagensPasta = function(event) {
-    const files = event.target.files;
-    if(files.length === 0) return;
-    let count = 0;
-    imagensMapeadas.clear();
-
-    for(let i = 0; i < files.length; i++) {
-        let fileName = files[i].name.toLowerCase();
-        if(fileName.includes(' - 01.') || fileName.includes(' - 02.') || fileName.includes(' - 03.') || fileName.includes(' - 04.') || fileName.includes(' - 05.') || fileName.includes(' - 06.')) {
-            let codBruto = fileName.split(' - ')[0];
-            let codNorm = normalizarCod(codBruto);
-            imagensMapeadas.add(codNorm);
-            count++;
-        }
-    }
-    mapeamentoDeImagemAtivo = true;
-
-    if (itensProcessados.length > 0) {
-        itensProcessados.forEach(item => { item.temImagem = imagensMapeadas.has(item.codNorm); });
-        if (typeof dispararFiltrosSemAtraso === 'function') dispararFiltrosSemAtraso();
-    }
-    mostrarToast(`Sucesso: ${count} imagens mapeadas!`, "success");
-}
-
-// ==========================================================================
-// 2. EXPORTAÇÃO PARA EXCEL
-// ==========================================================================
-window.exportarComprasExcel = function() {
-    const necessitaCompra = itensFiltrados.filter(i => {
-        let estoqueVirtual = i.saldo + i.transito;
-        return (estoqueVirtual < i.minimo) && i.minimo > 0 && i.maximo > 0;
-    });
-
-    if(necessitaCompra.length === 0) {
-        mostrarToast("Nenhum dado crítico na tela para exportar.", "warning");
-        return;
-    }
-    
-    let csvContent = "\uFEFF"; 
-    csvContent += "Código;Descrição;Filial;Saldo Físico;Em Trânsito;Estoque Virtual;Giro Atual (Dias);Mínimo;Máximo;Sugestão Compra;Giro Pós-Compra (Dias);Custo Unitário;Valor Estimado Compra\n";
-    
-    necessitaCompra.sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito)).forEach(i => {
-        let estoqueVirtual = i.saldo + i.transito;
-        let sug = i.maximo - estoqueVirtual;
-        
-        if(sug > 0) {
-            let val = sug * i.custoUnitario;
-            let descLimpa = i.desc.replace(/;/g, ',');
-            let filialLimpa = i.filialNm.replace(/;/g, ',');
-            
-            let giroAtual = i.consumo > 0 ? Math.round((i.saldo / i.consumo) * 30) : 'Sem Consumo';
-            let giroPos = i.consumo > 0 ? Math.round((i.maximo / i.consumo) * 30) : 'Sem Consumo';
-
-            csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.transito};${estoqueVirtual};${giroAtual};${i.minimo};${i.maximo};${sug};${giroPos};${i.custoUnitario.toFixed(2)};${val.toFixed(2)}\n`;
-        }
-    });
-    
-    const blob = new Blob([csvContent.replace(/\./g, ',')], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Necessidade_Compra_${new Date().toISOString().slice(0,10)}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    mostrarToast("Arquivo Excel baixado com sucesso!", "success");
-}
-
-window.exportarRevisaoExcel = function() {
-    const itensRevisao = itensFiltrados.filter(i => {
-        if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) return true;
-        if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) return true;
-        if (i.saldoUtil > i.maximo && i.maximo > 0) return true;
-        return false;
-    });
-
-    if(itensRevisao.length === 0) {
-        mostrarToast("Nenhum dado de revisão na tela para exportar.", "warning");
-        return;
-    }
-
-    let csvContent = "\uFEFF"; 
-    csvContent += "Código;Descrição;Filial;Saldo Útil;Mínimo Atual;Máximo Atual;Sugestão Novo Mín;Sugestão Novo Máx;Custo Consumo Mês;Ação Recomendada\n";
-
-    itensRevisao.forEach(i => {
-        let acao = "";
-        if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) {
-            acao = "Revisar/Zerar (Sem Consumo)";
-        } else if (i.saldoUtil > i.maximo && i.maximo > 0) {
-            acao = "Reduzir Máximo (Excesso)";
-        } else if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) {
-            acao = "Aumentar Mínimo (Risco)";
-        }
-
-        let descLimpa = i.desc.replace(/;/g, ',');
-        let filialLimpa = i.filialNm.replace(/;/g, ',');
-        csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldoUtil};${i.minimo};${i.maximo};${i.sugestaoMin};${i.sugestaoMax};${i.consumoFinanceiro.toFixed(2)};${acao}\n`;
-    });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Revisao_MinMax_${new Date().toISOString().slice(0,10)}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    mostrarToast("Planilha de Revisão baixada com sucesso!", "success");
-}
-
-// ==========================================================================
 // 3. MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
 // ==========================================================================
 async function processarInteligencia() {
@@ -281,14 +43,6 @@ async function processarInteligencia() {
     const colScSit = ['sc - situação', 'situacao sc'];
     const colScCanc = ['sc - cancelado', 'sc cancelado', 'cancelado'];
 
-    // TABELA DE COTAÇÃO ATUAL PARA CONVERSÃO DE MOEDAS (Base Comercial)
-    const cotacoesMoeda = {
-        'usd': 5.17, // Dólar Americano
-        'eur': 5.97, // Euro
-        'brl': 1.00, // Real Brasileiro (Base)
-        'r$': 1.00
-    };
-
     const dataAtual = new Date();
     let mesAnteriorNum = dataAtual.getMonth(); 
     if (mesAnteriorNum === 0) mesAnteriorNum = 12; 
@@ -297,13 +51,13 @@ async function processarInteligencia() {
     mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
     const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-    setProgress(92, "Processando Compras (com Conversão Cambial) e Lead Time...");
+    setProgress(92, "Processando Compras e Lead Time...");
     await new Promise(r => setTimeout(r, 50)); 
 
     const mapComprasTransito = new Map(); 
     const mapLeadTimeHistorico = new Map(); 
     
-    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_qtd_compra_fallback = null, c_sc_dt = null, c_rec_dt = null, c_of_moeda = null;
+    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_qtd_compra_fallback = null, c_sc_dt = null, c_rec_dt = null;
 
     if(bases.compras.length > 0) {
         c_cod_compra = encontrarChave(bases.compras[0], colCod);
@@ -315,7 +69,6 @@ async function processarInteligencia() {
         c_qtd_compra_fallback = encontrarChave(bases.compras[0], colQtdCompraFallback);
         c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
         c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
-        c_of_moeda = encontrarChave(bases.compras[0], ['of - moeda', 'moeda of', 'moeda']);
         
         bases.compras.forEach(item => {
             const cod = normalizarCod(item[c_cod_compra]);
@@ -326,10 +79,6 @@ async function processarInteligencia() {
             let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
-
-            // Conversão de moeda aplicada caso exista fator cambial na linha
-            let moedaStr = c_of_moeda && item[c_of_moeda] ? normalizarString(item[c_of_moeda]) : 'brl';
-            let taxaConversao = cotacoesMoeda[moedaStr] || 1.00;
 
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
@@ -626,7 +375,7 @@ async function processarInteligencia() {
     itensProcessados = baseSujaProcessada;
     
     // ==========================================================================
-    // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs) E CONVERSÃO CAMBIAL
+    // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS E HISTÓRICO COMPLETO
     // ==========================================================================
     ordesAtivasFiltradas = [];
     setStatusOFUnicos.clear();
@@ -638,7 +387,7 @@ async function processarInteligencia() {
         const c_forn = encontrarChave(bases.compras[0], colOfNomeFornecedor);
         const c_dt_ent = encontrarChave(bases.compras[0], colOfDataEntrega);
         const c_solicitante = encontrarChave(bases.compras[0], ['sc - nome solicitante', 'sc solicitante', 'nome solicitante', 'requisitante']);
-        const c_of_fechado = encontrarChave(bases.compras[0], ['of - fechado', 'fechado of']);
+        const c_of_fechado = encontrarChave(bases.compras[0], ['of - fechado', 'fechado of']); 
         
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
@@ -647,19 +396,15 @@ async function processarInteligencia() {
             let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
             let sitOFOriginal = c_of_sit ? linha[c_of_sit] : 'Pendente';
             let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
-            let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
+            let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
-            // Fator de conversão da moeda da linha para Real (BRL)
-            let moedaStr = c_of_moeda && linha[c_of_moeda] ? normalizarString(linha[c_of_moeda]) : 'brl';
-            let taxaCambio = cotacoesMoeda[moedaStr] || 1.00;
-
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let ofFechadoStr = c_of_fechado && linha[c_of_fechado] ? String(linha[c_of_fechado]).toLowerCase() : '';
             let isFechada = isFechadaOuCancelada || ofFechadoStr === 'sim' || ofFechadoStr === 's';
 
             let saldoPendente = 0;
-            if (isFechada) {
+            if (isFechadaOuCancelada) {
                 saldoPendente = 0; 
             } else if (c_of_qtd_pedida) {
                 saldoPendente = qtdPedida - qtdRecebida;
@@ -669,6 +414,7 @@ async function processarInteligencia() {
                 qtdPedida = saldoPendente; 
             }
 
+            // ATUALIZAÇÃO: Cálculo lógico exato do status
             let statusCalculado = sitOFOriginal || 'Pendente';
             if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
                 statusCalculado = 'Entregue';
@@ -688,7 +434,6 @@ async function processarInteligencia() {
 
                 if (statusCalculado) setStatusOFUnicos.add(statusCalculado);
 
-                // Aplica a conversão cambial no objeto guardado para os cálculos financeiros se necessário
                 ordesAtivasFiltradas.push({
                     sc: linha[c_sc] || '-',
                     of: linha[c_of] || '-',
@@ -700,8 +445,7 @@ async function processarInteligencia() {
                     qtdPedidaOriginal: qtdPedida,
                     saldoOF: saldoPendente,
                     sitOFOriginal: sitOFOriginal,
-                    statusCalculado: statusCalculado,
-                    taxaCambio: taxaCambio,
+                    statusCalculado: statusCalculado, // Guarda o status calculado matematicamente
                     filial: filialDaOF,
                     searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req).toLowerCase(),
                     linhaOriginal: linha 
@@ -710,6 +454,7 @@ async function processarInteligencia() {
         });
     }
 
+    // Injeta o Select filtrado por Padrão para "Pendentes"
     const selectStatusOf = document.getElementById('select-status-of');
     if (selectStatusOf) {
         selectStatusOf.innerHTML = '<option value="">Todos os Status (Pesquisa Livre)</option>';

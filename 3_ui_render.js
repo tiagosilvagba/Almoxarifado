@@ -23,27 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
-// Formatador inteligente de datas para dd/mm/aaaa
-window.formatarDataBR = function(val) {
-    if (!val || val === '-') return '-';
-    let str = String(val).trim().split(' ')[0]; 
-    if (str.includes('-')) {
-        let p = str.split('-');
-        if (p.length === 3) {
-            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
-            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
-        }
-    }
-    if (str.includes('/')) {
-        let p = str.split('/');
-        if (p.length === 3) {
-            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
-            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
-        }
-    }
-    return str; 
-};
-
 window.alterarTema = function(tema) {
     if (!tema) return;
     if (tema === 'light') document.documentElement.removeAttribute('data-theme');
@@ -172,7 +151,10 @@ window.limparFiltros = function() {
     if(document.getElementById('select-imagem')) document.getElementById('select-imagem').value = "";
     if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
     if(document.getElementById('select-local')) document.getElementById('select-local').value = "";
+    
+    // Na limpeza, o Status da OF passa a mostrar TODAS (Histórico)
     if(document.getElementById('select-status-of')) document.getElementById('select-status-of').value = "";
+    
     if(document.getElementById('busca')) document.getElementById('busca').value = "";
     if(document.getElementById('busca-compras')) document.getElementById('busca-compras').value = "";
     if(document.getElementById('busca-ofs')) document.getElementById('busca-ofs').value = "";
@@ -316,6 +298,7 @@ window.renderizarCompras = function() {
         `;
     }
 
+    // Regra mantida: Só sugere compra se o Estoque Virtual furar o MÍNIMO
     const necessitaCompra = itensFiltrados.filter(i => {
         let estoqueVirtual = i.saldo + i.transito;
         return (estoqueVirtual < i.minimo) && i.minimo > 0 && i.maximo > 0;
@@ -365,6 +348,7 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     const divResumo = document.getElementById('resumo-ofs');
     let htmlLote = [];
     
+    // Leitura inteligente do Status para manter "Pendentes" ou libertar para Todo o Histórico
     const selectStatusElement = document.getElementById('select-status-of');
     let statusOfFiltro = "Pendentes"; 
     if (selectStatusElement) {
@@ -393,6 +377,7 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     const mapaItens = new Map(itensProcessados.map(i => [i.codNorm, i]));
 
     ofsExibir.forEach(of => {
+        // O valor pendente só é somado no painel caso não esteja fechado/entregue
         if (of.saldoOF > 0) {
             let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
             let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
@@ -406,6 +391,7 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     ofsExibir.slice(0, 100).forEach(of => {
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
+        // Etiqueta de Cor Dinâmica para a Tabela Histórica
         let badgeClass = 'badge-normal';
         if (of.statusCalculado === 'Em Trânsito') badgeClass = 'badge-transito';
         else if (of.statusCalculado === 'Entrega Parcial') badgeClass = 'badge-abaixo';
@@ -789,29 +775,13 @@ window.abrirModalOF = function(scId, ofId, codProd) {
         return val && String(val).trim() !== '' ? String(val).trim() : '-';
     };
 
-    let qtdPedida = converterParaNumero(getC(['of - qtd. solicitada', 'of - qtd solicitada', 'qtd solicitada']));
-    let qtdEntregue = converterParaNumero(getC(['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida']));
-    let dataEntradaFisica = window.formatarDataBR(getC(['rec - dt entrada', 'dt entrada nf', 'data entrada']));
-    
-    let ofFechado = getC(['of - fechado', 'fechado of']).toLowerCase();
-    let sitOF = getC(['of - situação of', 'of - situacao of', 'situacao of']).toLowerCase();
-    let isFechada = ofFechado === 'sim' || ofFechado === 's' || sitOF.includes('fechada') || sitOF.includes('cancelada');
-
-    let badgeClass = 'badge-transito';
-    if (qtdPedida > 0 && qtdEntregue >= qtdPedida) badgeClass = 'badge-normal';
-    else if (qtdEntregue > 0 && qtdEntregue < qtdPedida && !isFechada) badgeClass = 'badge-abaixo';
-    else if (isFechada) badgeClass = 'badge-obsoleto';
-
-    // REGRA DE OURO ATUALIZADA: Se a data de entrada física for conhecida e a qtd entregue for completa, o item exibe Entregue e bloqueia contagem de atraso.
     let dataOF = window.formatarDataBR(getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']));
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
-    if (dataEntradaFisica !== '-' && qtdPedida > 0 && qtdEntregue >= qtdPedida) {
-        etaTag = `<span class="badge-status badge-normal" style="font-size:13px; padding:8px 16px;">🟢 Entregue em ${dataEntradaFisica}</span>`;
-    } else if (dataOF !== '-') {
+    if (dataOF !== '-') {
         let partes = dataOF.split('/');
         if(partes.length >= 3) {
-            let dtPrevista = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
+            let dtPrevista = new Date(`${partes[2].split(' ')[0]}-${partes[1]}-${partes[0]}T00:00:00`);
             let hoje = new Date();
             hoje.setHours(0,0,0,0);
             let diffDays = Math.ceil((dtPrevista - hoje) / (1000 * 60 * 60 * 24));
@@ -828,6 +798,12 @@ window.abrirModalOF = function(scId, ofId, codProd) {
     
     const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
     const makeDateRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${window.formatarDataBR(getC(names))}</span></div>`;
+
+    // CORREÇÃO: Aplica a nova tag visualizada do status "Entregue, Parcial ou Em trânsito" no Raio-X também.
+    let badgeClass = 'badge-normal';
+    if (of.statusCalculado === 'Em Trânsito') badgeClass = 'badge-transito';
+    else if (of.statusCalculado === 'Entrega Parcial') badgeClass = 'badge-abaixo';
+    else if (of.statusCalculado.includes('Fechada') || of.statusCalculado.includes('Cancelada')) badgeClass = 'badge-obsoleto';
 
     let col1 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
