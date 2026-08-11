@@ -344,7 +344,7 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
         htmlLote.push(`
-            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
+            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.sc}', '${of.of}', '${of.codProd}')">
                 <td>
                     <strong style="color:var(--text-primary);">${of.of}</strong><br>
                     <span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span><br>
@@ -698,15 +698,17 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     document.getElementById('modal-item').style.display = 'flex';
 };
 
-window.abrirModalOF = function(ofId, codProd) {
+window.abrirModalOF = function(scId, ofId, codProd) {
     let codNorm = normalizarCod(codProd);
-    const of = ordesAtivasFiltradas.find(o => o.of === ofId && normalizarCod(o.codProd) === codNorm);
-    const item = itensProcessados.find(i => i.codNorm === codNorm);
+    
+    const of = ordesAtivasFiltradas.find(o => o.sc === scId && o.of === ofId && normalizarCod(o.codProd) === codNorm);
 
-    if (!of || !item) {
-        mostrarToast("Erro: Detalhes da OF ou do Item não encontrados.", "error");
+    if (!of) {
+        mostrarToast("Erro: Detalhes da Ordem não encontrados no sistema.", "error");
         return;
     }
+
+    const item = itensProcessados.find(i => i.codNorm === codNorm);
 
     let linha = of.linhaOriginal || {};
 
@@ -797,6 +799,25 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     `;
 
+    let rodapeContextoHTML = "";
+    if (item) {
+        rodapeContextoHTML = `
+            <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px solid var(--border-color);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, curva financeira e locais físicos deste item?</p>
+                <button class="theme-btn active" onclick="abrirModalDetalhes('${item.codNorm}', '${item.filialIdBase}')" style="padding: 12px 24px; font-size: 14px; margin: 0 auto; border-radius: 8px;">
+                    Abrir Contexto Analítico do Item
+                </button>
+            </div>
+        `;
+    } else {
+        rodapeContextoHTML = `
+            <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px dashed var(--border-color); background: rgba(245, 158, 11, 0.05); border-radius: 12px;">
+                <p style="font-size: 14px; color: var(--text-warning); margin-bottom: 5px; font-weight:800;">⚠️ Item ausente no Ficheiro de Saldos</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">O código <strong>${of.codProd}</strong> tem pedidos em trânsito, mas não foi encontrado no arquivo mestre ("03 - Base_Itens.csv"). Por isso, o contexto analítico avançado não está disponível para ele.</p>
+            </div>
+        `;
+    }
+
     const content = `
         <div class="modal-header-section" style="border-bottom:none; padding-bottom:0;">
             <div style="flex-grow: 1;">
@@ -820,12 +841,7 @@ window.abrirModalOF = function(ofId, codProd) {
             ${col3}
         </div>
         
-        <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px solid var(--border-color);">
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, curva financeira e locais físicos deste item?</p>
-            <button class="theme-btn active" onclick="abrirModalDetalhes('${item.codNorm}', '${item.filialIdBase}')" style="padding: 12px 24px; font-size: 14px; margin: 0 auto; border-radius: 8px;">
-                Abrir Contexto Analítico do Item
-            </button>
-        </div>
+        ${rodapeContextoHTML}
     `;
 
     document.getElementById('modal-body-content').innerHTML = content;
