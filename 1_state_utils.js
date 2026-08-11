@@ -77,6 +77,27 @@ function formatarMoedaMask(valor) {
     return formatarMoeda(valor);
 }
 
+// Formatador inteligente de datas para dd/mm/aaaa
+window.formatarDataBR = function(val) {
+    if (!val || val === '-') return '-';
+    let str = String(val).trim().split(' ')[0]; 
+    if (str.includes('-')) {
+        let p = str.split('-');
+        if (p.length === 3) {
+            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
+            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
+        }
+    }
+    if (str.includes('/')) {
+        let p = str.split('/');
+        if (p.length === 3) {
+            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
+            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
+        }
+    }
+    return str; 
+};
+
 window.toggleValoresFinanceiros = function() {
     ocultarValoresFinanceiros = !ocultarValoresFinanceiros;
     const icone = document.getElementById('icone-valores');

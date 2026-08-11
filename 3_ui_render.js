@@ -281,23 +281,52 @@ window.renderizarCompras = function() {
     let totalQtd = 0;
     let totalValor = 0;
     
-    const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
-    
-    necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
-        let sug = i.maximo - i.saldo;
-        totalQtd += sug;
-        totalValor += (sug * i.custoUnitario);
-
-        htmlLote.push(`
-            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-                <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
-                <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
-                <td style="font-size:14px; font-weight:900; color:var(--text-critical);">${i.saldo}</td>
-                <td style="font-size:12px; font-weight:700; color:var(--text-warning);">${i.minimo}</td>
-                <td style="font-size:12px; font-weight:700; color:var(--primary-color);">${i.maximo}</td>
-                <td style="font-size:14px; font-weight:900; color:var(--text-success);">COMPRAR +${sug}</td>
+    if (tbody && tbody.previousElementSibling) {
+        tbody.previousElementSibling.innerHTML = `
+            <tr>
+                <th>Código / Descrição</th>
+                <th>Filial</th>
+                <th>Estoque (Físico + Trânsito)</th>
+                <th>Giro Atual</th>
+                <th>Máximo Global</th>
+                <th style="color: var(--text-success);">Comprar +Qtd</th>
+                <th style="color: var(--text-info);">Giro Pós-Compra</th>
             </tr>
-        `);
+        `;
+    }
+
+    // GATILHO CORRIGIDO: Só sugere compra se o Estoque Virtual furar o MÍNIMO
+    const necessitaCompra = itensFiltrados.filter(i => {
+        let estoqueVirtual = i.saldo + i.transito;
+        return (estoqueVirtual < i.minimo) && i.minimo > 0 && i.maximo > 0;
+    });
+    
+    necessitaCompra.sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito)).forEach(i => {
+        let estoqueVirtual = i.saldo + i.transito;
+        let sug = i.maximo - estoqueVirtual; 
+        
+        if(sug > 0) {
+            totalQtd += sug;
+            totalValor += (sug * i.custoUnitario);
+
+            let transitoHtml = i.transito > 0 ? `<br><span style="font-size:10px; color:var(--text-warning);">+${i.transito} em trânsito</span>` : '';
+            
+            // CÁLCULO DOS GIROS (Dias de Cobertura)
+            let giroAtualText = i.consumo > 0 ? Math.round((i.saldo / i.consumo) * 30) + 'd' : 'Sem Consumo';
+            let giroPosText = i.consumo > 0 ? Math.round((i.maximo / i.consumo) * 30) + 'd' : 'Sem Consumo';
+
+            htmlLote.push(`
+                <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
+                    <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
+                    <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-critical);">${i.saldo} ${transitoHtml}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-secondary);">${giroAtualText}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--primary-color);">${i.maximo}</td>
+                    <td style="font-size:14px; font-weight:900; color:var(--text-success);">+${sug}</td>
+                    <td style="font-size:12px; font-weight:700; color:var(--text-info);">${giroPosText}</td>
+                </tr>
+            `);
+        }
     });
     
     if (divResumo) {
@@ -307,7 +336,9 @@ window.renderizarCompras = function() {
         `;
     }
 
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras críticas para os filtros atuais.</td></tr>`;
+    if (tbody) {
+        tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="7" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras para os filtros (Estoque Virtual >= Mínimo).</td></tr>`;
+    }
 }
 
 window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "") {
@@ -354,7 +385,7 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
                 <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
                 <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${descOriginal}</td>
                 <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
-                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${of.dataEntrega}</td>
+                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${window.formatarDataBR(of.dataEntrega)}</td>
             </tr>
         `);
     });
@@ -718,7 +749,31 @@ window.abrirModalOF = function(scId, ofId, codProd) {
         return val && String(val).trim() !== '' ? String(val).trim() : '-';
     };
 
-    let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
+    let qtdPedida = converterParaNumero(getC(['of - qtd. solicitada', 'of - qtd solicitada', 'qtd solicitada']));
+    let qtdEntregue = converterParaNumero(getC(['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue']));
+    let ofFechado = getC(['of - fechado', 'fechado of']).toLowerCase();
+    let sitOF = getC(['of - situação of', 'of - situacao of', 'situacao of']).toLowerCase();
+    
+    let isFechada = ofFechado === 'sim' || ofFechado === 's' || sitOF.includes('fechada') || sitOF.includes('cancelada');
+
+    let statusCalculado = of.sitOFOriginal || 'Pendente';
+    let badgeClass = 'badge-transito';
+
+    if (qtdPedida > 0 && qtdEntregue === qtdPedida) {
+        statusCalculado = 'Entregue';
+        badgeClass = 'badge-normal';
+    } else if (qtdEntregue > 0 && qtdEntregue < qtdPedida && !isFechada) {
+        statusCalculado = 'Entrega Parcial';
+        badgeClass = 'badge-abaixo'; 
+    } else if (qtdPedida > 0 && qtdEntregue === 0 && !isFechada) {
+        statusCalculado = 'Em Trânsito';
+        badgeClass = 'badge-transito'; 
+    } else if (isFechada) {
+        statusCalculado = 'Fechada / Cancelada';
+        badgeClass = 'badge-obsoleto'; 
+    }
+
+    let dataOF = window.formatarDataBR(getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']));
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
     if (dataOF !== '-') {
@@ -738,7 +793,9 @@ window.abrirModalOF = function(scId, ofId, codProd) {
     let pStyle = "margin-bottom: 6px; font-size: 12px; color: var(--text-primary); border-bottom: 1px dashed var(--border-color); padding-bottom: 4px; display: flex; justify-content: space-between;";
     let sTitle = "font-size: 14px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase;";
     let strong = "font-weight: 700; color: var(--text-secondary); margin-right: 10px;";
+    
     const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
+    const makeDateRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${window.formatarDataBR(getC(names))}</span></div>`;
 
     let col1 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -746,7 +803,7 @@ window.abrirModalOF = function(scId, ofId, codProd) {
             ${makeRow('Código SC', ['sc - codigo', 'sc codigo', 'sc'])}
             ${makeRow('Situação', ['sc - situacao', 'situacao sc'])}
             ${makeRow('Centro Custo Aprov.', ['sc - centro custo aprovador', 'centro custo aprovador'])}
-            ${makeRow('Data Criação', ['sc - data criacao', 'data criacao sc', 'data criacao'])}
+            ${makeDateRow('Data Criação', ['sc - data criacao', 'data criacao sc', 'data criacao'])}
             ${makeRow('Solicitante', ['sc - nome solicitante', 'sc solicitante', 'nome solicitante'])}
             ${makeRow('Empresa', ['sc - empresa', 'empresa sc', 'empresa'])}
             ${makeRow('Filial', ['sc - filial', 'filial sc'])}
@@ -756,7 +813,7 @@ window.abrirModalOF = function(scId, ofId, codProd) {
             ${makeRow('Unid. Medida', ['sc - unid. medida', 'sc - unid medida'])}
             ${makeRow('Quantidade', ['sc - quantidade', 'quantidade sc'])}
             ${makeRow('Categoria', ['sc - categoria', 'categoria sc', 'categoria'])}
-            ${makeRow('DT Entrega', ['sc - dt entrega', 'sc - data entrega', 'dt entrega sc'])}
+            ${makeDateRow('DT Entrega', ['sc - dt entrega', 'sc - data entrega', 'dt entrega sc'])}
             ${makeRow('Regularização', ['sc - regularizacao', 'regularizacao sc'])}
             ${makeRow('OBS', ['sc - obs', 'observacao sc', 'obs sc'])}
             ${makeRow('Local Estoque', ['sc - local estoque', 'local estoque sc', 'local estoque'])}
@@ -769,14 +826,14 @@ window.abrirModalOF = function(scId, ofId, codProd) {
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-warning);">🛒 2. Fornecimento (OF)</h3>
             ${makeRow('Codigo OF', ['of - codigo', 'of codigo', 'ordem fornecimento', 'of'])}
-            ${makeRow('Data OF', ['of - data', 'data of'])}
+            ${makeDateRow('Data OF', ['of - data', 'data of'])}
             ${makeRow('Fornecedor', ['of - nome fornecedor', 'nome fornecedor of', 'fornecedor'])}
             ${makeRow('Qtd. Solicitada', ['of - qtd. solicitada', 'of - qtd solicitada', 'qtd solicitada'])}
             ${makeRow('Saldo Pendente', ['of - saldo', 'saldo of', 'saldo'])}
             ${makeRow('Qtd. Entregue', ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue'])}
             ${makeRow('Fechado', ['of - fechado', 'fechado of'])}
             ${makeRow('Bloqueado', ['of - bloqueado', 'bloqueado of'])}
-            ${makeRow('Data Entrega', ['of - data entrega', 'data entrega of'])}
+            ${makeDateRow('Data Entrega', ['of - data entrega', 'data entrega of'])}
             ${makeRow('Frete', ['of - frete', 'frete of'])}
             ${makeRow('Moeda', ['of - moeda', 'moeda of'])}
             ${makeRow('Situação OF', ['of - situacao of', 'situacao of'])}
@@ -791,8 +848,8 @@ window.abrirModalOF = function(scId, ofId, codProd) {
             <h3 style="${sTitle} color: var(--text-success);">📦 3. Recebimento (REC)</h3>
             ${makeRow('Nr NF', ['rec - nr nf', 'rec - nr. nf', 'nr nf', 'nota fiscal'])}
             ${makeRow('Série NF', ['rec - serie', 'serie nf', 'serie'])}
-            ${makeRow('DT Emissão', ['rec - dt emissao', 'dt emissao nf', 'data emissao'])}
-            ${makeRow('DT Entrada', ['rec - dt entrada', 'dt entrada nf', 'data entrada'])}
+            ${makeDateRow('DT Emissão', ['rec - dt emissao', 'dt emissao nf', 'data emissao'])}
+            ${makeDateRow('DT Entrada', ['rec - dt entrada', 'dt entrada nf', 'data entrada'])}
             ${makeRow('Unid. Medida', ['rec - unid. medida', 'rec - unid medida'])}
             ${makeRow('Quantidade Rec.', ['rec - quantidade', 'quantidade rec'])}
             ${makeRow('Valor Un. Fiscal', ['rec - valor un. fiscal', 'rec - valor un fiscal', 'valor un fiscal'])}
@@ -826,9 +883,10 @@ window.abrirModalOF = function(scId, ofId, codProd) {
                         <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
                             Raio-X da Ordem: <span style="color: var(--primary-color);">${of.of !== '-' ? of.of : of.sc}</span>
                         </h2>
-                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
+                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px;">
                             Item: #${of.codProd} - ${of.descProd}
                         </h3>
+                        <span class="badge-status ${badgeClass}">Status da Entrega: ${statusCalculado}</span>
                     </div>
                     ${etaTag}
                 </div>

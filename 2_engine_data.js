@@ -152,24 +152,36 @@ window.mapearImagensPasta = function(event) {
 // 2. EXPORTAÇÃO PARA EXCEL
 // ==========================================================================
 window.exportarComprasExcel = function() {
-    const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
+    const necessitaCompra = itensFiltrados.filter(i => {
+        let estoqueVirtual = i.saldo + i.transito;
+        return (estoqueVirtual < i.minimo) && i.minimo > 0 && i.maximo > 0;
+    });
+
     if(necessitaCompra.length === 0) {
         mostrarToast("Nenhum dado crítico na tela para exportar.", "warning");
         return;
     }
     
     let csvContent = "\uFEFF"; 
-    csvContent += "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n";
+    csvContent += "Código;Descrição;Filial;Saldo Físico;Em Trânsito;Estoque Virtual;Giro Atual (Dias);Mínimo;Máximo;Sugestão Compra;Giro Pós-Compra (Dias);Custo Unitário;Valor Estimado Compra\n";
     
-    necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
-        let sug = i.maximo - i.saldo;
-        let val = sug * i.custoUnitario;
-        let descLimpa = i.desc.replace(/;/g, ',');
-        let filialLimpa = i.filialNm.replace(/;/g, ',');
-        csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.minimo};${i.maximo};${sug};${i.custoUnitario.toFixed(2)};${val.toFixed(2)}\n`;
+    necessitaCompra.sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito)).forEach(i => {
+        let estoqueVirtual = i.saldo + i.transito;
+        let sug = i.maximo - estoqueVirtual;
+        
+        if(sug > 0) {
+            let val = sug * i.custoUnitario;
+            let descLimpa = i.desc.replace(/;/g, ',');
+            let filialLimpa = i.filialNm.replace(/;/g, ',');
+            
+            let giroAtual = i.consumo > 0 ? Math.round((i.saldo / i.consumo) * 30) : 'Sem Consumo';
+            let giroPos = i.consumo > 0 ? Math.round((i.maximo / i.consumo) * 30) : 'Sem Consumo';
+
+            csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.transito};${estoqueVirtual};${giroAtual};${i.minimo};${i.maximo};${sug};${giroPos};${i.custoUnitario.toFixed(2)};${val.toFixed(2)}\n`;
+        }
     });
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent.replace(/\./g, ',')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
