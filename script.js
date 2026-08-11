@@ -5,7 +5,7 @@ const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [];
 let itensFiltrados = [];
 
-// Nova estrutura armazenar as OFs ativas extraidas de compras.csv
+// Estrutura para armazenar as OFs ativas extraídas de compras.csv
 let ordesAtivasFiltradas = [];
 
 let vistaAtual = 'dashboard';
@@ -37,7 +37,10 @@ if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-
 // ==========================================================================
 // FUNÇÕES ÚTEIS E PARSER
 // ==========================================================================
-function normalizarString(val) { return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+// CORREÇÃO: replace(/\s+/g, ' ') garante que múltiplos espaços do ERP viram um só
+function normalizarString(val) { 
+    return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, ' ').trim(); 
+}
 function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
 function converterParaNumero(val) {
     if (val === null || val === undefined || val === '') return 0;
@@ -554,6 +557,7 @@ async function processarInteligencia() {
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
 
+            // VERIFICAÇÃO ABSOLUTA: Ignorar tudo se o Status indicar fechamento/cancelamento
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
@@ -564,13 +568,13 @@ async function processarInteligencia() {
                 if (saldoPendente < 0) saldoPendente = 0; 
             } else {
                 saldoPendente = c_qtd_compra_fallback ? converterParaNumero(item[c_qtd_compra_fallback]) : 0;
-                qtdPedida = saldoPendente; // Fallback
             }
 
             if (saldoPendente > 0) {
                 mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoPendente);
             }
 
+            // Cálculo de Lead Time Histórico
             if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
                 const parseData = (dStr) => {
                     const partes = String(dStr).trim().split('/');
@@ -768,6 +772,7 @@ async function processarInteligencia() {
     let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
         const transito = mapComprasTransito.get(item.codNorm) || 0;
 
+        // PROTEÇÃO: Só descarta se TUDO estiver zerado (Saldo, Min, Max e também SEM Trânsito pendente)
         if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
 
         if (item.saldo > 0 && item.valorTotalGlobal > 0) {
@@ -881,7 +886,7 @@ async function processarInteligencia() {
                 if(saldoPendente < 0) saldoPendente = 0;
             } else {
                 saldoPendente = c_qtd_compra_fallback ? converterParaNumero(linha[c_qtd_compra_fallback]) : 0;
-                qtdPedida = saldoPendente; // Fallback
+                qtdPedida = saldoPendente; 
             }
 
             if(saldoPendente > 0) {
@@ -1598,7 +1603,7 @@ window.abrirModalOF = function(ofId, codProd) {
     // Recupera a linha inteira do CSV guardada em cache
     let linha = of.linhaOriginal || {};
 
-    // Função local para buscar campos ignorando acentos/caixa alta
+    // Função local para buscar campos ignorando acentos/caixa alta e espaços anómalos
     const getC = (nomesArray) => {
         let ch = encontrarChave(linha, nomesArray);
         let val = ch ? linha[ch] : '';
@@ -1623,67 +1628,67 @@ window.abrirModalOF = function(ofId, codProd) {
         }
     }
 
-    // Estilos para as linhas do relatório
+    // Estilos base do painel modal
     let pStyle = "margin-bottom: 6px; font-size: 12px; color: var(--text-primary); border-bottom: 1px dashed var(--border-color); padding-bottom: 4px; display: flex; justify-content: space-between;";
     let sTitle = "font-size: 14px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase;";
     let strong = "font-weight: 700; color: var(--text-secondary); margin-right: 10px;";
     const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
 
-    // Coluna 1: SC
+    // COLUNA 1: SC (Solicitação)
     let col1 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--primary-color);">📝 1. Solicitação (SC)</h3>
-            ${makeRow('Código SC', ['sc - código', 'sc - codigo', 'sc codigo', 'sc'])}
-            ${makeRow('Situação', ['sc - situação', 'sc - situacao', 'sc situacao'])}
-            ${makeRow('CCU Aprovador', ['sc - centro custo aprovador', 'centro custo aprovador', 'sc - ccu aprovador'])}
-            ${makeRow('Data Criação', ['sc - data criação', 'sc - data criacao'])}
+            ${makeRow('Código SC', ['sc - codigo', 'sc codigo', 'sc'])}
+            ${makeRow('Situação', ['sc - situacao', 'situacao sc'])}
+            ${makeRow('Centro Custo Aprov.', ['sc - centro custo aprovador', 'centro custo aprovador'])}
+            ${makeRow('Data Criação', ['sc - data criacao', 'data criacao sc', 'data criacao'])}
             ${makeRow('Solicitante', ['sc - nome solicitante', 'sc solicitante', 'nome solicitante'])}
-            ${makeRow('Empresa', ['sc - empresa', 'empresa sc'])}
+            ${makeRow('Empresa', ['sc - empresa', 'empresa sc', 'empresa'])}
             ${makeRow('Filial', ['sc - filial', 'filial sc'])}
-            ${makeRow('Descr. Filial', ['sc - descr. filial', 'sc - descr filial', 'desc filial'])}
-            ${makeRow('Cód. Produto', ['sc - cód. produto', 'sc - cod. produto'])}
-            ${makeRow('Nome Produto', ['sc - nome produto', 'nome produto sc'])}
+            ${makeRow('Descr. Filial', ['sc - descr. filial', 'sc - descr filial', 'desc filial', 'descr filial'])}
+            ${makeRow('Cód. Produto', ['sc - cod. produto', 'sc - cod produto', 'cod produto'])}
+            ${makeRow('Nome Produto', ['sc - nome produto', 'nome produto sc', 'nome produto'])}
             ${makeRow('Unid. Medida', ['sc - unid. medida', 'sc - unid medida'])}
             ${makeRow('Quantidade', ['sc - quantidade', 'quantidade sc'])}
-            ${makeRow('Categoria', ['sc - categoria', 'categoria sc'])}
-            ${makeRow('DT Entrega', ['sc - dt entrega', 'sc - data entrega'])}
-            ${makeRow('Regularização', ['sc - regularização', 'sc - regularizacao'])}
-            ${makeRow('OBS', ['sc - obs', 'observacao sc'])}
-            ${makeRow('Local Estoque', ['sc - local estoque', 'local estoque sc'])}
+            ${makeRow('Categoria', ['sc - categoria', 'categoria sc', 'categoria'])}
+            ${makeRow('DT Entrega', ['sc - dt entrega', 'sc - data entrega', 'dt entrega sc'])}
+            ${makeRow('Regularização', ['sc - regularizacao', 'regularizacao sc'])}
+            ${makeRow('OBS', ['sc - obs', 'observacao sc', 'obs sc'])}
+            ${makeRow('Local Estoque', ['sc - local estoque', 'local estoque sc', 'local estoque'])}
             ${makeRow('CCU Etq', ['sc - ccu etq', 'ccu etq'])}
-            ${makeRow('Aprovador', ['sc - aprovador', 'aprovador sc'])}
+            ${makeRow('Aprovador', ['sc - aprovador', 'aprovador sc', 'aprovador'])}
         </div>
     `;
 
-    // Coluna 2: OF
+    // COLUNA 2: OF (Ordem Fornecimento)
     let col2 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-warning);">🛒 2. Fornecimento (OF)</h3>
-            ${makeRow('Codigo OF', ['of - codigo', 'of - código', 'of codigo', 'ordem fornecimento'])}
+            ${makeRow('Codigo OF', ['of - codigo', 'of codigo', 'ordem fornecimento', 'of'])}
             ${makeRow('Data OF', ['of - data', 'data of'])}
             ${makeRow('Fornecedor', ['of - nome fornecedor', 'nome fornecedor of', 'fornecedor'])}
-            ${makeRow('Qtd. Solicitada', ['of - qtd. solicitada', 'of - qtd solicitada'])}
-            ${makeRow('Saldo Pendente', ['of - saldo', 'saldo of'])}
-            ${makeRow('Qtd. Entregue', ['of - qtd. entregue', 'of - qtd entregue'])}
+            ${makeRow('Qtd. Solicitada', ['of - qtd. solicitada', 'of - qtd solicitada', 'qtd solicitada'])}
+            ${makeRow('Saldo Pendente', ['of - saldo', 'saldo of', 'saldo'])}
+            ${makeRow('Qtd. Entregue', ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue'])}
             ${makeRow('Fechado', ['of - fechado', 'fechado of'])}
             ${makeRow('Bloqueado', ['of - bloqueado', 'bloqueado of'])}
             ${makeRow('Data Entrega', ['of - data entrega', 'data entrega of'])}
             ${makeRow('Frete', ['of - frete', 'frete of'])}
             ${makeRow('Moeda', ['of - moeda', 'moeda of'])}
-            ${makeRow('Situação OF', ['of - situação of', 'of - situacao of', 'situacao of'])}
+            ${makeRow('Situação OF', ['of - situacao of', 'situacao of'])}
             ${makeRow('Tipo', ['of - tipo', 'tipo of'])}
-            ${makeRow('Email Fornecedor', ['of - email fornecedor', 'email fornecedor'])}
+            ${makeRow('Email Fornecedor', ['of - email fornecedor', 'email fornecedor of', 'email fornecedor'])}
             ${makeRow('OBS', ['of - obs', 'obs of'])}
         </div>
     `;
 
-    // Coluna 3: REC
+    // COLUNA 3: REC (Recebimento / Nota Fiscal)
     let col3 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-success);">📦 3. Recebimento (REC)</h3>
             ${makeRow('Nr NF', ['rec - nr nf', 'rec - nr. nf', 'nr nf', 'nota fiscal'])}
-            ${makeRow('Série NF', ['rec - série', 'rec - serie', 'serie nf'])}
-            ${makeRow('DT Emissão', ['rec - dt emissão', 'rec - dt emissao', 'dt emissao nf'])}
+            ${makeRow('Série NF', ['rec - serie', 'serie nf', 'serie'])}
+            ${makeRow('DT Emissão', ['rec - dt emissao', 'dt emissao nf', 'data emissao'])}
             ${makeRow('DT Entrada', ['rec - dt entrada', 'dt entrada nf', 'data entrada'])}
             ${makeRow('Unid. Medida', ['rec - unid. medida', 'rec - unid medida'])}
             ${makeRow('Quantidade Rec.', ['rec - quantidade', 'quantidade rec'])}
