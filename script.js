@@ -510,7 +510,8 @@ async function processarInteligencia() {
     const colScCodigo = ['sc - código', 'sc codigo', 'sc'];
     const colOfCodigo = ['of - codigo', 'of codigo', 'ordem fornecimento'];
     const colOfNomeFornecedor = ['of - nome fornecedor', 'fornecedor'];
-    const colOfQtdPedida = ['of - saldo', 'of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
+    const colOfQtdPedida = ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
+    const colRecQtd = ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida'];
     const colOfSit = ['of - situação of', 'situacao of', 'status of'];
     const colScSit = ['sc - situação', 'situacao sc'];
     const colScCanc = ['sc - cancelado', 'sc cancelado', 'cancelado'];
@@ -523,26 +524,34 @@ async function processarInteligencia() {
     mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
     const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-    setProgress(92, "Processando Compras (OFs em Trânsito) e Lead Time...");
+    setProgress(92, "Processando Compras (OFs em Trânsito) e Regras de Entrega...");
     await new Promise(r => setTimeout(r, 50)); 
 
     const mapComprasTransito = new Map(); 
     const mapLeadTimeHistorico = new Map(); 
     
-    let c_cod_compra = null, c_of_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_sc_dt = null, c_rec_dt = null;
+    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_of_col = null, c_sc_col = null, c_sc_dt = null, c_rec_dt = null;
 
     if(bases.compras.length > 0) {
         c_cod_compra = encontrarChave(bases.compras[0], colCod);
-        c_of_qtd = encontrarChave(bases.compras[0], colOfQtdPedida);
+        c_of_qtd_pedida = encontrarChave(bases.compras[0], colOfQtdPedida);
+        c_rec_qtd = encontrarChave(bases.compras[0], colRecQtd);
         c_of_sit = encontrarChave(bases.compras[0], colOfSit);
         c_sc_sit = encontrarChave(bases.compras[0], colScSit);
         c_sc_canc = encontrarChave(bases.compras[0], colScCanc);
+        c_of_col = encontrarChave(bases.compras[0], colOfCodigo);
+        c_sc_col = encontrarChave(bases.compras[0], colScCodigo);
         c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
         c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
         
         bases.compras.forEach(item => {
             const cod = normalizarCod(item[c_cod_compra]);
             if (!cod) return;
+
+            let qtdPedida = c_of_qtd_pedida ? converterParaNumero(item[c_of_qtd_pedida]) : 0;
+            let qtdRecebida = c_rec_qtd ? converterParaNumero(item[c_rec_qtd]) : 0;
+            let ofValor = c_of_col ? String(item[c_of_col]).trim() : '-';
+            let scValor = c_sc_col ? String(item[c_sc_col]).trim() : '-';
 
             let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
@@ -551,8 +560,22 @@ async function processarInteligencia() {
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
-            if (!isFechadaOuCancelada) {
-                saldoPendente = c_of_qtd ? converterParaNumero(item[c_of_qtd]) : 0;
+            if (isFechadaOuCancelada) {
+                saldoPendente = 0;
+            } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
+                // Aguardando Aprovação (Somente SC)
+                saldoPendente = 1;
+            } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
+                // Item Entregue
+                saldoPendente = 0;
+            } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
+                // Entrega Parcial (considera o saldo restante em trânsito)
+                saldoPendente = qtdPedida - qtdRecebida;
+            } else if (qtdPedida > 0 && qtdRecebida === 0) {
+                // Em Trânsito
+                saldoPendente = qtdPedida;
+            } else {
+                saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
             }
 
             if (saldoPendente > 0) {
@@ -846,43 +869,61 @@ async function processarInteligencia() {
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
         bases.compras.forEach(linha => {
-            let saldoPendente = c_of_qtd ? converterParaNumero(linha[c_of_qtd]) : 0;
-            let sitOFOriginal = c_of_sit ? linha[c_of_sit] : 'Pendente';
+            let qtdPedida = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
+            let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
+            let ofValor = c_of_col ? String(linha[c_of_col]).trim() : '-';
+            let scValor = c_sc_col ? String(linha[c_sc_col]).trim() : '-';
+
             let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
+            
+            let statusCalculado = 'Em Trânsito';
+            let saldoPendente = 0;
 
             if (isFechadaOuCancelada) {
-                saldoPendente = 0; 
+                return; // Ignora itens fechados/cancelados da gestão de trânsito
+            } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
+                statusCalculado = 'Aguardando Aprovação';
+                saldoPendente = 1;
+            } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
+                statusCalculado = 'Item Entregue';
+                saldoPendente = 0;
+            } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
+                statusCalculado = 'Entrega Parcial';
+                saldoPendente = qtdPedida - qtdRecebida;
+            } else if (qtdPedida > 0 && qtdRecebida === 0) {
+                statusCalculado = 'Em Trânsito';
+                saldoPendente = qtdPedida;
             } else {
-                saldoPendente = c_of_qtd ? converterParaNumero(linha[c_of_qtd]) : 0;
+                statusCalculado = 'Em Trânsito';
+                saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
             }
 
-            if(saldoPendente > 0) {
-                let cod = normalizarCod(linha[c_cod_compra]);
-                let objItem = mapaItensParaFilial.get(cod);
-                let filialDaOF = objItem ? objItem.filialNm : 'Geral';
-                let req = c_solicitante && linha[c_solicitante] ? linha[c_solicitante].trim() : 'Não Informado';
+            // Armazena no filtro dinâmico
+            setStatusOFUnicos.add(statusCalculado);
 
-                if (sitOFOriginal) setStatusOFUnicos.add(sitOFOriginal);
+            let cod = normalizarCod(linha[c_cod_compra]);
+            let objItem = mapaItensParaFilial.get(cod);
+            let filialDaOF = objItem ? objItem.filialNm : 'Geral';
+            let req = c_solicitante && linha[c_solicitante] ? linha[c_solicitante].trim() : 'Não Informado';
 
-                ordesAtivasFiltradas.push({
-                    sc: linha[c_sc] || '-',
-                    of: linha[c_of] || '-',
-                    codProd: linha[c_cod_compra] || '-',
-                    descProd: linha[c_desc] || '-',
-                    fornecedor: linha[c_forn] || 'Não Informado',
-                    solicitante: req,
-                    dataEntrega: linha[c_dt_ent] || 'Sem Data',
-                    saldoOF: saldoPendente,
-                    sitOFOriginal: sitOFOriginal,
-                    filial: filialDaOF,
-                    searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req).toLowerCase(),
-                    linhaOriginal: linha 
-                });
-            }
+            ordesAtivasFiltradas.push({
+                sc: linha[c_sc] || '-',
+                of: linha[c_of] || '-',
+                codProd: linha[c_cod_compra] || '-',
+                descProd: linha[c_desc] || '-',
+                fornecedor: linha[c_forn] || 'Não Informado',
+                solicitante: req,
+                dataEntrega: linha[c_dt_ent] || 'Sem Data',
+                saldoOF: saldoPendente,
+                sitOFOriginal: statusCalculado,
+                filial: filialDaOF,
+                searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req + " " + statusCalculado).toLowerCase(),
+                linhaOriginal: linha 
+            });
         });
     }
 
@@ -1200,6 +1241,11 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     });
 
     ofsExibir.slice(0, 100).forEach(of => {
+        let badgeStatusColor = 'var(--text-warning)';
+        if (of.sitOFOriginal === 'Item Entregue') badgeStatusColor = 'var(--text-success)';
+        else if (of.sitOFOriginal === 'Entrega Parcial') badgeStatusColor = 'var(--text-info)';
+        else if (of.sitOFOriginal === 'Aguardando Aprovação') badgeStatusColor = 'var(--text-secondary)';
+
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
                 <td>
@@ -1209,6 +1255,7 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
                 </td>
                 <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
                 <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
+                <td style="font-size:13px; font-weight:800; color:${badgeStatusColor};">${of.sitOFOriginal}</td>
                 <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
                 <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${of.dataEntrega}</td>
             </tr>
