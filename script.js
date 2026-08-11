@@ -510,8 +510,7 @@ async function processarInteligencia() {
     const colScCodigo = ['sc - código', 'sc codigo', 'sc'];
     const colOfCodigo = ['of - codigo', 'of codigo', 'ordem fornecimento'];
     const colOfNomeFornecedor = ['of - nome fornecedor', 'fornecedor'];
-    const colOfQtdPedida = ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
-    const colRecQtd = ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida'];
+    const colOfQtdPedida = ['of - saldo', 'of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
     const colOfSit = ['of - situação of', 'situacao of', 'status of'];
     const colScSit = ['sc - situação', 'situacao sc'];
     const colScCanc = ['sc - cancelado', 'sc cancelado', 'cancelado'];
@@ -530,16 +529,14 @@ async function processarInteligencia() {
     const mapComprasTransito = new Map(); 
     const mapLeadTimeHistorico = new Map(); 
     
-    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_qtd_compra_fallback = null, c_sc_dt = null, c_rec_dt = null;
+    let c_cod_compra = null, c_of_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_sc_dt = null, c_rec_dt = null;
 
     if(bases.compras.length > 0) {
         c_cod_compra = encontrarChave(bases.compras[0], colCod);
-        c_of_qtd_pedida = encontrarChave(bases.compras[0], colOfQtdPedida);
-        c_rec_qtd = encontrarChave(bases.compras[0], colRecQtd);
+        c_of_qtd = encontrarChave(bases.compras[0], colOfQtdPedida);
         c_of_sit = encontrarChave(bases.compras[0], colOfSit);
         c_sc_sit = encontrarChave(bases.compras[0], colScSit);
         c_sc_canc = encontrarChave(bases.compras[0], colScCanc);
-        c_qtd_compra_fallback = encontrarChave(bases.compras[0], colQtdCompraFallback);
         c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
         c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
         
@@ -547,22 +544,15 @@ async function processarInteligencia() {
             const cod = normalizarCod(item[c_cod_compra]);
             if (!cod) return;
 
-            let saldoPendente = 0;
             let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
 
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
+            let saldoPendente = 0;
 
-            if (isFechadaOuCancelada) {
-                saldoPendente = 0; 
-            } else if (c_of_qtd_pedida) {
-                let p = converterParaNumero(item[c_of_qtd_pedida]);
-                let r = c_rec_qtd ? converterParaNumero(item[c_rec_qtd]) : 0;
-                saldoPendente = p - r;
-                if (saldoPendente < 0) saldoPendente = 0;
-            } else {
-                saldoPendente = c_qtd_compra_fallback ? converterParaNumero(item[c_qtd_compra_fallback]) : 0;
+            if (!isFechadaOuCancelada) {
+                saldoPendente = c_of_qtd ? converterParaNumero(item[c_of_qtd]) : 0;
             }
 
             if (saldoPendente > 0) {
@@ -856,7 +846,7 @@ async function processarInteligencia() {
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
         bases.compras.forEach(linha => {
-            let saldoPendente = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
+            let saldoPendente = c_of_qtd ? converterParaNumero(linha[c_of_qtd]) : 0;
             let sitOFOriginal = c_of_sit ? linha[c_of_sit] : 'Pendente';
             let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
@@ -866,10 +856,8 @@ async function processarInteligencia() {
 
             if (isFechadaOuCancelada) {
                 saldoPendente = 0; 
-            } else if (c_of_qtd_pedida) {
-                saldoPendente = converterParaNumero(linha[c_of_qtd_pedida]);
             } else {
-                saldoPendente = c_qtd_compra_fallback ? converterParaNumero(linha[c_qtd_compra_fallback]) : 0;
+                saldoPendente = c_of_qtd ? converterParaNumero(linha[c_of_qtd]) : 0;
             }
 
             if(saldoPendente > 0) {
