@@ -465,9 +465,6 @@ window.exportarRevisaoExcel = function() {
     mostrarToast("Planilha de Revisão baixada com sucesso!", "success");
 }
 
-// ==========================================================================
-// MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
-// ==========================================================================
 async function processarInteligencia() {
     if (bases.baseItens.length === 0) { 
         mostrarToast("Erro: Arquivo Mestre não localizado.", "error"); 
@@ -523,10 +520,9 @@ async function processarInteligencia() {
     setProgress(92, "Processando Compras (OFs em Trânsito) e Lead Time...");
     await new Promise(r => setTimeout(r, 50)); 
 
-    const mapComprasTransito = new Map(); // Soma de Saldo Pendente validado
-    const mapLeadTimeHistorico = new Map(); // Para sugerir na revisão min/max
+    const mapComprasTransito = new Map(); 
+    const mapLeadTimeHistorico = new Map(); 
     
-    // Mapeamento antecipado das colunas de Compras para Validação de Status
     let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_qtd_compra_fallback = null, c_sc_dt = null, c_rec_dt = null;
 
     if(bases.compras.length > 0) {
@@ -550,12 +546,11 @@ async function processarInteligencia() {
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
 
-            // VERIFICAÇÃO ABSOLUTA: Ignorar tudo se o Status indicar fechamento/cancelamento
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
             if (isFechadaOuCancelada) {
-                saldoPendente = 0; // Regra de Ouro: Se a OF está fechada, ela NUNCA está em trânsito.
+                saldoPendente = 0; 
             } else if (c_of_qtd_pedida) {
                 saldoPendente = qtdPedida - qtdRecebida;
                 if (saldoPendente < 0) saldoPendente = 0; 
@@ -567,7 +562,6 @@ async function processarInteligencia() {
                 mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoPendente);
             }
 
-            // Cálculo de Lead Time Histórico
             if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
                 const parseData = (dStr) => {
                     const partes = String(dStr).trim().split('/');
@@ -587,7 +581,6 @@ async function processarInteligencia() {
         });
     }
     
-    // Média de Lead Time por Item
     const mapLeadTimeMedio = new Map();
     for (let [k, v] of mapLeadTimeHistorico) {
         let media = Math.round(v.reduce((a,b)=>a+b,0) / v.length);
@@ -600,7 +593,6 @@ async function processarInteligencia() {
     let cs_mes = encontrarChave(bases.consumos[0], colMesMovimento);
     let cs_cod = encontrarChave(bases.consumos[0], colCod);
     let cs_qtd = encontrarChave(bases.consumos[0], colQtdConsumo);
-    // IDENTIFICAR COLUNA DE LOCAL NO ARQUIVO DE CONSUMOS
     let cs_local = encontrarChave(bases.consumos[0], ['cd local', 'cod local', 'local', 'nm local', 'nome local']);
 
     const mapConsumosTotais = new Map();
@@ -614,12 +606,10 @@ async function processarInteligencia() {
                 encontrouConsumoNoMesAlvo = true;
                 const cod = normalizarCod(item[cs_cod]);
 
-                // TRAVA MATEMÁTICA: Ignora completamente o pico de consumo emergencial
-                // blindando os estoques estratégicos 299 e 295.
                 if (cs_local) {
                     let localVal = String(item[cs_local]).trim();
                     if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299') || localVal.includes('295')) {
-                        return; // Ignora o consumo deste local
+                        return; 
                     }
                 }
 
@@ -670,7 +660,6 @@ async function processarInteligencia() {
         const prateleira = item[b_prat] || '-';
         const divisao = item[b_div] || '-';
 
-        // REGRA: Rolândia (Ab. Aves vs Alp. Preparados) com trava anti-vazio
         if (filialIdBase === '704') {
             let locNum = parseInt(localIdRaw, 10);
             if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || localIdRaw === '295' || localIdRaw === '0295' || locNum >= 599) {
@@ -701,7 +690,6 @@ async function processarInteligencia() {
         const minimoLinha = converterParaNumero(item[b_min]);
         const maximoLinha = converterParaNumero(item[b_max]);
         
-        // REGRA DO LOCAL CRÍTICO 299 e 295
         let isCritico = false;
         if (['299', '0299', '295', '0295'].includes(localIdRaw) || localNm.includes('299') || localNm.includes('295')) {
             isCritico = true;
@@ -769,11 +757,8 @@ async function processarInteligencia() {
     await new Promise(r => setTimeout(r, 50)); 
 
     let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
-        // ========== PROTEÇÃO DE ITENS ZERADOS ==========
-        // Antecipamos o cálculo do trânsito para a variável poder proteger itens zerados.
         const transito = mapComprasTransito.get(item.codNorm) || 0;
 
-        // Só descarta se TUDO estiver zerado (Saldo, Min, Max e também SEM Trânsito pendente)
         if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
 
         if (item.saldo > 0 && item.valorTotalGlobal > 0) {
@@ -795,14 +780,13 @@ async function processarInteligencia() {
 
         let isLocalCriticoMacro = item.locais.some(l => l.isCritico && l.saldo > 0);
 
-        // CÁLCULO DE SALDO ÚTIL E SUGESTÕES MIN/MAX
         let saldoCritico = item.locais.filter(l => l.isCritico).reduce((sum, l) => sum + l.saldo, 0);
         let saldoUtil = item.saldo - saldoCritico;
         item.saldoUtil = saldoUtil;
 
         let consumoFisicoDiario = consumoMesAnteriorFisico / 30;
         let minSugerido = Math.ceil(consumoFisicoDiario * item.leadTime);
-        let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); // Estoque Max = Seguranca + 1 Mês
+        let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); 
         if (consumoMesAnteriorFisico === 0) { minSugerido = 0; maxSugerido = 0; }
         
         item.sugestaoMin = minSugerido;
@@ -866,6 +850,7 @@ async function processarInteligencia() {
         const c_desc = encontrarChave(bases.compras[0], colDesc);
         const c_forn = encontrarChave(bases.compras[0], colOfNomeFornecedor);
         const c_dt_ent = encontrarChave(bases.compras[0], colOfDataEntrega);
+        const c_solicitante = encontrarChave(bases.compras[0], ['sc - nome solicitante', 'sc solicitante', 'nome solicitante', 'requisitante']);
         
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
@@ -877,7 +862,6 @@ async function processarInteligencia() {
             let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
-            // VERIFICAÇÃO ABSOLUTA: Ignorar trânsito se o Status indicar fechamento/cancelamento
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
@@ -895,6 +879,7 @@ async function processarInteligencia() {
                 let cod = normalizarCod(linha[c_cod_compra]);
                 let objItem = mapaItensParaFilial.get(cod);
                 let filialDaOF = objItem ? objItem.filialNm : 'Geral';
+                let req = c_solicitante && linha[c_solicitante] ? linha[c_solicitante].trim() : 'Não Informado';
 
                 if (sitOFOriginal) setStatusOFUnicos.add(sitOFOriginal);
 
@@ -904,12 +889,13 @@ async function processarInteligencia() {
                     codProd: linha[c_cod_compra] || '-',
                     descProd: linha[c_desc] || '-',
                     fornecedor: linha[c_forn] || 'Não Informado',
+                    solicitante: req,
                     dataEntrega: linha[c_dt_ent] || 'Sem Data',
                     qtdPedidaOriginal: qtdPedida,
                     saldoOF: saldoPendente,
                     sitOFOriginal: sitOFOriginal,
                     filial: filialDaOF,
-                    searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn]).toLowerCase(),
+                    searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req).toLowerCase(),
                     linhaOriginal: linha // GUARDA O DADO BRUTO EM CACHE PARA O MODAL 3 COLUNAS
                 });
             }
@@ -942,7 +928,6 @@ async function processarInteligencia() {
         isFetchingData = false; 
     }, 600);
 }
-
 // ==========================================================================
 // BUSCA INTELIGENTE, FILTRO CASCATA E RENDERIZAÇÃO
 // ==========================================================================
@@ -1232,9 +1217,14 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     ofsExibir.slice(0, 100).forEach(of => {
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
+        // ADICIONADO: Nome do solicitante formatado abaixo da identificação de SC/OF
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
-                <td><strong style="color:var(--text-primary);">${of.of}</strong><br><span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span></td>
+                <td>
+                    <strong style="color:var(--text-primary);">${of.of}</strong><br>
+                    <span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span><br>
+                    <span style="font-size:10px;color:var(--primary-color); font-weight: 600;">👤 Req: ${of.solicitante}</span>
+                </td>
                 <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
                 <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
                 <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${descOriginal}</td>
@@ -1255,7 +1245,6 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
 
     tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
 }
-
 function renderizarDashboard() {
     let valorTotal = 0, valorObsoleto = 0, qtdObsoleto = 0;
     let qtdRupturaCritica = 0, qtdRupturaTransito = 0;
