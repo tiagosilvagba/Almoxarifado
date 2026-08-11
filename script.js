@@ -25,7 +25,7 @@ let mapeamentoDeImagemAtivo = false;
 let setLocaisUnicos = new Set(); 
 let setStatusOFUnicos = new Set(); // Filtro avançado de status OF
 
-// NOVO: Controle de visualização de valores monetários (Ocultos por Padrão)
+// Controle de visualização de valores monetários (Ocultos por Padrão)
 let ocultarValoresFinanceiros = true; 
 
 // Estado do Lightbox Nativo e Seguro
@@ -64,7 +64,6 @@ function formatarMoeda(valor) {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); 
 }
 
-// NOVO: Função para proteger os valores de fábrica sensíveis
 function formatarMoedaMask(valor) {
     if (ocultarValoresFinanceiros) return 'R$ ***';
     return formatarMoeda(valor);
@@ -76,7 +75,7 @@ window.toggleValoresFinanceiros = function() {
     if (icone) {
         icone.innerText = ocultarValoresFinanceiros ? '👁️ Mostrar Valores R$' : '🙈 Ocultar Valores R$';
     }
-    dispararFiltrosSemAtraso(); // Recarrega todas as telas pra atualizar as máscaras
+    dispararFiltrosSemAtraso(); 
 }
 
 function parseCSVFast(text) {
@@ -374,7 +373,6 @@ window.mapearImagensPasta = function(event) {
 
     for(let i = 0; i < files.length; i++) {
         let fileName = files[i].name.toLowerCase();
-        // Mapeador até a foto 6 para alimentar o Carrossel
         if(fileName.includes(' - 01.') || fileName.includes(' - 02.') || fileName.includes(' - 03.') || fileName.includes(' - 04.') || fileName.includes(' - 05.') || fileName.includes(' - 06.')) {
             let codBruto = fileName.split(' - ')[0];
             let codNorm = normalizarCod(codBruto);
@@ -392,7 +390,7 @@ window.mapearImagensPasta = function(event) {
 }
 
 // ==========================================================================
-// EXPORTAÇÃO PARA EXCEL (Botão Compras)
+// EXPORTAÇÃO PARA EXCEL
 // ==========================================================================
 window.exportarComprasExcel = function() {
     const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
@@ -401,7 +399,6 @@ window.exportarComprasExcel = function() {
         return;
     }
     
-    // UTF-8 BOM para garantir acentos perfeitos no Excel Windows
     let csvContent = "\uFEFF"; 
     csvContent += "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n";
     
@@ -410,7 +407,6 @@ window.exportarComprasExcel = function() {
         let val = sug * i.custoUnitario;
         let descLimpa = i.desc.replace(/;/g, ',');
         let filialLimpa = i.filialNm.replace(/;/g, ',');
-        // Exporta valor real sempre para Excel
         csvContent += `${i.cod};${descLimpa};${filialLimpa};${i.saldo};${i.minimo};${i.maximo};${sug};${i.custoUnitario.toFixed(2)};${val.toFixed(2)}\n`;
     });
     
@@ -426,9 +422,6 @@ window.exportarComprasExcel = function() {
     mostrarToast("Arquivo Excel baixado com sucesso!", "success");
 }
 
-// ==========================================================================
-// EXPORTAÇÃO PARA EXCEL (Botão Revisão Min/Max)
-// ==========================================================================
 window.exportarRevisaoExcel = function() {
     const itensRevisao = itensFiltrados.filter(i => {
         if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) return true;
@@ -607,6 +600,8 @@ async function processarInteligencia() {
     let cs_mes = encontrarChave(bases.consumos[0], colMesMovimento);
     let cs_cod = encontrarChave(bases.consumos[0], colCod);
     let cs_qtd = encontrarChave(bases.consumos[0], colQtdConsumo);
+    // IDENTIFICAR COLUNA DE LOCAL NO ARQUIVO DE CONSUMOS
+    let cs_local = encontrarChave(bases.consumos[0], ['cd local', 'cod local', 'local', 'nm local', 'nome local']);
 
     const mapConsumosTotais = new Map();
     let encontrouConsumoNoMesAlvo = false;
@@ -618,6 +613,16 @@ async function processarInteligencia() {
             if (mesItemNum === mesAnteriorNum) {
                 encontrouConsumoNoMesAlvo = true;
                 const cod = normalizarCod(item[cs_cod]);
+
+                // TRAVA MATEMÁTICA: Ignora completamente o pico de consumo emergencial
+                // blindando os estoques estratégicos 299 e 295.
+                if (cs_local) {
+                    let localVal = String(item[cs_local]).trim();
+                    if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299') || localVal.includes('295')) {
+                        return; // Ignora o consumo deste local
+                    }
+                }
+
                 const qtd = converterParaNumero(item[cs_qtd]);
                 if (cod) {
                     const chave = cod; 
@@ -724,7 +729,7 @@ async function processarInteligencia() {
                 saldo: 0, minimo: 0, maximo: 0, 
                 valorTotalGlobal: 0,
                 custoUnitario: 0,
-                leadTime: mapLeadTimeMedio.get(codNorm) || 15, // Padrão de segurança se não houver no histórico
+                leadTime: mapLeadTimeMedio.get(codNorm) || 15, 
                 locais: []
             });
         }
@@ -764,13 +769,12 @@ async function processarInteligencia() {
     await new Promise(r => setTimeout(r, 50)); 
 
     let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
-        // ========== CORREÇÃO IMPLEMENTADA AQUI ==========
+        // ========== PROTEÇÃO DE ITENS ZERADOS ==========
         // Antecipamos o cálculo do trânsito para a variável poder proteger itens zerados.
         const transito = mapComprasTransito.get(item.codNorm) || 0;
 
-        // Regra de Ouro: Só descarta se TUDO estiver zerado (Saldo, Min, Max e também SEM Trânsito pendente)
+        // Só descarta se TUDO estiver zerado (Saldo, Min, Max e também SEM Trânsito pendente)
         if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
-        // ================================================
 
         if (item.saldo > 0 && item.valorTotalGlobal > 0) {
             item.custoUnitario = item.valorTotalGlobal / item.saldo;
@@ -852,7 +856,7 @@ async function processarInteligencia() {
 
     itensProcessados = baseSujaProcessada;
     
-    // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs) COM VALIDAÇÃO DE STATUS
+    // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs)
     ordesAtivasFiltradas = [];
     setStatusOFUnicos.clear();
 
@@ -873,7 +877,7 @@ async function processarInteligencia() {
             let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
-            // VERIFICAÇÃO ABSOLUTA (Regra de Ouro): Ignorar trânsito se o Status indicar fechamento/cancelamento
+            // VERIFICAÇÃO ABSOLUTA: Ignorar trânsito se o Status indicar fechamento/cancelamento
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
@@ -905,13 +909,13 @@ async function processarInteligencia() {
                     saldoOF: saldoPendente,
                     sitOFOriginal: sitOFOriginal,
                     filial: filialDaOF,
-                    searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn]).toLowerCase()
+                    searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn]).toLowerCase(),
+                    linhaOriginal: linha // GUARDA O DADO BRUTO EM CACHE PARA O MODAL 3 COLUNAS
                 });
             }
         });
     }
 
-    // Popula o novo Dropdown de Status da OF
     const selectStatusOf = document.getElementById('select-status-of');
     if (selectStatusOf) {
         selectStatusOf.innerHTML = '<option value="">Todos os Status</option>';
@@ -948,7 +952,6 @@ function dispararFiltrosDebounce() {
     timerBusca = setTimeout(dispararFiltrosSemAtraso, 300); 
 }
 
-// ATUALIZA O DROPDOWN DE LOCAIS DEPENDENDO DA FILIAL SELECIONADA
 window.atualizarFiltroLocais = function() {
     const filialEscolhida = document.getElementById('select-filial').value;
     const selectLocal = document.getElementById('select-local');
@@ -974,12 +977,10 @@ window.atualizarFiltroLocais = function() {
 window.dispararFiltros = function() { dispararFiltrosSemAtraso(); } 
 
 function dispararFiltrosSemAtraso() {
-    // Pega as buscas das 3 caixas diferentes
     let valCatalogo = document.getElementById('busca')?.value || "";
     let valCompras = document.getElementById('busca-compras')?.value || "";
     let valGestao = document.getElementById('busca-ofs')?.value || "";
     
-    // Aplica a busca respectiva dependendo da tela aberta
     let termoBruto = "";
     if (vistaAtual === 'pesquisa') termoBruto = valCatalogo;
     else if (vistaAtual === 'compras') termoBruto = valCompras;
@@ -1048,7 +1049,7 @@ window.limparFiltros = function() {
     document.getElementById('filtro-abc-aviso').style.display = 'none';
     document.getElementById('filtro-status-aviso').style.display = 'none';
     document.getElementById('filtro-filial-aviso').style.display = 'none';
-    atualizarFiltroLocais(); // Reseta a cascata
+    atualizarFiltroLocais(); 
 }
 
 // ==========================================================================
@@ -1231,7 +1232,6 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     ofsExibir.slice(0, 100).forEach(of => {
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
-        // NOVO: Clique na OF para abrir modal específico
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
                 <td><strong style="color:var(--text-primary);">${of.of}</strong><br><span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span></td>
@@ -1583,7 +1583,9 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     document.getElementById('modal-item').style.display = 'flex';
 };
 
-// NOVO: Modal Exclusivo para Análise de Gestão de OF
+// ==========================================================================
+// 11. Modal Exclusivo para Análise de Gestão de OF (Raio-X 3 Colunas)
+// ==========================================================================
 window.abrirModalOF = function(ofId, codProd) {
     let codNorm = normalizarCod(codProd);
     const of = ordesAtivasFiltradas.find(o => o.of === ofId && normalizarCod(o.codProd) === codNorm);
@@ -1594,33 +1596,129 @@ window.abrirModalOF = function(ofId, codProd) {
         return;
     }
 
+    // Recupera a linha inteira do CSV guardada em cache
+    let linha = of.linhaOriginal || {};
+
+    // Função local para buscar campos ignorando acentos/caixa alta
+    const getC = (nomesArray) => {
+        let ch = encontrarChave(linha, nomesArray);
+        let val = ch ? linha[ch] : '';
+        return val && String(val).trim() !== '' ? String(val).trim() : '-';
+    };
+
+    // Calcula a Tag Visual de Prazo (ETA)
+    let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
+    let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
+    
+    if (dataOF !== '-') {
+        let partes = dataOF.split('/');
+        if(partes.length >= 3) {
+            let dtPrevista = new Date(`${partes[2].split(' ')[0]}-${partes[1]}-${partes[0]}T00:00:00`);
+            let hoje = new Date();
+            hoje.setHours(0,0,0,0);
+            let diffDays = Math.ceil((dtPrevista - hoje) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) etaTag = `<span class="badge-status badge-ruptura-critica" style="font-size:13px; padding:8px 16px;">🔴 Atrasado (${Math.abs(diffDays)}d)</span>`;
+            else if (diffDays === 0) etaTag = `<span class="badge-status" style="background:var(--text-warning); color:#fff; font-size:13px; padding:8px 16px;">🟡 Entrega Hoje</span>`;
+            else etaTag = `<span class="badge-status badge-normal" style="font-size:13px; padding:8px 16px;">🟢 No Prazo (${diffDays}d)</span>`;
+        }
+    }
+
+    // Estilos para as linhas do relatório
+    let pStyle = "margin-bottom: 6px; font-size: 12px; color: var(--text-primary); border-bottom: 1px dashed var(--border-color); padding-bottom: 4px; display: flex; justify-content: space-between;";
+    let sTitle = "font-size: 14px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase;";
+    let strong = "font-weight: 700; color: var(--text-secondary); margin-right: 10px;";
+    const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
+
+    // Coluna 1: SC
+    let col1 = `
+        <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="${sTitle} color: var(--primary-color);">📝 1. Solicitação (SC)</h3>
+            ${makeRow('Código SC', ['sc - código', 'sc - codigo', 'sc codigo', 'sc'])}
+            ${makeRow('Situação', ['sc - situação', 'sc - situacao', 'sc situacao'])}
+            ${makeRow('CCU Aprovador', ['sc - centro custo aprovador', 'centro custo aprovador', 'sc - ccu aprovador'])}
+            ${makeRow('Data Criação', ['sc - data criação', 'sc - data criacao'])}
+            ${makeRow('Solicitante', ['sc - nome solicitante', 'sc solicitante', 'nome solicitante'])}
+            ${makeRow('Empresa', ['sc - empresa', 'empresa sc'])}
+            ${makeRow('Filial', ['sc - filial', 'filial sc'])}
+            ${makeRow('Descr. Filial', ['sc - descr. filial', 'sc - descr filial', 'desc filial'])}
+            ${makeRow('Cód. Produto', ['sc - cód. produto', 'sc - cod. produto'])}
+            ${makeRow('Nome Produto', ['sc - nome produto', 'nome produto sc'])}
+            ${makeRow('Unid. Medida', ['sc - unid. medida', 'sc - unid medida'])}
+            ${makeRow('Quantidade', ['sc - quantidade', 'quantidade sc'])}
+            ${makeRow('Categoria', ['sc - categoria', 'categoria sc'])}
+            ${makeRow('DT Entrega', ['sc - dt entrega', 'sc - data entrega'])}
+            ${makeRow('Regularização', ['sc - regularização', 'sc - regularizacao'])}
+            ${makeRow('OBS', ['sc - obs', 'observacao sc'])}
+            ${makeRow('Local Estoque', ['sc - local estoque', 'local estoque sc'])}
+            ${makeRow('CCU Etq', ['sc - ccu etq', 'ccu etq'])}
+            ${makeRow('Aprovador', ['sc - aprovador', 'aprovador sc'])}
+        </div>
+    `;
+
+    // Coluna 2: OF
+    let col2 = `
+        <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="${sTitle} color: var(--text-warning);">🛒 2. Fornecimento (OF)</h3>
+            ${makeRow('Codigo OF', ['of - codigo', 'of - código', 'of codigo', 'ordem fornecimento'])}
+            ${makeRow('Data OF', ['of - data', 'data of'])}
+            ${makeRow('Fornecedor', ['of - nome fornecedor', 'nome fornecedor of', 'fornecedor'])}
+            ${makeRow('Qtd. Solicitada', ['of - qtd. solicitada', 'of - qtd solicitada'])}
+            ${makeRow('Saldo Pendente', ['of - saldo', 'saldo of'])}
+            ${makeRow('Qtd. Entregue', ['of - qtd. entregue', 'of - qtd entregue'])}
+            ${makeRow('Fechado', ['of - fechado', 'fechado of'])}
+            ${makeRow('Bloqueado', ['of - bloqueado', 'bloqueado of'])}
+            ${makeRow('Data Entrega', ['of - data entrega', 'data entrega of'])}
+            ${makeRow('Frete', ['of - frete', 'frete of'])}
+            ${makeRow('Moeda', ['of - moeda', 'moeda of'])}
+            ${makeRow('Situação OF', ['of - situação of', 'of - situacao of', 'situacao of'])}
+            ${makeRow('Tipo', ['of - tipo', 'tipo of'])}
+            ${makeRow('Email Fornecedor', ['of - email fornecedor', 'email fornecedor'])}
+            ${makeRow('OBS', ['of - obs', 'obs of'])}
+        </div>
+    `;
+
+    // Coluna 3: REC
+    let col3 = `
+        <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="${sTitle} color: var(--text-success);">📦 3. Recebimento (REC)</h3>
+            ${makeRow('Nr NF', ['rec - nr nf', 'rec - nr. nf', 'nr nf', 'nota fiscal'])}
+            ${makeRow('Série NF', ['rec - série', 'rec - serie', 'serie nf'])}
+            ${makeRow('DT Emissão', ['rec - dt emissão', 'rec - dt emissao', 'dt emissao nf'])}
+            ${makeRow('DT Entrada', ['rec - dt entrada', 'dt entrada nf', 'data entrada'])}
+            ${makeRow('Unid. Medida', ['rec - unid. medida', 'rec - unid medida'])}
+            ${makeRow('Quantidade Rec.', ['rec - quantidade', 'quantidade rec'])}
+            ${makeRow('Valor Un. Fiscal', ['rec - valor un. fiscal', 'rec - valor un fiscal', 'valor un fiscal'])}
+        </div>
+    `;
+
     const content = `
-        <div class="modal-header-section">
+        <div class="modal-header-section" style="border-bottom:none; padding-bottom:0;">
             <div style="flex-grow: 1;">
-                <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; line-height: 1.2;">
-                    Gestão de OF: <span style="color: var(--primary-color);">${of.of}</span>
-                </h2>
-                <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
-                    Item: #${of.codProd} - ${of.descProd}
-                </h3>
-                <div class="item-category" style="margin-bottom: 20px;">
-                    <span class="chip-category">SC Relacionada: <strong>${of.sc}</strong></span>
-                    <span class="chip-category">Fornecedor: <strong>${of.fornecedor}</strong></span>
-                    <span class="chip-category">Entrega Prevista: <strong>${of.dataEntrega}</strong></span>
-                    <span class="badge-status badge-transito">Status: ${of.sitOFOriginal || 'Pendente'}</span>
-                </div>
-                <div class="item-metrics-grid">
-                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual (Físico)</span><span class="metric-value">${item.saldo}</span></div>
-                    <div class="metric-box metric-default"><span class="metric-label">Mínimo / Máximo (Global)</span><span class="metric-value" style="font-size: 15px;">${item.minimo} / ${item.maximo}</span></div>
-                    <div class="metric-box metric-transito"><span class="metric-label">Quantidade Original Solicitada</span><span class="metric-value">${of.qtdPedidaOriginal}</span></div>
-                    <div class="metric-box metric-default" style="border-color: var(--text-warning);"><span class="metric-label" style="color:var(--text-warning);">Saldo Pendente de Entrega</span><span class="metric-value" style="color:var(--text-warning);">${of.saldoOF}</span></div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
+                            Raio-X da Ordem: <span style="color: var(--primary-color);">${of.of !== '-' ? of.of : of.sc}</span>
+                        </h2>
+                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
+                            Item: #${of.codProd} - ${of.descProd}
+                        </h3>
+                    </div>
+                    ${etaTag}
                 </div>
             </div>
         </div>
-        <div style="text-align: center; padding: 10px;">
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, locais e histórico de entrega desse item?</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 10px;">
+            ${col1}
+            ${col2}
+            ${col3}
+        </div>
+        
+        <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px solid var(--border-color);">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, curva financeira e locais físicos deste item?</p>
             <button class="theme-btn active" onclick="abrirModalDetalhes('${item.codNorm}', '${item.filialIdBase}')" style="padding: 12px 24px; font-size: 14px; margin: 0 auto; border-radius: 8px;">
-                Ver Contexto Completo do Item Analisado
+                Abrir Contexto Analítico do Item
             </button>
         </div>
     `;
