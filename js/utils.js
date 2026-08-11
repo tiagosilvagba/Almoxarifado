@@ -1,7 +1,7 @@
-import { state } from './state.js';
+import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js';
 
 export function normalizarString(val) { 
-    return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); 
+    return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, ' ').trim(); 
 }
 
 export function normalizarCod(val) { 
@@ -33,19 +33,9 @@ export function formatarMoeda(valor) {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); 
 }
 
-export function formatarMoedaMask(valor) {
-    if (state.ocultarValoresFinanceiros) return 'R$ ***';
+export function formatarMoedaMask(valor, ocultarValoresFinanceiros) {
+    if (ocultarValoresFinanceiros) return 'R$ ***';
     return formatarMoeda(valor);
-}
-
-export function mostrarToast(mensagem, tipo = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${tipo}`;
-    toast.innerText = mensagem;
-    container.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, 5000);
 }
 
 export function parseCSVFast(text) {

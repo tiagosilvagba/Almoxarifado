@@ -1,29 +1,28 @@
-export const state = {
-    bases: { baseItens: [], compras: [], consumos: [] },
-    itensProcessados: [],
-    itensFiltrados: [],
-    ordesAtivasFiltradas: [],
-    vistaAtual: 'dashboard',
-    
-    chartABCInstance: null,
-    chartStatusInstance: null,
-    chartFiliaisInstance: null,
+export const bases = { baseItens: [], compras: [], consumos: [] };
+export let itensProcessados = [];
+export let itensFiltrados = [];
+export let ordesAtivasFiltradas = [];
 
-    filtroGraficoABC: null,
-    filtroGraficoStatus: null,
-    filtroGraficoFilial: null,
+export let vistaAtual = 'dashboard';
+export let chartABCInstance = null;
+export let chartStatusInstance = null;
+export let chartFiliaisInstance = null;
+export let mesesAnalisados = 1; 
+export let filtroGraficoABC = null; 
+export let filtroGraficoStatus = null;
+export let filtroGraficoFilial = null;
+export let mesConsumoAtual = "MÊS";
+export let isFetchingData = false; 
+export let loaderProgress = 0;
 
-    mesConsumoAtual: "MÊS",
-    isFetchingData: false,
-    loaderProgress: 0,
+export let imagensMapeadas = new Set();
+export let mapeamentoDeImagemAtivo = false;
+export let setLocaisUnicos = new Set(); 
+export let setStatusOFUnicos = new Set();
 
-    imagensMapeadas: new Set(),
-    mapeamentoDeImagemAtivo: false,
-    setLocaisUnicos: new Set(),
-    setStatusOFUnicos: new Set(),
+export let ocultarValoresFinanceiros = true; 
 
-    ocultarValoresFinanceiros: true,
+export let currentLightboxImages = [];
+export let currentLightboxIndex = 0;
 
-    currentLightboxImages: [],
-    currentLightboxIndex: 0
-};
+if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
