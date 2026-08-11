@@ -23,6 +23,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
+// Formatador inteligente de datas para dd/mm/aaaa
+window.formatarDataBR = function(val) {
+    if (!val || val === '-') return '-';
+    let str = String(val).trim().split(' ')[0]; 
+    if (str.includes('-')) {
+        let p = str.split('-');
+        if (p.length === 3) {
+            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
+            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
+        }
+    }
+    if (str.includes('/')) {
+        let p = str.split('/');
+        if (p.length === 3) {
+            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
+            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
+        }
+    }
+    return str; 
+};
+
 window.alterarTema = function(tema) {
     if (!tema) return;
     if (tema === 'light') document.documentElement.removeAttribute('data-theme');
@@ -295,7 +316,6 @@ window.renderizarCompras = function() {
         `;
     }
 
-    // GATILHO CORRIGIDO: Só sugere compra se o Estoque Virtual furar o MÍNIMO
     const necessitaCompra = itensFiltrados.filter(i => {
         let estoqueVirtual = i.saldo + i.transito;
         return (estoqueVirtual < i.minimo) && i.minimo > 0 && i.maximo > 0;
@@ -311,7 +331,6 @@ window.renderizarCompras = function() {
 
             let transitoHtml = i.transito > 0 ? `<br><span style="font-size:10px; color:var(--text-warning);">+${i.transito} em trânsito</span>` : '';
             
-            // CÁLCULO DOS GIROS (Dias de Cobertura)
             let giroAtualText = i.consumo > 0 ? Math.round((i.saldo / i.consumo) * 30) + 'd' : 'Sem Consumo';
             let giroPosText = i.consumo > 0 ? Math.round((i.maximo / i.consumo) * 30) + 'd' : 'Sem Consumo';
 
@@ -346,12 +365,23 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     const divResumo = document.getElementById('resumo-ofs');
     let htmlLote = [];
     
-    const statusOfFiltro = document.getElementById('select-status-of')?.value || "";
+    const selectStatusElement = document.getElementById('select-status-of');
+    let statusOfFiltro = "Pendentes"; 
+    if (selectStatusElement) {
+        statusOfFiltro = selectStatusElement.value;
+    }
 
     let ofsExibir = ordesAtivasFiltradas.filter(of => {
         let bateTermo = termosSplit.length === 0 || termosSplit.some(t => of.searchStr.includes(t));
         let bateFilial = !filialFiltro || of.filial === filialFiltro || of.filial === 'Geral';
-        let bateStatus = !statusOfFiltro || of.sitOFOriginal === statusOfFiltro;
+        
+        let bateStatus = true;
+        if (statusOfFiltro === "Pendentes") {
+            bateStatus = (of.statusCalculado === 'Em Trânsito' || of.statusCalculado === 'Entrega Parcial');
+        } else if (statusOfFiltro !== "") {
+            bateStatus = (of.statusCalculado === statusOfFiltro);
+        }
+
         return bateTermo && bateFilial && bateStatus;
     });
 
@@ -363,10 +393,12 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     const mapaItens = new Map(itensProcessados.map(i => [i.codNorm, i]));
 
     ofsExibir.forEach(of => {
-        let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
-        let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
-        valTransitoTotal += val;
-        qtdTransitoTotal += of.saldoOF;
+        if (of.saldoOF > 0) {
+            let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
+            let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
+            valTransitoTotal += val;
+            qtdTransitoTotal += of.saldoOF;
+        }
         fornSet.add(of.fornecedor);
         ofSet.add(of.of);
     });
@@ -374,6 +406,11 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     ofsExibir.slice(0, 100).forEach(of => {
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
+        let badgeClass = 'badge-normal';
+        if (of.statusCalculado === 'Em Trânsito') badgeClass = 'badge-transito';
+        else if (of.statusCalculado === 'Entrega Parcial') badgeClass = 'badge-abaixo';
+        else if (of.statusCalculado.includes('Fechada') || of.statusCalculado.includes('Cancelada')) badgeClass = 'badge-obsoleto';
+
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.sc}', '${of.of}', '${of.codProd}')">
                 <td>
@@ -385,21 +422,24 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
                 <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
                 <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${descOriginal}</td>
                 <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
-                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${window.formatarDataBR(of.dataEntrega)}</td>
+                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">
+                    ${window.formatarDataBR(of.dataEntrega)}<br>
+                    <span class="badge-status ${badgeClass}" style="margin-top:4px; display:inline-block; font-size:9px;">${of.statusCalculado}</span>
+                </td>
             </tr>
         `);
     });
     
     if (divResumo) {
         divResumo.innerHTML = `
-            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
+            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente a Receber</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
             <div class="kpi-card"><span class="kpi-title">Saldo Físico a Receber</span><span class="kpi-value">${qtdTransitoTotal}</span></div>
-            <div class="kpi-card"><span class="kpi-title">OFs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
+            <div class="kpi-card"><span class="kpi-title">Ordens Listadas</span><span class="kpi-value">${ofSet.size}</span></div>
             <div class="kpi-card"><span class="kpi-title">Fornecedores Diferentes</span><span class="kpi-value">${fornSet.size}</span></div>
         `;
     }
 
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs correspondentes para os filtros atuais.</td></tr>`;
 }
 
 window.renderizarDashboard = function() {
@@ -750,36 +790,28 @@ window.abrirModalOF = function(scId, ofId, codProd) {
     };
 
     let qtdPedida = converterParaNumero(getC(['of - qtd. solicitada', 'of - qtd solicitada', 'qtd solicitada']));
-    let qtdEntregue = converterParaNumero(getC(['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue']));
+    let qtdEntregue = converterParaNumero(getC(['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida']));
+    let dataEntradaFisica = window.formatarDataBR(getC(['rec - dt entrada', 'dt entrada nf', 'data entrada']));
+    
     let ofFechado = getC(['of - fechado', 'fechado of']).toLowerCase();
     let sitOF = getC(['of - situação of', 'of - situacao of', 'situacao of']).toLowerCase();
-    
     let isFechada = ofFechado === 'sim' || ofFechado === 's' || sitOF.includes('fechada') || sitOF.includes('cancelada');
 
-    let statusCalculado = of.sitOFOriginal || 'Pendente';
     let badgeClass = 'badge-transito';
+    if (qtdPedida > 0 && qtdEntregue >= qtdPedida) badgeClass = 'badge-normal';
+    else if (qtdEntregue > 0 && qtdEntregue < qtdPedida && !isFechada) badgeClass = 'badge-abaixo';
+    else if (isFechada) badgeClass = 'badge-obsoleto';
 
-    if (qtdPedida > 0 && qtdEntregue === qtdPedida) {
-        statusCalculado = 'Entregue';
-        badgeClass = 'badge-normal';
-    } else if (qtdEntregue > 0 && qtdEntregue < qtdPedida && !isFechada) {
-        statusCalculado = 'Entrega Parcial';
-        badgeClass = 'badge-abaixo'; 
-    } else if (qtdPedida > 0 && qtdEntregue === 0 && !isFechada) {
-        statusCalculado = 'Em Trânsito';
-        badgeClass = 'badge-transito'; 
-    } else if (isFechada) {
-        statusCalculado = 'Fechada / Cancelada';
-        badgeClass = 'badge-obsoleto'; 
-    }
-
+    // REGRA DE OURO ATUALIZADA: Se a data de entrada física for conhecida e a qtd entregue for completa, o item exibe Entregue e bloqueia contagem de atraso.
     let dataOF = window.formatarDataBR(getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']));
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
-    if (dataOF !== '-') {
+    if (dataEntradaFisica !== '-' && qtdPedida > 0 && qtdEntregue >= qtdPedida) {
+        etaTag = `<span class="badge-status badge-normal" style="font-size:13px; padding:8px 16px;">🟢 Entregue em ${dataEntradaFisica}</span>`;
+    } else if (dataOF !== '-') {
         let partes = dataOF.split('/');
         if(partes.length >= 3) {
-            let dtPrevista = new Date(`${partes[2].split(' ')[0]}-${partes[1]}-${partes[0]}T00:00:00`);
+            let dtPrevista = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
             let hoje = new Date();
             hoje.setHours(0,0,0,0);
             let diffDays = Math.ceil((dtPrevista - hoje) / (1000 * 60 * 60 * 24));
@@ -870,7 +902,7 @@ window.abrirModalOF = function(scId, ofId, codProd) {
         rodapeContextoHTML = `
             <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px dashed var(--border-color); background: rgba(245, 158, 11, 0.05); border-radius: 12px;">
                 <p style="font-size: 14px; color: var(--text-warning); margin-bottom: 5px; font-weight:800;">⚠️ Item ausente no Ficheiro de Saldos</p>
-                <p style="font-size: 12px; color: var(--text-secondary);">O código <strong>${of.codProd}</strong> tem pedidos em trânsito, mas não foi encontrado no arquivo mestre ("03 - Base_Itens.csv"). Por isso, o contexto analítico avançado não está disponível para ele.</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">O código <strong>${of.codProd}</strong> tem pedidos no histórico, mas não foi encontrado no arquivo mestre ("03 - Base_Itens.csv"). Por isso, o contexto analítico não está disponível para ele.</p>
             </div>
         `;
     }
@@ -886,7 +918,7 @@ window.abrirModalOF = function(scId, ofId, codProd) {
                         <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px;">
                             Item: #${of.codProd} - ${of.descProd}
                         </h3>
-                        <span class="badge-status ${badgeClass}">Status da Entrega: ${statusCalculado}</span>
+                        <span class="badge-status ${badgeClass}">Status da Entrega: ${of.statusCalculado}</span>
                     </div>
                     ${etaTag}
                 </div>
