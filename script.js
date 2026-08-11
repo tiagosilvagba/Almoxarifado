@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(btn.getAttribute('data-theme-val') === temaLocal) btn.classList.add('active');
     });
     
-    // Listeners das Caixas de Busca
     const bsCatalog = document.getElementById('busca');
     if(bsCatalog) bsCatalog.addEventListener('input', dispararFiltrosDebounce);
     
@@ -465,6 +464,9 @@ window.exportarRevisaoExcel = function() {
     mostrarToast("Planilha de Revisão baixada com sucesso!", "success");
 }
 
+// ==========================================================================
+// MOTOR DE INTELIGÊNCIA E CONSOLIDAÇÃO FINANCEIRA
+// ==========================================================================
 async function processarInteligencia() {
     if (bases.baseItens.length === 0) { 
         mostrarToast("Erro: Arquivo Mestre não localizado.", "error"); 
@@ -478,7 +480,10 @@ async function processarInteligencia() {
     const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'];
     const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
     const colQtdConsumo = ['qt movimento', 'quantidade consumida', 'quantidade'];
-    const colQtdCompraFallback = ['quantidade', 'qtde', 'saldo aberto', 'of - saldo', 'sc - quantidade'];
+    
+    // CORREÇÃO: Forçar a leitura prioritária da coluna OF - Saldo como fallback
+    const colQtdCompraFallback = ['of - saldo', 'saldo aberto', 'quantidade', 'qtde', 'sc - quantidade'];
+    
     const colCusto = ['vl custo unitario atual', 'custo unitario', 'custo'];
     const colMin = ['qt minimo', 'minimo', 'min'];
     const colMax = ['qt maximo', 'maximo', 'max'];
@@ -504,7 +509,10 @@ async function processarInteligencia() {
     const colOfNomeFornecedor = ['of - nome fornecedor', 'fornecedor'];
     
     const colOfQtdPedida = ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
-    const colRecQtd = ['rec - quantidade', 'quantidade recebida', 'qtd recebida', 'quantidade rec'];
+    
+    // CORREÇÃO: Forçar o sistema a cruzar e ler a Qtd. Entregue com prioridade máxima
+    const colRecQtd = ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida'];
+    
     const colOfSit = ['of - situação of', 'situacao of', 'status of'];
     const colScSit = ['sc - situação', 'situacao sc'];
     const colScCanc = ['sc - cancelado', 'sc cancelado', 'cancelado'];
@@ -556,6 +564,7 @@ async function processarInteligencia() {
                 if (saldoPendente < 0) saldoPendente = 0; 
             } else {
                 saldoPendente = c_qtd_compra_fallback ? converterParaNumero(item[c_qtd_compra_fallback]) : 0;
+                qtdPedida = saldoPendente; // Fallback
             }
 
             if (saldoPendente > 0) {
@@ -928,6 +937,7 @@ async function processarInteligencia() {
         isFetchingData = false; 
     }, 600);
 }
+
 // ==========================================================================
 // BUSCA INTELIGENTE, FILTRO CASCATA E RENDERIZAÇÃO
 // ==========================================================================
@@ -1217,7 +1227,6 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     ofsExibir.slice(0, 100).forEach(of => {
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
-        // ADICIONADO: Nome do solicitante formatado abaixo da identificação de SC/OF
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
                 <td>
@@ -1245,6 +1254,7 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
 
     tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
 }
+
 function renderizarDashboard() {
     let valorTotal = 0, valorObsoleto = 0, qtdObsoleto = 0;
     let qtdRupturaCritica = 0, qtdRupturaTransito = 0;
