@@ -5,6 +5,7 @@ const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [];
 let itensFiltrados = [];
 
+// Estrutura para armazenar as OFs ativas extraídas de compras.csv
 let ordesAtivasFiltradas = [];
 
 let vistaAtual = 'dashboard';
@@ -22,10 +23,12 @@ let loaderProgress = 0;
 let imagensMapeadas = new Set();
 let mapeamentoDeImagemAtivo = false;
 let setLocaisUnicos = new Set(); 
-let setStatusOFUnicos = new Set(); 
+let setStatusOFUnicos = new Set(); // Filtro avançado de status OF
 
+// Controle de visualização de valores monetários (Ocultos por Padrão)
 let ocultarValoresFinanceiros = true; 
 
+// Estado do Lightbox Nativo e Seguro
 let currentLightboxImages = [];
 let currentLightboxIndex = 0;
 
@@ -34,14 +37,11 @@ if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-
 // ==========================================================================
 // FUNÇÕES ÚTEIS E PARSER
 // ==========================================================================
+// CORREÇÃO: replace(/\s+/g, ' ') garante que múltiplos espaços do ERP viram um só
 function normalizarString(val) { 
     return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, ' ').trim(); 
 }
-
-function normalizarCod(val) { 
-    return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); 
-}
-
+function normalizarCod(val) { return String(val || '').toLowerCase().replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); }
 function converterParaNumero(val) {
     if (val === null || val === undefined || val === '') return 0;
     if (typeof val === 'number') return val;
@@ -51,25 +51,13 @@ function converterParaNumero(val) {
     return isNaN(floatVal) ? 0 : floatVal;
 }
 
-// CORREÇÃO: Função de busca agora é 100% segura contra falsos positivos
 function encontrarChave(objRef, termosChave) {
     if (!objRef) return null;
     const chaves = Object.keys(objRef);
-    
-    // 1ª Tentativa: Correspondência Exata
     for (const termo of termosChave) {
         const termoBusca = normalizarString(termo);
         for (const chave of chaves) {
-            if (normalizarString(chave) === termoBusca) return chave;
-        }
-    }
-    
-    // 2ª Tentativa: Correspondência Parcial (Ignora termos curtos como 'sc', 'of' para não bugar)
-    for (const termo of termosChave) {
-        const termoBusca = normalizarString(termo);
-        if (termoBusca.length <= 3) continue; 
-        for (const chave of chaves) {
-            if (normalizarString(chave).includes(termoBusca)) return chave;
+            if (normalizarString(chave) === termoBusca || normalizarString(chave).includes(termoBusca)) return chave;
         }
     }
     return null;
@@ -490,11 +478,13 @@ async function processarInteligencia() {
         isFetchingData = false; return; 
     }
 
+    // ================= COLUNAS MAIS RECENTES DA JBS =================
     const colCod = ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto'];
     const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'];
     const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
     const colQtdConsumo = ['qt movimento', 'quantidade consumida', 'quantidade'];
     
+    // CORREÇÃO: Forçar a leitura prioritária da coluna OF - Saldo como fallback
     const colQtdCompraFallback = ['of - saldo', 'saldo aberto', 'quantidade', 'qtde', 'sc - quantidade'];
     
     const colCusto = ['vl custo unitario atual', 'custo unitario', 'custo'];
@@ -513,6 +503,7 @@ async function processarInteligencia() {
     const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
     const colValorTotal = ['vl total', 'valor total', 'custo total', 'saldo financeiro', 'vl saldo', 'valor do saldo'];
     
+    // COLUNAS DE PRAZO E STATUS (NOVA REGRA DE NEGÓCIO OFs)
     const colScDataCriacao = ['sc - data criação', 'data criacao sc', 'data criacao'];
     const colRecDataEntrada = ['rec - dt entrada', 'dt entrada', 'data entrada'];
     const colOfDataEntrega = ['of - data entrega', 'data entrega of', 'dt entrega of'];
@@ -521,6 +512,8 @@ async function processarInteligencia() {
     const colOfNomeFornecedor = ['of - nome fornecedor', 'fornecedor'];
     
     const colOfQtdPedida = ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
+    
+    // CORREÇÃO: Forçar o sistema a cruzar e ler a Qtd. Entregue com prioridade máxima
     const colRecQtd = ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida'];
     
     const colOfSit = ['of - situação of', 'situacao of', 'status of'];
@@ -564,6 +557,7 @@ async function processarInteligencia() {
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
 
+            // VERIFICAÇÃO ABSOLUTA: Ignorar tudo se o Status indicar fechamento/cancelamento
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
@@ -580,6 +574,7 @@ async function processarInteligencia() {
                 mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoPendente);
             }
 
+            // Cálculo de Lead Time Histórico
             if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
                 const parseData = (dStr) => {
                     const partes = String(dStr).trim().split('/');
@@ -777,6 +772,7 @@ async function processarInteligencia() {
     let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
         const transito = mapComprasTransito.get(item.codNorm) || 0;
 
+        // PROTEÇÃO: Só descarta se TUDO estiver zerado (Saldo, Min, Max e também SEM Trânsito pendente)
         if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
 
         if (item.saldo > 0 && item.valorTotalGlobal > 0) {
@@ -914,7 +910,7 @@ async function processarInteligencia() {
                     sitOFOriginal: sitOFOriginal,
                     filial: filialDaOF,
                     searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req).toLowerCase(),
-                    linhaOriginal: linha 
+                    linhaOriginal: linha // GUARDA O DADO BRUTO EM CACHE PARA O MODAL 3 COLUNAS
                 });
             }
         });
@@ -1604,14 +1600,17 @@ window.abrirModalOF = function(ofId, codProd) {
         return;
     }
 
+    // Recupera a linha inteira do CSV guardada em cache
     let linha = of.linhaOriginal || {};
 
+    // Função local para buscar campos ignorando acentos/caixa alta e espaços anómalos
     const getC = (nomesArray) => {
         let ch = encontrarChave(linha, nomesArray);
         let val = ch ? linha[ch] : '';
         return val && String(val).trim() !== '' ? String(val).trim() : '-';
     };
 
+    // Calcula a Tag Visual de Prazo (ETA)
     let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
@@ -1629,11 +1628,13 @@ window.abrirModalOF = function(ofId, codProd) {
         }
     }
 
+    // Estilos base do painel modal
     let pStyle = "margin-bottom: 6px; font-size: 12px; color: var(--text-primary); border-bottom: 1px dashed var(--border-color); padding-bottom: 4px; display: flex; justify-content: space-between;";
     let sTitle = "font-size: 14px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase;";
     let strong = "font-weight: 700; color: var(--text-secondary); margin-right: 10px;";
     const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
 
+    // COLUNA 1: SC (Solicitação)
     let col1 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--primary-color);">📝 1. Solicitação (SC)</h3>
@@ -1659,6 +1660,7 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     `;
 
+    // COLUNA 2: OF (Ordem Fornecimento)
     let col2 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-warning);">🛒 2. Fornecimento (OF)</h3>
@@ -1680,6 +1682,7 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     `;
 
+    // COLUNA 3: REC (Recebimento / Nota Fiscal)
     let col3 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-success);">📦 3. Recebimento (REC)</h3>
