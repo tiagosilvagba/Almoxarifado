@@ -1588,27 +1588,37 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
 };
 
 // ==========================================================================
-// 11. Modal Exclusivo para Análise de Gestão de OF (Raio-X 3 Colunas)
+// Modal Exclusivo para Análise de Gestão de OF (Raio-X 3 Colunas) - BLINDADO
 // ==========================================================================
 window.abrirModalOF = function(ofId, codProd) {
     let codNorm = normalizarCod(codProd);
-    const of = ordesAtivasFiltradas.find(o => o.of === ofId && normalizarCod(o.codProd) === codNorm);
+    
+    // Busca flexível: ignora espaços extras e diferenças de formatação
+    let of = ordesAtivasFiltradas.find(o => String(o.of).trim() === String(ofId).trim() && normalizarCod(o.codProd) === codNorm);
+    if (!of) {
+        // Fallback de segurança caso a combinação exata falhe
+        of = ordesAtivasFiltradas.find(o => String(o.of).trim() === String(ofId).trim() || normalizarCod(o.codProd) === codNorm);
+    }
+
     const item = itensProcessados.find(i => i.codNorm === codNorm);
 
-    if (!of || !item) {
-        mostrarToast("Erro: Detalhes da OF ou do Item não encontrados.", "error");
+    // Valida apenas se a OF foi localizada na lista ativa
+    if (!of) {
+        mostrarToast("Erro: Detalhes da OF não encontrados na listagem.", "error");
         return;
     }
 
     // Recupera a linha inteira do CSV guardada em cache
     let linha = of.linhaOriginal || {};
 
-    // Função local para buscar campos ignorando acentos/caixa alta e espaços anómalos
+    // Função local para buscar campos ignorando acentos e espaços
     const getC = (nomesArray) => {
         let ch = encontrarChave(linha, nomesArray);
         let val = ch ? linha[ch] : '';
         return val && String(val).trim() !== '' ? String(val).trim() : '-';
     };
+
+    let descExibicao = item ? item.desc : (of.descProd || 'Descrição não informada na Base Mestre');
 
     // Calcula a Tag Visual de Prazo (ETA)
     let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
@@ -1628,13 +1638,11 @@ window.abrirModalOF = function(ofId, codProd) {
         }
     }
 
-    // Estilos base do painel modal
     let pStyle = "margin-bottom: 6px; font-size: 12px; color: var(--text-primary); border-bottom: 1px dashed var(--border-color); padding-bottom: 4px; display: flex; justify-content: space-between;";
     let sTitle = "font-size: 14px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase;";
     let strong = "font-weight: 700; color: var(--text-secondary); margin-right: 10px;";
     const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
 
-    // COLUNA 1: SC (Solicitação)
     let col1 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--primary-color);">📝 1. Solicitação (SC)</h3>
@@ -1660,7 +1668,6 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     `;
 
-    // COLUNA 2: OF (Ordem Fornecimento)
     let col2 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-warning);">🛒 2. Fornecimento (OF)</h3>
@@ -1682,7 +1689,6 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     `;
 
-    // COLUNA 3: REC (Recebimento / Nota Fiscal)
     let col3 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
             <h3 style="${sTitle} color: var(--text-success);">📦 3. Recebimento (REC)</h3>
@@ -1696,6 +1702,19 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     `;
 
+    let rodapeContextoHTML = item ? `
+        <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px solid var(--border-color);">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, curva financeira e locais físicos deste item?</p>
+            <button class="theme-btn active" onclick="abrirModalDetalhes('${item.codNorm}', '${item.filialIdBase}')" style="padding: 12px 24px; font-size: 14px; margin: 0 auto; border-radius: 8px;">
+                Abrir Contexto Analítico do Item
+            </button>
+        </div>
+    ` : `
+        <div style="text-align: center; padding: 15px; margin-top: 15px; border-top: 1px solid var(--border-color);">
+            <p style="font-size: 12px; color: var(--text-warning);">⚠️ <i>Nota: Este item possui Ordem de Fornecimento ativa, mas o código <strong>#${codProd}</strong> não foi encontrado na Base Mestre (03 - Base_Itens.csv). O contexto analítico avançado de estoque está indisponível para ele.</i></p>
+        </div>
+    `;
+
     const content = `
         <div class="modal-header-section" style="border-bottom:none; padding-bottom:0;">
             <div style="flex-grow: 1;">
@@ -1705,7 +1724,7 @@ window.abrirModalOF = function(ofId, codProd) {
                             Raio-X da Ordem: <span style="color: var(--primary-color);">${of.of !== '-' ? of.of : of.sc}</span>
                         </h2>
                         <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
-                            Item: #${of.codProd} - ${of.descProd}
+                            Item: #${codProd} - ${descExibicao}
                         </h3>
                     </div>
                     ${etaTag}
@@ -1719,19 +1738,12 @@ window.abrirModalOF = function(ofId, codProd) {
             ${col3}
         </div>
         
-        <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px solid var(--border-color);">
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Deseja aprofundar a análise de consumo, curva financeira e locais físicos deste item?</p>
-            <button class="theme-btn active" onclick="abrirModalDetalhes('${item.codNorm}', '${item.filialIdBase}')" style="padding: 12px 24px; font-size: 14px; margin: 0 auto; border-radius: 8px;">
-                Abrir Contexto Analítico do Item
-            </button>
-        </div>
+        ${rodapeContextoHTML}
     `;
 
     document.getElementById('modal-body-content').innerHTML = content;
     document.getElementById('modal-item').style.display = 'flex';
-};
-
-window.fecharModal = function() {
+};window.fecharModal = function() {
     document.getElementById('modal-item').style.display = 'none';
     document.getElementById('modal-body-content').innerHTML = ''; 
 };
