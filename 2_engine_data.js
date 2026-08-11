@@ -281,6 +281,14 @@ async function processarInteligencia() {
     const colScSit = ['sc - situação', 'situacao sc'];
     const colScCanc = ['sc - cancelado', 'sc cancelado', 'cancelado'];
 
+    // TABELA DE COTAÇÃO ATUAL PARA CONVERSÃO DE MOEDAS (Base Comercial)
+    const cotacoesMoeda = {
+        'usd': 5.17, // Dólar Americano
+        'eur': 5.97, // Euro
+        'brl': 1.00, // Real Brasileiro (Base)
+        'r$': 1.00
+    };
+
     const dataAtual = new Date();
     let mesAnteriorNum = dataAtual.getMonth(); 
     if (mesAnteriorNum === 0) mesAnteriorNum = 12; 
@@ -289,13 +297,13 @@ async function processarInteligencia() {
     mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
     const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-    setProgress(92, "Processando Compras (OFs em Trânsito) e Lead Time...");
+    setProgress(92, "Processando Compras (com Conversão Cambial) e Lead Time...");
     await new Promise(r => setTimeout(r, 50)); 
 
     const mapComprasTransito = new Map(); 
     const mapLeadTimeHistorico = new Map(); 
     
-    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_qtd_compra_fallback = null, c_sc_dt = null, c_rec_dt = null;
+    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_qtd_compra_fallback = null, c_sc_dt = null, c_rec_dt = null, c_of_moeda = null;
 
     if(bases.compras.length > 0) {
         c_cod_compra = encontrarChave(bases.compras[0], colCod);
@@ -307,6 +315,7 @@ async function processarInteligencia() {
         c_qtd_compra_fallback = encontrarChave(bases.compras[0], colQtdCompraFallback);
         c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
         c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
+        c_of_moeda = encontrarChave(bases.compras[0], ['of - moeda', 'moeda of', 'moeda']);
         
         bases.compras.forEach(item => {
             const cod = normalizarCod(item[c_cod_compra]);
@@ -317,6 +326,10 @@ async function processarInteligencia() {
             let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
+
+            // Conversão de moeda aplicada caso exista fator cambial na linha
+            let moedaStr = c_of_moeda && item[c_of_moeda] ? normalizarString(item[c_of_moeda]) : 'brl';
+            let taxaConversao = cotacoesMoeda[moedaStr] || 1.00;
 
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
@@ -612,7 +625,9 @@ async function processarInteligencia() {
 
     itensProcessados = baseSujaProcessada;
     
-    // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs)
+    // ==========================================================================
+    // PROCESSA A NOVA ABA: GESTÃO DE COMPRAS (OFs) E CONVERSÃO CAMBIAL
+    // ==========================================================================
     ordesAtivasFiltradas = [];
     setStatusOFUnicos.clear();
 
@@ -623,6 +638,7 @@ async function processarInteligencia() {
         const c_forn = encontrarChave(bases.compras[0], colOfNomeFornecedor);
         const c_dt_ent = encontrarChave(bases.compras[0], colOfDataEntrega);
         const c_solicitante = encontrarChave(bases.compras[0], ['sc - nome solicitante', 'sc solicitante', 'nome solicitante', 'requisitante']);
+        const c_of_fechado = encontrarChave(bases.compras[0], ['of - fechado', 'fechado of']);
         
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
@@ -631,13 +647,19 @@ async function processarInteligencia() {
             let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
             let sitOFOriginal = c_of_sit ? linha[c_of_sit] : 'Pendente';
             let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
-            let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
+            let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
-            let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
-            let saldoPendente = 0;
+            // Fator de conversão da moeda da linha para Real (BRL)
+            let moedaStr = c_of_moeda && linha[c_of_moeda] ? normalizarString(linha[c_of_moeda]) : 'brl';
+            let taxaCambio = cotacoesMoeda[moedaStr] || 1.00;
 
-            if (isFechadaOuCancelada) {
+            let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
+            let ofFechadoStr = c_of_fechado && linha[c_of_fechado] ? String(linha[c_of_fechado]).toLowerCase() : '';
+            let isFechada = isFechadaOuCancelada || ofFechadoStr === 'sim' || ofFechadoStr === 's';
+
+            let saldoPendente = 0;
+            if (isFechada) {
                 saldoPendente = 0; 
             } else if (c_of_qtd_pedida) {
                 saldoPendente = qtdPedida - qtdRecebida;
@@ -647,14 +669,26 @@ async function processarInteligencia() {
                 qtdPedida = saldoPendente; 
             }
 
-            if(saldoPendente > 0) {
-                let cod = normalizarCod(linha[c_cod_compra]);
+            let statusCalculado = sitOFOriginal || 'Pendente';
+            if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
+                statusCalculado = 'Entregue';
+            } else if (qtdRecebida > 0 && qtdRecebida < qtdPedida && !isFechada) {
+                statusCalculado = 'Entrega Parcial';
+            } else if (qtdPedida > 0 && qtdRecebida === 0 && !isFechada) {
+                statusCalculado = 'Em Trânsito';
+            } else if (isFechada) {
+                statusCalculado = 'Fechada / Cancelada';
+            }
+
+            let cod = normalizarCod(linha[c_cod_compra]);
+            if (cod) {
                 let objItem = mapaItensParaFilial.get(cod);
                 let filialDaOF = objItem ? objItem.filialNm : 'Geral';
                 let req = c_solicitante && linha[c_solicitante] ? linha[c_solicitante].trim() : 'Não Informado';
 
-                if (sitOFOriginal) setStatusOFUnicos.add(sitOFOriginal);
+                if (statusCalculado) setStatusOFUnicos.add(statusCalculado);
 
+                // Aplica a conversão cambial no objeto guardado para os cálculos financeiros se necessário
                 ordesAtivasFiltradas.push({
                     sc: linha[c_sc] || '-',
                     of: linha[c_of] || '-',
@@ -666,6 +700,8 @@ async function processarInteligencia() {
                     qtdPedidaOriginal: qtdPedida,
                     saldoOF: saldoPendente,
                     sitOFOriginal: sitOFOriginal,
+                    statusCalculado: statusCalculado,
+                    taxaCambio: taxaCambio,
                     filial: filialDaOF,
                     searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req).toLowerCase(),
                     linhaOriginal: linha 
@@ -676,7 +712,8 @@ async function processarInteligencia() {
 
     const selectStatusOf = document.getElementById('select-status-of');
     if (selectStatusOf) {
-        selectStatusOf.innerHTML = '<option value="">Todos os Status</option>';
+        selectStatusOf.innerHTML = '<option value="">Todos os Status (Pesquisa Livre)</option>';
+        selectStatusOf.innerHTML += '<option value="Pendentes" selected>⏳ Apenas Pendentes (Trânsito / Parcial)</option>';
         Array.from(setStatusOFUnicos).sort().forEach(s => {
             if(s) selectStatusOf.innerHTML += `<option value="${s}">${s}</option>`;
         });
