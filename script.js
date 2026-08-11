@@ -566,10 +566,10 @@ async function processarInteligencia() {
                 // Aguardando Aprovação (Somente SC)
                 saldoPendente = 1;
             } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
-                // Item Entregue (Saldo pendente = 0)
+                // Item Entregue
                 saldoPendente = 0;
             } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
-                // Entrega Parcial (Saldo restante)
+                // Entrega Parcial
                 saldoPendente = qtdPedida - qtdRecebida;
             } else if (qtdPedida > 0 && qtdRecebida === 0) {
                 // Em Trânsito
@@ -628,7 +628,7 @@ async function processarInteligencia() {
 
                 if (cs_local) {
                     let localVal = String(item[cs_local]).trim();
-                    if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299' ) || localVal.includes('295')) {
+                    if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299') || localVal.includes('295')) {
                         return; 
                     }
                 }
@@ -884,21 +884,17 @@ async function processarInteligencia() {
             let saldoPendente = 0;
 
             if (isFechadaOuCancelada) {
-                return; // Ignora fechadas ou canceladas
+                return; 
             } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
-                // Somente SC sem OF -> Aguardando Aprovação
                 statusCalculado = 'Aguardando Aprovação';
                 saldoPendente = 1;
             } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
-                // Qtd Entregue == Qtd Solicitada -> Item Entregue
                 statusCalculado = 'Item Entregue';
                 saldoPendente = 0;
             } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
-                // Qtd Entregue < Qtd Solicitada e > 0 -> Entrega Parcial (ex: SC 7255197 com 3,25 de 6000)
                 statusCalculado = 'Entrega Parcial';
                 saldoPendente = qtdPedida - qtdRecebida;
             } else if (qtdPedida > 0 && qtdRecebida === 0) {
-                // Solicitado > 0 e Entregue == 0 -> Em Trânsito
                 statusCalculado = 'Em Trânsito';
                 saldoPendente = qtdPedida;
             } else {
@@ -906,7 +902,6 @@ async function processarInteligencia() {
                 saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
             }
 
-            // Armazena no filtro dinâmico de Status de OF
             setStatusOFUnicos.add(statusCalculado);
 
             let cod = normalizarCod(linha[c_cod_compra]);
@@ -1627,10 +1622,13 @@ window.abrirModalOF = function(ofId, codProd) {
 
     let descExibicao = item ? item.desc : (of.descProd || 'Descrição não informada na Base Mestre');
 
+    // Validação da Tag Visual de Prazo/Atraso aplicando a regra de item já entregue
     let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
-    if (dataOF !== '-') {
+    if (of.sitOFOriginal === 'Item Entregue') {
+        etaTag = `<span class="badge-status badge-normal" style="font-size:13px; padding:8px 16px; background:#10b981; color:#fff;">✅ Item Entregue</span>`;
+    } else if (dataOF !== '-') {
         let partes = dataOF.split('/');
         if(partes.length >= 3) {
             let dtPrevista = new Date(`${partes[2].split(' ')[0]}-${partes[1]}-${partes[0]}T00:00:00`);
