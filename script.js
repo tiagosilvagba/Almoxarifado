@@ -547,23 +547,20 @@ async function processarInteligencia() {
             const cod = normalizarCod(item[c_cod_compra]);
             if (!cod) return;
 
-            let qtdPedida = c_of_qtd_pedida ? converterParaNumero(item[c_of_qtd_pedida]) : 0;
-            let qtdRecebida = c_rec_qtd ? converterParaNumero(item[c_rec_qtd]) : 0;
+            let saldoPendente = 0;
             let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
 
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
-            let saldoPendente = 0;
 
             if (isFechadaOuCancelada) {
                 saldoPendente = 0; 
             } else if (c_of_qtd_pedida) {
-                if (qtdPedida > qtdRecebida) {
-                    saldoPendente = qtdPedida - qtdRecebida;
-                } else {
-                    saldoPendente = 0; 
-                }
+                let p = converterParaNumero(item[c_of_qtd_pedida]);
+                let r = c_rec_qtd ? converterParaNumero(item[c_rec_qtd]) : 0;
+                saldoPendente = p - r;
+                if (saldoPendente < 0) saldoPendente = 0;
             } else {
                 saldoPendente = c_qtd_compra_fallback ? converterParaNumero(item[c_qtd_compra_fallback]) : 0;
             }
@@ -859,27 +856,20 @@ async function processarInteligencia() {
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
         bases.compras.forEach(linha => {
-            let qtdPedida = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
-            let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
+            let saldoPendente = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
             let sitOFOriginal = c_of_sit ? linha[c_of_sit] : 'Pendente';
             let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
             let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
-            let saldoPendente = 0;
 
             if (isFechadaOuCancelada) {
                 saldoPendente = 0; 
             } else if (c_of_qtd_pedida) {
-                if (qtdPedida > qtdRecebida) {
-                    saldoPendente = qtdPedida - qtdRecebida;
-                } else {
-                    saldoPendente = 0; 
-                }
+                saldoPendente = converterParaNumero(linha[c_of_qtd_pedida]);
             } else {
                 saldoPendente = c_qtd_compra_fallback ? converterParaNumero(linha[c_qtd_compra_fallback]) : 0;
-                qtdPedida = saldoPendente; 
             }
 
             if(saldoPendente > 0) {
@@ -898,7 +888,6 @@ async function processarInteligencia() {
                     fornecedor: linha[c_forn] || 'Não Informado',
                     solicitante: req,
                     dataEntrega: linha[c_dt_ent] || 'Sem Data',
-                    qtdPedidaOriginal: qtdPedida,
                     saldoOF: saldoPendente,
                     sitOFOriginal: sitOFOriginal,
                     filial: filialDaOF,
@@ -1223,8 +1212,6 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     });
 
     ofsExibir.slice(0, 100).forEach(of => {
-        let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
-        
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
                 <td>
@@ -1234,7 +1221,6 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
                 </td>
                 <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
                 <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
-                <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${descOriginal}</td>
                 <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
                 <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${of.dataEntrega}</td>
             </tr>
@@ -1483,9 +1469,6 @@ function atualizarGraficos() {
     }
 }
 
-// ==========================================================================
-// FUNÇÕES DOS MODAIS DE DETALHES (ITEM E GESTÃO DE OF)
-// ==========================================================================
 window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     const item = itensProcessados.find(i => i.codNorm === codNorm && i.filialIdBase === filialIdBase);
     if (!item) {
