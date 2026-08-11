@@ -23,6 +23,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
+// NOVA FUNÇÃO: Formatador inteligente de datas para dd/mm/aaaa
+window.formatarDataBR = function(val) {
+    if (!val || val === '-') return '-';
+    // Remove as horas se o ERP exportar "2024-05-10 14:30:00"
+    let str = String(val).trim().split(' ')[0]; 
+    
+    // Tratamento para formato ISO (aaaa-mm-dd) ou (dd-mm-aaaa)
+    if (str.includes('-')) {
+        let p = str.split('-');
+        if (p.length === 3) {
+            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
+            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
+        }
+    }
+    // Tratamento para formato com barras (aaaa/mm/dd) ou (dd/mm/aaaa) sem os zeros
+    if (str.includes('/')) {
+        let p = str.split('/');
+        if (p.length === 3) {
+            if (p[0].length === 4) return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`; 
+            return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`; 
+        }
+    }
+    return str; // Fallback de segurança
+};
+
 window.alterarTema = function(tema) {
     if (!tema) return;
     if (tema === 'light') document.documentElement.removeAttribute('data-theme');
@@ -151,10 +176,7 @@ window.limparFiltros = function() {
     if(document.getElementById('select-imagem')) document.getElementById('select-imagem').value = "";
     if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
     if(document.getElementById('select-local')) document.getElementById('select-local').value = "";
-    
-    // Na limpeza, o Status da OF passa a mostrar TODAS (Histórico)
     if(document.getElementById('select-status-of')) document.getElementById('select-status-of').value = "";
-    
     if(document.getElementById('busca')) document.getElementById('busca').value = "";
     if(document.getElementById('busca-compras')) document.getElementById('busca-compras').value = "";
     if(document.getElementById('busca-ofs')) document.getElementById('busca-ofs').value = "";
@@ -284,51 +306,23 @@ window.renderizarCompras = function() {
     let totalQtd = 0;
     let totalValor = 0;
     
-    if (tbody && tbody.previousElementSibling) {
-        tbody.previousElementSibling.innerHTML = `
-            <tr>
-                <th>Código / Descrição</th>
-                <th>Filial</th>
-                <th>Estoque (Físico + Trânsito)</th>
-                <th>Giro Atual</th>
-                <th>Máximo Global</th>
-                <th style="color: var(--text-success);">Comprar +Qtd</th>
-                <th style="color: var(--text-info);">Giro Pós-Compra</th>
-            </tr>
-        `;
-    }
-
-    // Regra mantida: Só sugere compra se o Estoque Virtual furar o MÍNIMO
-    const necessitaCompra = itensFiltrados.filter(i => {
-        let estoqueVirtual = i.saldo + i.transito;
-        return (estoqueVirtual < i.minimo) && i.minimo > 0 && i.maximo > 0;
-    });
+    const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
     
-    necessitaCompra.sort((a,b) => (a.saldo + a.transito) - (b.saldo + b.transito)).forEach(i => {
-        let estoqueVirtual = i.saldo + i.transito;
-        let sug = i.maximo - estoqueVirtual; 
-        
-        if(sug > 0) {
-            totalQtd += sug;
-            totalValor += (sug * i.custoUnitario);
+    necessitaCompra.sort((a,b) => a.saldo - b.saldo).forEach(i => {
+        let sug = i.maximo - i.saldo;
+        totalQtd += sug;
+        totalValor += (sug * i.custoUnitario);
 
-            let transitoHtml = i.transito > 0 ? `<br><span style="font-size:10px; color:var(--text-warning);">+${i.transito} em trânsito</span>` : '';
-            
-            let giroAtualText = i.consumo > 0 ? Math.round((i.saldo / i.consumo) * 30) + 'd' : 'Sem Consumo';
-            let giroPosText = i.consumo > 0 ? Math.round((i.maximo / i.consumo) * 30) + 'd' : 'Sem Consumo';
-
-            htmlLote.push(`
-                <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
-                    <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
-                    <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
-                    <td style="font-size:14px; font-weight:900; color:var(--text-critical);">${i.saldo} ${transitoHtml}</td>
-                    <td style="font-size:12px; font-weight:700; color:var(--text-secondary);">${giroAtualText}</td>
-                    <td style="font-size:12px; font-weight:700; color:var(--primary-color);">${i.maximo}</td>
-                    <td style="font-size:14px; font-weight:900; color:var(--text-success);">+${sug}</td>
-                    <td style="font-size:12px; font-weight:700; color:var(--text-info);">${giroPosText}</td>
-                </tr>
-            `);
-        }
+        htmlLote.push(`
+            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalDetalhes('${i.codNorm}', '${i.filialIdBase}')">
+                <td><strong style="color:var(--primary-color);">#${i.cod}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${i.desc}</span></td>
+                <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${i.filialNm}</td>
+                <td style="font-size:14px; font-weight:900; color:var(--text-critical);">${i.saldo}</td>
+                <td style="font-size:12px; font-weight:700; color:var(--text-warning);">${i.minimo}</td>
+                <td style="font-size:12px; font-weight:700; color:var(--primary-color);">${i.maximo}</td>
+                <td style="font-size:14px; font-weight:900; color:var(--text-success);">COMPRAR +${sug}</td>
+            </tr>
+        `);
     });
     
     if (divResumo) {
@@ -338,9 +332,7 @@ window.renderizarCompras = function() {
         `;
     }
 
-    if (tbody) {
-        tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="7" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras para os filtros (Estoque Virtual >= Mínimo).</td></tr>`;
-    }
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras críticas para os filtros atuais.</td></tr>`;
 }
 
 window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "") {
@@ -348,24 +340,12 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     const divResumo = document.getElementById('resumo-ofs');
     let htmlLote = [];
     
-    // Leitura inteligente do Status para manter "Pendentes" ou libertar para Todo o Histórico
-    const selectStatusElement = document.getElementById('select-status-of');
-    let statusOfFiltro = "Pendentes"; 
-    if (selectStatusElement) {
-        statusOfFiltro = selectStatusElement.value;
-    }
+    const statusOfFiltro = document.getElementById('select-status-of')?.value || "";
 
     let ofsExibir = ordesAtivasFiltradas.filter(of => {
         let bateTermo = termosSplit.length === 0 || termosSplit.some(t => of.searchStr.includes(t));
         let bateFilial = !filialFiltro || of.filial === filialFiltro || of.filial === 'Geral';
-        
-        let bateStatus = true;
-        if (statusOfFiltro === "Pendentes") {
-            bateStatus = (of.statusCalculado === 'Em Trânsito' || of.statusCalculado === 'Entrega Parcial');
-        } else if (statusOfFiltro !== "") {
-            bateStatus = (of.statusCalculado === statusOfFiltro);
-        }
-
+        let bateStatus = !statusOfFiltro || of.sitOFOriginal === statusOfFiltro;
         return bateTermo && bateFilial && bateStatus;
     });
 
@@ -377,13 +357,10 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     const mapaItens = new Map(itensProcessados.map(i => [i.codNorm, i]));
 
     ofsExibir.forEach(of => {
-        // O valor pendente só é somado no painel caso não esteja fechado/entregue
-        if (of.saldoOF > 0) {
-            let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
-            let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
-            valTransitoTotal += val;
-            qtdTransitoTotal += of.saldoOF;
-        }
+        let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
+        let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
+        valTransitoTotal += val;
+        qtdTransitoTotal += of.saldoOF;
         fornSet.add(of.fornecedor);
         ofSet.add(of.of);
     });
@@ -391,12 +368,7 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
     ofsExibir.slice(0, 100).forEach(of => {
         let descOriginal = of.qtdPedidaOriginal > 0 ? of.qtdPedidaOriginal : of.saldoOF;
         
-        // Etiqueta de Cor Dinâmica para a Tabela Histórica
-        let badgeClass = 'badge-normal';
-        if (of.statusCalculado === 'Em Trânsito') badgeClass = 'badge-transito';
-        else if (of.statusCalculado === 'Entrega Parcial') badgeClass = 'badge-abaixo';
-        else if (of.statusCalculado.includes('Fechada') || of.statusCalculado.includes('Cancelada')) badgeClass = 'badge-obsoleto';
-
+        // Aplicação da formatação de data na tabela de OFs
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.sc}', '${of.of}', '${of.codProd}')">
                 <td>
@@ -408,24 +380,21 @@ window.renderizarGestaoDeCompras = function(termosSplit = [], filialFiltro = "")
                 <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
                 <td style="font-size:13px; font-weight:600; color:var(--text-primary);">${descOriginal}</td>
                 <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
-                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">
-                    ${window.formatarDataBR(of.dataEntrega)}<br>
-                    <span class="badge-status ${badgeClass}" style="margin-top:4px; display:inline-block; font-size:9px;">${of.statusCalculado}</span>
-                </td>
+                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${window.formatarDataBR(of.dataEntrega)}</td>
             </tr>
         `);
     });
     
     if (divResumo) {
         divResumo.innerHTML = `
-            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente a Receber</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
+            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
             <div class="kpi-card"><span class="kpi-title">Saldo Físico a Receber</span><span class="kpi-value">${qtdTransitoTotal}</span></div>
-            <div class="kpi-card"><span class="kpi-title">Ordens Listadas</span><span class="kpi-value">${ofSet.size}</span></div>
+            <div class="kpi-card"><span class="kpi-title">OFs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
             <div class="kpi-card"><span class="kpi-title">Fornecedores Diferentes</span><span class="kpi-value">${fornSet.size}</span></div>
         `;
     }
 
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs correspondentes para os filtros atuais.</td></tr>`;
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
 }
 
 window.renderizarDashboard = function() {
@@ -755,6 +724,9 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     document.getElementById('modal-item').style.display = 'flex';
 };
 
+// ==========================================================================
+// 11. Modal Exclusivo para Análise de Gestão de OF (Raio-X 3 Colunas)
+// ==========================================================================
 window.abrirModalOF = function(scId, ofId, codProd) {
     let codNorm = normalizarCod(codProd);
     
@@ -775,13 +747,14 @@ window.abrirModalOF = function(scId, ofId, codProd) {
         return val && String(val).trim() !== '' ? String(val).trim() : '-';
     };
 
+    // Usa o novo formatador inteligente para calcular a etiqueta de prazo e mostrar as datas em pt-BR
     let dataOF = window.formatarDataBR(getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']));
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
     if (dataOF !== '-') {
         let partes = dataOF.split('/');
         if(partes.length >= 3) {
-            let dtPrevista = new Date(`${partes[2].split(' ')[0]}-${partes[1]}-${partes[0]}T00:00:00`);
+            let dtPrevista = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
             let hoje = new Date();
             hoje.setHours(0,0,0,0);
             let diffDays = Math.ceil((dtPrevista - hoje) / (1000 * 60 * 60 * 24));
@@ -797,13 +770,9 @@ window.abrirModalOF = function(scId, ofId, codProd) {
     let strong = "font-weight: 700; color: var(--text-secondary); margin-right: 10px;";
     
     const makeRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${getC(names)}</span></div>`;
+    
+    // Função específica para forçar o output com as datas tratadas em dd/mm/aaaa
     const makeDateRow = (label, names) => `<div style="${pStyle}"><span style="${strong}">${label}:</span> <span style="text-align: right; word-break: break-word; font-weight:600;">${window.formatarDataBR(getC(names))}</span></div>`;
-
-    // CORREÇÃO: Aplica a nova tag visualizada do status "Entregue, Parcial ou Em trânsito" no Raio-X também.
-    let badgeClass = 'badge-normal';
-    if (of.statusCalculado === 'Em Trânsito') badgeClass = 'badge-transito';
-    else if (of.statusCalculado === 'Entrega Parcial') badgeClass = 'badge-abaixo';
-    else if (of.statusCalculado.includes('Fechada') || of.statusCalculado.includes('Cancelada')) badgeClass = 'badge-obsoleto';
 
     let col1 = `
         <div style="background: var(--bg-subcard); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -878,7 +847,7 @@ window.abrirModalOF = function(scId, ofId, codProd) {
         rodapeContextoHTML = `
             <div style="text-align: center; padding: 20px 10px 10px; margin-top: 15px; border-top: 1px dashed var(--border-color); background: rgba(245, 158, 11, 0.05); border-radius: 12px;">
                 <p style="font-size: 14px; color: var(--text-warning); margin-bottom: 5px; font-weight:800;">⚠️ Item ausente no Ficheiro de Saldos</p>
-                <p style="font-size: 12px; color: var(--text-secondary);">O código <strong>${of.codProd}</strong> tem pedidos no histórico, mas não foi encontrado no arquivo mestre ("03 - Base_Itens.csv"). Por isso, o contexto analítico não está disponível para ele.</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">O código <strong>${of.codProd}</strong> tem pedidos em trânsito, mas não foi encontrado no arquivo mestre ("03 - Base_Itens.csv"). Por isso, o contexto analítico avançado não está disponível para ele.</p>
             </div>
         `;
     }
@@ -891,10 +860,9 @@ window.abrirModalOF = function(scId, ofId, codProd) {
                         <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
                             Raio-X da Ordem: <span style="color: var(--primary-color);">${of.of !== '-' ? of.of : of.sc}</span>
                         </h2>
-                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
                             Item: #${of.codProd} - ${of.descProd}
                         </h3>
-                        <span class="badge-status ${badgeClass}">Status da Entrega: ${of.statusCalculado}</span>
                     </div>
                     ${etaTag}
                 </div>
