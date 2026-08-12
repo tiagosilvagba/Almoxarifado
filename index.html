@@ -174,6 +174,18 @@
                 </select>
             </div>
             
+            <div class="filter-group">
+                <label class="filter-label">Análise de Parâmetros (Mín/Máx):</label>
+                <select id="select-analise-minmax" class="segmentation-select" onchange="dispararFiltros()">
+                    <option value="">Todos os Itens</option>
+                    <option value="sem_saldo_sem_param">🌑 Sem Saldo e Sem Mín/Máx</option>
+                    <option value="com_saldo_sem_param">📦 Com Saldo e Mín/Máx Zerado</option>
+                    <option value="abaixo_min">📉 Abaixo do Mínimo</option>
+                    <option value="acima_max">📈 Acima do Máximo</option>
+                    <option value="dentro_range">✅ Dentro do Range (Mín/Máx)</option>
+                </select>
+            </div>
+            
             <button class="btn-reset-filters" onclick="limparFiltros()">🧹 Limpar Filtros</button>
         </div>
     </aside>

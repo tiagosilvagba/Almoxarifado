@@ -774,7 +774,8 @@ async function processarInteligencia() {
     let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
         const transito = mapComprasTransito.get(item.codNorm) || 0;
 
-        if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
+        // LINHA REMOVIDA PARA MANTER OS ITENS SEM SALDO E MIN/MAX NA BASE E SEREM FILTRADOS PELO NOVO SELECT
+        // if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
 
         if (item.saldo > 0 && item.valorTotalGlobal > 0) {
             item.custoUnitario = item.valorTotalGlobal / item.saldo;
@@ -807,8 +808,14 @@ async function processarInteligencia() {
         item.sugestaoMin = minSugerido;
         item.sugestaoMax = maxSugerido;
 
+        // ATUALIZAÇÃO DA DEFINIÇÃO DE STATUS PARA PROTEGER OS KPIs
         let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
-        if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
+        
+        if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) {
+            // Nova trava: Impede que itens fantasmas virem "Ruptura Crítica"
+            status = 'Inativo / Sem Parâmetros'; statusBadge = 'badge-obsoleto'; 
+        }
+        else if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
         else if (item.saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
         else if (item.saldo > 0 && consumoMesAnteriorFisico <= 0) { 
             if (isLocalCriticoMacro) {
@@ -1004,6 +1011,7 @@ function dispararFiltrosSemAtraso() {
     const imagemFiltro = document.getElementById('select-imagem').value;
     const filialFiltro = document.getElementById('select-filial')?.value || filtroGraficoFilial || "";
     const localFiltro = document.getElementById('select-local')?.value || "";
+    const analiseMinMaxFiltro = document.getElementById('select-analise-minmax')?.value || ""; // NOVO
 
     if (imagemFiltro !== "" && !mapeamentoDeImagemAtivo) {
         mostrarToast("Para filtrar por imagens, mapeie a pasta no menu lateral.", "warning");
@@ -1027,7 +1035,22 @@ function dispararFiltrosSemAtraso() {
             if (imagemFiltro === 'com_imagem') bateImagem = i.temImagem === true;
             if (imagemFiltro === 'sem_imagem') bateImagem = i.temImagem === false;
         }
-        return bateTermo && bateCurva && bateStatus && bateImagem && bateFilial && bateLocal;
+
+        // LÓGICA DO NOVO FILTRO AQUI
+        let bateAnaliseMinMax = true;
+        if (analiseMinMaxFiltro === "sem_saldo_sem_param") {
+            bateAnaliseMinMax = (i.saldo === 0 && i.minimo === 0 && i.maximo === 0);
+        } else if (analiseMinMaxFiltro === "com_saldo_sem_param") {
+            bateAnaliseMinMax = (i.saldo > 0 && i.minimo === 0 && i.maximo === 0);
+        } else if (analiseMinMaxFiltro === "abaixo_min") {
+            bateAnaliseMinMax = (i.minimo > 0 && i.saldo < i.minimo);
+        } else if (analiseMinMaxFiltro === "acima_max") {
+            bateAnaliseMinMax = (i.maximo > 0 && i.saldo > i.maximo);
+        } else if (analiseMinMaxFiltro === "dentro_range") {
+            bateAnaliseMinMax = (i.minimo > 0 && i.maximo > 0 && i.saldo >= i.minimo && i.saldo <= i.maximo);
+        }
+
+        return bateTermo && bateCurva && bateStatus && bateImagem && bateFilial && bateLocal && bateAnaliseMinMax;
     });
 
     if (vistaAtual === 'pesquisa') renderizarPesquisa();
@@ -1051,6 +1074,7 @@ window.limparFiltros = function() {
     if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
     if(document.getElementById('select-local')) document.getElementById('select-local').value = "";
     if(document.getElementById('select-status-of')) document.getElementById('select-status-of').value = "";
+    if(document.getElementById('select-analise-minmax')) document.getElementById('select-analise-minmax').value = ""; // Adicionado novo filtro na limpeza
     document.getElementById('busca').value = "";
     document.getElementById('busca-compras').value = "";
     document.getElementById('busca-ofs').value = "";
