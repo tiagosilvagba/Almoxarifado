@@ -5,6 +5,15 @@ const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [];
 let itensFiltrados = [];
 
+// Bases Globais puras para recalculo dinâmico
+let global_mapConsolidado = new Map();
+let global_mapComprasTransito = new Map();
+let global_mapLeadTimeMedio = new Map();
+
+// Novas variáveis para a Tela de Consulta de Consumo
+let consumosProcessados = [];
+let consumosFiltrados = [];
+
 // Estrutura para armazenar as OFs ativas extraídas de compras.csv
 let ordesAtivasFiltradas = [];
 
@@ -12,7 +21,6 @@ let vistaAtual = 'dashboard';
 let chartABCInstance = null;
 let chartStatusInstance = null;
 let chartFiliaisInstance = null;
-let mesesAnalisados = 1; 
 let filtroGraficoABC = null; 
 let filtroGraficoStatus = null;
 let filtroGraficoFilial = null;
@@ -23,7 +31,7 @@ let loaderProgress = 0;
 let imagensMapeadas = new Set();
 let mapeamentoDeImagemAtivo = false;
 let setLocaisUnicos = new Set(); 
-let setStatusOFUnicos = new Set(); // Filtro avançado de status OF
+let setStatusOFUnicos = new Set(); 
 
 // Controle de visualização de valores monetários (Ocultos por Padrão)
 let ocultarValoresFinanceiros = true; 
@@ -53,6 +61,23 @@ function converterParaNumero(val) {
     if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
     let floatVal = parseFloat(str);
     return isNaN(floatVal) ? 0 : floatVal;
+}
+
+// Parser avançado de datas para suportar a coluna dt movimento
+function parseDataGenerica(dStr) {
+    if(!dStr || typeof dStr !== 'string') return null;
+    const partes = dStr.trim().split(' ')[0].split('/');
+    if (partes.length >= 3) {
+        let ano = partes[2];
+        if (ano.length === 2) ano = '20' + ano;
+        return new Date(ano, partes[1] - 1, partes[0]);
+    }
+    if (dStr.includes('-')) {
+        let d = new Date(dStr);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset()); // Previne salto de fuso horário
+        return isNaN(d) ? null : d;
+    }
+    return null;
 }
 
 function encontrarChave(objRef, termosChave) {
@@ -188,7 +213,7 @@ document.addEventListener('keydown', function(event) {
 });
 
 // ==========================================================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO E NAVEGAÇÃO
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const temaLocal = localStorage.getItem('temaAlmoxarifado') || 'light';
@@ -204,6 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const bsOFs = document.getElementById('busca-ofs');
     if(bsOFs) bsOFs.addEventListener('input', dispararFiltrosDebounce);
+    
+    const bsConsumos = document.getElementById('busca-consumo');
+    if(bsConsumos) bsConsumos.addEventListener('input', dispararFiltrosDebounce);
     
     setTimeout(() => {
         if (!isFetchingData) carregarArquivosAutomaticamente();
@@ -225,19 +253,32 @@ function alterarTema(tema) {
 
 function navegarPara(view) {
     vistaAtual = view;
-    ['pesquisa', 'dashboard', 'compras', 'gestao-compras', 'instrucoes', 'revisao'].forEach(v => {
+    // Adicionado 'consulta-consumo' à lista de views
+    ['pesquisa', 'dashboard', 'compras', 'gestao-compras', 'instrucoes', 'revisao', 'consulta-consumo'].forEach(v => {
         const el = document.getElementById(`view-${v}`);
         const nav = document.getElementById(`nav-${v}`);
         if(el) el.style.display = (v === view) ? 'flex' : 'none';
         if(nav) nav.classList.toggle('active', v === view);
     });
+    
     if(view === 'pesquisa' || view === 'dashboard') dispararFiltrosSemAtraso();
     if(view === 'compras') renderizarCompras();
     if(view === 'gestao-compras') renderizarGestaoDeCompras();
     if(view === 'revisao') renderizarRevisao();
+    if(view === 'consulta-consumo') renderizarConsultaConsumo();
 }
 
 function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
+
+// Chamada ativada quando o usuário muda o mês no novo filtro
+window.mudarMesConsumo = function() {
+    const selectPeriodo = document.getElementById('select-mes-consumo-kpi');
+    if(selectPeriodo && selectPeriodo.value) {
+        if(isFetchingData) return;
+        isFetchingData = true;
+        aplicarPeriodoConsumo(selectPeriodo.value, false);
+    }
+}
 
 // ==========================================================================
 // CARGA DE ARQUIVOS E IMAGENS
@@ -247,17 +288,11 @@ async function carregarArquivosAutomaticamente() {
     isFetchingData = true;
 
     const loader = document.getElementById('tech-loader');
-    if (loader) {
-        loader.style.display = 'flex';
-        loader.style.opacity = '1';
-    }
-    
+    if (loader) { loader.style.display = 'flex'; loader.style.opacity = '1'; }
     const ring = document.getElementById('loader-ring');
     if (ring) ring.classList.remove('error');
-    
     const btnFallback = document.getElementById('btn-fallback');
     if (btnFallback) btnFallback.style.display = 'none';
-    
     const logs = document.getElementById('loader-logs');
     if (logs) logs.innerHTML = '';
     
@@ -294,10 +329,7 @@ async function carregarArquivosAutomaticamente() {
             bases[arq.id] = parseCSVFast(text);
             
             setProgress(30 + (i*20), `✓ ${arq.url} (Lido e Extraído com Sucesso)`, 'success');
-            if (elStatus) {
-                elStatus.innerText = `✅ ${arq.url}`;
-                elStatus.className = 'status-item status-ok';
-            }
+            if (elStatus) { elStatus.innerText = `✅ ${arq.url}`; elStatus.className = 'status-item status-ok'; }
             carregados++;
         } catch (error) {
             let detalhe = error.message;
@@ -305,10 +337,7 @@ async function carregarArquivosAutomaticamente() {
                 detalhe = "Falha de rede ou CORS. Você está rodando localmente sem servidor web?";
             }
             setProgress(loaderProgress, `[ERRO ${arq.url}] ${detalhe}`, 'error');
-            if (elStatus) {
-                elStatus.innerText = `❌ Falha: ${arq.url}`;
-                elStatus.className = 'status-item status-erro';
-            }
+            if (elStatus) { elStatus.innerText = `❌ Falha: ${arq.url}`; elStatus.className = 'status-item status-erro'; }
             errosCriticos = true;
         }
     }
@@ -354,10 +383,7 @@ window.uploadManualMultiplo = function(event) {
                 setProgress(20 + (idx*20), `✓ ${file.name} Importado com Sucesso.`, 'success');
                 
                 const elStatus = document.getElementById(`status-${alvoId === 'baseItens' ? 'base' : alvoId}`);
-                if (elStatus) {
-                    elStatus.innerText = `✅ ${file.name}`;
-                    elStatus.className = 'status-item status-ok';
-                }
+                if (elStatus) { elStatus.innerText = `✅ ${file.name}`; elStatus.className = 'status-item status-ok'; }
                 carregados++;
                 if(carregados === files.length) {
                     setProgress(90, "Todos os arquivos manuais carregados. Iniciando Inteligência...", 'success');
@@ -400,10 +426,7 @@ window.mapearImagensPasta = function(event) {
 // ==========================================================================
 window.exportarComprasExcel = function() {
     const necessitaCompra = itensFiltrados.filter(i => (i.saldo <= 0 || i.saldo < i.minimo) && i.minimo > 0 && i.maximo > 0);
-    if(necessitaCompra.length === 0) {
-        mostrarToast("Nenhum dado crítico na tela para exportar.", "warning");
-        return;
-    }
+    if(necessitaCompra.length === 0) { mostrarToast("Nenhum dado crítico na tela para exportar.", "warning"); return; }
     
     let csvContent = "\uFEFF"; 
     csvContent += "Código;Descrição;Filial;Saldo Atual;Mínimo;Máximo;Sugestão Compra;Custo Unitário;Valor Estimado Compra\n";
@@ -436,23 +459,16 @@ window.exportarRevisaoExcel = function() {
         return false;
     });
 
-    if(itensRevisao.length === 0) {
-        mostrarToast("Nenhum dado de revisão na tela para exportar.", "warning");
-        return;
-    }
+    if(itensRevisao.length === 0) { mostrarToast("Nenhum dado de revisão na tela para exportar.", "warning"); return; }
 
     let csvContent = "\uFEFF"; 
     csvContent += "Código;Descrição;Filial;Saldo Útil;Mínimo Atual;Máximo Atual;Sugestão Novo Mín;Sugestão Novo Máx;Custo Consumo Mês;Ação Recomendada\n";
 
     itensRevisao.forEach(i => {
         let acao = "";
-        if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) {
-            acao = "Revisar/Zerar (Sem Consumo)";
-        } else if (i.saldoUtil > i.maximo && i.maximo > 0) {
-            acao = "Reduzir Máximo (Excesso)";
-        } else if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) {
-            acao = "Aumentar Mínimo (Risco)";
-        }
+        if (i.consumoFinanceiro === 0 && (i.minimo > 0 || i.maximo > 0)) { acao = "Revisar/Zerar (Sem Consumo)"; } 
+        else if (i.saldoUtil > i.maximo && i.maximo > 0) { acao = "Reduzir Máximo (Excesso)"; } 
+        else if (i.saldoUtil < i.minimo && i.consumoFinanceiro > 0) { acao = "Aumentar Mínimo (Risco)"; }
 
         let descLimpa = i.desc.replace(/;/g, ',');
         let filialLimpa = i.filialNm.replace(/;/g, ',');
@@ -487,7 +503,6 @@ async function processarInteligencia() {
     const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
     const colQtdConsumo = ['qt movimento', 'quantidade consumida', 'quantidade'];
     const colQtdCompraFallback = ['of - saldo', 'saldo aberto', 'quantidade', 'qtde', 'sc - quantidade'];
-    
     const colCusto = ['vl custo unitario atual', 'custo unitario', 'custo'];
     const colMin = ['qt minimo', 'minimo', 'min'];
     const colMax = ['qt maximo', 'maximo', 'max'];
@@ -499,6 +514,7 @@ async function processarInteligencia() {
     const colPrateleira = ['cd prateleira', 'prateleira'];
     const colDivisao = ['cd divisao', 'divisao'];
     const colMesMovimento = ['mês movimento', 'mes movimento', 'mes', 'mês', 'periodo'];
+    const colDtMovimento = ['dt movimento', 'data movimento', 'data', 'dt emissao'];
     const colUM = ['cd unidade medida', 'un', 'um'];
     const colLocalId = ['cd local', 'cod local', 'local'];
     const colLocalNm = ['nm local', 'nome local', 'estoque', 'desc local', 'desc. local'];
@@ -516,34 +532,28 @@ async function processarInteligencia() {
     const colScSit = ['sc - situação', 'situacao sc'];
     const colScCanc = ['sc - cancelado', 'sc cancelado', 'cancelado'];
 
-    const dataAtual = new Date();
-    let mesAnteriorNum = dataAtual.getMonth(); 
-    if (mesAnteriorNum === 0) mesAnteriorNum = 12; 
-
     const nomesMesesDisplay = ['', 'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
-    mesConsumoAtual = nomesMesesDisplay[mesAnteriorNum]; 
     const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-    setProgress(92, "Processando Compras (OFs em Trânsito) e Regras de Entrega...");
+    setProgress(92, "1. Lendo Compras (OFs em Trânsito)...");
     await new Promise(r => setTimeout(r, 50)); 
 
-    const mapComprasTransito = new Map(); 
+    global_mapComprasTransito.clear();
+    global_mapLeadTimeMedio.clear();
     const mapLeadTimeHistorico = new Map(); 
     
-    let c_cod_compra = null, c_of_qtd_pedida = null, c_rec_qtd = null, c_of_sit = null, c_sc_sit = null, c_sc_canc = null, c_of_col = null, c_sc_col = null, c_sc_dt = null, c_rec_dt = null;
+    let c_cod_compra = encontrarChave(bases.compras[0], colCod);
+    let c_of_qtd_pedida = encontrarChave(bases.compras[0], colOfQtdPedida);
+    let c_rec_qtd = encontrarChave(bases.compras[0], colRecQtd);
+    let c_of_sit = encontrarChave(bases.compras[0], colOfSit);
+    let c_sc_sit = encontrarChave(bases.compras[0], colScSit);
+    let c_sc_canc = encontrarChave(bases.compras[0], colScCanc);
+    let c_of_col = encontrarChave(bases.compras[0], colOfCodigo);
+    let c_sc_col = encontrarChave(bases.compras[0], colScCodigo);
+    let c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
+    let c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
 
     if(bases.compras.length > 0) {
-        c_cod_compra = encontrarChave(bases.compras[0], colCod);
-        c_of_qtd_pedida = encontrarChave(bases.compras[0], colOfQtdPedida);
-        c_rec_qtd = encontrarChave(bases.compras[0], colRecQtd);
-        c_of_sit = encontrarChave(bases.compras[0], colOfSit);
-        c_sc_sit = encontrarChave(bases.compras[0], colScSit);
-        c_sc_canc = encontrarChave(bases.compras[0], colScCanc);
-        c_of_col = encontrarChave(bases.compras[0], colOfCodigo);
-        c_sc_col = encontrarChave(bases.compras[0], colScCodigo);
-        c_sc_dt = encontrarChave(bases.compras[0], colScDataCriacao);
-        c_rec_dt = encontrarChave(bases.compras[0], colRecDataEntrada);
-        
         bases.compras.forEach(item => {
             const cod = normalizarCod(item[c_cod_compra]);
             if (!cod) return;
@@ -560,37 +570,21 @@ async function processarInteligencia() {
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
-            if (isFechadaOuCancelada) {
-                saldoPendente = 0;
-            } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
-                // Aguardando Aprovação (Somente SC)
-                saldoPendente = 1;
-            } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
-                // Item Entregue
-                saldoPendente = 0;
-            } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
-                // Entrega Parcial
-                saldoPendente = qtdPedida - qtdRecebida;
-            } else if (qtdPedida > 0 && qtdRecebida === 0) {
-                // Em Trânsito
-                saldoPendente = qtdPedida;
-            } else {
-                saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
-            }
+            if (isFechadaOuCancelada) { saldoPendente = 0; } 
+            else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) { saldoPendente = 1; } 
+            else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) { saldoPendente = 0; } 
+            else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) { saldoPendente = qtdPedida - qtdRecebida; } 
+            else if (qtdPedida > 0 && qtdRecebida === 0) { saldoPendente = qtdPedida; } 
+            else { saldoPendente = qtdPedida > 0 ? qtdPedida : 1; }
 
             if (saldoPendente > 0) {
-                mapComprasTransito.set(cod, (mapComprasTransito.get(cod) || 0) + saldoPendente);
+                global_mapComprasTransito.set(cod, (global_mapComprasTransito.get(cod) || 0) + saldoPendente);
             }
 
             if (c_sc_dt && c_rec_dt && item[c_sc_dt] && item[c_rec_dt]) {
-                const parseData = (dStr) => {
-                    const partes = String(dStr).trim().split('/');
-                    if (partes.length === 3) return new Date(partes[2].split(' ')[0], partes[1] - 1, partes[0]);
-                    return new Date(dStr);
-                };
-                let dtCria = parseData(item[c_sc_dt]);
-                let dtEntr = parseData(item[c_rec_dt]);
-                if (!isNaN(dtCria) && !isNaN(dtEntr)) {
+                let dtCria = parseDataGenerica(item[c_sc_dt]);
+                let dtEntr = parseDataGenerica(item[c_rec_dt]);
+                if (dtCria && dtEntr) {
                     let dias = Math.ceil(Math.abs(dtEntr - dtCria) / (1000 * 60 * 60 * 24));
                     if(dias > 0 && dias < 300) { 
                         if(!mapLeadTimeHistorico.has(cod)) mapLeadTimeHistorico.set(cod, []);
@@ -601,48 +595,81 @@ async function processarInteligencia() {
         });
     }
     
-    const mapLeadTimeMedio = new Map();
     for (let [k, v] of mapLeadTimeHistorico) {
         let media = Math.round(v.reduce((a,b)=>a+b,0) / v.length);
-        mapLeadTimeMedio.set(k, media);
+        global_mapLeadTimeMedio.set(k, media);
     }
 
-    setProgress(93, "Apurando Consumo Real do Mês...");
+    setProgress(93, "2. Lendo Base de Consumo Histórico...");
     await new Promise(r => setTimeout(r, 50));
 
     let cs_mes = encontrarChave(bases.consumos[0], colMesMovimento);
     let cs_cod = encontrarChave(bases.consumos[0], colCod);
     let cs_qtd = encontrarChave(bases.consumos[0], colQtdConsumo);
-    let cs_local = encontrarChave(bases.consumos[0], ['cd local', 'cod local', 'local', 'nm local', 'nome local']);
+    let cs_local = encontrarChave(bases.consumos[0], colLocalId);
+    let cs_dt = encontrarChave(bases.consumos[0], colDtMovimento); 
 
-    const mapConsumosTotais = new Map();
-    let encontrouConsumoNoMesAlvo = false;
+    let periodosMap = new Map();
+    consumosProcessados = [];
 
-    if(bases.consumos.length > 0 && cs_mes) {
+    if(bases.consumos.length > 0) {
         bases.consumos.forEach(item => {
-            const mesStr = normalizarString(item[cs_mes]);
-            const mesItemNum = ordemMeses[mesStr];
-            if (mesItemNum === mesAnteriorNum) {
-                encontrouConsumoNoMesAlvo = true;
-                const cod = normalizarCod(item[cs_cod]);
+            const cod = normalizarCod(item[cs_cod]);
+            const qtd = converterParaNumero(item[cs_qtd]);
+            const localVal = cs_local ? String(item[cs_local]).trim() : '';
 
-                if (cs_local) {
-                    let localVal = String(item[cs_local]).trim();
-                    if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299') || localVal.includes('295')) {
-                        return; 
-                    }
-                }
+            let d = cs_dt ? parseDataGenerica(item[cs_dt]) : null;
+            let mesItemNum = null, anoItemNum = null;
 
-                const qtd = converterParaNumero(item[cs_qtd]);
-                if (cod) {
-                    const chave = cod; 
-                    mapConsumosTotais.set(chave, (mapConsumosTotais.get(chave) || 0) + qtd);
+            if (d) {
+                mesItemNum = d.getMonth() + 1;
+                anoItemNum = d.getFullYear();
+            } else if (cs_mes && item[cs_mes]) {
+                mesItemNum = ordemMeses[normalizarString(item[cs_mes])];
+                anoItemNum = new Date().getFullYear();
+            }
+
+            let periodoLabel = '-';
+            if (mesItemNum && anoItemNum) {
+                periodoLabel = `${nomesMesesDisplay[mesItemNum]}/${anoItemNum}`;
+                let key = `${mesItemNum}/${anoItemNum}`;
+                if (!periodosMap.has(key)) {
+                    periodosMap.set(key, { mes: mesItemNum, ano: anoItemNum, label: periodoLabel });
                 }
             }
+
+            consumosProcessados.push({
+                data: d ? d.toLocaleDateString('pt-BR') : (item[cs_mes] || '-'),
+                codNorm: cod,
+                codOriginal: item[cs_cod] || '-',
+                qtd: qtd,
+                local: localVal,
+                mes: mesItemNum,
+                ano: anoItemNum,
+                periodoLabel: periodoLabel,
+                searchStr: (cod + " " + localVal + " " + (item[cs_dt]||'') + " " + (item[cs_mes]||'')).toLowerCase()
+            });
         });
     }
 
-    setProgress(95, "Consolidando Base Mestre e Locais de Estoque...");
+    let listaPeriodos = Array.from(periodosMap.values()).sort((a,b) => {
+        if (a.ano !== b.ano) return b.ano - a.ano;
+        return b.mes - a.mes;
+    });
+
+    // Povoar o combo box de período (se já existir no HTML)
+    const selectPeriodo = document.getElementById('select-mes-consumo-kpi');
+    if (selectPeriodo) {
+        selectPeriodo.innerHTML = '';
+        listaPeriodos.forEach(p => {
+            selectPeriodo.innerHTML += `<option value="${p.label}">${p.label}</option>`;
+        });
+    }
+
+    let periodoDefault = listaPeriodos.length > 0 ? listaPeriodos[0].label : "MÊS";
+    if (selectPeriodo) selectPeriodo.value = periodoDefault;
+
+    setProgress(95, "3. Lendo e Consolidando Base Mestre...");
     await new Promise(r => setTimeout(r, 50)); 
 
     const b_cod = encontrarChave(bases.baseItens[0], colCod);
@@ -663,7 +690,7 @@ async function processarInteligencia() {
     const b_localNm = encontrarChave(bases.baseItens[0], colLocalNm);
     const b_valorTotal = encontrarChave(bases.baseItens[0], colValorTotal);
 
-    const mapConsolidado = new Map();
+    global_mapConsolidado.clear();
     setLocaisUnicos.clear();
     const setFiliaisUnicas = new Set(); 
 
@@ -683,14 +710,11 @@ async function processarInteligencia() {
         if (filialIdBase === '704') {
             let locNum = parseInt(localIdRaw, 10);
             if (localIdRaw === '101' || localIdRaw === '0101' || localIdRaw === '299' || localIdRaw === '0299' || localIdRaw === '295' || localIdRaw === '0295' || locNum >= 599) {
-                filialNm = 'Rolândia - Alp. Preparados';
-                filialIdBase = '704_ALP';
+                filialNm = 'Rolândia - Alp. Preparados'; filialIdBase = '704_ALP';
             } else if (locNum > 0 && locNum < 599) {
-                filialNm = 'Rolândia - Ab. Aves';
-                filialIdBase = '704_AB';
+                filialNm = 'Rolândia - Ab. Aves'; filialIdBase = '704_AB';
             } else {
-                filialNm = 'Rolândia - Alp. Preparados'; 
-                filialIdBase = '704_ALP';
+                filialNm = 'Rolândia - Alp. Preparados'; filialIdBase = '704_ALP';
             }
         }
         
@@ -706,55 +730,36 @@ async function processarInteligencia() {
         const maximoLinha = converterParaNumero(item[b_max]);
         
         let isCritico = false;
-        if (['299', '0299', '295', '0295'].includes(localIdRaw) || localNm.includes('299') || localNm.includes('295')) {
-            isCritico = true;
-        }
+        if (['299', '0299', '295', '0295'].includes(localIdRaw) || localNm.includes('299') || localNm.includes('295')) isCritico = true;
 
         let valorTotalLinha = b_valorTotal ? converterParaNumero(item[b_valorTotal]) : 0;
         let custoUnitarioLinha = converterParaNumero(item[b_custo]);
 
-        if (valorTotalLinha > 0 && saldoLinha > 0) {
-            custoUnitarioLinha = valorTotalLinha / saldoLinha;
-        } else if (custoUnitarioLinha > 0 && saldoLinha > 0) {
-            valorTotalLinha = custoUnitarioLinha * saldoLinha;
-        }
+        if (valorTotalLinha > 0 && saldoLinha > 0) custoUnitarioLinha = valorTotalLinha / saldoLinha;
+        else if (custoUnitarioLinha > 0 && saldoLinha > 0) valorTotalLinha = custoUnitarioLinha * saldoLinha;
 
         const chave = codNorm + '|' + filialIdBase;
 
-        if (!mapConsolidado.has(chave)) {
-            mapConsolidado.set(chave, {
+        if (!global_mapConsolidado.has(chave)) {
+            global_mapConsolidado.set(chave, {
                 cod: codBruto, codNorm: codNorm, 
                 desc: item[b_desc] || "Item sem Descrição",
                 um: item[b_um] || 'UN',
                 filialNm: filialNm, filialIdBase: filialIdBase,
-                grupo: item[b_grupo] || '',
-                classe: item[b_classe] || '',
-                saldo: 0, minimo: 0, maximo: 0, 
-                valorTotalGlobal: 0,
-                custoUnitario: 0,
-                leadTime: mapLeadTimeMedio.get(codNorm) || 15, 
-                locais: []
+                grupo: item[b_grupo] || '', classe: item[b_classe] || '',
+                saldo: 0, minimo: 0, maximo: 0, valorTotalGlobal: 0, custoUnitario: 0,
+                leadTime: global_mapLeadTimeMedio.get(codNorm) || 15, locais: []
             });
         }
 
-        const obj = mapConsolidado.get(chave);
+        const obj = global_mapConsolidado.get(chave);
         obj.saldo += saldoLinha;
         obj.valorTotalGlobal += valorTotalLinha;
         
         if (minimoLinha > obj.minimo) obj.minimo = minimoLinha;
         if (maximoLinha > obj.maximo) obj.maximo = maximoLinha;
         
-        obj.locais.push({ 
-            filialNm: filialNm,
-            localId: localIdRaw,
-            localNm: localNm,
-            reparticao: reparticao, 
-            prateleira: prateleira, 
-            divisao: divisao, 
-            saldo: saldoLinha,
-            custoUnitario: custoUnitarioLinha,
-            isCritico: isCritico
-        });
+        obj.locais.push({ filialNm, localId: localIdRaw, localNm, reparticao, prateleira, divisao, saldo: saldoLinha, custoUnitario: custoUnitarioLinha, isCritico });
     });
 
     const selectFilial = document.getElementById('select-filial');
@@ -768,20 +773,53 @@ async function processarInteligencia() {
         Array.from(setLocaisUnicos).sort().forEach(l => { selectLocal.innerHTML += `<option value="${l}">${l}</option>`; });
     }
 
-    setProgress(98, "Calculando KPIs e Recomendações...");
+    setProgress(98, "Ativando Motor de Inteligência para Mês Base...");
     await new Promise(r => setTimeout(r, 50)); 
+    
+    // Dispara a criação da tabela final (que agora pode ser recalculada no clique do novo select)
+    aplicarPeriodoConsumo(periodoDefault, true);
+}
 
-    let baseSujaProcessada = Array.from(mapConsolidado.values()).map(item => {
-        const transito = mapComprasTransito.get(item.codNorm) || 0;
 
-        // LINHA REMOVIDA PARA MANTER OS ITENS SEM SALDO E MIN/MAX NA BASE E SEREM FILTRADOS PELO NOVO SELECT
-        // if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) return null; 
+// Nova função separada que gera a base Suja e os KPIs utilizando APENAS o mês selecionado
+window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
+    if(!isFirstLoad) {
+        setProgress(50, `Recalculando inteligência para ${periodoLabel}...`);
+        const loader = document.getElementById('tech-loader');
+        if (loader) { loader.style.display = 'flex'; loader.style.opacity = '1'; }
+    }
 
-        if (item.saldo > 0 && item.valorTotalGlobal > 0) {
-            item.custoUnitario = item.valorTotalGlobal / item.saldo;
-        } else if (item.locais.length > 0) {
-            item.custoUnitario = item.locais[0].custoUnitario;
+    mesConsumoAtual = periodoLabel;
+    
+    // Atualiza os Labels Visuais Dinamicamente
+    const elTitleConsumo = document.getElementById('kpi-consumo-title');
+    const elThConsumo = document.getElementById('th-consumo');
+    const elDashKpiLabel = document.getElementById('dash-kpi-consumo-label'); 
+    
+    if (elTitleConsumo) elTitleConsumo.innerText = `Custo do Consumo`;
+    if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`;
+    if (elDashKpiLabel) elDashKpiLabel.innerText = `Período Base: ${mesConsumoAtual}`; // Etiqueta exigida no Dashboard
+
+    // 1. Filtrar o Consumo para criar o Mapa desse mês
+    const mapConsumosTotais = new Map();
+    let encontrouConsumoNoMesAlvo = false;
+
+    consumosProcessados.forEach(c => {
+        if (c.periodoLabel === periodoLabel) {
+            encontrouConsumoNoMesAlvo = true;
+            let localVal = c.local;
+            if (localVal === '299' || localVal === '0299' || localVal === '295' || localVal === '0295' || localVal.includes('299') || localVal.includes('295')) return;
+            if (c.codNorm) mapConsumosTotais.set(c.codNorm, (mapConsumosTotais.get(c.codNorm) || 0) + c.qtd);
         }
+    });
+
+    // 2. Mesclar Consumo com a Base Mestre clonada
+    let baseSujaProcessada = Array.from(global_mapConsolidado.values()).map(itemRaw => {
+        let item = JSON.parse(JSON.stringify(itemRaw)); // Clone para não destruir a base pura
+        const transito = global_mapComprasTransito.get(item.codNorm) || 0;
+
+        if (item.saldo > 0 && item.valorTotalGlobal > 0) item.custoUnitario = item.valorTotalGlobal / item.saldo;
+        else if (item.locais.length > 0) item.custoUnitario = item.locais[0].custoUnitario;
 
         const consumoMesAnteriorFisico = Math.abs(mapConsumosTotais.get(item.codNorm)) || 0;
         const valorImobilizado = item.valorTotalGlobal > 0 ? item.valorTotalGlobal : (item.saldo * item.custoUnitario);
@@ -795,34 +833,21 @@ async function processarInteligencia() {
         if (consumoAnualFinanceiro > 0) diasGiroAnual = Math.round((valorImobilizado / consumoAnualFinanceiro) * 365);
 
         let isLocalCriticoMacro = item.locais.some(l => l.isCritico && l.saldo > 0);
-
         let saldoCritico = item.locais.filter(l => l.isCritico).reduce((sum, l) => sum + l.saldo, 0);
-        let saldoUtil = item.saldo - saldoCritico;
-        item.saldoUtil = saldoUtil;
-
+        
+        item.saldoUtil = item.saldo - saldoCritico;
         let consumoFisicoDiario = consumoMesAnteriorFisico / 30;
-        let minSugerido = Math.ceil(consumoFisicoDiario * item.leadTime);
-        let maxSugerido = Math.ceil(minSugerido + (consumoMesAnteriorFisico * 1)); 
-        if (consumoMesAnteriorFisico === 0) { minSugerido = 0; maxSugerido = 0; }
         
-        item.sugestaoMin = minSugerido;
-        item.sugestaoMax = maxSugerido;
+        item.sugestaoMin = consumoMesAnteriorFisico === 0 ? 0 : Math.ceil(consumoFisicoDiario * item.leadTime);
+        item.sugestaoMax = consumoMesAnteriorFisico === 0 ? 0 : Math.ceil(item.sugestaoMin + (consumoMesAnteriorFisico * 1)); 
 
-        // ATUALIZAÇÃO DA DEFINIÇÃO DE STATUS PARA PROTEGER OS KPIs
         let status = 'Estoque Normal'; let statusBadge = 'badge-normal';
-        
-        if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) {
-            // Nova trava: Impede que itens fantasmas virem "Ruptura Crítica"
-            status = 'Inativo / Sem Parâmetros'; statusBadge = 'badge-obsoleto'; 
-        }
+        if (item.saldo === 0 && item.minimo === 0 && item.maximo === 0 && transito === 0) { status = 'Inativo / Sem Parâmetros'; statusBadge = 'badge-obsoleto'; }
         else if (item.saldo <= 0 && transito <= 0) { status = 'Ruptura Crítica (Sem Pedido)'; statusBadge = 'badge-ruptura-critica'; } 
         else if (item.saldo <= 0 && transito > 0) { status = 'Ruptura (Em Trânsito)'; statusBadge = 'badge-ruptura-transito'; } 
         else if (item.saldo > 0 && consumoMesAnteriorFisico <= 0) { 
-            if (isLocalCriticoMacro) {
-                status = 'Normal/Local Crítico'; statusBadge = 'badge-normal-critico';
-            } else {
-                status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; 
-            }
+            if (isLocalCriticoMacro) { status = 'Normal/Local Crítico'; statusBadge = 'badge-normal-critico'; } 
+            else { status = 'Obsoleto (Sem Consumo)'; statusBadge = 'badge-obsoleto'; }
         } 
         else if (item.saldo > 0 && item.minimo > 0 && item.saldo < item.minimo) { status = 'Abaixo Mínimo'; statusBadge = 'badge-abaixo'; }
         else if (item.maximo > 0 && item.saldo > item.maximo) { status = 'Excesso Estoque'; statusBadge = 'badge-acima'; }
@@ -830,12 +855,10 @@ async function processarInteligencia() {
         item.reparticao = item.locais[0]?.reparticao || '-';
         item.prateleira = item.locais[0]?.prateleira || '-';
         item.divisao = item.locais[0]?.divisao || '-';
-
         const searchString = (item.codNorm + " " + normalizarString(item.desc) + " " + normalizarString(item.grupo) + " " + normalizarString(item.classe) + " rep " + item.reparticao + " prat " + item.prateleira + " div " + item.divisao).toLowerCase();
 
         return {
-            ...item,
-            transito, consumo: consumoMesAnteriorFisico, consumoFinanceiro, 
+            ...item, transito, consumo: consumoMesAnteriorFisico, consumoFinanceiro, 
             diasGiroMensal, diasGiroAnual, valorImobilizado,
             status, statusBadge, curva: 'C', searchString,
             temImagem: mapeamentoDeImagemAtivo ? imagensMapeadas.has(item.codNorm) : null
@@ -849,7 +872,7 @@ async function processarInteligencia() {
     const itemsParaABC = [...baseSujaProcessada].sort((a, b) => b.consumoFinanceiro - a.consumoFinanceiro);
     const consumoTotalFinanceiroGlobal = itemsParaABC.reduce((acc, curr) => acc + curr.consumoFinanceiro, 0);
     let consumoAcumulado = 0;
-
+    
     itemsParaABC.forEach(item => {
         if (consumoTotalFinanceiroGlobal > 0 && item.consumoFinanceiro > 0) {
             consumoAcumulado += item.consumoFinanceiro;
@@ -861,16 +884,23 @@ async function processarInteligencia() {
     });
 
     itensProcessados = baseSujaProcessada;
-    
+
+    // 3. Gerar a lista de OFs Pendentes e Status
     ordesAtivasFiltradas = [];
     setStatusOFUnicos.clear();
 
     if(bases.compras.length > 0) {
-        const c_sc = encontrarChave(bases.compras[0], colScCodigo);
-        const c_of = encontrarChave(bases.compras[0], colOfCodigo);
-        const c_desc = encontrarChave(bases.compras[0], colDesc);
-        const c_forn = encontrarChave(bases.compras[0], colOfNomeFornecedor);
-        const c_dt_ent = encontrarChave(bases.compras[0], colOfDataEntrega);
+        const c_cod_compra = encontrarChave(bases.compras[0], ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto']);
+        const c_of_qtd_pedida = encontrarChave(bases.compras[0], ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade']);
+        const c_rec_qtd = encontrarChave(bases.compras[0], ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida']);
+        const c_of_sit = encontrarChave(bases.compras[0], ['of - situação of', 'situacao of', 'status of']);
+        const c_sc_sit = encontrarChave(bases.compras[0], ['sc - situação', 'situacao sc']);
+        const c_sc_canc = encontrarChave(bases.compras[0], ['sc - cancelado', 'sc cancelado', 'cancelado']);
+        const c_of_col = encontrarChave(bases.compras[0], ['of - codigo', 'of codigo', 'ordem fornecimento']);
+        const c_sc_col = encontrarChave(bases.compras[0], ['sc - código', 'sc codigo', 'sc']);
+        const c_desc = encontrarChave(bases.compras[0], ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto']);
+        const c_forn = encontrarChave(bases.compras[0], ['of - nome fornecedor', 'fornecedor']);
+        const c_dt_ent = encontrarChave(bases.compras[0], ['of - data entrega', 'data entrega of', 'dt entrega of']);
         const c_solicitante = encontrarChave(bases.compras[0], ['sc - nome solicitante', 'sc solicitante', 'nome solicitante', 'requisitante']);
         
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
@@ -886,28 +916,15 @@ async function processarInteligencia() {
             let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
             
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
-            
             let statusCalculado = 'Em Trânsito';
             let saldoPendente = 0;
 
-            if (isFechadaOuCancelada) {
-                return; 
-            } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
-                statusCalculado = 'Aguardando Aprovação';
-                saldoPendente = 1;
-            } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
-                statusCalculado = 'Item Entregue';
-                saldoPendente = 0;
-            } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
-                statusCalculado = 'Entrega Parcial';
-                saldoPendente = qtdPedida - qtdRecebida;
-            } else if (qtdPedida > 0 && qtdRecebida === 0) {
-                statusCalculado = 'Em Trânsito';
-                saldoPendente = qtdPedida;
-            } else {
-                statusCalculado = 'Em Trânsito';
-                saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
-            }
+            if (isFechadaOuCancelada) return; 
+            else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) { statusCalculado = 'Aguardando Aprovação'; saldoPendente = 1; } 
+            else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) { statusCalculado = 'Item Entregue'; saldoPendente = 0; } 
+            else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) { statusCalculado = 'Entrega Parcial'; saldoPendente = qtdPedida - qtdRecebida; } 
+            else if (qtdPedida > 0 && qtdRecebida === 0) { statusCalculado = 'Em Trânsito'; saldoPendente = qtdPedida; } 
+            else { statusCalculado = 'Em Trânsito'; saldoPendente = qtdPedida > 0 ? qtdPedida : 1; }
 
             setStatusOFUnicos.add(statusCalculado);
 
@@ -917,17 +934,12 @@ async function processarInteligencia() {
             let req = c_solicitante && linha[c_solicitante] ? linha[c_solicitante].trim() : 'Não Informado';
 
             ordesAtivasFiltradas.push({
-                sc: linha[c_sc] || '-',
-                of: linha[c_of] || '-',
-                codProd: linha[c_cod_compra] || '-',
-                descProd: linha[c_desc] || '-',
-                fornecedor: linha[c_forn] || 'Não Informado',
-                solicitante: req,
-                dataEntrega: linha[c_dt_ent] || 'Sem Data',
-                saldoOF: saldoPendente,
-                sitOFOriginal: statusCalculado,
-                filial: filialDaOF,
-                searchStr: (linha[c_of] + " " + linha[c_sc] + " " + linha[c_cod_compra] + " " + linha[c_forn] + " " + req + " " + statusCalculado).toLowerCase(),
+                sc: linha[c_sc_col] || '-', of: linha[c_of_col] || '-',
+                codProd: linha[c_cod_compra] || '-', descProd: linha[c_desc] || '-',
+                fornecedor: linha[c_forn] || 'Não Informado', solicitante: req,
+                dataEntrega: linha[c_dt_ent] || 'Sem Data', saldoOF: saldoPendente,
+                sitOFOriginal: statusCalculado, filial: filialDaOF,
+                searchStr: ((linha[c_of_col]||'') + " " + (linha[c_sc_col]||'') + " " + (linha[c_cod_compra]||'') + " " + (linha[c_forn]||'') + " " + req + " " + statusCalculado).toLowerCase(),
                 linhaOriginal: linha 
             });
         });
@@ -941,24 +953,21 @@ async function processarInteligencia() {
         });
     }
 
-    setProgress(100, "Renderizando Interface...", "success");
+    if(isFirstLoad) setProgress(100, "Renderizando Interface...", "success");
     
-    const elTitleConsumo = document.getElementById('kpi-consumo-title');
-    const elThConsumo = document.getElementById('th-consumo');
-    if (elTitleConsumo) elTitleConsumo.innerText = `Custo do Consumo (${mesConsumoAtual})`;
-    if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`; 
-
+    // 4. Fechar ciclo
     setTimeout(() => {
         dispararFiltrosSemAtraso();
         if(!encontrouConsumoNoMesAlvo && bases.consumos.length > 0) {
-            mostrarToast(`Atenção: Não detectamos saídas de ${mesConsumoAtual} no arquivo de consumos.`, "warning");
+            mostrarToast(`Atenção: Não detectamos saídas no período alvo selecionado (${mesConsumoAtual}).`, "warning");
         } else {
-            mostrarToast(`Inteligência Ativada. Consumo travado em ${mesConsumoAtual}.`, "success");
+            mostrarToast(`Base atualizada! Utilizando Consumo e Mín/Máx referente à: ${mesConsumoAtual}.`, "success");
         }
         fecharLoader();
         isFetchingData = false; 
     }, 600);
 }
+
 
 // ==========================================================================
 // BUSCA INTELIGENTE, FILTRO CASCATA E RENDERIZAÇÃO
@@ -997,11 +1006,13 @@ function dispararFiltrosSemAtraso() {
     let valCatalogo = document.getElementById('busca')?.value || "";
     let valCompras = document.getElementById('busca-compras')?.value || "";
     let valGestao = document.getElementById('busca-ofs')?.value || "";
+    let valConsumo = document.getElementById('busca-consumo')?.value || ""; 
     
     let termoBruto = "";
     if (vistaAtual === 'pesquisa') termoBruto = valCatalogo;
     else if (vistaAtual === 'compras') termoBruto = valCompras;
     else if (vistaAtual === 'gestao-compras') termoBruto = valGestao;
+    else if (vistaAtual === 'consulta-consumo') termoBruto = valConsumo;
     else termoBruto = valCatalogo; 
 
     const termosSplit = termoBruto ? normalizarString(termoBruto).split(',').map(t => t.trim()).filter(t => t) : [];
@@ -1011,7 +1022,7 @@ function dispararFiltrosSemAtraso() {
     const imagemFiltro = document.getElementById('select-imagem').value;
     const filialFiltro = document.getElementById('select-filial')?.value || filtroGraficoFilial || "";
     const localFiltro = document.getElementById('select-local')?.value || "";
-    const analiseMinMaxFiltro = document.getElementById('select-analise-minmax')?.value || ""; // NOVO
+    const analiseMinMaxFiltro = document.getElementById('select-analise-minmax')?.value || ""; 
 
     if (imagemFiltro !== "" && !mapeamentoDeImagemAtivo) {
         mostrarToast("Para filtrar por imagens, mapeie a pasta no menu lateral.", "warning");
@@ -1019,6 +1030,7 @@ function dispararFiltrosSemAtraso() {
         return;
     }
 
+    // Filtro da Matriz Principal (Base de Itens)
     itensFiltrados = itensProcessados.filter(i => {
         const bateTermo = termosSplit.length === 0 || termosSplit.some(t => i.searchString.includes(t));
         const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
@@ -1036,21 +1048,22 @@ function dispararFiltrosSemAtraso() {
             if (imagemFiltro === 'sem_imagem') bateImagem = i.temImagem === false;
         }
 
-        // LÓGICA DO NOVO FILTRO AQUI
         let bateAnaliseMinMax = true;
-        if (analiseMinMaxFiltro === "sem_saldo_sem_param") {
-            bateAnaliseMinMax = (i.saldo === 0 && i.minimo === 0 && i.maximo === 0);
-        } else if (analiseMinMaxFiltro === "com_saldo_sem_param") {
-            bateAnaliseMinMax = (i.saldo > 0 && i.minimo === 0 && i.maximo === 0);
-        } else if (analiseMinMaxFiltro === "abaixo_min") {
-            bateAnaliseMinMax = (i.minimo > 0 && i.saldo < i.minimo);
-        } else if (analiseMinMaxFiltro === "acima_max") {
-            bateAnaliseMinMax = (i.maximo > 0 && i.saldo > i.maximo);
-        } else if (analiseMinMaxFiltro === "dentro_range") {
-            bateAnaliseMinMax = (i.minimo > 0 && i.maximo > 0 && i.saldo >= i.minimo && i.saldo <= i.maximo);
-        }
+        if (analiseMinMaxFiltro === "sem_saldo_sem_param") bateAnaliseMinMax = (i.saldo === 0 && i.minimo === 0 && i.maximo === 0);
+        else if (analiseMinMaxFiltro === "com_saldo_sem_param") bateAnaliseMinMax = (i.saldo > 0 && i.minimo === 0 && i.maximo === 0);
+        else if (analiseMinMaxFiltro === "abaixo_min") bateAnaliseMinMax = (i.minimo > 0 && i.saldo < i.minimo);
+        else if (analiseMinMaxFiltro === "acima_max") bateAnaliseMinMax = (i.maximo > 0 && i.saldo > i.maximo);
+        else if (analiseMinMaxFiltro === "dentro_range") bateAnaliseMinMax = (i.minimo > 0 && i.maximo > 0 && i.saldo >= i.minimo && i.saldo <= i.maximo);
 
         return bateTermo && bateCurva && bateStatus && bateImagem && bateFilial && bateLocal && bateAnaliseMinMax;
+    });
+
+    // Filtro Específico para a Tela Histórica de Consumo:
+    // Retorna as linhas do consumos.csv cruzadas pelo mês ESCOLHIDO NO FILTRO DO DASHBOARD para evitar confusão de números.
+    consumosFiltrados = consumosProcessados.filter(c => {
+        const bateTermo = termosSplit.length === 0 || termosSplit.some(t => c.searchStr.includes(t));
+        const bateMes = c.periodoLabel === mesConsumoAtual;
+        return bateTermo && bateMes;
     });
 
     if (vistaAtual === 'pesquisa') renderizarPesquisa();
@@ -1058,6 +1071,7 @@ function dispararFiltrosSemAtraso() {
     else if (vistaAtual === 'compras') renderizarCompras();
     else if (vistaAtual === 'gestao-compras') renderizarGestaoDeCompras(termosSplit, filialFiltro);
     else if (vistaAtual === 'revisao') renderizarRevisao();
+    else if (vistaAtual === 'consulta-consumo') renderizarConsultaConsumo();
 }
 
 window.limparFiltroGrafico = function(tipo) {
@@ -1074,10 +1088,12 @@ window.limparFiltros = function() {
     if(document.getElementById('select-filial')) document.getElementById('select-filial').value = "";
     if(document.getElementById('select-local')) document.getElementById('select-local').value = "";
     if(document.getElementById('select-status-of')) document.getElementById('select-status-of').value = "";
-    if(document.getElementById('select-analise-minmax')) document.getElementById('select-analise-minmax').value = ""; // Adicionado novo filtro na limpeza
+    if(document.getElementById('select-analise-minmax')) document.getElementById('select-analise-minmax').value = "";
+    
     document.getElementById('busca').value = "";
     document.getElementById('busca-compras').value = "";
     document.getElementById('busca-ofs').value = "";
+    if(document.getElementById('busca-consumo')) document.getElementById('busca-consumo').value = "";
     
     filtroGraficoABC = null; filtroGraficoStatus = null; filtroGraficoFilial = null;
     document.getElementById('filtro-abc-aviso').style.display = 'none';
@@ -1089,6 +1105,46 @@ window.limparFiltros = function() {
 // ==========================================================================
 // RENDERIZAÇÃO DAS TELAS E TABELAS
 // ==========================================================================
+
+function renderizarConsultaConsumo() {
+    const tbody = document.getElementById('consumos-table-body');
+    if (!tbody) return; 
+
+    let htmlLote = [];
+    let contadorGeral = 0;
+    let valorFinanceiroTotal = 0;
+    
+    const mapaItensBase = new Map(itensProcessados.map(i => [i.codNorm, i]));
+
+    consumosFiltrados.slice(0, 150).forEach(c => {
+        let itemMestre = mapaItensBase.get(c.codNorm);
+        let desc = itemMestre ? itemMestre.desc : 'Não Encontrado na Base Mestre';
+        let custo = itemMestre ? itemMestre.custoUnitario : 0;
+        let valorTotalDaLinha = c.qtd * custo;
+
+        contadorGeral += c.qtd;
+        valorFinanceiroTotal += valorTotalDaLinha;
+
+        htmlLote.push(`
+            <tr class="fade-in">
+                <td style="font-size: 13px; font-weight: 700; color: var(--text-primary);">${c.data}</td>
+                <td><strong style="color:var(--primary-color);">#${c.codOriginal}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${desc}</span></td>
+                <td style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">${c.local || '-'}</td>
+                <td style="font-size: 14px; font-weight: 900; color: var(--text-warning);">${c.qtd}</td>
+                <td style="font-size: 12px; font-weight: 600; color: var(--text-primary);">${formatarMoedaMask(custo)}</td>
+                <td style="font-size: 13px; font-weight: 800; color: var(--text-danger);">${formatarMoedaMask(valorTotalDaLinha)}</td>
+            </tr>
+        `);
+    });
+
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Nenhum registro de saída encontrado para os filtros atuais.</td></tr>`;
+    
+    const countEl = document.getElementById('consumo-kpi-qtd');
+    const valorEl = document.getElementById('consumo-kpi-valor');
+    if(countEl) countEl.innerText = `${contadorGeral.toLocaleString('pt-BR')} itens (Exibindo Max 150 linhas)`;
+    if(valorEl) valorEl.innerText = formatarMoedaMask(valorFinanceiroTotal);
+}
+
 function renderizarPesquisa() {
     const container = document.getElementById('resultados');
     document.getElementById('contador-itens').innerText = `${itensFiltrados.length} itens encontrados.`;
@@ -1646,7 +1702,6 @@ window.abrirModalOF = function(ofId, codProd) {
 
     let descExibicao = item ? item.desc : (of.descProd || 'Descrição não informada na Base Mestre');
 
-    // Validação da Tag Visual de Prazo/Atraso aplicando a regra de item já entregue
     let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     

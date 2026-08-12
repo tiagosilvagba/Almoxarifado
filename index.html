@@ -69,6 +69,9 @@
             <a href="#" class="nav-item" id="nav-pesquisa" onclick="navegarPara('pesquisa')">
                 <span style="font-size: 18px;">🔍</span><span>Catálogo & Pesquisa</span>
             </a>
+            <a href="#" class="nav-item" id="nav-consulta-consumo" onclick="navegarPara('consulta-consumo')">
+                <span style="font-size: 18px;">📅</span><span>Histórico de Consumo</span>
+            </a>
             <a href="#" class="nav-item" id="nav-revisao" onclick="navegarPara('revisao')">
                 <span style="font-size: 18px;">⚖️</span><span>Revisão Min/Max</span>
             </a>
@@ -125,6 +128,14 @@
             <button class="btn-toggle-filter" onclick="toggleSegmentacao()">◀</button>
         </div>
         <div class="filter-panel-body">
+            <div class="filter-group" style="padding: 10px; background: rgba(14, 165, 233, 0.05); border-radius: 8px; border: 1px dashed var(--primary-color);">
+                <label class="filter-label" style="color: var(--primary-color); font-weight: 800;">📅 Mês Base (Consumo e KPIs):</label>
+                <select id="select-mes-consumo-kpi" class="segmentation-select" style="border-color: var(--primary-color);" onchange="mudarMesConsumo()">
+                    <option value="">Aguardando leitura...</option>
+                </select>
+                <span style="font-size: 10px; color: var(--text-secondary); display: block; margin-top: 5px; line-height: 1.2;">Altera a base de cálculo de todo o painel de KPIs, Dashboard e sugestão de Min/Max.</span>
+            </div>
+
             <div class="filter-group">
                 <label class="filter-label">Filial:</label>
                 <select id="select-filial" class="segmentation-select" onchange="atualizarFiltroLocais()">
@@ -201,6 +212,53 @@
         </div>
     </main>
 
+    <main class="main-content" id="view-consulta-consumo" style="display: none;">
+        <div class="container">
+            <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
+                <div style="flex-grow: 1;">
+                    <header><h1 style="margin-bottom: 10px;">📅 Consulta de Histórico de Consumo (Movimentações)</h1></header>
+                    <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">Esta tela exibe todas as linhas de saídas lidas no arquivo de Consumos. Utilize a caixa de busca abaixo para rastrear uma data, código, ou local de estoque específico. <br><b style="color: var(--primary-color);">Nota: A escolha de Mês Base nos Filtros Avançados isola a visualização para o mês de interesse, permitindo total rastreabilidade.</b></p>
+                    <input type="text" id="busca-consumo" class="search-box" style="margin-top:10px;" placeholder="Pesquisar por código, local ou descrição da saída..." oninput="dispararFiltrosDebounce()">
+                </div>
+            </div>
+            
+            <div class="scrollable-results-section">
+                <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;">
+                    <div class="kpi-card border-warning">
+                        <span class="kpi-title">Volume Físico Movimentado</span>
+                        <span class="kpi-value color-warning" id="consumo-kpi-qtd">0 itens</span>
+                        <span class="kpi-sub">Total de peças consumidas no escopo filtrado</span>
+                    </div>
+                    <div class="kpi-card border-danger" style="border-left-color: var(--text-critical);">
+                        <span class="kpi-title">Impacto Financeiro (Saídas)</span>
+                        <span class="kpi-value" style="color: var(--text-critical);" id="consumo-kpi-valor">R$ 0,00</span>
+                        <span class="kpi-sub">Valor do custo unitário x Qtd Saída</span>
+                    </div>
+                </div>
+
+                <div class="dash-section-box">
+                    <div class="dash-table-container">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>Data Movimento</th>
+                                    <th>Código / Produto</th>
+                                    <th>Localização</th>
+                                    <th>Qtd. de Saída</th>
+                                    <th>Custo Unit. (Mestre)</th>
+                                    <th style="color: var(--text-danger);">Custo Total da Baixa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="consumos-table-body">
+                                <tr><td colspan="6" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
     <main class="main-content" id="view-revisao" style="display: none;">
         <div class="container">
             <div class="fixed-top-section" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
@@ -224,11 +282,12 @@
                                     <th>Mín / Máx Atual</th>
                                     <th style="color: var(--text-info);">Sugestão Novo Mín</th>
                                     <th style="color: var(--text-info);">Sugestão Novo Máx</th>
+                                    <th style="color: var(--text-info);">Custo Consumo Base</th>
                                     <th style="color: var(--text-danger);">Alerta do Sistema</th>
                                 </tr>
                             </thead>
                             <tbody id="revisao-table-body">
-                                <tr><td colspan="7" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
+                                <tr><td colspan="8" style="text-align:center; padding: 40px;">Aguardando leitura automática...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -250,8 +309,7 @@
                 </button>
             </div>
             <div class="scrollable-results-section">
-                <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;" id="resumo-necessidade">
-                    </div>
+                <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;" id="resumo-necessidade"></div>
                 
                 <div class="dash-section-box">
                     <div class="dash-table-container">
@@ -294,7 +352,7 @@
                                     <th>SC / OF</th>
                                     <th>Código / Produto</th>
                                     <th>Fornecedor</th>
-                                    <th>Qtd Original</th>
+                                    <th>Status Principal</th>
                                     <th style="color: var(--text-warning);">Saldo Pendente</th>
                                     <th>Data Prevista</th>
                                 </tr>
@@ -322,11 +380,8 @@
                     <h3>2. Lead Time e Revisão de Min/Max</h3>
                     <p>O sistema mede automaticamente a diferença de dias entre a Criação da SC e a Entrada Física (REC) de cada item. Com base na média de entrega do fornecedor e do consumo diário, a aba de <b>Revisão Min/Max</b> vai te dar <i>sugestões matemáticas</i> precisas de qual deveria ser o novo Mínimo (Estoque de Segurança) e Máximo de cada item.</p>
 
-                    <h3>3. Giro de Estoque Financeiro (Em Dias)</h3>
-                    <ul>
-                        <li><b>No Dashboard (Macro):</b> O Giro de Período e a Cobertura Financeira (Dias) são calculados pelo <b>peso financeiro</b> (Soma em R$ do Consumo / Soma em R$ do Saldo).</li>
-                        <li><b>No Catálogo e Modal (Micro):</b> A conversão para dias é aplicada individualmente. Fórmula: <code>(Saldo R$ / Consumo R$) * 30</code>.</li>
-                    </ul>
+                    <h3>3. Seleção de Mês Base e Giro Financeiro (Em Dias)</h3>
+                    <p>O painel agora recalcula todos os KPIs e status instantaneamente ao selecionar o <b>Mês Base</b> nos filtros laterais. O Giro de Período e a Cobertura Financeira são calculados pela fórmula: <code>(Saldo R$ / Consumo R$) * 30</code> para dias de proteção.</p>
 
                     <h3>4. Regra de Reserva Estratégica: Locais 299 e 295</h3>
                     <p>Se o material possui saldo nos locais <code>299</code> ou <code>295</code>, esse item recebe uma "blindagem". Mesmo sem consumo no mês, ele <b>NÃO</b> será classificado como "Obsoleto". O sistema o protegerá com o status especial <b>🟣 Normal/Local Crítico (299/295)</b>. Na aba de Revisão, esse saldo estratégico é subtraído, exibindo apenas o <b>Saldo Útil</b> da fábrica.</p>
@@ -406,9 +461,9 @@
                         <span class="kpi-sub">Valor do saldo consolidado filtrado</span>
                     </div>
                     <div class="kpi-card">
-                        <span class="kpi-title" id="kpi-consumo-title">Custo do Consumo (Mês)</span>
+                        <span class="kpi-title" id="kpi-consumo-title">Custo do Consumo</span>
                         <span class="kpi-value" id="dash-kpi-consumo-financeiro">R$ ***</span>
-                        <span class="kpi-sub">Valor das saídas no período filtrado</span>
+                        <span class="kpi-sub" id="dash-kpi-consumo-label" style="color: var(--primary-color); font-weight: 600;">Período Base: Aguardando...</span>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-title">Catálogo Analisado</span>
@@ -450,7 +505,7 @@
                                     <th>Código / Descrição</th>
                                     <th>Endereço Físico Principal</th>
                                     <th>Saldo Atual</th>
-                                    <th id="th-consumo">Custo Consumo Mês</th>
+                                    <th id="th-consumo">Custo Consumo</th>
                                     <th>Cobertura</th>
                                     <th>Status</th>
                                 </tr>
