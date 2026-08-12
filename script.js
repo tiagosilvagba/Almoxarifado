@@ -4,18 +4,12 @@
 const bases = { baseItens: [], compras: [], consumos: [] };
 let itensProcessados = [];
 let itensFiltrados = [];
-
-// Estrutura para armazenar as OFs ativas extraídas de compras.csv
 let ordesAtivasFiltradas = [];
 
 let vistaAtual = 'dashboard';
 let chartABCInstance = null;
 let chartStatusInstance = null;
 let chartFiliaisInstance = null;
-let mesesAnalisados = 1; 
-let filtroGraficoABC = null; 
-let filtroGraficoStatus = null;
-let filtroGraficoFilial = null;
 let mesConsumoAtual = "MÊS";
 let isFetchingData = false; 
 let loaderProgress = 0;
@@ -23,12 +17,9 @@ let loaderProgress = 0;
 let imagensMapeadas = new Set();
 let mapeamentoDeImagemAtivo = false;
 let setLocaisUnicos = new Set(); 
-let setStatusOFUnicos = new Set(); // Filtro avançado de status OF
+let setStatusOFUnicos = new Set();
 
-// Controle de visualização de valores monetários (Ocultos por Padrão)
 let ocultarValoresFinanceiros = true; 
-
-// Estado do Lightbox Nativo e Seguro
 let currentLightboxImages = [];
 let currentLightboxIndex = 0;
 
@@ -40,15 +31,17 @@ if (typeof Chart !== 'undefined') Chart.defaults.font.family = "'Inter', system-
 function normalizarString(val) { 
     return String(val || '').normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, ' ').trim(); 
 }
+
 function normalizarCod(val) { 
     if (val === null || val === undefined) return '';
     let str = String(val).trim();
     if (str.endsWith('.0')) str = str.slice(0, -2);
     return str.replace(/\./g, '').replace(/[^a-z0-9-]/g, '').replace(/^0+/, ''); 
 }
+
 function converterParaNumero(val) {
     if (val === null || val === undefined || val === '') return 0;
-    if (typeof val === 'number') return val;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
     let str = String(val).trim().replace(/[R$\s]/g, '');
     if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
     let floatVal = parseFloat(str);
@@ -563,16 +556,12 @@ async function processarInteligencia() {
             if (isFechadaOuCancelada) {
                 saldoPendente = 0;
             } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
-                // Aguardando Aprovação (Somente SC)
-                saldoPendente = 1;
-            } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
-                // Item Entregue
+                saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
+            } else if (Math.abs(qtdRecebida - qtdPedida) < 0.01) {
                 saldoPendente = 0;
             } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
-                // Entrega Parcial
                 saldoPendente = qtdPedida - qtdRecebida;
             } else if (qtdPedida > 0 && qtdRecebida === 0) {
-                // Em Trânsito
                 saldoPendente = qtdPedida;
             } else {
                 saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
@@ -719,7 +708,7 @@ async function processarInteligencia() {
             valorTotalLinha = custoUnitarioLinha * saldoLinha;
         }
 
-        const chave = codNorm + '|' + filialIdBase;
+        const chave = codNorm;
 
         if (!mapConsolidado.has(chave)) {
             mapConsolidado.set(chave, {
@@ -886,9 +875,9 @@ async function processarInteligencia() {
             if (isFechadaOuCancelada) {
                 return; 
             } else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) {
-                statusCalculado = 'Aguardando Aprovação';
-                saldoPendente = 1;
-            } else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) {
+                statusCalculado = 'Pendente de OF';
+                saldoPendente = qtdPedida > 0 ? qtdPedida : 1;
+            } else if (Math.abs(qtdRecebida - qtdPedida) < 0.01) {
                 statusCalculado = 'Item Entregue';
                 saldoPendente = 0;
             } else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) {
@@ -917,6 +906,7 @@ async function processarInteligencia() {
                 fornecedor: linha[c_forn] || 'Não Informado',
                 solicitante: req,
                 dataEntrega: linha[c_dt_ent] || 'Sem Data',
+                qtdPedidaOriginal: qtdPedida,
                 saldoOF: saldoPendente,
                 sitOFOriginal: statusCalculado,
                 filial: filialDaOF,
@@ -1085,8 +1075,8 @@ function renderizarPesquisa() {
                           <div class="img-placeholder" style="display:none;"><span style="font-size:20px; margin-bottom:5px;">🚫</span>FOTO NÃO<br>ENCONTRADA</div>`;
         }
         
-        let filiaisComSaldo = itensProcessados
-            .filter(x => x.codNorm === i.codNorm && x.saldo > 0)
+        let filiaisComSaldo = i.locais
+            .filter(x => x.saldo > 0)
             .map(x => x.filialNm)
             .filter((v, idx, a) => a.indexOf(v) === idx)
             .join(', ');
@@ -1243,7 +1233,7 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
         let badgeStatusColor = 'var(--text-warning)';
         if (of.sitOFOriginal === 'Item Entregue') badgeStatusColor = 'var(--text-success)';
         else if (of.sitOFOriginal === 'Entrega Parcial') badgeStatusColor = 'var(--text-info)';
-        else if (of.sitOFOriginal === 'Aguardando Aprovação') badgeStatusColor = 'var(--text-secondary)';
+        else if (of.sitOFOriginal === 'Pendente de OF') badgeStatusColor = 'var(--text-danger)';
 
         htmlLote.push(`
             <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
@@ -1503,8 +1493,11 @@ function atualizarGraficos() {
     }
 }
 
+// ==========================================================================
+// 10. FUNÇÕES DO MODAL DE DETALHES DO ITEM (SUPERCARD)
+// ==========================================================================
 window.abrirModalDetalhes = function(codNorm, filialIdBase) {
-    const item = itensProcessados.find(i => i.codNorm === codNorm && i.filialIdBase === filialIdBase);
+    const item = itensProcessados.find(i => i.codNorm === codNorm);
     if (!item) {
         mostrarToast("Erro: Detalhes do item não encontrados.", "error");
         return;
@@ -1513,19 +1506,11 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     let imagensHTML = '';
     let lightboxArray = [];
     
-    if (mapeamentoDeImagemAtivo && item.temImagem) {
-        for(let k = 1; k <= 6; k++) {
-            let imgPath = `imagens/${item.cod} - 0${k}.jpg`;
-            lightboxArray.push(imgPath);
-            imagensHTML += `<img src="${imgPath}" alt="Foto ${k}" style="height: 150px; min-width: 150px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border-color);" onclick="abrirLightboxArray('${lightboxArray.join(',')}', ${k-1}, event)" onerror="this.style.display='none'">`;
-        }
-    } else {
-        let imgPath = `imagens/${item.cod} - 01.jpg`;
+    for(let k = 1; k <= 6; k++) {
+        let numeroFormatado = k < 10 ? `0${k}` : `${k}`;
+        let imgPath = `imagens/${item.cod} - ${numeroFormatado}.jpg`;
         lightboxArray.push(imgPath);
-        imagensHTML = `
-            <img src="${imgPath}" alt="Foto Principal" style="height: 150px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border-color);" onclick="abrirLightboxArray('${lightboxArray.join(',')}', 0, event)" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="img-placeholder" style="display:none; width: 150px; height: 150px; border-radius: 12px;"><span style="font-size:24px; margin-bottom: 5px;">🚫</span>SEM FOTO</div>
-        `;
+        imagensHTML += `<img src="${imgPath}" alt="Foto ${numeroFormatado}" style="height: 150px; min-width: 150px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border-color); cursor: pointer;" onclick="abrirLightboxArray('${lightboxArray.join(',')}', ${k-1}, event)" onerror="this.style.display='none'">`;
     }
 
     let linhasLocais = item.locais.map(loc => `
@@ -1555,7 +1540,7 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
                     <span class="badge-status ${item.statusBadge}">${item.status}</span>
                 </div>
                 <div class="item-metrics-grid">
-                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${item.saldo}</span></div>
+                    <div class="metric-box metric-saldo"><span class="metric-label">Saldo Total (Consolidado)</span><span class="metric-value">${item.saldo}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Custo Unitário</span><span class="metric-value">${formatarMoedaMask(item.custoUnitario)}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Valor Imobilizado</span><span class="metric-value">${formatarMoedaMask(item.valorImobilizado)}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Sugestão Mín / Máx</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
@@ -1568,12 +1553,12 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
             </div>
         </div>
 
-        <h3 style="font-size: 13px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Galeria de Imagens</h3>
-        <div class="modal-gallery-container" style="margin-bottom: 24px;">
+        <h3 style="font-size: 13px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Galeria de Imagens (Até 6 Fotos)</h3>
+        <div class="modal-gallery-container" style="margin-bottom: 24px; display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
             ${imagensHTML}
         </div>
 
-        <h3 style="font-size: 13px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Detalhamento de Locais (Físico vs Sistema)</h3>
+        <h3 style="font-size: 13px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Detalhamento de Locais e Filiais Consolidadas</h3>
         <div style="overflow-x: auto; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color);">
             <table class="modal-locais-table">
                 <thead>
@@ -1597,14 +1582,15 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     document.getElementById('modal-item').style.display = 'flex';
 };
 
+// ==========================================================================
+// 11. Modal Exclusivo para Análise de Gestão de OF (Raio-X 3 Colunas)
+// ==========================================================================
 window.abrirModalOF = function(ofId, codProd) {
     let codNorm = normalizarCod(codProd);
-    
     let of = ordesAtivasFiltradas.find(o => String(o.of).trim() === String(ofId).trim() && normalizarCod(o.codProd) === codNorm);
     if (!of) {
         of = ordesAtivasFiltradas.find(o => String(o.of).trim() === String(ofId).trim() || normalizarCod(o.codProd) === codNorm);
     }
-
     const item = itensProcessados.find(i => i.codNorm === codNorm);
 
     if (!of) {
@@ -1621,8 +1607,10 @@ window.abrirModalOF = function(ofId, codProd) {
     };
 
     let descExibicao = item ? item.desc : (of.descProd || 'Descrição não informada na Base Mestre');
+    let saldoEstoqueExibicao = item ? item.saldo : 'Não localizado';
+    let minimoExibicao = item ? item.minimo : '-';
+    let maximoExibicao = item ? item.maximo : '-';
 
-    // Validação da Tag Visual de Prazo/Atraso aplicando a regra de item já entregue
     let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
@@ -1727,9 +1715,24 @@ window.abrirModalOF = function(ofId, codProd) {
                         <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
                             Raio-X da Ordem: <span style="color: var(--primary-color);">${of.of !== '-' ? of.of : of.sc}</span>
                         </h2>
-                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
+                        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px;">
                             Item: #${codProd} - ${descExibicao}
                         </h3>
+                        
+                        <div style="display: flex; gap: 12px; margin-bottom: 15px; flex-wrap: wrap;">
+                            <div style="background: var(--bg-subcard); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
+                                <span style="color: var(--text-secondary); font-weight: 600;">Saldo Atual (Total):</span> 
+                                <strong style="color: var(--primary-color); font-size: 13px;">${saldoEstoqueExibicao}</strong>
+                            </div>
+                            <div style="background: var(--bg-subcard); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
+                                <span style="color: var(--text-secondary); font-weight: 600;">Mínimo:</span> 
+                                <strong style="color: var(--text-warning); font-size: 13px;">${minimoExibicao}</strong>
+                            </div>
+                            <div style="background: var(--bg-subcard); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
+                                <span style="color: var(--text-secondary); font-weight: 600;">Máximo:</span> 
+                                <strong style="color: var(--text-success); font-size: 13px;">${maximoExibicao}</strong>
+                            </div>
+                        </div>
                     </div>
                     ${etaTag}
                 </div>
