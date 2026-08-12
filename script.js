@@ -931,15 +931,21 @@ async function processarInteligencia() {
     if (elTitleConsumo) elTitleConsumo.innerText = `Custo do Consumo (${mesConsumoAtual})`;
     if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`; 
 
+    // BLOCO BLINDADO DE RENDERIZAÇÃO PARA EVITAR TRAVAMENTO EM "Renderizando Interface..."
     setTimeout(() => {
-        dispararFiltrosSemAtraso();
-        if(!encontrouConsumoNoMesAlvo && bases.consumos.length > 0) {
-            mostrarToast(`Atenção: Não detectamos saídas de ${mesConsumoAtual} no arquivo de consumos.`, "warning");
-        } else {
-            mostrarToast(`Inteligência Ativada. Consumo travado em ${mesConsumoAtual}.`, "success");
+        try {
+            dispararFiltrosSemAtraso();
+            if(!encontrouConsumoNoMesAlvo && bases.consumos.length > 0) {
+                mostrarToast(`Atenção: Não detectamos saídas de ${mesConsumoAtual} no arquivo de consumos.`, "warning");
+            } else {
+                mostrarToast(`Inteligência Ativada. Consumo travado em ${mesConsumoAtual}.`, "success");
+            }
+        } catch (err) {
+            console.error("Erro na renderização visual:", err);
+        } finally {
+            fecharLoader();
+            isFetchingData = false; 
         }
-        fecharLoader();
-        isFetchingData = false; 
     }, 600);
 }
 
@@ -1199,70 +1205,6 @@ function renderizarCompras() {
     tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem necessidade de compras críticas para os filtros atuais.</td></tr>`;
 }
 
-function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
-    const tbody = document.getElementById('ofs-table-body');
-    const divResumo = document.getElementById('resumo-ofs');
-    let htmlLote = [];
-    
-    const statusOfFiltro = document.getElementById('select-status-of').value;
-
-    let ofsExibir = ordesAtivasFiltradas.filter(of => {
-        let bateTermo = termosSplit.length === 0 || termosSplit.some(t => of.searchStr.includes(t));
-        let bateFilial = !filialFiltro || of.filial === filialFiltro || of.filial === 'Geral';
-        let bateStatus = !statusOfFiltro || of.sitOFOriginal === statusOfFiltro;
-        return bateTermo && bateFilial && bateStatus;
-    });
-
-    let valTransitoTotal = 0;
-    let qtdTransitoTotal = 0;
-    let fornSet = new Set();
-    let ofSet = new Set();
-
-    const mapaItens = new Map(itensProcessados.map(i => [i.codNorm, i]));
-
-    ofsExibir.forEach(of => {
-        let itemRef = mapaItens.get(normalizarCod(of.codProd)); 
-        let val = of.saldoOF * (itemRef ? itemRef.custoUnitario : 0);
-        valTransitoTotal += val;
-        qtdTransitoTotal += of.saldoOF;
-        fornSet.add(of.fornecedor);
-        ofSet.add(of.of);
-    });
-
-    ofsExibir.slice(0, 100).forEach(of => {
-        let badgeStatusColor = 'var(--text-warning)';
-        if (of.sitOFOriginal === 'Item Entregue') badgeStatusColor = 'var(--text-success)';
-        else if (of.sitOFOriginal === 'Entrega Parcial') badgeStatusColor = 'var(--text-info)';
-        else if (of.sitOFOriginal === 'Pendente de OF') badgeStatusColor = 'var(--text-danger)';
-
-        htmlLote.push(`
-            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
-                <td>
-                    <strong style="color:var(--text-primary);">${of.of}</strong><br>
-                    <span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span><br>
-                    <span style="font-size:10px;color:var(--primary-color); font-weight: 600;">👤 Req: ${of.solicitante}</span>
-                </td>
-                <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
-                <td style="font-size:11px; font-weight:700; color:var(--text-secondary);">${of.fornecedor}</td>
-                <td style="font-size:13px; font-weight:800; color:${badgeStatusColor};">${of.sitOFOriginal}</td>
-                <td style="font-size:14px; font-weight:900; color:var(--text-warning);">${of.saldoOF} und</td>
-                <td style="font-size:12px; font-weight:700; color:var(--text-primary);">${of.dataEntrega}</td>
-            </tr>
-        `);
-    });
-    
-    if (divResumo) {
-        divResumo.innerHTML = `
-            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
-            <div class="kpi-card"><span class="kpi-title">Saldo Físico a Receber</span><span class="kpi-value">${qtdTransitoTotal}</span></div>
-            <div class="kpi-card"><span class="kpi-title">OFs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
-            <div class="kpi-card"><span class="kpi-title">Fornecedores Diferentes</span><span class="kpi-value">${fornSet.size}</span></div>
-        `;
-    }
-
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
-}
-
 function renderizarDashboard() {
     let valorTotal = 0, valorObsoleto = 0, qtdObsoleto = 0;
     let qtdRupturaCritica = 0, qtdRupturaTransito = 0;
@@ -1270,12 +1212,11 @@ function renderizarDashboard() {
     let totalSaldoFinanceiro = 0, totalConsumoMensalFinanceiro = 0;
     let skusAtivos = 0; 
 
-    itensFiltrados.forEach(i => {
+    itensFiltrados.filter(i => i.saldo > 0).forEach(i => {
         valorTotal += i.valorImobilizado;
         totalSaldoFinanceiro += i.valorImobilizado;
         totalConsumoMensalFinanceiro += i.consumoFinanceiro;
-        
-        if (i.saldo > 0) skusAtivos++;
+        skusAtivos++;
 
         if (i.status === 'Ruptura Crítica (Sem Pedido)') qtdRupturaCritica++;
         if (i.status === 'Ruptura (Em Trânsito)') qtdRupturaTransito++;
@@ -1295,7 +1236,7 @@ function renderizarDashboard() {
     const safeSetText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
     safeSetText('dash-kpi-valor-total', formatarMoedaMask(valorTotal));
-    safeSetText('dash-kpi-total-itens', `Em ${itensFiltrados.length} SKUs`);
+    safeSetText('dash-kpi-total-itens', `Em ${skusAtivos} SKUs`);
     
     safeSetText('dash-kpi-giro-anual', totalConsumoMensalFinanceiro > 0 ? `${giroAnualDias} dias` : 'Sem Consumo');
     safeSetText('dash-kpi-giro-medio', totalConsumoMensalFinanceiro > 0 ? `${giroMensalDias} dias` : 'Sem Consumo');
