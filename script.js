@@ -1201,6 +1201,8 @@ function renderizarPesquisa() {
 
                         <div class="item-metrics-grid">
                             <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual (Qtd)</span><span class="metric-value">${i.saldo} <span style="font-size:11px;">und</span></span></div>
+                            <div class="metric-box metric-default"><span class="metric-label">Mín / Máx (Atual)</span><span class="metric-value">${i.minimo} / ${i.maximo}</span></div>
+                            <div class="metric-box metric-default"><span class="metric-label" style="color: var(--text-info);">Mín / Máx (Sug.)</span><span class="metric-value">${i.sugestaoMin} / ${i.sugestaoMax}</span></div>
                             <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value">${giroMensalDias}</span></div>
                             <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value">${giroAnualDias}</span></div>
                             <div class="metric-box metric-default"><span class="metric-label">Custo Consumo</span><span class="metric-value">${formatarMoedaMask(i.consumoFinanceiro)}</span></div>
@@ -1636,9 +1638,10 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
                 </div>
                 <div class="item-metrics-grid">
                     <div class="metric-box metric-saldo"><span class="metric-label">Saldo Atual</span><span class="metric-value">${item.saldo}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label">Mín / Máx (Atual)</span><span class="metric-value">${item.minimo} / ${item.maximo}</span></div>
+                    <div class="metric-box metric-default"><span class="metric-label" style="color: var(--text-info);">Mín / Máx (Sug.)</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Custo Unitário</span><span class="metric-value">${formatarMoedaMask(item.custoUnitario)}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Valor Imobilizado</span><span class="metric-value">${formatarMoedaMask(item.valorImobilizado)}</span></div>
-                    <div class="metric-box metric-default"><span class="metric-label">Sugestão Mín / Máx</span><span class="metric-value">${item.sugestaoMin} / ${item.sugestaoMax}</span></div>
                     
                     <div class="metric-box metric-default"><span class="metric-label" style="color: var(--primary-color);">Giro Mensal</span><span class="metric-value" style="font-size: 15px;">${giroMensalTexto}</span></div>
                     <div class="metric-box metric-default"><span class="metric-label">Giro Anual</span><span class="metric-value" style="font-size: 15px;">${giroAnualTexto}</span></div>
