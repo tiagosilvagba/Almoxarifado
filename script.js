@@ -270,7 +270,6 @@ function navegarPara(view) {
 
 function toggleSegmentacao() { document.getElementById('app-layout').classList.toggle('segmentation-hidden'); }
 
-// Chamada ativada quando o usuário muda o mês no novo filtro
 window.mudarMesConsumo = function() {
     const selectPeriodo = document.getElementById('select-mes-consumo-kpi');
     if(selectPeriodo && selectPeriodo.value) {
@@ -502,7 +501,6 @@ async function processarInteligencia() {
     const colDesc = ['nome do item detalhado', 'nome do item resumido', 'nome produto', 'desc', 'sc - nome produto', 'of - nome produto'];
     const colQtdSaldo = ['qt saldo atual', 'saldo livre', 'saldo']; 
     const colQtdConsumo = ['qt movimento', 'quantidade consumida', 'quantidade'];
-    const colQtdCompraFallback = ['of - saldo', 'saldo aberto', 'quantidade', 'qtde', 'sc - quantidade'];
     const colCusto = ['vl custo unitario atual', 'custo unitario', 'custo'];
     const colMin = ['qt minimo', 'minimo', 'min'];
     const colMax = ['qt maximo', 'maximo', 'max'];
@@ -527,6 +525,7 @@ async function processarInteligencia() {
     const colOfCodigo = ['of - codigo', 'of codigo', 'ordem fornecimento'];
     const colOfNomeFornecedor = ['of - nome fornecedor', 'fornecedor'];
     const colOfQtdPedida = ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade'];
+    const colScQtd = ['sc - quantidade', 'quantidade sc']; 
     const colRecQtd = ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida'];
     const colOfSit = ['of - situação of', 'situacao of', 'status of'];
     const colScSit = ['sc - situação', 'situacao sc'];
@@ -535,7 +534,7 @@ async function processarInteligencia() {
     const nomesMesesDisplay = ['', 'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
     const ordemMeses = { 'janeiro':1, 'jan':1, 'fevereiro':2, 'fev':2, 'março':3, 'marco':3, 'mar':3, 'abril':4, 'abr':4, 'maio':5, 'mai':5, 'junho':6, 'jun':6, 'julho':7, 'jul':7, 'agosto':8, 'ago':8, 'setembro':9, 'set':9, 'outubro':10, 'out':10, 'novembro':11, 'nov':11, 'dezembro':12, 'dez':12 };
 
-    setProgress(92, "1. Lendo Compras (OFs em Trânsito)...");
+    setProgress(92, "1. Lendo Compras (OFs em Trânsito e SCs Pendentes)...");
     await new Promise(r => setTimeout(r, 50)); 
 
     global_mapComprasTransito.clear();
@@ -544,6 +543,7 @@ async function processarInteligencia() {
     
     let c_cod_compra = encontrarChave(bases.compras[0], colCod);
     let c_of_qtd_pedida = encontrarChave(bases.compras[0], colOfQtdPedida);
+    let c_sc_qtd = encontrarChave(bases.compras[0], colScQtd);
     let c_rec_qtd = encontrarChave(bases.compras[0], colRecQtd);
     let c_of_sit = encontrarChave(bases.compras[0], colOfSit);
     let c_sc_sit = encontrarChave(bases.compras[0], colScSit);
@@ -558,24 +558,35 @@ async function processarInteligencia() {
             const cod = normalizarCod(item[c_cod_compra]);
             if (!cod) return;
 
-            let qtdPedida = c_of_qtd_pedida ? converterParaNumero(item[c_of_qtd_pedida]) : 0;
+            let qtdPedidaOF = c_of_qtd_pedida ? converterParaNumero(item[c_of_qtd_pedida]) : 0;
+            let qtdPedidaSC = c_sc_qtd ? converterParaNumero(item[c_sc_qtd]) : 0;
             let qtdRecebida = c_rec_qtd ? converterParaNumero(item[c_rec_qtd]) : 0;
-            let ofValor = c_of_col ? String(item[c_of_col]).trim() : '-';
-            let scValor = c_sc_col ? String(item[c_sc_col]).trim() : '-';
+            
+            const ofStr = item[c_of_col];
+            const scStr = item[c_sc_col];
+            let ofValorRaw = (ofStr === null || ofStr === undefined) ? '' : String(ofStr).trim();
+            let scValorRaw = (scStr === null || scStr === undefined) ? '' : String(scStr).trim();
 
-            let sitOF = c_of_sit ? normalizarString(item[c_of_sit]) : '';
-            let sitSC = c_sc_sit ? normalizarString(item[c_sc_sit]) : '';
-            let cancSC = c_sc_canc ? normalizarString(item[c_sc_canc]) : '';
+            let ofValor = ofValorRaw.toLowerCase();
+            let scValor = scValorRaw.toLowerCase();
+            if (ofValor === '-' || ofValor === 'undefined' || ofValor === 'null' || ofValor === '') ofValorRaw = '';
+            if (scValor === '-' || scValor === 'undefined' || scValor === 'null' || scValor === '') scValorRaw = '';
+
+            let sitOF = c_of_sit && item[c_of_sit] ? String(item[c_of_sit]).toLowerCase() : '';
+            let sitSC = c_sc_sit && item[c_sc_sit] ? String(item[c_sc_sit]).toLowerCase() : '';
+            let cancSC = c_sc_canc && item[c_sc_canc] ? String(item[c_sc_canc]).toLowerCase() : '';
 
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let saldoPendente = 0;
 
             if (isFechadaOuCancelada) { saldoPendente = 0; } 
-            else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) { saldoPendente = 1; } 
-            else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) { saldoPendente = 0; } 
-            else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) { saldoPendente = qtdPedida - qtdRecebida; } 
-            else if (qtdPedida > 0 && qtdRecebida === 0) { saldoPendente = qtdPedida; } 
-            else { saldoPendente = qtdPedida > 0 ? qtdPedida : 1; }
+            else if (ofValorRaw === '' && scValorRaw !== '') { 
+                saldoPendente = qtdPedidaSC > 0 ? qtdPedidaSC : 1; 
+            } 
+            else if (qtdPedidaOF > 0 && qtdRecebida >= qtdPedidaOF) { saldoPendente = 0; } 
+            else if (qtdPedidaOF > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedidaOF) { saldoPendente = qtdPedidaOF - qtdRecebida; } 
+            else if (qtdPedidaOF > 0 && qtdRecebida === 0) { saldoPendente = qtdPedidaOF; } 
+            else { saldoPendente = qtdPedidaOF > 0 ? qtdPedidaOF : 1; }
 
             if (saldoPendente > 0) {
                 global_mapComprasTransito.set(cod, (global_mapComprasTransito.get(cod) || 0) + saldoPendente);
@@ -657,7 +668,6 @@ async function processarInteligencia() {
         return b.mes - a.mes;
     });
 
-    // Povoar o combo box de período (se já existir no HTML)
     const selectPeriodo = document.getElementById('select-mes-consumo-kpi');
     if (selectPeriodo) {
         selectPeriodo.innerHTML = '';
@@ -776,12 +786,10 @@ async function processarInteligencia() {
     setProgress(98, "Ativando Motor de Inteligência para Mês Base...");
     await new Promise(r => setTimeout(r, 50)); 
     
-    // Dispara a criação da tabela final (que agora pode ser recalculada no clique do novo select)
     aplicarPeriodoConsumo(periodoDefault, true);
 }
 
 
-// Nova função separada que gera a base Suja e os KPIs utilizando APENAS o mês selecionado
 window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
     if(!isFirstLoad) {
         setProgress(50, `Recalculando inteligência para ${periodoLabel}...`);
@@ -791,16 +799,14 @@ window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
 
     mesConsumoAtual = periodoLabel;
     
-    // Atualiza os Labels Visuais Dinamicamente
     const elTitleConsumo = document.getElementById('kpi-consumo-title');
     const elThConsumo = document.getElementById('th-consumo');
     const elDashKpiLabel = document.getElementById('dash-kpi-consumo-label'); 
     
     if (elTitleConsumo) elTitleConsumo.innerText = `Custo do Consumo`;
     if (elThConsumo) elThConsumo.innerText = `Custo Consumo (${mesConsumoAtual})`;
-    if (elDashKpiLabel) elDashKpiLabel.innerText = `Período Base: ${mesConsumoAtual}`; // Etiqueta exigida no Dashboard
+    if (elDashKpiLabel) elDashKpiLabel.innerText = `Período Base: ${mesConsumoAtual}`;
 
-    // 1. Filtrar o Consumo para criar o Mapa desse mês
     const mapConsumosTotais = new Map();
     let encontrouConsumoNoMesAlvo = false;
 
@@ -813,9 +819,8 @@ window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
         }
     });
 
-    // 2. Mesclar Consumo com a Base Mestre clonada
     let baseSujaProcessada = Array.from(global_mapConsolidado.values()).map(itemRaw => {
-        let item = JSON.parse(JSON.stringify(itemRaw)); // Clone para não destruir a base pura
+        let item = JSON.parse(JSON.stringify(itemRaw)); 
         const transito = global_mapComprasTransito.get(item.codNorm) || 0;
 
         if (item.saldo > 0 && item.valorTotalGlobal > 0) item.custoUnitario = item.valorTotalGlobal / item.saldo;
@@ -885,13 +890,13 @@ window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
 
     itensProcessados = baseSujaProcessada;
 
-    // 3. Gerar a lista de OFs Pendentes e Status
     ordesAtivasFiltradas = [];
     setStatusOFUnicos.clear();
 
     if(bases.compras.length > 0) {
         const c_cod_compra = encontrarChave(bases.compras[0], ['cd item', 'cod produto', 'codigo', 'cod', 'item', 'sc - cód. produto', 'of - cód. produto']);
         const c_of_qtd_pedida = encontrarChave(bases.compras[0], ['of - qtd. solicitada', 'quantidade pedida', 'qtd solicitada', 'of - quantidade']);
+        const c_sc_qtd = encontrarChave(bases.compras[0], ['sc - quantidade', 'quantidade sc']); // Qtd da SC
         const c_rec_qtd = encontrarChave(bases.compras[0], ['of - qtd. entregue', 'of - qtd entregue', 'qtd entregue', 'rec - quantidade', 'quantidade recebida', 'qtd recebida']);
         const c_of_sit = encontrarChave(bases.compras[0], ['of - situação of', 'situacao of', 'status of']);
         const c_sc_sit = encontrarChave(bases.compras[0], ['sc - situação', 'situacao sc']);
@@ -906,40 +911,57 @@ window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
         const mapaItensParaFilial = new Map(itensProcessados.map(i => [i.codNorm, i]));
         
         bases.compras.forEach(linha => {
-            let qtdPedida = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
-            let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
-            let ofValor = c_of_col ? String(linha[c_of_col]).trim() : '-';
-            let scValor = c_sc_col ? String(linha[c_sc_col]).trim() : '-';
+            let codNorm = normalizarCod(linha[c_cod_compra]);
+            if (!codNorm) return;
 
-            let sitOF = c_of_sit ? normalizarString(linha[c_of_sit]) : '';
-            let sitSC = c_sc_sit ? normalizarString(linha[c_sc_sit]) : '';
-            let cancSC = c_sc_canc ? normalizarString(linha[c_sc_canc]) : '';
+            let qtdPedidaOF = c_of_qtd_pedida ? converterParaNumero(linha[c_of_qtd_pedida]) : 0;
+            let qtdPedidaSC = c_sc_qtd ? converterParaNumero(linha[c_sc_qtd]) : 0;
+            let qtdRecebida = c_rec_qtd ? converterParaNumero(linha[c_rec_qtd]) : 0;
+            
+            const ofStr = linha[c_of_col];
+            const scStr = linha[c_sc_col];
+            let ofValorRaw = (ofStr === null || ofStr === undefined) ? '' : String(ofStr).trim();
+            let scValorRaw = (scStr === null || scStr === undefined) ? '' : String(scStr).trim();
+
+            let ofValor = ofValorRaw.toLowerCase();
+            let scValor = scValorRaw.toLowerCase();
+            if (ofValor === '-' || ofValor === 'undefined' || ofValor === 'null' || ofValor === '') ofValorRaw = '';
+            if (scValor === '-' || scValor === 'undefined' || scValor === 'null' || scValor === '') scValorRaw = '';
+
+            let sitOF = c_of_sit && linha[c_of_sit] ? String(linha[c_of_sit]).toLowerCase() : '';
+            let sitSC = c_sc_sit && linha[c_sc_sit] ? String(linha[c_sc_sit]).toLowerCase() : '';
+            let cancSC = c_sc_canc && linha[c_sc_canc] ? String(linha[c_sc_canc]).toLowerCase() : '';
             
             let isFechadaOuCancelada = sitOF.includes('fechada') || sitOF.includes('cancelada') || sitSC.includes('cancelado') || cancSC === 'sim' || cancSC === 's';
             let statusCalculado = 'Em Trânsito';
             let saldoPendente = 0;
 
             if (isFechadaOuCancelada) return; 
-            else if ((!ofValor || ofValor === '-' || ofValor === '') && (scValor && scValor !== '-' && scValor !== '')) { statusCalculado = 'Aguardando Aprovação'; saldoPendente = 1; } 
-            else if (qtdPedida > 0 && qtdRecebida >= qtdPedida) { statusCalculado = 'Item Entregue'; saldoPendente = 0; } 
-            else if (qtdPedida > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedida) { statusCalculado = 'Entrega Parcial'; saldoPendente = qtdPedida - qtdRecebida; } 
-            else if (qtdPedida > 0 && qtdRecebida === 0) { statusCalculado = 'Em Trânsito'; saldoPendente = qtdPedida; } 
-            else { statusCalculado = 'Em Trânsito'; saldoPendente = qtdPedida > 0 ? qtdPedida : 1; }
+            else if (ofValorRaw === '' && scValorRaw !== '') { 
+                statusCalculado = linha[c_sc_sit] ? String(linha[c_sc_sit]).trim() : 'SC Aberta (Sem OF)'; 
+                saldoPendente = qtdPedidaSC > 0 ? qtdPedidaSC : 1; 
+            } 
+            else if (qtdPedidaOF > 0 && qtdRecebida >= qtdPedidaOF) { statusCalculado = 'Item Entregue'; saldoPendente = 0; } 
+            else if (qtdPedidaOF > 0 && qtdRecebida > 0 && qtdRecebida < qtdPedidaOF) { statusCalculado = 'Entrega Parcial'; saldoPendente = qtdPedidaOF - qtdRecebida; } 
+            else if (qtdPedidaOF > 0 && qtdRecebida === 0) { statusCalculado = 'Em Trânsito'; saldoPendente = qtdPedidaOF; } 
+            else { statusCalculado = 'Em Trânsito'; saldoPendente = qtdPedidaOF > 0 ? qtdPedidaOF : 1; }
 
             setStatusOFUnicos.add(statusCalculado);
 
-            let cod = normalizarCod(linha[c_cod_compra]);
-            let objItem = mapaItensParaFilial.get(cod);
+            let objItem = mapaItensParaFilial.get(codNorm);
             let filialDaOF = objItem ? objItem.filialNm : 'Geral';
             let req = c_solicitante && linha[c_solicitante] ? linha[c_solicitante].trim() : 'Não Informado';
 
             ordesAtivasFiltradas.push({
-                sc: linha[c_sc_col] || '-', of: linha[c_of_col] || '-',
+                idLogico: ordesAtivasFiltradas.length, 
+                codNorm: codNorm, // Para filtro relacional cruzado do Power BI
+                sc: scValorRaw || '-', 
+                of: ofValorRaw || '-',
                 codProd: linha[c_cod_compra] || '-', descProd: linha[c_desc] || '-',
                 fornecedor: linha[c_forn] || 'Não Informado', solicitante: req,
                 dataEntrega: linha[c_dt_ent] || 'Sem Data', saldoOF: saldoPendente,
                 sitOFOriginal: statusCalculado, filial: filialDaOF,
-                searchStr: ((linha[c_of_col]||'') + " " + (linha[c_sc_col]||'') + " " + (linha[c_cod_compra]||'') + " " + (linha[c_forn]||'') + " " + req + " " + statusCalculado).toLowerCase(),
+                searchStr: ((ofValorRaw) + " " + (scValorRaw) + " " + (linha[c_cod_compra]||'') + " " + (linha[c_forn]||'') + " " + req + " " + statusCalculado).toLowerCase(),
                 linhaOriginal: linha 
             });
         });
@@ -955,7 +977,6 @@ window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
 
     if(isFirstLoad) setProgress(100, "Renderizando Interface...", "success");
     
-    // 4. Fechar ciclo
     setTimeout(() => {
         dispararFiltrosSemAtraso();
         if(!encontrouConsumoNoMesAlvo && bases.consumos.length > 0) {
@@ -970,7 +991,7 @@ window.aplicarPeriodoConsumo = function(periodoLabel, isFirstLoad = false) {
 
 
 // ==========================================================================
-// BUSCA INTELIGENTE, FILTRO CASCATA E RENDERIZAÇÃO
+// BUSCA INTELIGENTE, CROSS-FILTER (POWER BI) E RENDERIZAÇÃO
 // ==========================================================================
 let timerBusca;
 function dispararFiltrosDebounce() {
@@ -1020,7 +1041,7 @@ function dispararFiltrosSemAtraso() {
     const statusFiltro = document.getElementById('select-saldo-status').value;
     const curvaFiltro = document.getElementById('select-curva').value;
     const imagemFiltro = document.getElementById('select-imagem').value;
-    const filialFiltro = document.getElementById('select-filial')?.value || filtroGraficoFilial || "";
+    const filialFiltro = document.getElementById('select-filial')?.value || "";
     const localFiltro = document.getElementById('select-local')?.value || "";
     const analiseMinMaxFiltro = document.getElementById('select-analise-minmax')?.value || ""; 
 
@@ -1030,7 +1051,7 @@ function dispararFiltrosSemAtraso() {
         return;
     }
 
-    // Filtro da Matriz Principal (Base de Itens)
+    // 1. Filtro Relacional Mestre
     itensFiltrados = itensProcessados.filter(i => {
         const bateTermo = termosSplit.length === 0 || termosSplit.some(t => i.searchString.includes(t));
         const bateCurva = !curvaFiltro || i.curva === curvaFiltro;
@@ -1055,21 +1076,33 @@ function dispararFiltrosSemAtraso() {
         else if (analiseMinMaxFiltro === "acima_max") bateAnaliseMinMax = (i.maximo > 0 && i.saldo > i.maximo);
         else if (analiseMinMaxFiltro === "dentro_range") bateAnaliseMinMax = (i.minimo > 0 && i.maximo > 0 && i.saldo >= i.minimo && i.saldo <= i.maximo);
 
-        return bateTermo && bateCurva && bateStatus && bateImagem && bateFilial && bateLocal && bateAnaliseMinMax;
+        // POWER BI: Filtros oriundos de cliques diretos nos gráficos
+        let bateGraficoABC = !filtroGraficoABC || i.curva === filtroGraficoABC;
+        let bateGraficoStatus = true;
+        if (filtroGraficoStatus) {
+            if (filtroGraficoStatus === 'Ruptura') bateGraficoStatus = i.status.includes('Ruptura');
+            else if (filtroGraficoStatus === 'Obsoleto') bateGraficoStatus = i.status.includes('Obsoleto');
+            else bateGraficoStatus = i.status === filtroGraficoStatus;
+        }
+        let bateGraficoFilial = !filtroGraficoFilial || i.filialNm === filtroGraficoFilial;
+
+        return bateTermo && bateCurva && bateStatus && bateImagem && bateFilial && bateLocal && bateAnaliseMinMax && bateGraficoABC && bateGraficoStatus && bateGraficoFilial;
     });
 
-    // Filtro Específico para a Tela Histórica de Consumo:
-    // Retorna as linhas do consumos.csv cruzadas pelo mês ESCOLHIDO NO FILTRO DO DASHBOARD para evitar confusão de números.
+    // 2. Chave de Relacionamento (Para filtrar abas secundárias pelo que sobrou no Mestre)
+    const setCodigosFiltrados = new Set(itensFiltrados.map(i => i.codNorm));
+
     consumosFiltrados = consumosProcessados.filter(c => {
         const bateTermo = termosSplit.length === 0 || termosSplit.some(t => c.searchStr.includes(t));
         const bateMes = c.periodoLabel === mesConsumoAtual;
-        return bateTermo && bateMes;
+        const bateRelacionamentoItem = setCodigosFiltrados.has(c.codNorm); // Lógica PBI Relacional
+        return bateTermo && bateMes && bateRelacionamentoItem;
     });
 
     if (vistaAtual === 'pesquisa') renderizarPesquisa();
     else if (vistaAtual === 'dashboard') renderizarDashboard();
     else if (vistaAtual === 'compras') renderizarCompras();
-    else if (vistaAtual === 'gestao-compras') renderizarGestaoDeCompras(termosSplit, filialFiltro);
+    else if (vistaAtual === 'gestao-compras') renderizarGestaoDeCompras(termosSplit, filialFiltro); // Gestão de compras também receberá o cross-filter lá dentro
     else if (vistaAtual === 'revisao') renderizarRevisao();
     else if (vistaAtual === 'consulta-consumo') renderizarConsultaConsumo();
 }
@@ -1297,12 +1330,15 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     let htmlLote = [];
     
     const statusOfFiltro = document.getElementById('select-status-of').value;
+    const setCodigosFiltrados = new Set(itensFiltrados.map(i => i.codNorm));
 
     let ofsExibir = ordesAtivasFiltradas.filter(of => {
         let bateTermo = termosSplit.length === 0 || termosSplit.some(t => of.searchStr.includes(t));
         let bateFilial = !filialFiltro || of.filial === filialFiltro || of.filial === 'Geral';
         let bateStatus = !statusOfFiltro || of.sitOFOriginal === statusOfFiltro;
-        return bateTermo && bateFilial && bateStatus;
+        let bateRelacionamento = setCodigosFiltrados.has(of.codNorm); // Power BI: Relacionamento cruzado com a base!
+
+        return bateTermo && bateFilial && bateStatus && bateRelacionamento;
     });
 
     let valTransitoTotal = 0;
@@ -1318,20 +1354,24 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
         valTransitoTotal += val;
         qtdTransitoTotal += of.saldoOF;
         fornSet.add(of.fornecedor);
-        ofSet.add(of.of);
+        if (of.of !== '-' && of.of !== '') ofSet.add(of.of);
+        else ofSet.add(of.sc);
     });
 
     ofsExibir.slice(0, 100).forEach(of => {
         let badgeStatusColor = 'var(--text-warning)';
-        if (of.sitOFOriginal === 'Item Entregue') badgeStatusColor = 'var(--text-success)';
-        else if (of.sitOFOriginal === 'Entrega Parcial') badgeStatusColor = 'var(--text-info)';
-        else if (of.sitOFOriginal === 'Aguardando Aprovação') badgeStatusColor = 'var(--text-secondary)';
+        if (of.sitOFOriginal.toLowerCase().includes('entregue')) badgeStatusColor = 'var(--text-success)';
+        else if (of.sitOFOriginal.toLowerCase().includes('parcial')) badgeStatusColor = 'var(--text-info)';
+        else if (of.of === '-' || of.of === '') badgeStatusColor = 'var(--text-danger)'; 
+
+        let mainId = (of.of !== '-' && of.of !== '') ? of.of : `SC: ${of.sc}`;
+        let subId = (of.of !== '-' && of.of !== '') ? `SC: ${of.sc}` : `<span style="color:var(--text-warning);font-weight:bold;">Aguardando Emissão de OF</span>`;
 
         htmlLote.push(`
-            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF('${of.of}', '${of.codProd}')">
+            <tr class="fade-in" style="cursor:pointer;" onclick="abrirModalOF(${of.idLogico})">
                 <td>
-                    <strong style="color:var(--text-primary);">${of.of}</strong><br>
-                    <span style="font-size:10px;color:var(--text-secondary);">SC: ${of.sc}</span><br>
+                    <strong style="color:var(--text-primary);">${mainId}</strong><br>
+                    <span style="font-size:10px;color:var(--text-secondary);">${subId}</span><br>
                     <span style="font-size:10px;color:var(--primary-color); font-weight: 600;">👤 Req: ${of.solicitante}</span>
                 </td>
                 <td><strong style="color:var(--primary-color);">#${of.codProd}</strong><br><span style="font-size:11px;color:var(--text-secondary); font-weight:500;">${of.descProd}</span></td>
@@ -1345,14 +1385,14 @@ function renderizarGestaoDeCompras(termosSplit = [], filialFiltro = "") {
     
     if (divResumo) {
         divResumo.innerHTML = `
-            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
+            <div class="kpi-card border-info"><span class="kpi-title">Valor Pendente em OF/SC</span><span class="kpi-value color-info">${formatarMoedaMask(valTransitoTotal)}</span></div>
             <div class="kpi-card"><span class="kpi-title">Saldo Físico a Receber</span><span class="kpi-value">${qtdTransitoTotal}</span></div>
-            <div class="kpi-card"><span class="kpi-title">OFs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
+            <div class="kpi-card"><span class="kpi-title">Ordens/SCs em Aberto</span><span class="kpi-value">${ofSet.size}</span></div>
             <div class="kpi-card"><span class="kpi-title">Fornecedores Diferentes</span><span class="kpi-value">${fornSet.size}</span></div>
         `;
     }
 
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem OFs pendentes ou ativas para os filtros.</td></tr>`;
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="6" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Sem Ordens ou SCs ativas para os filtros.</td></tr>`;
 }
 
 function renderizarDashboard() {
@@ -1386,6 +1426,7 @@ function renderizarDashboard() {
 
     const safeSetText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
+    // Os KPIs atualizarão perfeitamente agora com os cliques no gráfico!
     safeSetText('dash-kpi-valor-total', formatarMoedaMask(valorTotal));
     safeSetText('dash-kpi-total-itens', `Em ${itensFiltrados.length} SKUs`);
     
@@ -1413,10 +1454,11 @@ function renderizarTabelaDashboard() {
     if (!tbody) return;
 
     let htmlLote = [];
+    
+    // Agora renderiza a tabela APENAS montando os avisos (labels), a inteligência já filtrou!
     let itensTabela = itensFiltrados;
 
     if (filtroGraficoABC) {
-        itensTabela = itensTabela.filter(i => i.curva === filtroGraficoABC);
         document.getElementById('filtro-abc-aviso').style.display = 'inline-block';
         document.getElementById('filtro-abc-aviso').innerText = `✖ Filtro ABC: Curva ${filtroGraficoABC}`;
     } else { 
@@ -1425,10 +1467,6 @@ function renderizarTabelaDashboard() {
     }
 
     if (filtroGraficoStatus) {
-        if (filtroGraficoStatus === 'Ruptura') itensTabela = itensTabela.filter(i => i.status.includes('Ruptura')); 
-        else if (filtroGraficoStatus === 'Obsoleto') itensTabela = itensTabela.filter(i => i.status.includes('Obsoleto'));
-        else itensTabela = itensTabela.filter(i => i.status === filtroGraficoStatus);
-        
         document.getElementById('filtro-status-aviso').style.display = 'inline-block';
         document.getElementById('filtro-status-aviso').innerText = `✖ Filtro Status: ${filtroGraficoStatus}`;
     } else { 
@@ -1437,7 +1475,6 @@ function renderizarTabelaDashboard() {
     }
     
     if (filtroGraficoFilial) {
-        itensTabela = itensTabela.filter(i => i.filialNm === filtroGraficoFilial);
         document.getElementById('filtro-filial-aviso').style.display = 'inline-block';
         document.getElementById('filtro-filial-aviso').innerText = `✖ Filtro Filial: ${filtroGraficoFilial}`;
     } else { 
@@ -1460,7 +1497,7 @@ function renderizarTabelaDashboard() {
             </tr>
         `);
     });
-    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan="7" style="text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);">Nenhum dado encontrado para os filtros ativos.</td></tr>`;
+    tbody.innerHTML = htmlLote.join('') || `<tr><td colspan=\"7\" style=\"text-align:center; padding: 40px; font-weight: 500; color: var(--text-secondary);\">Nenhum dado encontrado para os filtros ativos.</td></tr>`;
 }
 
 function atualizarGraficos() {
@@ -1518,7 +1555,7 @@ function atualizarGraficos() {
                 if(activeElements.length > 0) {
                     const curvaEscolhida = ['A', 'B', 'C'][activeElements[0].index];
                     filtroGraficoABC = (filtroGraficoABC === curvaEscolhida) ? null : curvaEscolhida;
-                    renderizarTabelaDashboard(); 
+                    dispararFiltrosSemAtraso(); // Power BI Cross-filter
                 }
             },
             onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
@@ -1546,7 +1583,7 @@ function atualizarGraficos() {
                     let statusEscolhido = rotulosGraficoBarra[activeElements[0].index];
                     if (statusEscolhido === 'Local Crítico') statusEscolhido = 'Normal/Local Crítico';
                     filtroGraficoStatus = (filtroGraficoStatus === statusEscolhido) ? null : statusEscolhido;
-                    renderizarTabelaDashboard(); 
+                    dispararFiltrosSemAtraso(); // Power BI Cross-filter
                 }
             },
             onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
@@ -1574,7 +1611,7 @@ function atualizarGraficos() {
                     if(activeElements.length > 0) {
                         const filialEscolhida = keysFiliais[activeElements[0].index];
                         filtroGraficoFilial = (filtroGraficoFilial === filialEscolhida) ? null : filialEscolhida;
-                        renderizarTabelaDashboard(); 
+                        dispararFiltrosSemAtraso(); // Power BI Cross-filter
                     }
                 },
                 onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; },
@@ -1680,20 +1717,16 @@ window.abrirModalDetalhes = function(codNorm, filialIdBase) {
     document.getElementById('modal-item').style.display = 'flex';
 };
 
-window.abrirModalOF = function(ofId, codProd) {
-    let codNorm = normalizarCod(codProd);
+window.abrirModalOF = function(idLogico) {
+    let of = ordesAtivasFiltradas.find(o => o.idLogico === idLogico);
     
-    let of = ordesAtivasFiltradas.find(o => String(o.of).trim() === String(ofId).trim() && normalizarCod(o.codProd) === codNorm);
-    if (!of) {
-        of = ordesAtivasFiltradas.find(o => String(o.of).trim() === String(ofId).trim() || normalizarCod(o.codProd) === codNorm);
-    }
-
-    const item = itensProcessados.find(i => i.codNorm === codNorm);
-
     if (!of) {
         mostrarToast("Erro: Detalhes da OF não encontrados na listagem.", "error");
         return;
     }
+
+    let codNorm = normalizarCod(of.codProd);
+    const item = itensProcessados.find(i => i.codNorm === codNorm);
 
     let linha = of.linhaOriginal || {};
 
@@ -1708,7 +1741,7 @@ window.abrirModalOF = function(ofId, codProd) {
     let dataOF = getC(['of - data entrega', 'data entrega of', 'sc - dt entrega', 'sc - data entrega']);
     let etaTag = `<span class="badge-status badge-transito" style="font-size:13px; padding:8px 16px;">⏳ Pendente</span>`;
     
-    if (of.sitOFOriginal === 'Item Entregue') {
+    if (of.sitOFOriginal.toLowerCase().includes('entregue')) {
         etaTag = `<span class="badge-status badge-normal" style="font-size:13px; padding:8px 16px; background:#10b981; color:#fff;">✅ Item Entregue</span>`;
     } else if (dataOF !== '-') {
         let partes = dataOF.split('/');
@@ -1797,9 +1830,11 @@ window.abrirModalOF = function(ofId, codProd) {
         </div>
     ` : `
         <div style="text-align: center; padding: 15px; margin-top: 15px; border-top: 1px solid var(--border-color);">
-            <p style="font-size: 12px; color: var(--text-warning);">⚠️ <i>Nota: Este item possui Ordem de Fornecimento ativa, mas o código <strong>#${codProd}</strong> não foi encontrado na Base Mestre (03 - Base_Itens.csv). O contexto analítico avançado de estoque está indisponível para ele.</i></p>
+            <p style="font-size: 12px; color: var(--text-warning);">⚠️ <i>Nota: O código <strong>#${codProd}</strong> não foi encontrado na Base Mestre (03 - Base_Itens.csv). O contexto analítico avançado de estoque está indisponível para ele.</i></p>
         </div>
     `;
+
+    let mainTitle = (of.of !== '-' && of.of !== '') ? `OF ${of.of}` : `SC ${of.sc}`;
 
     const content = `
         <div class="modal-header-section" style="border-bottom:none; padding-bottom:0;">
@@ -1807,7 +1842,7 @@ window.abrirModalOF = function(ofId, codProd) {
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
                         <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
-                            Raio-X da Ordem: <span style="color: var(--primary-color);">${of.of !== '-' ? of.of : of.sc}</span>
+                            Raio-X da Ordem: <span style="color: var(--primary-color);">${mainTitle}</span>
                         </h2>
                         <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 20px;">
                             Item: #${codProd} - ${descExibicao}
