@@ -90,9 +90,18 @@ function cacheUi() {
 }
 
 function bindEvents() {
-  ui.branchFilter.addEventListener("change", () => {
-    updateLocationFilter(ui.locationFilter, ui.branchFilter.value);
-  });
+  for (const select of [
+    ui.branchFilter,
+    ui.locationFilter,
+    ui.categoryFilter,
+    ui.unitFilter,
+    ui.supplierFilter,
+    ui.stockStatusFilter,
+  ]) {
+    select.addEventListener("change", () => refreshDependentFilters(select.id));
+  }
+  ui.positiveBalanceFilter.addEventListener("change", () => refreshDependentFilters("positiveBalanceFilter"));
+  ui.searchInput.addEventListener("input", debounce(() => refreshDependentFilters("searchInput"), 180));
   ui.searchInput.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
@@ -442,6 +451,118 @@ function updateLocationFilter(select, branchCode) {
   if ([...locations].some(([value]) => value === currentValue)) select.value = currentValue;
 }
 
+function refreshDependentFilters(changedId) {
+  if (!state.items.length) return;
+
+  const definitions = [
+    ["branchFilter", ui.branchFilter, "Todas as filiais"],
+    ["locationFilter", ui.locationFilter, "Todos os locais"],
+    ["categoryFilter", ui.categoryFilter, "Todas as categorias"],
+    ["unitFilter", ui.unitFilter, "Todas as unidades"],
+    ["supplierFilter", ui.supplierFilter, "Todos os fornecedores"],
+  ];
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    for (const [filterId, select, firstLabel] of definitions) {
+      if (filterId === changedId) continue;
+      const currentValue = select.value;
+      const entries = collectDependentOptions(filterId);
+      fillSelect(select, entries, firstLabel);
+      if (entries.some(([value]) => value === currentValue)) select.value = currentValue;
+    }
+  }
+
+  if (refreshStatusAvailability(changedId)) {
+    for (const [filterId, select, firstLabel] of definitions) {
+      if (filterId === changedId) continue;
+      const currentValue = select.value;
+      const entries = collectDependentOptions(filterId);
+      fillSelect(select, entries, firstLabel);
+      if (entries.some(([value]) => value === currentValue)) select.value = currentValue;
+    }
+  }
+}
+
+function collectDependentOptions(targetFilterId) {
+  const options = new Map();
+  for (const item of state.items) {
+    if (!itemMatchesDraftFilters(item, targetFilterId)) continue;
+
+    if (targetFilterId === "categoryFilter") {
+      for (const value of item.categories || []) if (value) options.set(value, value);
+      continue;
+    }
+    if (targetFilterId === "unitFilter") {
+      for (const value of item.units || []) if (value) options.set(value, value);
+      continue;
+    }
+    if (targetFilterId === "supplierFilter") {
+      for (const value of item.suppliers || []) if (value) options.set(value, value);
+      continue;
+    }
+
+    const status = ui.stockStatusFilter.value;
+    const positions = draftPositions(item, targetFilterId)
+      .filter((position) => !status || positionMatchesStatus(position, status));
+    for (const position of positions) {
+      if (targetFilterId === "branchFilter" && position.branchCode) {
+        options.set(position.branchCode, [position.branchCode, position.branchName].filter(Boolean).join(" · "));
+      }
+      if (targetFilterId === "locationFilter" && position.locationKey) {
+        options.set(position.locationKey, [position.branchCode, position.localCode, position.localName].filter(Boolean).join(" · "));
+      }
+    }
+  }
+  return [...options];
+}
+
+function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
+  const query = normalizeSearch(ui.searchInput.value);
+  const branch = excludedFilterId === "branchFilter" ? "" : ui.branchFilter.value;
+  const location = excludedFilterId === "locationFilter" ? "" : ui.locationFilter.value;
+  const category = excludedFilterId === "categoryFilter" ? "" : ui.categoryFilter.value;
+  const unit = excludedFilterId === "unitFilter" ? "" : ui.unitFilter.value;
+  const supplier = excludedFilterId === "supplierFilter" ? "" : ui.supplierFilter.value;
+  const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
+  const positiveOnly = ui.positiveBalanceFilter.checked;
+
+  if (query && !item.searchText.includes(query)) return false;
+  if (category && !(item.categories || []).includes(category)) return false;
+  if (unit && !(item.units || []).includes(unit)) return false;
+  if (supplier && !(item.suppliers || []).includes(supplier)) return false;
+
+  const positions = (item.positions || []).filter((position) => {
+    if (branch && position.branchCode !== branch) return false;
+    if (location && position.locationKey !== location) return false;
+    return true;
+  });
+  if ((branch || location || status || positiveOnly) && !positions.length) return false;
+  if (status && !positions.some((position) => positionMatchesStatus(position, status))) return false;
+  if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
+  return true;
+}
+
+function draftPositions(item, excludedFilterId) {
+  const branch = excludedFilterId === "branchFilter" ? "" : ui.branchFilter.value;
+  const location = excludedFilterId === "locationFilter" ? "" : ui.locationFilter.value;
+  return (item.positions || []).filter((position) => {
+    if (branch && position.branchCode !== branch) return false;
+    if (location && position.locationKey !== location) return false;
+    return true;
+  });
+}
+
+function refreshStatusAvailability(changedId) {
+  if (changedId === "stockStatusFilter") return false;
+  for (const option of ui.stockStatusFilter.options) {
+    if (!option.value) continue;
+    option.disabled = !state.items.some((item) => itemMatchesDraftFilters(item, "stockStatusFilter", option.value));
+  }
+  if (!ui.stockStatusFilter.selectedOptions[0]?.disabled) return false;
+  ui.stockStatusFilter.value = "";
+  return true;
+}
+
 function fillSelect(select, entries, firstLabel) {
   const sorted = entries
     .filter(([value]) => value)
@@ -462,7 +583,8 @@ function clearFilters() {
   ui.supplierFilter.value = "";
   ui.stockStatusFilter.value = "";
   ui.positiveBalanceFilter.checked = false;
-  updateLocationFilter(ui.locationFilter, "");
+  populateFilters();
+  for (const option of ui.stockStatusFilter.options) option.disabled = false;
   applyAllFilters(true);
 }
 
@@ -504,8 +626,8 @@ function positionMatchesStatus(position, status) {
   const maximum = position.maximum ?? 0;
   const quantity = position.quantity ?? 0;
 
-  if (status === "zero-configured") return minimum > 0 && maximum > 0 && quantity === 0;
-  if (status === "below-with-balance") return minimum > 0 && quantity > 0 && quantity < minimum;
+  if (status === "zero") return quantity === 0;
+  if (status === "below-min") return minimum > 0 && quantity > 0 && quantity < minimum;
   if (status === "above-max") return maximum > 0 && quantity > maximum;
   if (status === "within-range") return minimum > 0 && maximum > 0 && quantity >= minimum && quantity <= maximum;
   return true;
