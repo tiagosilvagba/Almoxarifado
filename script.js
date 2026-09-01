@@ -23,11 +23,6 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2,
 });
 
-const compactNumberFormatter = new Intl.NumberFormat("pt-BR", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
 const compactCurrencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -360,7 +355,7 @@ function applyFilters() {
 }
 
 function updateMetrics(items) {
-  let quantity = 0;
+  let codesWithStock = 0;
   let value = 0;
   let outOfStock = 0;
   let belowMin = 0;
@@ -370,7 +365,7 @@ function updateMetrics(items) {
   const pendingSc = new Set();
 
   for (const item of items) {
-    quantity += item.balanceTotal || 0;
+    if (item.balanceTotal > 0) codesWithStock += 1;
     value += item.stockValueTotal || 0;
     if (item.flags.outOfStock) outOfStock += 1;
     if (item.flags.belowMin) belowMin += 1;
@@ -381,8 +376,8 @@ function updateMetrics(items) {
   }
 
   ui.metricItems.textContent = integerFormatter.format(items.length);
-  ui.metricQuantity.textContent = compactNumberFormatter.format(quantity);
-  ui.metricQuantity.title = numberFormatter.format(quantity);
+  ui.metricQuantity.textContent = integerFormatter.format(codesWithStock);
+  ui.metricQuantity.title = pluralize(codesWithStock, "código com saldo", "códigos com saldo");
   ui.metricValue.textContent = compactCurrencyFormatter.format(value);
   ui.metricValue.title = currencyFormatter.format(value);
   ui.metricOutOfStock.textContent = integerFormatter.format(outOfStock);
