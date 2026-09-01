@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-2">
-    <script src="script.js?v=20260901-2" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-3">
+    <script src="script.js?v=20260901-3" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -61,6 +61,17 @@
             <span id="metricsContext" class="context-label">Base completa</span>
           </div>
 
+          <section class="filter-panel filter-panel--compact dashboard-filters" aria-label="Filtrar indicadores do Dashboard">
+            <label class="field">
+              <span>Filial</span>
+              <select id="dashboardBranchFilter"><option value="">Todas as filiais</option></select>
+            </label>
+            <label class="field">
+              <span>Local de estoque</span>
+              <select id="dashboardLocationFilter"><option value="">Todos os locais</option></select>
+            </label>
+          </section>
+
           <div class="metrics-grid" aria-label="Indicadores">
             <article class="metric metric--blue">
               <span class="metric__label">Total de itens</span>
@@ -68,9 +79,9 @@
               <small>códigos catalogados</small>
             </article>
             <article class="metric metric--steel">
-              <span class="metric__label">Códigos com estoque</span>
+              <span class="metric__label">Códigos por filial com estoque</span>
               <strong id="metricQuantity">—</strong>
-              <small>itens com saldo positivo</small>
+              <small>contagem aditiva entre filiais</small>
             </article>
             <article class="metric metric--navy">
               <span class="metric__label">Valor do estoque</span>
@@ -154,6 +165,17 @@
               <select id="supplierFilter"><option value="">Todos os fornecedores</option></select>
             </label>
 
+            <label class="field">
+              <span>Situação do estoque</span>
+              <select id="stockStatusFilter">
+                <option value="">Todas as situações</option>
+                <option value="zero-configured">Mínimo e máximo positivos, saldo zero</option>
+                <option value="below-with-balance">Abaixo do mínimo, com saldo</option>
+                <option value="above-max">Acima do máximo</option>
+                <option value="within-range">Dentro do range</option>
+              </select>
+            </label>
+
             <label class="switch-field">
               <input id="positiveBalanceFilter" type="checkbox">
               <span class="switch-field__track" aria-hidden="true"></span>
@@ -212,6 +234,14 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
                 <input id="purchaseSearchInput" type="search" autocomplete="off" placeholder="Código, descrição, filial ou local">
               </span>
+            </label>
+            <label class="field">
+              <span>Filial</span>
+              <select id="purchaseBranchFilter"><option value="">Todas as filiais</option></select>
+            </label>
+            <label class="field">
+              <span>Local de estoque</span>
+              <select id="purchaseLocationFilter"><option value="">Todos os locais</option></select>
             </label>
           </section>
 

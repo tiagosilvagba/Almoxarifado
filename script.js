@@ -66,13 +66,15 @@ function cacheUi() {
     "metricValue", "metricOutOfStock", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "searchInput",
     "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
-    "positiveBalanceFilter", "clearFilters", "resultCount", "cardsGrid", "emptyState",
+    "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "resultCount", "cardsGrid", "emptyState",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
     "modalSubtitle", "modalClose", "modalBadges", "modalGallery", "modalBalance",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedWithoutMax",
-    "purchaseSearchInput", "purchaseNeedResultCount", "purchaseNeedTableWrap",
+    "purchaseSearchInput", "purchaseBranchFilter", "purchaseLocationFilter",
+    "purchaseNeedResultCount", "purchaseNeedTableWrap", "dashboardBranchFilter",
+    "dashboardLocationFilter",
     "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
     "consumptionColumnCount", "consumptionPreviewWrap",
   ];
@@ -93,14 +95,26 @@ function bindEvents() {
 
   for (const element of [
     ui.branchFilter,
-    ui.locationFilter,
     ui.categoryFilter,
     ui.unitFilter,
     ui.supplierFilter,
+    ui.stockStatusFilter,
     ui.positiveBalanceFilter,
   ]) {
     element.addEventListener("change", applyFilters);
   }
+
+  ui.branchFilter.addEventListener("change", () => {
+    updateLocationFilter(ui.locationFilter, ui.branchFilter.value);
+    applyFilters();
+  });
+  ui.locationFilter.addEventListener("change", applyFilters);
+
+  ui.dashboardBranchFilter.addEventListener("change", () => {
+    updateLocationFilter(ui.dashboardLocationFilter, ui.dashboardBranchFilter.value);
+    updateDashboardMetrics();
+  });
+  ui.dashboardLocationFilter.addEventListener("change", updateDashboardMetrics);
 
   ui.clearFilters.addEventListener("click", clearFilters);
   ui.loadMoreButton.addEventListener("click", renderNextBatch);
@@ -112,6 +126,11 @@ function bindEvents() {
   });
 
   ui.purchaseSearchInput.addEventListener("input", debounce(renderPurchaseNeeds, 160));
+  ui.purchaseBranchFilter.addEventListener("change", () => {
+    updateLocationFilter(ui.purchaseLocationFilter, ui.purchaseBranchFilter.value);
+    renderPurchaseNeeds();
+  });
+  ui.purchaseLocationFilter.addEventListener("change", renderPurchaseNeeds);
   ui.purchaseNeedTableWrap.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-item-code]");
     if (trigger) openItem(trigger.dataset.itemCode);
@@ -252,7 +271,7 @@ async function handleWorkerMessage(event) {
     state.imageIndex = await state.imagePromise;
     prepareItems();
     populateFilters();
-    updateMetrics(state.items);
+    updateDashboardMetrics();
     buildPurchaseNeeds();
     renderPurchaseNeeds();
     renderConsumptionReview();
@@ -379,10 +398,34 @@ function populateFilters() {
   }
 
   fillSelect(ui.branchFilter, [...branches], "Todas as filiais");
-  fillSelect(ui.locationFilter, [...locations], "Todos os locais");
+  fillSelect(ui.dashboardBranchFilter, [...branches], "Todas as filiais");
+  fillSelect(ui.purchaseBranchFilter, [...branches], "Todas as filiais");
+  updateLocationFilter(ui.locationFilter, ui.branchFilter.value);
+  updateLocationFilter(ui.dashboardLocationFilter, ui.dashboardBranchFilter.value);
+  updateLocationFilter(ui.purchaseLocationFilter, ui.purchaseBranchFilter.value);
   fillSelect(ui.categoryFilter, [...categories].map((value) => [value, value]), "Todas as categorias");
   fillSelect(ui.unitFilter, [...units].map((value) => [value, value]), "Todas as unidades");
   fillSelect(ui.supplierFilter, [...suppliers].map((value) => [value, value]), "Todos os fornecedores");
+}
+
+function updateLocationFilter(select, branchCode) {
+  const currentValue = select.value;
+  const locations = new Map();
+
+  for (const item of state.items) {
+    for (const position of item.positions || []) {
+      if (branchCode && position.branchCode !== branchCode) continue;
+      if (!position.locationKey) continue;
+      locations.set(position.locationKey, [
+        position.branchCode,
+        position.localCode,
+        position.localName,
+      ].filter(Boolean).join(" · "));
+    }
+  }
+
+  fillSelect(select, [...locations], "Todos os locais");
+  if ([...locations].some(([value]) => value === currentValue)) select.value = currentValue;
 }
 
 function fillSelect(select, entries, firstLabel) {
@@ -403,6 +446,7 @@ function clearFilters() {
   ui.categoryFilter.value = "";
   ui.unitFilter.value = "";
   ui.supplierFilter.value = "";
+  ui.stockStatusFilter.value = "";
   ui.positiveBalanceFilter.checked = false;
   applyFilters();
   ui.searchInput.focus();
@@ -415,16 +459,22 @@ function applyFilters() {
   const category = ui.categoryFilter.value;
   const unit = ui.unitFilter.value;
   const supplier = ui.supplierFilter.value;
+  const stockStatus = ui.stockStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
   state.filteredItems = state.items.filter((item) => {
     if (query && !item.searchText.includes(query)) return false;
-    if (branch && !(item.positions || []).some((position) => position.branchCode === branch)) return false;
-    if (location && !(item.positions || []).some((position) => position.locationKey === location)) return false;
+    const matchingPositions = (item.positions || []).filter((position) => {
+      if (branch && position.branchCode !== branch) return false;
+      if (location && position.locationKey !== location) return false;
+      return true;
+    });
+    if ((branch || location) && !matchingPositions.length) return false;
+    if (stockStatus && !matchingPositions.some((position) => positionMatchesStatus(position, stockStatus))) return false;
     if (category && !(item.categories || []).includes(category)) return false;
     if (unit && !(item.units || []).includes(unit)) return false;
     if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-    if (positiveOnly && item.balanceTotal <= 0) return false;
+    if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
   });
 
@@ -435,8 +485,23 @@ function applyFilters() {
   renderNextBatch();
 }
 
-function updateMetrics(items) {
-  let codesWithStock = 0;
+function positionMatchesStatus(position, status) {
+  const minimum = position.minimum ?? 0;
+  const maximum = position.maximum ?? 0;
+  const quantity = position.quantity ?? 0;
+
+  if (status === "zero-configured") return minimum > 0 && maximum > 0 && quantity === 0;
+  if (status === "below-with-balance") return minimum > 0 && quantity > 0 && quantity < minimum;
+  if (status === "above-max") return maximum > 0 && quantity > maximum;
+  if (status === "within-range") return minimum > 0 && maximum > 0 && quantity >= minimum && quantity <= maximum;
+  return true;
+}
+
+function updateDashboardMetrics() {
+  const branch = ui.dashboardBranchFilter.value;
+  const location = ui.dashboardLocationFilter.value;
+  const scopedItems = new Set();
+  const codesWithStock = new Set();
   let value = 0;
   let outOfStock = 0;
   let belowMin = 0;
@@ -445,20 +510,34 @@ function updateMetrics(items) {
   let negative = 0;
   const pendingSc = new Set();
 
-  for (const item of items) {
-    if (item.balanceTotal > 0) codesWithStock += 1;
-    value += item.stockValueTotal || 0;
-    if (item.flags.outOfStock) outOfStock += 1;
-    if (item.flags.belowMin) belowMin += 1;
-    if (item.flags.aboveMax) aboveMax += 1;
-    if (item.flags.unconfigured) unconfigured += 1;
-    if (item.flags.negative) negative += 1;
+  for (const item of state.items) {
+    const positions = (item.positions || []).filter((position) => {
+      if (branch && position.branchCode !== branch) return false;
+      if (location && position.locationKey !== location) return false;
+      return true;
+    });
+    if (!positions.length && (branch || location)) continue;
+    if (positions.length || (!branch && !location)) scopedItems.add(item.code);
+
+    for (const position of positions) {
+      value += position.stockValue || 0;
+      if (position.quantity > 0) {
+        const stockKey = branch ? item.code : `${position.branchCode}::${item.code}`;
+        codesWithStock.add(stockKey);
+      }
+      if (position.outOfStock) outOfStock += 1;
+      if (position.belowMin) belowMin += 1;
+      if (position.aboveMax) aboveMax += 1;
+      if (position.unconfigured) unconfigured += 1;
+      if (position.negative) negative += 1;
+    }
+
     for (const sc of item.pendingScCodes || []) pendingSc.add(sc);
   }
 
-  ui.metricItems.textContent = integerFormatter.format(items.length);
-  ui.metricQuantity.textContent = integerFormatter.format(codesWithStock);
-  ui.metricQuantity.title = pluralize(codesWithStock, "código com saldo", "códigos com saldo");
+  ui.metricItems.textContent = integerFormatter.format(scopedItems.size);
+  ui.metricQuantity.textContent = integerFormatter.format(codesWithStock.size);
+  ui.metricQuantity.title = pluralize(codesWithStock.size, "ocorrência de código com saldo", "ocorrências de código com saldo");
   ui.metricValue.textContent = compactCurrencyFormatter.format(value);
   ui.metricValue.title = currencyFormatter.format(value);
   ui.metricOutOfStock.textContent = integerFormatter.format(outOfStock);
@@ -467,6 +546,11 @@ function updateMetrics(items) {
   ui.metricUnconfigured.textContent = integerFormatter.format(unconfigured);
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
   ui.metricNegative.textContent = integerFormatter.format(negative);
+  ui.metricsContext.textContent = location
+    ? ui.dashboardLocationFilter.selectedOptions[0]?.textContent || "Local selecionado"
+    : branch
+      ? ui.dashboardBranchFilter.selectedOptions[0]?.textContent || `Filial ${branch}`
+      : "Todas as filiais · contagem aditiva";
 }
 
 function buildPurchaseNeeds() {
@@ -494,8 +578,15 @@ function buildPurchaseNeeds() {
 
 function renderPurchaseNeeds() {
   const query = normalizeSearch(ui.purchaseSearchInput.value);
+  const branch = ui.purchaseBranchFilter.value;
+  const location = ui.purchaseLocationFilter.value;
+  const scoped = state.purchaseNeeds.filter(({ position }) => {
+    if (branch && position.branchCode !== branch) return false;
+    if (location && position.locationKey !== location) return false;
+    return true;
+  });
   const visible = query
-    ? state.purchaseNeeds.filter(({ item, position }) => normalizeSearch([
+    ? scoped.filter(({ item, position }) => normalizeSearch([
       item.code,
       item.name,
       position.branchCode,
@@ -503,12 +594,12 @@ function renderPurchaseNeeds() {
       position.localCode,
       position.localName,
     ].join(" ")).includes(query))
-    : state.purchaseNeeds;
+    : scoped;
 
-  const itemCodes = new Set(state.purchaseNeeds.map(({ item }) => item.code));
-  const withoutMaximum = state.purchaseNeeds.filter(({ position }) => !(position.maximum > 0)).length;
+  const itemCodes = new Set(scoped.map(({ item }) => item.code));
+  const withoutMaximum = scoped.filter(({ position }) => !(position.maximum > 0)).length;
   ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
-  ui.purchaseNeedPositions.textContent = integerFormatter.format(state.purchaseNeeds.length);
+  ui.purchaseNeedPositions.textContent = integerFormatter.format(scoped.length);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
   ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "posição", "posições")} exibida${visible.length === 1 ? "" : "s"}`;
 
