@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-8">
-    <script src="script.js?v=20260901-8" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-9">
+    <script src="script.js?v=20260901-9" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -121,7 +121,7 @@
 
           <div class="filter-actions">
             <button id="clearFilters" class="button button--ghost" type="button">Limpar filtros</button>
-            <button id="applyFiltersButton" class="button button--primary" type="button">Aplicar filtros</button>
+            <button id="applyFiltersButton" class="button button--primary" type="button">Concluir e fechar</button>
           </div>
         </section>
 
@@ -187,6 +187,18 @@
             </article>
           </div>
           <p id="metricReconciliation" class="metric-reconciliation" aria-live="polite"></p>
+
+          <section class="dashboard-detail" aria-labelledby="pendingScTitle">
+            <div class="table-heading">
+              <div>
+                <span class="eyebrow">Compras pendentes</span>
+                <h3 id="pendingScTitle">SC sem OF gerada</h3>
+                <p>Solicitações com compra confirmada, não canceladas e sem código de OF.</p>
+              </div>
+              <span id="pendingScListCount" class="context-label">0 registros</span>
+            </div>
+            <div id="pendingScTableWrap" class="table-wrap"></div>
+          </section>
         </section>
 
         <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="resultsTitle">
@@ -276,6 +288,28 @@
         </section>
       </section>
     </main>
+
+    <dialog id="purchaseNeedModal" class="item-modal purchase-need-modal" aria-labelledby="purchaseModalTitle">
+      <div class="modal-shell modal-shell--purchase">
+        <header class="modal-header modal-header--purchase">
+          <div>
+            <span id="purchaseModalCode" class="modal-code"></span>
+            <h2 id="purchaseModalTitle">Necessidade de Compra</h2>
+            <p id="purchaseModalSubtitle"></p>
+          </div>
+          <button id="purchaseModalClose" class="modal-close" type="button" aria-label="Fechar necessidade de compra">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content">
+          <div id="purchaseModalSummary" class="summary-cards purchase-summary-cards"></div>
+          <dl id="purchaseModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions">
+            <button id="purchaseModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
 
     <dialog id="itemModal" class="item-modal" aria-labelledby="modalTitle">
       <div class="modal-shell">

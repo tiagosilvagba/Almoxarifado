@@ -57,6 +57,8 @@ const state = {
   historyVisible: CONFIG.historyBatch,
   lastFocusedElement: null,
   purchaseNeeds: [],
+  purchaseNeedByKey: new Map(),
+  activePurchaseNeed: null,
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
 };
 
@@ -90,6 +92,9 @@ function cacheUi() {
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedWithoutMax",
     "purchaseNeedResultCount", "purchaseNeedTableWrap",
+    "pendingScListCount", "pendingScTableWrap", "purchaseNeedModal", "purchaseModalClose",
+    "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
+    "purchaseModalDetails", "purchaseModalOpenItem",
     "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
     "consumptionColumnCount", "consumptionPreviewWrap",
   ];
@@ -114,10 +119,10 @@ function bindEvents() {
     ui.supplierFilter,
     ui.stockStatusFilter,
   ]) {
-    select.addEventListener("change", () => refreshDependentFilters(select.id));
+    select.addEventListener("change", () => handleAutomaticFilter(select.id));
   }
-  ui.positiveBalanceFilter.addEventListener("change", () => refreshDependentFilters("positiveBalanceFilter"));
-  ui.searchInput.addEventListener("input", debounce(() => refreshDependentFilters("searchInput"), 180));
+  ui.positiveBalanceFilter.addEventListener("change", () => handleAutomaticFilter("positiveBalanceFilter"));
+  ui.searchInput.addEventListener("input", debounce(() => handleAutomaticFilter("searchInput"), 180));
   ui.searchInput.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
@@ -140,8 +145,26 @@ function bindEvents() {
   });
 
   ui.purchaseNeedTableWrap.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-purchase-need-key]");
+    if (trigger) openPurchaseNeedModal(trigger.dataset.purchaseNeedKey);
+  });
+  ui.pendingScTableWrap.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-item-code]");
     if (trigger) openItem(trigger.dataset.itemCode);
+  });
+
+  ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
+  ui.purchaseNeedModal.addEventListener("click", (event) => {
+    if (event.target === ui.purchaseNeedModal) closePurchaseNeedModal();
+  });
+  ui.purchaseNeedModal.addEventListener("close", () => {
+    state.activePurchaseNeed = null;
+    state.lastFocusedElement?.focus?.();
+  });
+  ui.purchaseModalOpenItem.addEventListener("click", () => {
+    const code = state.activePurchaseNeed?.item.code;
+    closePurchaseNeedModal();
+    if (code) window.setTimeout(() => openItem(code), 0);
   });
 
   for (const pageTab of ui.pageTabs) {
@@ -262,9 +285,15 @@ function closeFilters() {
 function applyAllFilters(shouldClose = false) {
   applyFilters();
   updateDashboardMetrics();
+  renderPendingScList();
   renderPurchaseNeeds();
   updateFilterSummary();
   if (shouldClose) closeFilters();
+}
+
+function handleAutomaticFilter(changedId) {
+  refreshDependentFilters(changedId);
+  applyAllFilters(false);
 }
 
 function updateFilterSummary() {
@@ -757,6 +786,57 @@ function buildPurchaseNeeds() {
     if (codeOrder) return codeOrder;
     return a.position.locationKey.localeCompare(b.position.locationKey, "pt-BR", { numeric: true });
   });
+  state.purchaseNeedByKey.clear();
+  state.purchaseNeeds.forEach((need, index) => {
+    need.key = `need-${index}`;
+    state.purchaseNeedByKey.set(need.key, need);
+  });
+}
+
+function renderPendingScList() {
+  const rowsByKey = new Map();
+
+  for (const item of state.filteredItems) {
+    const pendingCodes = new Set(item.pendingScCodes || []);
+    if (!pendingCodes.size) continue;
+    for (const record of item.history || []) {
+      const sc = record.sc;
+      if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
+      const key = `${sc.code}::${item.code}`;
+      if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
+    }
+  }
+
+  const rows = [...rowsByKey.values()].sort((a, b) => {
+    const codeOrder = a.sc.code.localeCompare(b.sc.code, "pt-BR", { numeric: true });
+    return codeOrder || a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true });
+  });
+  const uniqueSc = new Set(rows.map(({ sc }) => sc.code));
+  ui.pendingScListCount.textContent = `${pluralize(uniqueSc.size, "SC", "SCs")} · ${pluralize(rows.length, "item", "itens")}`;
+
+  if (!rows.length) {
+    ui.pendingScTableWrap.innerHTML = `<div class="table-empty">Nenhuma SC sem OF corresponde aos filtros aplicados.</div>`;
+    return;
+  }
+
+  const body = rows.map(({ item, record, sc }) => `<tr>
+    <td><strong>${escapeHtml(sc.code)}</strong></td>
+    <td><button class="table-link" type="button" data-item-code="${escapeHtml(item.code)}">${escapeHtml(item.code)}</button></td>
+    <td class="cell-wrap">${escapeHtml(item.name)}</td>
+    <td class="cell-wrap">${escapeHtml(record.branch || "—")}</td>
+    <td>${escapeHtml(sc.date || "—")}</td>
+    <td>${escapeHtml(sc.deliveryDate || "—")}</td>
+    <td class="number">${formatOptionalNumber(sc.quantity)}</td>
+    <td class="number">${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</td>
+    <td class="cell-wrap">${escapeHtml(sc.category || "—")}</td>
+    <td class="cell-wrap">${escapeHtml(sc.reason || "—")}</td>
+    <td>${escapeHtml(sc.status || "—")}</td>
+  </tr>`).join("");
+
+  ui.pendingScTableWrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>SC</th><th>Código</th><th>Item</th><th>Filial</th><th>Criação</th><th>Entrega</th><th class="number">Quantidade</th><th class="number">Valor estimado</th><th>Categoria</th><th>Motivo</th><th>Situação</th></tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
 }
 
 function renderPurchaseNeeds() {
@@ -784,8 +864,8 @@ function renderPurchaseNeeds() {
     return;
   }
 
-  const rows = visible.map(({ item, position, target, suggested }) => `<tr>
-    <td><button class="table-link" type="button" data-item-code="${escapeHtml(item.code)}">${escapeHtml(item.code)}</button></td>
+  const rows = visible.map(({ item, position, target, suggested, key }) => `<tr data-purchase-need-key="${escapeHtml(key)}">
+    <td><button class="table-link" type="button" data-purchase-need-key="${escapeHtml(key)}">${escapeHtml(item.code)}</button></td>
     <td class="cell-wrap">${escapeHtml(item.name)}</td>
     <td>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · "))}</td>
     <td class="cell-wrap">${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · "))}</td>
@@ -805,6 +885,45 @@ function renderPurchaseNeeds() {
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+function openPurchaseNeedModal(key) {
+  const need = state.purchaseNeedByKey.get(key);
+  if (!need) return;
+  const { item, position, target, suggested } = need;
+  state.activePurchaseNeed = need;
+  state.lastFocusedElement = document.activeElement;
+
+  ui.purchaseModalCode.textContent = `Código ${item.code}`;
+  ui.purchaseModalTitle.textContent = item.name;
+  ui.purchaseModalSubtitle.textContent = [
+    position.branchCode,
+    position.branchName,
+    position.localCode,
+    position.localName,
+  ].filter(Boolean).join(" · ");
+  ui.purchaseModalSummary.innerHTML = `
+    <article><span>Saldo atual</span><strong>${numberFormatter.format(position.quantity)}</strong></article>
+    <article><span>Mínimo</span><strong>${formatOptionalNumber(position.minimum)}</strong></article>
+    <article><span>Máximo</span><strong>${formatOptionalNumber(position.maximum)}</strong></article>
+    <article><span>Meta</span><strong>${numberFormatter.format(target)}</strong></article>
+    <article><span>Comprar</span><strong>${numberFormatter.format(suggested)}</strong></article>`;
+  ui.purchaseModalDetails.innerHTML = `
+    <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
+    <div><dt>Filial</dt><dd>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</dd></div>
+    <div><dt>Local</dt><dd>${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · ") || "—")}</dd></div>
+    <div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "—")}</dd></div>
+    <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
+    <div><dt>Critério da sugestão</dt><dd>${position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
+
+  if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
+  else ui.purchaseNeedModal.setAttribute("open", "");
+  ui.purchaseModalClose.focus();
+}
+
+function closePurchaseNeedModal() {
+  if (typeof ui.purchaseNeedModal.close === "function" && ui.purchaseNeedModal.open) ui.purchaseNeedModal.close();
+  else ui.purchaseNeedModal.removeAttribute("open");
 }
 
 function renderConsumptionReview() {

@@ -521,6 +521,29 @@ select:focus-visible {
   text-align: center;
 }
 
+.dashboard-detail {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--steel-200);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-detail .table-heading {
+  margin-bottom: 14px;
+}
+
+.dashboard-detail h3 {
+  margin: 3px 0 0;
+  color: var(--navy-900);
+  font-size: 1.22rem;
+}
+
+.dashboard-detail .table-heading p {
+  margin: 5px 0 0;
+}
+
 .filter-panel {
   padding: 22px;
   border: 1px solid var(--steel-200);
@@ -1067,6 +1090,42 @@ select:focus-visible {
   backdrop-filter: blur(3px);
 }
 
+.modal-shell--purchase {
+  max-width: 860px;
+  border-top: 5px solid var(--amber);
+}
+
+.modal-header--purchase {
+  background: linear-gradient(120deg, var(--amber-soft), var(--white) 62%);
+}
+
+.purchase-modal-content {
+  display: grid;
+  gap: 20px;
+}
+
+.purchase-summary-cards {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.purchase-summary-cards article:last-child {
+  border-color: color-mix(in srgb, var(--amber) 34%, var(--steel-200));
+  background: var(--amber-soft);
+}
+
+.purchase-summary-cards article:last-child strong {
+  color: var(--amber);
+}
+
+.purchase-details {
+  margin: 0;
+}
+
+.purchase-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .modal-shell {
   max-height: min(92vh, 960px);
   display: grid;
@@ -1326,6 +1385,14 @@ select:focus-visible {
   margin-bottom: -14px;
 }
 
+#purchaseNeedTableWrap tbody tr {
+  cursor: pointer;
+}
+
+#purchaseNeedTableWrap tbody tr:hover td {
+  background: var(--blue-100);
+}
+
 .table-link {
   padding: 2px 0;
   border: 0;
@@ -1537,6 +1604,10 @@ select:focus-visible {
 
   .summary-layout {
     grid-template-columns: 1fr;
+  }
+
+  .purchase-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .item-modal,
