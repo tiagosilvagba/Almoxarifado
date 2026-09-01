@@ -10,6 +10,20 @@ const CONFIG = Object.freeze({
   historyBatch: 20,
 });
 
+const THEME_IDS = new Set([
+  "jbs", "seara", "industrial", "graphite", "operations",
+  "logistics", "corporate", "ocean", "neutral", "contrast",
+]);
+
+if (typeof document !== "undefined") {
+  try {
+    const savedTheme = localStorage.getItem("almoxarifado-theme");
+    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "industrial";
+  } catch {
+    document.documentElement.dataset.theme = "industrial";
+  }
+}
+
 const numberFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2,
 });
@@ -54,6 +68,7 @@ if (typeof document !== "undefined") {
 
 async function init() {
   cacheUi();
+  initializeTheme();
   bindEvents();
   navigateToPage(pageFromHash(), false);
   await loadCatalog();
@@ -61,7 +76,7 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "refreshButton", "loadingPanel", "loadingTitle", "loadingMessage",
+    "statusLine", "refreshButton", "themeSelect", "loadingPanel", "loadingTitle", "loadingMessage",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricOutOfStock", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "searchInput",
@@ -90,6 +105,7 @@ function cacheUi() {
 }
 
 function bindEvents() {
+  ui.themeSelect.addEventListener("change", () => applyTheme(ui.themeSelect.value, true));
   for (const select of [
     ui.branchFilter,
     ui.locationFilter,
@@ -153,6 +169,27 @@ function bindEvents() {
 
   for (const tab of ui.tabs) {
     tab.addEventListener("click", () => activateTab(tab.dataset.tab));
+  }
+}
+
+function initializeTheme() {
+  const theme = THEME_IDS.has(document.documentElement.dataset.theme)
+    ? document.documentElement.dataset.theme
+    : "industrial";
+  ui.themeSelect.value = theme;
+  applyTheme(theme, false);
+}
+
+function applyTheme(theme, persist) {
+  const selectedTheme = THEME_IDS.has(theme) ? theme : "industrial";
+  document.documentElement.dataset.theme = selectedTheme;
+  const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--navy-800").trim();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor || "#123a63");
+  if (!persist) return;
+  try {
+    localStorage.setItem("almoxarifado-theme", selectedTheme);
+  } catch {
+    // O tema continua ativo durante a sessão mesmo se o armazenamento estiver indisponível.
   }
 }
 

@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-7">
-    <script src="script.js?v=20260901-7" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-8">
+    <script src="script.js?v=20260901-8" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -25,11 +25,28 @@
             <p id="statusLine" aria-live="polite">Preparando catálogo…</p>
           </div>
         </div>
-        <button id="refreshButton" class="icon-button" type="button" title="Recarregar os arquivos CSV" aria-label="Recarregar os arquivos CSV">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20 11a8.1 8.1 0 1 0-2.3 6.7M20 4v7h-7"></path>
-          </svg>
-        </button>
+        <div class="topbar__actions">
+          <label class="theme-picker">
+            <span>Tema</span>
+            <select id="themeSelect" aria-label="Escolher tema visual">
+              <option value="jbs">JBS</option>
+              <option value="seara">Seara</option>
+              <option value="industrial">Industrial Azul</option>
+              <option value="graphite">Grafite</option>
+              <option value="operations">Verde Operação</option>
+              <option value="logistics">Âmbar Logística</option>
+              <option value="corporate">Roxo Corporativo</option>
+              <option value="ocean">Oceano</option>
+              <option value="neutral">Claro Neutro</option>
+              <option value="contrast">Alto Contraste</option>
+            </select>
+          </label>
+          <button id="refreshButton" class="icon-button" type="button" title="Recarregar os arquivos CSV" aria-label="Recarregar os arquivos CSV">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 11a8.1 8.1 0 1 0-2.3 6.7M20 4v7h-7"></path>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="app-nav-wrap">
         <nav class="shell app-nav" aria-label="Navegação principal" role="tablist">

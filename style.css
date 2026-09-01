@@ -26,12 +26,90 @@
   --cyan-soft: #dff5f8;
   --violet: #6947a8;
   --violet-soft: #efe8fb;
+  --topbar-text: #c8d9e7;
+  --active-accent: #69c2ff;
+  --focus-color: rgba(32, 134, 210, 0.32);
+  --filter-count-bg: #a9dcff;
+  --theme-wash: rgba(18, 58, 99, 0.05);
   --shadow-sm: 0 2px 9px rgba(7, 26, 45, 0.07);
   --shadow-md: 0 12px 34px rgba(7, 26, 45, 0.13);
   --shadow-lg: 0 24px 70px rgba(7, 26, 45, 0.22);
   --radius-sm: 8px;
   --radius-md: 13px;
   --radius-lg: 18px;
+}
+
+html[data-theme="jbs"] {
+  --navy-950: #36070c; --navy-900: #650b14; --navy-800: #86111c; --navy-700: #a41724;
+  --blue-600: #c8102e; --blue-500: #e3212d; --blue-100: #fde4e7;
+  --steel-700: #72585b; --steel-500: #92787b; --steel-300: #d0bfc1; --steel-200: #e4d7d9; --steel-100: #f2e9ea; --steel-50: #faf6f6;
+  --text: #2d171a; --muted: #725c60; --topbar-text: #ffecef; --active-accent: #ffffff;
+  --focus-color: rgba(200, 16, 46, 0.32); --filter-count-bg: #ffffff; --theme-wash: rgba(200, 16, 46, 0.055);
+}
+
+html[data-theme="seara"] {
+  --navy-950: #400609; --navy-900: #72080f; --navy-800: #930d17; --navy-700: #ad111d;
+  --blue-600: #bd1420; --blue-500: #f3c500; --blue-100: #fff4bd;
+  --steel-700: #75633c; --steel-500: #95835d; --steel-300: #d4c9a9; --steel-200: #e7dfc8; --steel-100: #f4efdf; --steel-50: #fbf9f0;
+  --text: #2e210d; --muted: #71664f; --topbar-text: #fff5c7; --active-accent: #f3c500;
+  --focus-color: rgba(243, 197, 0, 0.42); --filter-count-bg: #f3c500; --theme-wash: rgba(243, 197, 0, 0.08);
+}
+
+html[data-theme="graphite"] {
+  --navy-950: #11161b; --navy-900: #1d252d; --navy-800: #29343e; --navy-700: #3a4854;
+  --blue-600: #337da8; --blue-500: #49a2d4; --blue-100: #dceef8;
+  --steel-700: #4d5a64; --steel-500: #74818a; --steel-300: #bdc6cc; --steel-200: #d8dee2; --steel-100: #e9edef; --steel-50: #f5f6f7;
+  --text: #1d252b; --muted: #65717a; --topbar-text: #dce5eb; --active-accent: #59b7e8;
+  --focus-color: rgba(73, 162, 212, 0.35); --filter-count-bg: #9bd6f4; --theme-wash: rgba(29, 37, 45, 0.06);
+}
+
+html[data-theme="operations"] {
+  --navy-950: #08291f; --navy-900: #0d4333; --navy-800: #125b45; --navy-700: #197357;
+  --blue-600: #16805e; --blue-500: #25a87c; --blue-100: #d9f3e9;
+  --steel-700: #48695e; --steel-500: #718c83; --steel-300: #b8cec7; --steel-200: #d4e2dd; --steel-100: #e7f0ed; --steel-50: #f3f8f6;
+  --text: #17352c; --muted: #5e776f; --topbar-text: #d9f4e9; --active-accent: #6be0b8;
+  --focus-color: rgba(37, 168, 124, 0.34); --filter-count-bg: #96ebcd; --theme-wash: rgba(22, 128, 94, 0.06);
+}
+
+html[data-theme="logistics"] {
+  --navy-950: #321b05; --navy-900: #553008; --navy-800: #70420d; --navy-700: #895718;
+  --blue-600: #b56b09; --blue-500: #e29419; --blue-100: #ffedcf;
+  --steel-700: #726047; --steel-500: #93816a; --steel-300: #d1c4b2; --steel-200: #e4dacd; --steel-100: #f1ebe3; --steel-50: #faf7f2;
+  --text: #352819; --muted: #766955; --topbar-text: #ffedd0; --active-accent: #ffc45c;
+  --focus-color: rgba(226, 148, 25, 0.38); --filter-count-bg: #ffd48b; --theme-wash: rgba(181, 107, 9, 0.065);
+}
+
+html[data-theme="corporate"] {
+  --navy-950: #1c1038; --navy-900: #30205a; --navy-800: #443078; --navy-700: #584293;
+  --blue-600: #6b4bb0; --blue-500: #8a68d1; --blue-100: #ece5fa;
+  --steel-700: #665d79; --steel-500: #887f99; --steel-300: #c9c2d4; --steel-200: #dfdae7; --steel-100: #eeeaf3; --steel-50: #f8f6fa;
+  --text: #2b223b; --muted: #70677e; --topbar-text: #eee8fb; --active-accent: #b79bef;
+  --focus-color: rgba(138, 104, 209, 0.36); --filter-count-bg: #d3c0f8; --theme-wash: rgba(107, 75, 176, 0.06);
+}
+
+html[data-theme="ocean"] {
+  --navy-950: #042a33; --navy-900: #074451; --navy-800: #0a5b6c; --navy-700: #0e7489;
+  --blue-600: #0789a3; --blue-500: #16abc5; --blue-100: #d9f3f7;
+  --steel-700: #496d74; --steel-500: #739097; --steel-300: #bbd0d4; --steel-200: #d6e3e6; --steel-100: #e8f0f2; --steel-50: #f3f8f9;
+  --text: #17353b; --muted: #5e7a80; --topbar-text: #d8f4f8; --active-accent: #57d4e5;
+  --focus-color: rgba(22, 171, 197, 0.35); --filter-count-bg: #91e1ec; --theme-wash: rgba(7, 137, 163, 0.06);
+}
+
+html[data-theme="neutral"] {
+  --navy-950: #20252b; --navy-900: #343b43; --navy-800: #48515a; --navy-700: #5c6670;
+  --blue-600: #356b94; --blue-500: #4f89b4; --blue-100: #e2edf5;
+  --steel-700: #5b6670; --steel-500: #818b94; --steel-300: #c6cdd2; --steel-200: #dce1e4; --steel-100: #eceff1; --steel-50: #f8f9fa;
+  --text: #252a2f; --muted: #6b747c; --topbar-text: #edf0f2; --active-accent: #8ec3e7;
+  --focus-color: rgba(79, 137, 180, 0.34); --filter-count-bg: #b9d8ed; --theme-wash: rgba(72, 81, 90, 0.045);
+}
+
+html[data-theme="contrast"] {
+  --navy-950: #000000; --navy-900: #000000; --navy-800: #111111; --navy-700: #262626;
+  --blue-600: #005fcc; --blue-500: #ffd900; --blue-100: #fff6ad;
+  --steel-700: #242424; --steel-500: #505050; --steel-300: #8f8f8f; --steel-200: #bdbdbd; --steel-100: #e0e0e0; --steel-50: #ffffff;
+  --text: #000000; --muted: #333333; --topbar-text: #ffffff; --active-accent: #ffd900;
+  --focus-color: rgba(255, 217, 0, 0.7); --filter-count-bg: #ffd900; --theme-wash: rgba(0, 0, 0, 0.035);
+  --shadow-sm: 0 0 0 2px #111111; --shadow-md: 0 0 0 3px #111111; --shadow-lg: 0 0 0 4px #000000;
 }
 
 * {
@@ -47,7 +125,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(18, 58, 99, 0.05), transparent 240px),
+    linear-gradient(180deg, var(--theme-wash), transparent 240px),
     var(--steel-50);
   color: var(--text);
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -69,7 +147,7 @@ select {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 3px solid rgba(32, 134, 210, 0.32);
+  outline: 3px solid var(--focus-color);
   outline-offset: 2px;
 }
 
@@ -116,7 +194,7 @@ select:focus-visible {
   padding: 11px 17px;
   flex: 0 0 auto;
   border: 0;
-  color: #c8d9e7;
+  color: var(--topbar-text);
   background: transparent;
   font-size: 0.86rem;
   font-weight: 750;
@@ -148,7 +226,7 @@ select:focus-visible {
 }
 
 .app-nav__tab.is-active::after {
-  background: #69c2ff;
+  background: var(--active-accent);
 }
 
 .brand {
@@ -187,8 +265,43 @@ select:focus-visible {
 
 .brand p {
   margin: 5px 0 0;
-  color: #c8d9e7;
+  color: var(--topbar-text);
   font-size: 0.88rem;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.theme-picker {
+  display: grid;
+  gap: 3px;
+  color: var(--topbar-text);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.theme-picker select {
+  min-width: 170px;
+  height: 44px;
+  padding: 0 34px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 11px;
+  color: var(--white);
+  background: var(--navy-800);
+  font-size: 0.83rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.theme-picker option {
+  color: var(--text);
+  background: var(--white);
 }
 
 .icon-button,
@@ -458,7 +571,7 @@ select:focus-visible {
   padding-inline: 6px;
   border-radius: 999px;
   color: var(--navy-900);
-  background: #a9dcff;
+  background: var(--filter-count-bg);
   font-size: 0.75rem;
 }
 
@@ -654,7 +767,7 @@ select:focus-visible {
 }
 
 .switch-field input:focus-visible + .switch-field__track {
-  outline: 3px solid rgba(32, 134, 210, 0.32);
+  outline: 3px solid var(--focus-color);
   outline-offset: 2px;
 }
 
@@ -1461,6 +1574,27 @@ select:focus-visible {
     font-size: 1.16rem;
   }
 
+  .topbar__content {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .theme-picker > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .theme-picker select {
+    min-width: 0;
+    width: 126px;
+    height: 40px;
+    padding-left: 9px;
+    font-size: 0.76rem;
+  }
+
   .icon-button {
     width: 40px;
     height: 40px;
@@ -1579,6 +1713,20 @@ select:focus-visible {
 
   .details-list dd {
     padding-top: 2px;
+  }
+}
+
+@media (max-width: 400px) {
+  .brand__mark {
+    display: none;
+  }
+
+  .brand h1 {
+    font-size: 1rem;
+  }
+
+  .theme-picker select {
+    width: 112px;
   }
 }
 
