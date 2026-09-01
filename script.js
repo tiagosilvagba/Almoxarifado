@@ -626,7 +626,7 @@ function positionMatchesStatus(position, status) {
   const maximum = position.maximum ?? 0;
   const quantity = position.quantity ?? 0;
 
-  if (status === "zero") return quantity === 0;
+  if (status === "zero") return quantity === 0 && minimum + maximum > 0;
   if (status === "below-min") return minimum > 0 && quantity > 0 && quantity < minimum;
   if (status === "above-max") return maximum > 0 && quantity > maximum;
   if (status === "within-range") return minimum > 0 && maximum > 0 && quantity >= minimum && quantity <= maximum;
@@ -640,11 +640,11 @@ function updateDashboardMetrics() {
   const scopedItems = new Set();
   const codesWithStock = new Set();
   let value = 0;
-  let outOfStock = 0;
-  let belowMin = 0;
-  let aboveMax = 0;
-  let unconfigured = 0;
-  let negative = 0;
+  const outOfStockCodes = new Set();
+  const belowMinCodes = new Set();
+  const aboveMaxCodes = new Set();
+  const unconfiguredCodes = new Set();
+  const negativeCodes = new Set();
   const pendingSc = new Set();
 
   for (const item of state.filteredItems) {
@@ -663,11 +663,11 @@ function updateDashboardMetrics() {
         const stockKey = branch ? item.code : `${position.branchCode}::${item.code}`;
         codesWithStock.add(stockKey);
       }
-      if (position.outOfStock) outOfStock += 1;
-      if (position.belowMin) belowMin += 1;
-      if (position.aboveMax) aboveMax += 1;
-      if (position.unconfigured) unconfigured += 1;
-      if (position.negative) negative += 1;
+      if (position.outOfStock) outOfStockCodes.add(item.code);
+      if (position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum) belowMinCodes.add(item.code);
+      if (position.aboveMax) aboveMaxCodes.add(item.code);
+      if (position.unconfigured) unconfiguredCodes.add(item.code);
+      if (position.negative) negativeCodes.add(item.code);
     }
 
     for (const sc of item.pendingScCodes || []) pendingSc.add(sc);
@@ -678,12 +678,12 @@ function updateDashboardMetrics() {
   ui.metricQuantity.title = pluralize(codesWithStock.size, "ocorrência de código com saldo", "ocorrências de código com saldo");
   ui.metricValue.textContent = compactCurrencyFormatter.format(value);
   ui.metricValue.title = currencyFormatter.format(value);
-  ui.metricOutOfStock.textContent = integerFormatter.format(outOfStock);
-  ui.metricBelowMin.textContent = integerFormatter.format(belowMin);
-  ui.metricAboveMax.textContent = integerFormatter.format(aboveMax);
-  ui.metricUnconfigured.textContent = integerFormatter.format(unconfigured);
+  ui.metricOutOfStock.textContent = integerFormatter.format(outOfStockCodes.size);
+  ui.metricBelowMin.textContent = integerFormatter.format(belowMinCodes.size);
+  ui.metricAboveMax.textContent = integerFormatter.format(aboveMaxCodes.size);
+  ui.metricUnconfigured.textContent = integerFormatter.format(unconfiguredCodes.size);
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
-  ui.metricNegative.textContent = integerFormatter.format(negative);
+  ui.metricNegative.textContent = integerFormatter.format(negativeCodes.size);
   ui.metricsContext.textContent = location
     ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
     : branch

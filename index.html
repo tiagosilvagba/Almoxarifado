@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-5">
-    <script src="script.js?v=20260901-5" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-6">
+    <script src="script.js?v=20260901-6" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -89,7 +89,7 @@
               <span>Situação do estoque</span>
               <select id="stockStatusFilter">
                 <option value="">Todas as situações</option>
-                <option value="zero">Itens zerados</option>
+                <option value="zero">Itens zerados (Min + Máx &gt; 0)</option>
                 <option value="below-min">Itens abaixo do mínimo</option>
                 <option value="above-max">Itens acima do máximo</option>
                 <option value="within-range">Itens dentro do range</option>
@@ -141,7 +141,7 @@
             <article class="metric metric--amber">
               <span class="metric__label">Abaixo do mínimo</span>
               <strong id="metricBelowMin">—</strong>
-              <small>em ao menos uma posição</small>
+              <small>códigos com saldo abaixo do mínimo</small>
             </article>
             <article class="metric metric--red">
               <span class="metric__label">Acima do máximo</span>
