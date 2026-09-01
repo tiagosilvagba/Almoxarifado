@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#123a63">
+    <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Gestão de Almoxarifado</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="shell topbar__content">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+              <path d="M6 18.5 24 8l18 10.5v21a2.5 2.5 0 0 1-2.5 2.5h-31A2.5 2.5 0 0 1 6 39.5v-21Z"></path>
+              <path d="M14 26h20v16H14zM19 26v16M29 26v16M14 34h20"></path>
+            </svg>
+          </span>
+          <div>
+            <h1>Gestão de Almoxarifado</h1>
+            <p id="statusLine" aria-live="polite">Preparando catálogo…</p>
+          </div>
+        </div>
+        <button id="refreshButton" class="icon-button" type="button" title="Recarregar os arquivos CSV" aria-label="Recarregar os arquivos CSV">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 11a8.1 8.1 0 1 0-2.3 6.7M20 4v7h-7"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="shell main-content">
+      <section id="loadingPanel" class="loading-panel" aria-live="polite" aria-busy="true">
+        <div class="loading-panel__spinner" aria-hidden="true"></div>
+        <div>
+          <strong id="loadingTitle">Carregando dados do almoxarifado</strong>
+          <p id="loadingMessage">Lendo os arquivos de saldo e compras…</p>
+        </div>
+        <button id="retryButton" class="button button--primary is-hidden" type="button">Tentar novamente</button>
+      </section>
+
+      <section id="catalogContent" class="catalog-content is-hidden" aria-label="Catálogo do almoxarifado">
+        <div class="section-heading section-heading--compact">
+          <div>
+            <span class="eyebrow">Visão geral</span>
+            <h2>Indicadores do estoque</h2>
+          </div>
+          <span id="metricsContext" class="context-label">Base completa</span>
+        </div>
+
+        <div class="metrics-grid" aria-label="Indicadores">
+          <article class="metric metric--blue">
+            <span class="metric__label">Total de itens</span>
+            <strong id="metricItems">—</strong>
+            <small>códigos catalogados</small>
+          </article>
+          <article class="metric metric--steel">
+            <span class="metric__label">Quantidade em estoque</span>
+            <strong id="metricQuantity">—</strong>
+            <small>saldo consolidado</small>
+          </article>
+          <article class="metric metric--navy">
+            <span class="metric__label">Valor do estoque</span>
+            <strong id="metricValue">—</strong>
+            <small>valor atual consolidado</small>
+          </article>
+          <article class="metric metric--slate">
+            <span class="metric__label">Fora de estoque</span>
+            <strong id="metricOutOfStock">—</strong>
+            <small>sem limites e sem saldo</small>
+          </article>
+          <article class="metric metric--amber">
+            <span class="metric__label">Abaixo do mínimo</span>
+            <strong id="metricBelowMin">—</strong>
+            <small>em ao menos uma posição</small>
+          </article>
+          <article class="metric metric--red">
+            <span class="metric__label">Acima do máximo</span>
+            <strong id="metricAboveMax">—</strong>
+            <small>com máximo parametrizado</small>
+          </article>
+          <article class="metric metric--cyan">
+            <span class="metric__label">Saldo sem Min&amp;Máx</span>
+            <strong id="metricUnconfigured">—</strong>
+            <small>saldo com limites zerados</small>
+          </article>
+          <article class="metric metric--violet">
+            <span class="metric__label">SC sem OF</span>
+            <strong id="metricPendingSc">—</strong>
+            <small>compras confirmadas</small>
+          </article>
+          <article class="metric metric--charcoal">
+            <span class="metric__label">Saldo negativo</span>
+            <strong id="metricNegative">—</strong>
+            <small>em ao menos uma posição</small>
+          </article>
+        </div>
+
+        <section class="filter-panel" aria-labelledby="filterTitle">
+          <div class="filter-panel__header">
+            <div>
+              <span class="eyebrow">Consulta</span>
+              <h2 id="filterTitle">Localizar itens</h2>
+            </div>
+            <button id="clearFilters" class="text-button" type="button">Limpar filtros</button>
+          </div>
+
+          <div class="filters-grid">
+            <label class="field field--search">
+              <span>Código ou descrição</span>
+              <span class="field__control">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+                <input id="searchInput" type="search" autocomplete="off" placeholder="Digite um código, item ou grupo">
+              </span>
+            </label>
+
+            <label class="field">
+              <span>Filial</span>
+              <select id="branchFilter"><option value="">Todas as filiais</option></select>
+            </label>
+
+            <label class="field">
+              <span>Local de estoque</span>
+              <select id="locationFilter"><option value="">Todos os locais</option></select>
+            </label>
+
+            <label class="field">
+              <span>Categoria ou grupo</span>
+              <select id="categoryFilter"><option value="">Todas as categorias</option></select>
+            </label>
+
+            <label class="field">
+              <span>Unidade</span>
+              <select id="unitFilter"><option value="">Todas as unidades</option></select>
+            </label>
+
+            <label class="field">
+              <span>Fornecedor</span>
+              <select id="supplierFilter"><option value="">Todos os fornecedores</option></select>
+            </label>
+
+            <label class="switch-field">
+              <input id="positiveBalanceFilter" type="checkbox">
+              <span class="switch-field__track" aria-hidden="true"></span>
+              <span>Somente itens com saldo positivo</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="results" aria-labelledby="resultsTitle">
+          <div class="section-heading results__heading">
+            <div>
+              <span class="eyebrow">Catálogo</span>
+              <h2 id="resultsTitle">Itens encontrados</h2>
+            </div>
+            <div class="results__summary">
+              <strong id="resultCount">0 itens</strong>
+              <span>Ordenados por código</span>
+            </div>
+          </div>
+
+          <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+
+          <div id="emptyState" class="empty-state is-hidden">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 13h34v27H7zM7 13l8-7h18l8 7M17 24h14"></path></svg>
+            <h3>Nenhum item encontrado</h3>
+            <p>Altere os filtros ou limpe a busca para consultar outros itens.</p>
+          </div>
+
+          <div class="load-more-wrap">
+            <button id="loadMoreButton" class="button button--secondary is-hidden" type="button">Carregar mais</button>
+            <span id="visibleCount" class="visible-count"></span>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="itemModal" class="item-modal" aria-labelledby="modalTitle">
+      <div class="modal-shell">
+        <header class="modal-header">
+          <div>
+            <span id="modalCode" class="modal-code"></span>
+            <h2 id="modalTitle">Detalhes do item</h2>
+            <p id="modalSubtitle"></p>
+          </div>
+          <button id="modalClose" class="modal-close" type="button" aria-label="Fechar detalhes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+
+        <div id="modalBadges" class="modal-badges"></div>
+
+        <nav class="modal-tabs" aria-label="Seções do item" role="tablist">
+          <button class="modal-tab is-active" id="tab-summary" type="button" role="tab" aria-selected="true" aria-controls="panel-summary" data-tab="summary">Resumo e fotos</button>
+          <button class="modal-tab" id="tab-stock" type="button" role="tab" aria-selected="false" aria-controls="panel-stock" data-tab="stock">Posições de estoque</button>
+          <button class="modal-tab" id="tab-history" type="button" role="tab" aria-selected="false" aria-controls="panel-history" data-tab="history">SC, OF e REC</button>
+        </nav>
+
+        <div class="modal-content">
+          <section id="panel-summary" class="tab-panel" role="tabpanel" aria-labelledby="tab-summary">
+            <div class="summary-layout">
+              <div id="modalGallery" class="gallery"></div>
+              <div class="item-summary">
+                <div class="summary-cards">
+                  <article><span>Saldo total</span><strong id="modalBalance">—</strong></article>
+                  <article><span>Valor em estoque</span><strong id="modalStockValue">—</strong></article>
+                  <article><span>Posições</span><strong id="modalPositionCount">—</strong></article>
+                  <article><span>Registros de compras</span><strong id="modalHistoryCount">—</strong></article>
+                </div>
+                <dl id="modalDetails" class="details-list"></dl>
+              </div>
+            </div>
+          </section>
+
+          <section id="panel-stock" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="tab-stock">
+            <div class="table-heading">
+              <div>
+                <h3>Distribuição por filial e local</h3>
+                <p>Limites e saldos são avaliados individualmente em cada posição.</p>
+              </div>
+            </div>
+            <div id="stockTableWrap" class="table-wrap"></div>
+          </section>
+
+          <section id="panel-history" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="tab-history">
+            <div class="table-heading">
+              <div>
+                <h3>Processo completo de compras</h3>
+                <p>Solicitação de compra, ordem de fornecimento e recebimento/nota fiscal.</p>
+              </div>
+              <span id="historySummary" class="context-label"></span>
+            </div>
+            <div id="historyTableWrap" class="table-wrap"></div>
+            <div class="history-more-wrap">
+              <button id="historyLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais 20 registros</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
+    <noscript>
+      <div class="noscript">Ative o JavaScript para consultar o catálogo do almoxarifado.</div>
+    </noscript>
+  </body>
+</html>
