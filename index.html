@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-2">
+    <script src="script.js?v=20260901-2" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -32,11 +32,11 @@
         </button>
       </div>
       <div class="app-nav-wrap">
-        <nav class="shell app-nav" aria-label="Navegação principal">
-          <button class="app-nav__tab is-active" type="button" data-page="dashboard" aria-current="page">Dashboard</button>
-          <button class="app-nav__tab" type="button" data-page="catalogo">Catálogo</button>
-          <button class="app-nav__tab" type="button" data-page="necessidade-compra">Necessidade de Compra</button>
-          <button class="app-nav__tab" type="button" data-page="revisao-min-max">Revisão de Min e Máx</button>
+        <nav class="shell app-nav" aria-label="Navegação principal" role="tablist">
+          <a class="app-nav__tab is-active" href="#dashboard" data-page="dashboard" role="tab" aria-selected="true" aria-controls="page-dashboard">Dashboard</a>
+          <a class="app-nav__tab" href="#catalogo" data-page="catalogo" role="tab" aria-selected="false" aria-controls="page-catalogo">Catálogo</a>
+          <a class="app-nav__tab" href="#necessidade-compra" data-page="necessidade-compra" role="tab" aria-selected="false" aria-controls="page-necessidade-compra">Necessidade de Compra</a>
+          <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de Min e Máx</a>
         </nav>
       </div>
     </header>
@@ -51,7 +51,7 @@
         <button id="retryButton" class="button button--primary is-hidden" type="button">Tentar novamente</button>
       </section>
 
-      <section id="catalogContent" class="catalog-content is-hidden" aria-label="Catálogo do almoxarifado">
+      <section id="catalogContent" class="catalog-content" aria-label="Gestão do almoxarifado">
         <section id="page-dashboard" class="page-panel" data-page-panel="dashboard" aria-labelledby="dashboardTitle">
           <div class="section-heading section-heading--compact">
             <div>

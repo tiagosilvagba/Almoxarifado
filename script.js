@@ -55,6 +55,7 @@ if (typeof document !== "undefined") {
 async function init() {
   cacheUi();
   bindEvents();
+  navigateToPage(pageFromHash(), false);
   await loadCatalog();
 }
 
@@ -117,7 +118,10 @@ function bindEvents() {
   });
 
   for (const pageTab of ui.pageTabs) {
-    pageTab.addEventListener("click", () => navigateToPage(pageTab.dataset.page, true));
+    pageTab.addEventListener("click", (event) => {
+      event.preventDefault();
+      navigateToPage(pageTab.dataset.page, true);
+    });
     pageTab.addEventListener("keydown", handlePageTabKeydown);
   }
   window.addEventListener("hashchange", () => navigateToPage(pageFromHash(), false));
@@ -157,6 +161,7 @@ function navigateToPage(page, updateHash) {
     const active = tab.dataset.page === validPage;
     tab.classList.toggle("is-active", active);
     tab.setAttribute("aria-current", active ? "page" : "false");
+    tab.setAttribute("aria-selected", String(active));
     tab.tabIndex = active ? 0 : -1;
   }
 
@@ -271,7 +276,6 @@ async function handleWorkerMessage(event) {
 
 function showLoading(title, message) {
   ui.loadingPanel.classList.remove("is-hidden", "has-error");
-  ui.catalogContent.classList.add("is-hidden");
   ui.loadingPanel.setAttribute("aria-busy", "true");
   ui.loadingTitle.textContent = title;
   ui.loadingMessage.textContent = message;
