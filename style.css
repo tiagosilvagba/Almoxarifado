@@ -404,6 +404,93 @@ select:focus-visible {
   box-shadow: var(--shadow-sm);
 }
 
+.global-filter-bar {
+  position: sticky;
+  top: 122px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--steel-200);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
+}
+
+.button--filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--navy-700);
+  color: var(--white);
+  background: var(--navy-700);
+}
+
+.button--filter svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.filter-count {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding-inline: 6px;
+  border-radius: 999px;
+  color: var(--navy-900);
+  background: #a9dcff;
+  font-size: 0.75rem;
+}
+
+.filter-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-filters {
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-md);
+}
+
+.icon-button--light {
+  flex: 0 0 auto;
+  border-color: var(--steel-200);
+  color: var(--navy-800);
+  background: var(--steel-50);
+}
+
+.icon-button--light:hover {
+  background: var(--steel-100);
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--steel-100);
+}
+
+.button--ghost {
+  border: 1px solid var(--steel-300);
+  color: var(--navy-800);
+  background: var(--white);
+}
+
 .filter-panel--compact {
   max-width: 720px;
   padding: 16px;
@@ -1336,6 +1423,15 @@ select:focus-visible {
 @media (max-width: 560px) {
   .topbar {
     position: static;
+  }
+
+  .global-filter-bar {
+    top: 8px;
+  }
+
+  .filter-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .app-nav {

@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-3">
-    <script src="script.js?v=20260901-3" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-4">
+    <script src="script.js?v=20260901-4" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -52,6 +52,62 @@
       </section>
 
       <section id="catalogContent" class="catalog-content" aria-label="Gestão do almoxarifado">
+        <div class="global-filter-bar">
+          <button id="filterToggleButton" class="button button--filter" type="button" aria-expanded="false" aria-controls="globalFiltersPanel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+            <span>Filtros</span>
+            <span id="activeFilterCount" class="filter-count is-hidden">0</span>
+          </button>
+          <span id="filterSummary" class="filter-summary">Todas as filiais · todos os itens</span>
+        </div>
+
+        <section id="globalFiltersPanel" class="filter-panel global-filters is-hidden" aria-labelledby="globalFilterTitle">
+          <div class="filter-panel__header">
+            <div>
+              <span class="eyebrow">Consulta global</span>
+              <h2 id="globalFilterTitle">Filtrar itens</h2>
+            </div>
+            <button id="closeFiltersButton" class="icon-button icon-button--light" type="button" aria-label="Fechar filtros">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+            </button>
+          </div>
+
+          <div class="filters-grid">
+            <label class="field field--search">
+              <span>Código ou descrição</span>
+              <span class="field__control">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+                <input id="searchInput" type="search" autocomplete="off" placeholder="Digite um código, item ou grupo">
+              </span>
+            </label>
+            <label class="field"><span>Filial</span><select id="branchFilter"><option value="">Todas as filiais</option></select></label>
+            <label class="field"><span>Local de estoque</span><select id="locationFilter"><option value="">Todos os locais</option></select></label>
+            <label class="field"><span>Categoria ou grupo</span><select id="categoryFilter"><option value="">Todas as categorias</option></select></label>
+            <label class="field"><span>Unidade</span><select id="unitFilter"><option value="">Todas as unidades</option></select></label>
+            <label class="field"><span>Fornecedor</span><select id="supplierFilter"><option value="">Todos os fornecedores</option></select></label>
+            <label class="field">
+              <span>Situação do estoque</span>
+              <select id="stockStatusFilter">
+                <option value="">Todas as situações</option>
+                <option value="zero-configured">Mínimo e máximo positivos, saldo zero</option>
+                <option value="below-with-balance">Abaixo do mínimo, com saldo</option>
+                <option value="above-max">Acima do máximo</option>
+                <option value="within-range">Dentro do range</option>
+              </select>
+            </label>
+            <label class="switch-field">
+              <input id="positiveBalanceFilter" type="checkbox">
+              <span class="switch-field__track" aria-hidden="true"></span>
+              <span>Somente itens com saldo positivo</span>
+            </label>
+          </div>
+
+          <div class="filter-actions">
+            <button id="clearFilters" class="button button--ghost" type="button">Limpar filtros</button>
+            <button id="applyFiltersButton" class="button button--primary" type="button">Aplicar filtros</button>
+          </div>
+        </section>
+
         <section id="page-dashboard" class="page-panel" data-page-panel="dashboard" aria-labelledby="dashboardTitle">
           <div class="section-heading section-heading--compact">
             <div>
@@ -60,17 +116,6 @@
             </div>
             <span id="metricsContext" class="context-label">Base completa</span>
           </div>
-
-          <section class="filter-panel filter-panel--compact dashboard-filters" aria-label="Filtrar indicadores do Dashboard">
-            <label class="field">
-              <span>Filial</span>
-              <select id="dashboardBranchFilter"><option value="">Todas as filiais</option></select>
-            </label>
-            <label class="field">
-              <span>Local de estoque</span>
-              <select id="dashboardLocationFilter"><option value="">Todos os locais</option></select>
-            </label>
-          </section>
 
           <div class="metrics-grid" aria-label="Indicadores">
             <article class="metric metric--blue">
@@ -121,69 +166,7 @@
           </div>
         </section>
 
-        <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="filterTitle">
-          <section class="filter-panel" aria-labelledby="filterTitle">
-          <div class="filter-panel__header">
-            <div>
-              <span class="eyebrow">Consulta</span>
-              <h2 id="filterTitle">Localizar itens</h2>
-            </div>
-            <button id="clearFilters" class="text-button" type="button">Limpar filtros</button>
-          </div>
-
-          <div class="filters-grid">
-            <label class="field field--search">
-              <span>Código ou descrição</span>
-              <span class="field__control">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-                <input id="searchInput" type="search" autocomplete="off" placeholder="Digite um código, item ou grupo">
-              </span>
-            </label>
-
-            <label class="field">
-              <span>Filial</span>
-              <select id="branchFilter"><option value="">Todas as filiais</option></select>
-            </label>
-
-            <label class="field">
-              <span>Local de estoque</span>
-              <select id="locationFilter"><option value="">Todos os locais</option></select>
-            </label>
-
-            <label class="field">
-              <span>Categoria ou grupo</span>
-              <select id="categoryFilter"><option value="">Todas as categorias</option></select>
-            </label>
-
-            <label class="field">
-              <span>Unidade</span>
-              <select id="unitFilter"><option value="">Todas as unidades</option></select>
-            </label>
-
-            <label class="field">
-              <span>Fornecedor</span>
-              <select id="supplierFilter"><option value="">Todos os fornecedores</option></select>
-            </label>
-
-            <label class="field">
-              <span>Situação do estoque</span>
-              <select id="stockStatusFilter">
-                <option value="">Todas as situações</option>
-                <option value="zero-configured">Mínimo e máximo positivos, saldo zero</option>
-                <option value="below-with-balance">Abaixo do mínimo, com saldo</option>
-                <option value="above-max">Acima do máximo</option>
-                <option value="within-range">Dentro do range</option>
-              </select>
-            </label>
-
-            <label class="switch-field">
-              <input id="positiveBalanceFilter" type="checkbox">
-              <span class="switch-field__track" aria-hidden="true"></span>
-              <span>Somente itens com saldo positivo</span>
-            </label>
-          </div>
-          </section>
-
+        <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="resultsTitle">
           <section class="results" aria-labelledby="resultsTitle">
           <div class="section-heading results__heading">
             <div>
@@ -226,24 +209,6 @@
             <article><span>Posições abaixo do mínimo</span><strong id="purchaseNeedPositions">—</strong></article>
             <article><span>Sem máximo informado</span><strong id="purchaseNeedWithoutMax">—</strong></article>
           </div>
-
-          <section class="filter-panel filter-panel--compact" aria-label="Filtrar necessidade de compra">
-            <label class="field field--search">
-              <span>Localizar necessidade</span>
-              <span class="field__control">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-                <input id="purchaseSearchInput" type="search" autocomplete="off" placeholder="Código, descrição, filial ou local">
-              </span>
-            </label>
-            <label class="field">
-              <span>Filial</span>
-              <select id="purchaseBranchFilter"><option value="">Todas as filiais</option></select>
-            </label>
-            <label class="field">
-              <span>Local de estoque</span>
-              <select id="purchaseLocationFilter"><option value="">Todos os locais</option></select>
-            </label>
-          </section>
 
           <div class="table-heading purchase-table-heading">
             <div>

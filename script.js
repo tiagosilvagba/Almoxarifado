@@ -66,15 +66,15 @@ function cacheUi() {
     "metricValue", "metricOutOfStock", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "searchInput",
     "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
-    "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "resultCount", "cardsGrid", "emptyState",
+    "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
+    "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
+    "filterSummary", "resultCount", "cardsGrid", "emptyState",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
     "modalSubtitle", "modalClose", "modalBadges", "modalGallery", "modalBalance",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedWithoutMax",
-    "purchaseSearchInput", "purchaseBranchFilter", "purchaseLocationFilter",
-    "purchaseNeedResultCount", "purchaseNeedTableWrap", "dashboardBranchFilter",
-    "dashboardLocationFilter",
+    "purchaseNeedResultCount", "purchaseNeedTableWrap",
     "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
     "consumptionColumnCount", "consumptionPreviewWrap",
   ];
@@ -90,33 +90,22 @@ function cacheUi() {
 }
 
 function bindEvents() {
-  const debouncedSearch = debounce(applyFilters, 180);
-  ui.searchInput.addEventListener("input", debouncedSearch);
-
-  for (const element of [
-    ui.branchFilter,
-    ui.categoryFilter,
-    ui.unitFilter,
-    ui.supplierFilter,
-    ui.stockStatusFilter,
-    ui.positiveBalanceFilter,
-  ]) {
-    element.addEventListener("change", applyFilters);
-  }
-
   ui.branchFilter.addEventListener("change", () => {
     updateLocationFilter(ui.locationFilter, ui.branchFilter.value);
-    applyFilters();
   });
-  ui.locationFilter.addEventListener("change", applyFilters);
-
-  ui.dashboardBranchFilter.addEventListener("change", () => {
-    updateLocationFilter(ui.dashboardLocationFilter, ui.dashboardBranchFilter.value);
-    updateDashboardMetrics();
+  ui.searchInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    applyAllFilters(true);
   });
-  ui.dashboardLocationFilter.addEventListener("change", updateDashboardMetrics);
 
   ui.clearFilters.addEventListener("click", clearFilters);
+  ui.applyFiltersButton.addEventListener("click", () => applyAllFilters(true));
+  ui.filterToggleButton.addEventListener("click", toggleFilters);
+  ui.closeFiltersButton.addEventListener("click", closeFilters);
+  ui.globalFiltersPanel.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeFilters();
+  });
   ui.loadMoreButton.addEventListener("click", renderNextBatch);
   ui.refreshButton.addEventListener("click", loadCatalog);
   ui.retryButton.addEventListener("click", loadCatalog);
@@ -125,12 +114,6 @@ function bindEvents() {
     renderHistory(state.activeItem);
   });
 
-  ui.purchaseSearchInput.addEventListener("input", debounce(renderPurchaseNeeds, 160));
-  ui.purchaseBranchFilter.addEventListener("change", () => {
-    updateLocationFilter(ui.purchaseLocationFilter, ui.purchaseBranchFilter.value);
-    renderPurchaseNeeds();
-  });
-  ui.purchaseLocationFilter.addEventListener("change", renderPurchaseNeeds);
   ui.purchaseNeedTableWrap.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-item-code]");
     if (trigger) openItem(trigger.dataset.itemCode);
@@ -217,6 +200,43 @@ function pageTitle(page) {
   })[page];
 }
 
+function toggleFilters() {
+  const willOpen = ui.globalFiltersPanel.classList.contains("is-hidden");
+  ui.globalFiltersPanel.classList.toggle("is-hidden", !willOpen);
+  ui.filterToggleButton.setAttribute("aria-expanded", String(willOpen));
+  if (willOpen) window.requestAnimationFrame(() => ui.searchInput.focus());
+}
+
+function closeFilters() {
+  ui.globalFiltersPanel.classList.add("is-hidden");
+  ui.filterToggleButton.setAttribute("aria-expanded", "false");
+  ui.filterToggleButton.focus();
+}
+
+function applyAllFilters(shouldClose = false) {
+  applyFilters();
+  updateDashboardMetrics();
+  renderPurchaseNeeds();
+  updateFilterSummary();
+  if (shouldClose) closeFilters();
+}
+
+function updateFilterSummary() {
+  const labels = [];
+  const query = ui.searchInput.value.trim();
+  if (query) labels.push(`Busca: ${query}`);
+  if (ui.branchFilter.value) labels.push(ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`);
+  if (ui.locationFilter.value) labels.push(ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado");
+  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.stockStatusFilter]) {
+    if (select.value) labels.push(select.selectedOptions[0]?.textContent || select.value);
+  }
+  if (ui.positiveBalanceFilter.checked) labels.push("Somente saldo positivo");
+
+  ui.activeFilterCount.textContent = String(labels.length);
+  ui.activeFilterCount.classList.toggle("is-hidden", !labels.length);
+  ui.filterSummary.textContent = labels.length ? labels.join(" · ") : "Todas as filiais · todos os itens";
+}
+
 async function loadCatalog() {
   if (state.worker) {
     state.worker.terminate();
@@ -271,11 +291,9 @@ async function handleWorkerMessage(event) {
     state.imageIndex = await state.imagePromise;
     prepareItems();
     populateFilters();
-    updateDashboardMetrics();
     buildPurchaseNeeds();
-    renderPurchaseNeeds();
     renderConsumptionReview();
-    applyFilters();
+    applyAllFilters(false);
     navigateToPage(pageFromHash(), false);
 
     const time = new Intl.DateTimeFormat("pt-BR", {
@@ -398,11 +416,7 @@ function populateFilters() {
   }
 
   fillSelect(ui.branchFilter, [...branches], "Todas as filiais");
-  fillSelect(ui.dashboardBranchFilter, [...branches], "Todas as filiais");
-  fillSelect(ui.purchaseBranchFilter, [...branches], "Todas as filiais");
   updateLocationFilter(ui.locationFilter, ui.branchFilter.value);
-  updateLocationFilter(ui.dashboardLocationFilter, ui.dashboardBranchFilter.value);
-  updateLocationFilter(ui.purchaseLocationFilter, ui.purchaseBranchFilter.value);
   fillSelect(ui.categoryFilter, [...categories].map((value) => [value, value]), "Todas as categorias");
   fillSelect(ui.unitFilter, [...units].map((value) => [value, value]), "Todas as unidades");
   fillSelect(ui.supplierFilter, [...suppliers].map((value) => [value, value]), "Todos os fornecedores");
@@ -448,8 +462,8 @@ function clearFilters() {
   ui.supplierFilter.value = "";
   ui.stockStatusFilter.value = "";
   ui.positiveBalanceFilter.checked = false;
-  applyFilters();
-  ui.searchInput.focus();
+  updateLocationFilter(ui.locationFilter, "");
+  applyAllFilters(true);
 }
 
 function applyFilters() {
@@ -498,8 +512,9 @@ function positionMatchesStatus(position, status) {
 }
 
 function updateDashboardMetrics() {
-  const branch = ui.dashboardBranchFilter.value;
-  const location = ui.dashboardLocationFilter.value;
+  const branch = ui.branchFilter.value;
+  const location = ui.locationFilter.value;
+  const stockStatus = ui.stockStatusFilter.value;
   const scopedItems = new Set();
   const codesWithStock = new Set();
   let value = 0;
@@ -510,10 +525,11 @@ function updateDashboardMetrics() {
   let negative = 0;
   const pendingSc = new Set();
 
-  for (const item of state.items) {
+  for (const item of state.filteredItems) {
     const positions = (item.positions || []).filter((position) => {
       if (branch && position.branchCode !== branch) return false;
       if (location && position.locationKey !== location) return false;
+      if (stockStatus && !positionMatchesStatus(position, stockStatus)) return false;
       return true;
     });
     if (!positions.length && (branch || location)) continue;
@@ -547,9 +563,9 @@ function updateDashboardMetrics() {
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
   ui.metricNegative.textContent = integerFormatter.format(negative);
   ui.metricsContext.textContent = location
-    ? ui.dashboardLocationFilter.selectedOptions[0]?.textContent || "Local selecionado"
+    ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
     : branch
-      ? ui.dashboardBranchFilter.selectedOptions[0]?.textContent || `Filial ${branch}`
+      ? ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${branch}`
       : "Todas as filiais · contagem aditiva";
 }
 
@@ -577,29 +593,22 @@ function buildPurchaseNeeds() {
 }
 
 function renderPurchaseNeeds() {
-  const query = normalizeSearch(ui.purchaseSearchInput.value);
-  const branch = ui.purchaseBranchFilter.value;
-  const location = ui.purchaseLocationFilter.value;
-  const scoped = state.purchaseNeeds.filter(({ position }) => {
+  const branch = ui.branchFilter.value;
+  const location = ui.locationFilter.value;
+  const stockStatus = ui.stockStatusFilter.value;
+  const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
+  const visible = state.purchaseNeeds.filter(({ item, position }) => {
+    if (!filteredCodes.has(item.code)) return false;
     if (branch && position.branchCode !== branch) return false;
     if (location && position.locationKey !== location) return false;
+    if (stockStatus && !positionMatchesStatus(position, stockStatus)) return false;
     return true;
   });
-  const visible = query
-    ? scoped.filter(({ item, position }) => normalizeSearch([
-      item.code,
-      item.name,
-      position.branchCode,
-      position.branchName,
-      position.localCode,
-      position.localName,
-    ].join(" ")).includes(query))
-    : scoped;
 
-  const itemCodes = new Set(scoped.map(({ item }) => item.code));
-  const withoutMaximum = scoped.filter(({ position }) => !(position.maximum > 0)).length;
+  const itemCodes = new Set(visible.map(({ item }) => item.code));
+  const withoutMaximum = visible.filter(({ position }) => !(position.maximum > 0)).length;
   ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
-  ui.purchaseNeedPositions.textContent = integerFormatter.format(scoped.length);
+  ui.purchaseNeedPositions.textContent = integerFormatter.format(visible.length);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
   ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "posição", "posições")} exibida${visible.length === 1 ? "" : "s"}`;
 
