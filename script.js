@@ -62,7 +62,7 @@ async function init() {
 function cacheUi() {
   const ids = [
     "statusLine", "refreshButton", "loadingPanel", "loadingTitle", "loadingMessage",
-    "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity",
+    "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricOutOfStock", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "searchInput",
     "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
@@ -639,6 +639,7 @@ function updateDashboardMetrics() {
   const stockStatus = ui.stockStatusFilter.value;
   const scopedItems = new Set();
   const codesWithStock = new Set();
+  const zeroCodes = new Set();
   let value = 0;
   const outOfStockCodes = new Set();
   const belowMinCodes = new Set();
@@ -657,13 +658,18 @@ function updateDashboardMetrics() {
     if (!positions.length && (branch || location)) continue;
     if (positions.length || (!branch && !location)) scopedItems.add(item.code);
 
+    const itemBalance = positions.reduce((sum, position) => sum + (position.quantity || 0), 0);
+    const itemLimits = positions.reduce((sum, position) => sum + (position.minimum || 0) + (position.maximum || 0), 0);
+    if (itemBalance !== 0) {
+      codesWithStock.add(item.code);
+    } else if (itemLimits > 0) {
+      zeroCodes.add(item.code);
+    } else {
+      outOfStockCodes.add(item.code);
+    }
+
     for (const position of positions) {
       value += position.stockValue || 0;
-      if (position.quantity > 0) {
-        const stockKey = branch ? item.code : `${position.branchCode}::${item.code}`;
-        codesWithStock.add(stockKey);
-      }
-      if (position.outOfStock) outOfStockCodes.add(item.code);
       if (position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum) belowMinCodes.add(item.code);
       if (position.aboveMax) aboveMaxCodes.add(item.code);
       if (position.unconfigured) unconfiguredCodes.add(item.code);
@@ -675,7 +681,8 @@ function updateDashboardMetrics() {
 
   ui.metricItems.textContent = integerFormatter.format(scopedItems.size);
   ui.metricQuantity.textContent = integerFormatter.format(codesWithStock.size);
-  ui.metricQuantity.title = pluralize(codesWithStock.size, "ocorrência de código com saldo", "ocorrências de código com saldo");
+  ui.metricQuantity.title = pluralize(codesWithStock.size, "código com saldo", "códigos com saldo");
+  ui.metricZero.textContent = integerFormatter.format(zeroCodes.size);
   ui.metricValue.textContent = compactCurrencyFormatter.format(value);
   ui.metricValue.title = currencyFormatter.format(value);
   ui.metricOutOfStock.textContent = integerFormatter.format(outOfStockCodes.size);
@@ -684,11 +691,12 @@ function updateDashboardMetrics() {
   ui.metricUnconfigured.textContent = integerFormatter.format(unconfiguredCodes.size);
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
   ui.metricNegative.textContent = integerFormatter.format(negativeCodes.size);
+  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos = ${integerFormatter.format(codesWithStock.size)} com saldo + ${integerFormatter.format(zeroCodes.size)} zerados + ${integerFormatter.format(outOfStockCodes.size)} fora de estoque`;
   ui.metricsContext.textContent = location
     ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
     : branch
       ? ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${branch}`
-      : "Todas as filiais · contagem aditiva";
+      : "Todas as filiais · códigos únicos";
 }
 
 function buildPurchaseNeeds() {

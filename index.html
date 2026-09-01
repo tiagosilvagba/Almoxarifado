@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-6">
-    <script src="script.js?v=20260901-6" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-7">
+    <script src="script.js?v=20260901-7" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -124,9 +124,14 @@
               <small>códigos catalogados</small>
             </article>
             <article class="metric metric--steel">
-              <span class="metric__label">Códigos por filial com estoque</span>
+              <span class="metric__label">Itens com saldo</span>
               <strong id="metricQuantity">—</strong>
-              <small>contagem aditiva entre filiais</small>
+              <small>códigos com saldo diferente de zero</small>
+            </article>
+            <article class="metric metric--cyan">
+              <span class="metric__label">Itens zerados</span>
+              <strong id="metricZero">—</strong>
+              <small>saldo zero com Min + Máx maior que zero</small>
             </article>
             <article class="metric metric--navy">
               <span class="metric__label">Valor do estoque</span>
@@ -136,7 +141,7 @@
             <article class="metric metric--slate">
               <span class="metric__label">Fora de estoque</span>
               <strong id="metricOutOfStock">—</strong>
-              <small>sem limites e sem saldo</small>
+              <small>saldo zero sem parametrização de limites</small>
             </article>
             <article class="metric metric--amber">
               <span class="metric__label">Abaixo do mínimo</span>
@@ -164,6 +169,7 @@
               <small>em ao menos uma posição</small>
             </article>
           </div>
+          <p id="metricReconciliation" class="metric-reconciliation" aria-live="polite"></p>
         </section>
 
         <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="resultsTitle">
