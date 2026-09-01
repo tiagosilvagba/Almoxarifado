@@ -98,6 +98,57 @@ select:focus-visible {
   gap: 24px;
 }
 
+.app-nav-wrap {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 26, 45, 0.24);
+}
+
+.app-nav {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.app-nav__tab {
+  position: relative;
+  min-height: 49px;
+  padding: 11px 17px;
+  flex: 0 0 auto;
+  border: 0;
+  color: #c8d9e7;
+  background: transparent;
+  font-size: 0.86rem;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: 160ms ease;
+}
+
+.app-nav__tab::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  bottom: 0;
+  left: 16px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+}
+
+.app-nav__tab:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.app-nav__tab.is-active {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-nav__tab.is-active::after {
+  background: #69c2ff;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -227,6 +278,11 @@ select:focus-visible {
   gap: 28px;
 }
 
+.page-panel {
+  display: grid;
+  gap: 28px;
+}
+
 .section-heading {
   display: flex;
   align-items: end;
@@ -245,6 +301,13 @@ select:focus-visible {
   font-size: clamp(1.25rem, 2vw, 1.55rem);
   line-height: 1.25;
   letter-spacing: -0.02em;
+}
+
+.section-description {
+  max-width: 780px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .eyebrow {
@@ -337,6 +400,11 @@ select:focus-visible {
   border-radius: var(--radius-lg);
   background: var(--white);
   box-shadow: var(--shadow-sm);
+}
+
+.filter-panel--compact {
+  max-width: 720px;
+  padding: 16px;
 }
 
 .filter-panel__header {
@@ -995,6 +1063,109 @@ select:focus-visible {
   border-radius: var(--radius-sm);
 }
 
+.need-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.need-summary article {
+  min-height: 104px;
+  padding: 17px;
+  border: 1px solid var(--steel-200);
+  border-left: 4px solid var(--blue-600);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.need-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.need-summary strong {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: var(--navy-900);
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.purchase-table-heading {
+  margin-bottom: -14px;
+}
+
+.table-link {
+  padding: 2px 0;
+  border: 0;
+  color: var(--blue-600);
+  background: transparent;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.table-link:hover {
+  color: var(--navy-800);
+  text-decoration-color: currentColor;
+}
+
+.construction-state {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 42px 24px;
+  border: 1px dashed var(--steel-300);
+  border-radius: var(--radius-lg);
+  color: var(--muted);
+  background:
+    linear-gradient(145deg, rgba(18, 58, 99, 0.035), rgba(32, 134, 210, 0.015)),
+    var(--white);
+  text-align: center;
+}
+
+.construction-state svg {
+  width: 68px;
+  height: 68px;
+  margin-bottom: 5px;
+  fill: none;
+  stroke: var(--steel-500);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.construction-state > span {
+  color: var(--blue-600);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.construction-state h3 {
+  margin: 2px 0 0;
+  color: var(--navy-900);
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+}
+
+.construction-state p {
+  margin: 3px 0 0;
+}
+
+.consumption-available {
+  display: grid;
+  gap: 22px;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -1120,6 +1291,10 @@ select:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .need-summary {
+    grid-template-columns: 1fr;
+  }
+
   .filters-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1141,6 +1316,17 @@ select:focus-visible {
 @media (max-width: 560px) {
   .topbar {
     position: static;
+  }
+
+  .app-nav {
+    width: 100%;
+    padding-inline: 12px;
+  }
+
+  .app-nav__tab {
+    min-height: 46px;
+    padding-inline: 13px;
+    font-size: 0.8rem;
   }
 
   .brand h1 {

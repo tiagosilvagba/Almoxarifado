@@ -3,6 +3,7 @@
 const CONFIG = Object.freeze({
   saldoFile: "00 - Saldo_Online.csv",
   comprasFile: "01 - Compras_Almox.csv",
+  consumoFile: "03 - Consumo.csv",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
   maxImages: 5,
@@ -41,6 +42,8 @@ const state = {
   activeItem: null,
   historyVisible: CONFIG.historyBatch,
   lastFocusedElement: null,
+  purchaseNeeds: [],
+  consumption: { available: false, headers: [], rows: [], rowCount: 0 },
 };
 
 const ui = {};
@@ -67,6 +70,10 @@ function cacheUi() {
     "modalSubtitle", "modalClose", "modalBadges", "modalGallery", "modalBalance",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
+    "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedWithoutMax",
+    "purchaseSearchInput", "purchaseNeedResultCount", "purchaseNeedTableWrap",
+    "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
+    "consumptionColumnCount", "consumptionPreviewWrap",
   ];
 
   for (const id of ids) {
@@ -75,6 +82,8 @@ function cacheUi() {
 
   ui.tabs = [...document.querySelectorAll(".modal-tab")];
   ui.panels = [...document.querySelectorAll(".tab-panel")];
+  ui.pageTabs = [...document.querySelectorAll(".app-nav__tab")];
+  ui.pagePanels = [...document.querySelectorAll("[data-page-panel]")];
 }
 
 function bindEvents() {
@@ -101,6 +110,18 @@ function bindEvents() {
     renderHistory(state.activeItem);
   });
 
+  ui.purchaseSearchInput.addEventListener("input", debounce(renderPurchaseNeeds, 160));
+  ui.purchaseNeedTableWrap.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-item-code]");
+    if (trigger) openItem(trigger.dataset.itemCode);
+  });
+
+  for (const pageTab of ui.pageTabs) {
+    pageTab.addEventListener("click", () => navigateToPage(pageTab.dataset.page, true));
+    pageTab.addEventListener("keydown", handlePageTabKeydown);
+  }
+  window.addEventListener("hashchange", () => navigateToPage(pageFromHash(), false));
+
   ui.cardsGrid.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-item-code]");
     if (trigger) openItem(trigger.dataset.itemCode);
@@ -118,6 +139,58 @@ function bindEvents() {
   for (const tab of ui.tabs) {
     tab.addEventListener("click", () => activateTab(tab.dataset.tab));
   }
+}
+
+function pageFromHash() {
+  const page = window.location.hash.replace(/^#/, "");
+  return ["dashboard", "catalogo", "necessidade-compra", "revisao-min-max"].includes(page)
+    ? page
+    : "dashboard";
+}
+
+function navigateToPage(page, updateHash) {
+  const validPage = ["dashboard", "catalogo", "necessidade-compra", "revisao-min-max"].includes(page)
+    ? page
+    : "dashboard";
+
+  for (const tab of ui.pageTabs) {
+    const active = tab.dataset.page === validPage;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-current", active ? "page" : "false");
+    tab.tabIndex = active ? 0 : -1;
+  }
+
+  for (const panel of ui.pagePanels) {
+    panel.classList.toggle("is-hidden", panel.dataset.pagePanel !== validPage);
+  }
+
+  if (updateHash && window.location.hash !== `#${validPage}`) {
+    history.pushState(null, "", `#${validPage}`);
+  }
+
+  document.title = `${pageTitle(validPage)} · Gestão de Almoxarifado`;
+}
+
+function handlePageTabKeydown(event) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault();
+  const current = ui.pageTabs.indexOf(event.currentTarget);
+  let next = current;
+  if (event.key === "ArrowRight") next = (current + 1) % ui.pageTabs.length;
+  if (event.key === "ArrowLeft") next = (current - 1 + ui.pageTabs.length) % ui.pageTabs.length;
+  if (event.key === "Home") next = 0;
+  if (event.key === "End") next = ui.pageTabs.length - 1;
+  ui.pageTabs[next].focus();
+  navigateToPage(ui.pageTabs[next].dataset.page, true);
+}
+
+function pageTitle(page) {
+  return ({
+    dashboard: "Dashboard",
+    catalogo: "Catálogo",
+    "necessidade-compra": "Necessidade de Compra",
+    "revisao-min-max": "Revisão de Min e Máx",
+  })[page];
 }
 
 async function loadCatalog() {
@@ -145,6 +218,7 @@ async function loadCatalog() {
     worker.postMessage({
       saldoUrl: new URL(CONFIG.saldoFile, document.baseURI).href,
       comprasUrl: new URL(CONFIG.comprasFile, document.baseURI).href,
+      consumoUrl: new URL(CONFIG.consumoFile, document.baseURI).href,
     });
   } catch (error) {
     showError("Não foi possível iniciar o catálogo.", error.message);
@@ -169,10 +243,16 @@ async function handleWorkerMessage(event) {
 
   try {
     state.items = message.payload.items;
+    state.consumption = message.payload.consumption;
     state.imageIndex = await state.imagePromise;
     prepareItems();
     populateFilters();
+    updateMetrics(state.items);
+    buildPurchaseNeeds();
+    renderPurchaseNeeds();
+    renderConsumptionReview();
     applyFilters();
+    navigateToPage(pageFromHash(), false);
 
     const time = new Intl.DateTimeFormat("pt-BR", {
       hour: "2-digit",
@@ -344,11 +424,8 @@ function applyFilters() {
     return true;
   });
 
-  const filtersActive = Boolean(query || branch || location || category || unit || supplier || positiveOnly);
-  ui.metricsContext.textContent = filtersActive ? "Base filtrada" : "Base completa";
   ui.resultCount.textContent = pluralize(state.filteredItems.length, "item", "itens");
 
-  updateMetrics(state.filteredItems);
   state.renderedCount = 0;
   ui.cardsGrid.replaceChildren();
   renderNextBatch();
@@ -386,6 +463,97 @@ function updateMetrics(items) {
   ui.metricUnconfigured.textContent = integerFormatter.format(unconfigured);
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
   ui.metricNegative.textContent = integerFormatter.format(negative);
+}
+
+function buildPurchaseNeeds() {
+  const needs = [];
+
+  for (const item of state.items) {
+    for (const position of item.positions || []) {
+      if (!(position.minimum > 0 && position.quantity < position.minimum)) continue;
+      const target = position.maximum > 0 ? position.maximum : position.minimum;
+      needs.push({
+        item,
+        position,
+        target,
+        suggested: Math.max(target - position.quantity, 0),
+      });
+    }
+  }
+
+  state.purchaseNeeds = needs.sort((a, b) => {
+    const codeOrder = a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true, sensitivity: "base" });
+    if (codeOrder) return codeOrder;
+    return a.position.locationKey.localeCompare(b.position.locationKey, "pt-BR", { numeric: true });
+  });
+}
+
+function renderPurchaseNeeds() {
+  const query = normalizeSearch(ui.purchaseSearchInput.value);
+  const visible = query
+    ? state.purchaseNeeds.filter(({ item, position }) => normalizeSearch([
+      item.code,
+      item.name,
+      position.branchCode,
+      position.branchName,
+      position.localCode,
+      position.localName,
+    ].join(" ")).includes(query))
+    : state.purchaseNeeds;
+
+  const itemCodes = new Set(state.purchaseNeeds.map(({ item }) => item.code));
+  const withoutMaximum = state.purchaseNeeds.filter(({ position }) => !(position.maximum > 0)).length;
+  ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
+  ui.purchaseNeedPositions.textContent = integerFormatter.format(state.purchaseNeeds.length);
+  ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
+  ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "posição", "posições")} exibida${visible.length === 1 ? "" : "s"}`;
+
+  if (!visible.length) {
+    ui.purchaseNeedTableWrap.innerHTML = `<div class="table-empty">Nenhuma necessidade de compra corresponde à busca informada.</div>`;
+    return;
+  }
+
+  const rows = visible.map(({ item, position, target, suggested }) => `<tr>
+    <td><button class="table-link" type="button" data-item-code="${escapeHtml(item.code)}">${escapeHtml(item.code)}</button></td>
+    <td class="cell-wrap">${escapeHtml(item.name)}</td>
+    <td>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · "))}</td>
+    <td class="cell-wrap">${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · "))}</td>
+    <td>${escapeHtml((item.units || []).join(", ") || "—")}</td>
+    <td class="number">${numberFormatter.format(position.quantity)}</td>
+    <td class="number">${numberFormatter.format(position.minimum)}</td>
+    <td class="number">${formatOptionalNumber(position.maximum)}</td>
+    <td class="number">${numberFormatter.format(target)}</td>
+    <td class="number"><strong>${numberFormatter.format(suggested)}</strong></td>
+  </tr>`).join("");
+
+  ui.purchaseNeedTableWrap.innerHTML = `<table class="data-table">
+    <thead><tr>
+      <th>Código</th><th>Item</th><th>Filial</th><th>Local</th><th>Unidade</th>
+      <th class="number">Saldo</th><th class="number">Mínimo</th><th class="number">Máximo</th>
+      <th class="number">Meta</th><th class="number">Comprar</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderConsumptionReview() {
+  const consumption = state.consumption || { available: false };
+  ui.consumptionWaiting.classList.toggle("is-hidden", consumption.available);
+  ui.consumptionAvailable.classList.toggle("is-hidden", !consumption.available);
+  if (!consumption.available) return;
+
+  ui.consumptionRowCount.textContent = integerFormatter.format(consumption.rowCount || 0);
+  ui.consumptionColumnCount.textContent = integerFormatter.format(consumption.headers?.length || 0);
+
+  const headers = (consumption.headers || []).slice(0, 12);
+  if (!headers.length) {
+    ui.consumptionPreviewWrap.innerHTML = `<div class="table-empty">O CSV foi localizado, mas não possui cabeçalhos legíveis.</div>`;
+    return;
+  }
+
+  const heading = headers.map((header) => `<th>${escapeHtml(header || "Sem título")}</th>`).join("");
+  const rows = (consumption.rows || []).map((row) => `<tr>${headers.map((_, index) => `<td class="cell-wrap">${escapeHtml(row[index] || "")}</td>`).join("")}</tr>`).join("");
+  ui.consumptionPreviewWrap.innerHTML = `<table class="data-table"><thead><tr>${heading}</tr></thead><tbody>${rows || `<tr><td colspan="${headers.length}">CSV sem registros.</td></tr>`}</tbody></table>`;
 }
 
 function renderNextBatch() {
@@ -756,11 +924,12 @@ function inventoryWorker() {
 
   self.onmessage = async (event) => {
     try {
-      const { saldoUrl, comprasUrl } = event.data;
-      progress("Baixando os dois arquivos CSV…");
-      const [saldoText, comprasText] = await Promise.all([
+      const { saldoUrl, comprasUrl, consumoUrl } = event.data;
+      progress("Baixando os arquivos de saldo e compras…");
+      const [saldoText, comprasText, consumoText] = await Promise.all([
         fetchText(saldoUrl, "Saldo_Online"),
         fetchText(comprasUrl, "Compras_Almox"),
+        fetchOptionalText(consumoUrl),
       ]);
 
       const items = new Map();
@@ -942,9 +1111,11 @@ function inventoryWorker() {
         output.push(item);
       }
 
+      const consumption = parseConsumptionCsv(consumoText);
+
       self.postMessage({
         type: "complete",
-        payload: { items: output, saldoRows, comprasRows },
+        payload: { items: output, saldoRows, comprasRows, consumption },
       });
     } catch (error) {
       self.postMessage({ type: "error", message: error?.message || String(error) });
@@ -955,6 +1126,32 @@ function inventoryWorker() {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`${label}: arquivo não encontrado (${response.status}).`);
     return decoder.decode(await response.arrayBuffer());
+  }
+
+  async function fetchOptionalText(url) {
+    if (!url) return null;
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) return null;
+      return decoder.decode(await response.arrayBuffer());
+    } catch {
+      return null;
+    }
+  }
+
+  function parseConsumptionCsv(text) {
+    if (text === null) return { available: false, headers: [], rows: [], rowCount: 0 };
+
+    let headers = [];
+    const rows = [];
+    let rowCount = 0;
+    parseCsv(text, (csvHeaders, row) => {
+      if (!headers.length) headers = csvHeaders.map(clean);
+      rowCount += 1;
+      if (rows.length < 20) rows.push(row.slice(0, 12));
+    });
+
+    return { available: true, headers, rows, rowCount };
   }
 
   function progress(message) {

@@ -31,6 +31,14 @@
           </svg>
         </button>
       </div>
+      <div class="app-nav-wrap">
+        <nav class="shell app-nav" aria-label="Navegação principal">
+          <button class="app-nav__tab is-active" type="button" data-page="dashboard" aria-current="page">Dashboard</button>
+          <button class="app-nav__tab" type="button" data-page="catalogo">Catálogo</button>
+          <button class="app-nav__tab" type="button" data-page="necessidade-compra">Necessidade de Compra</button>
+          <button class="app-nav__tab" type="button" data-page="revisao-min-max">Revisão de Min e Máx</button>
+        </nav>
+      </div>
     </header>
 
     <main class="shell main-content">
@@ -44,63 +52,66 @@
       </section>
 
       <section id="catalogContent" class="catalog-content is-hidden" aria-label="Catálogo do almoxarifado">
-        <div class="section-heading section-heading--compact">
-          <div>
-            <span class="eyebrow">Visão geral</span>
-            <h2>Indicadores do estoque</h2>
+        <section id="page-dashboard" class="page-panel" data-page-panel="dashboard" aria-labelledby="dashboardTitle">
+          <div class="section-heading section-heading--compact">
+            <div>
+              <span class="eyebrow">Visão geral</span>
+              <h2 id="dashboardTitle">Indicadores do estoque</h2>
+            </div>
+            <span id="metricsContext" class="context-label">Base completa</span>
           </div>
-          <span id="metricsContext" class="context-label">Base completa</span>
-        </div>
 
-        <div class="metrics-grid" aria-label="Indicadores">
-          <article class="metric metric--blue">
-            <span class="metric__label">Total de itens</span>
-            <strong id="metricItems">—</strong>
-            <small>códigos catalogados</small>
-          </article>
-          <article class="metric metric--steel">
-            <span class="metric__label">Códigos com estoque</span>
-            <strong id="metricQuantity">—</strong>
-            <small>itens com saldo positivo</small>
-          </article>
-          <article class="metric metric--navy">
-            <span class="metric__label">Valor do estoque</span>
-            <strong id="metricValue">—</strong>
-            <small>valor atual consolidado</small>
-          </article>
-          <article class="metric metric--slate">
-            <span class="metric__label">Fora de estoque</span>
-            <strong id="metricOutOfStock">—</strong>
-            <small>sem limites e sem saldo</small>
-          </article>
-          <article class="metric metric--amber">
-            <span class="metric__label">Abaixo do mínimo</span>
-            <strong id="metricBelowMin">—</strong>
-            <small>em ao menos uma posição</small>
-          </article>
-          <article class="metric metric--red">
-            <span class="metric__label">Acima do máximo</span>
-            <strong id="metricAboveMax">—</strong>
-            <small>com máximo parametrizado</small>
-          </article>
-          <article class="metric metric--cyan">
-            <span class="metric__label">Saldo sem Min&amp;Máx</span>
-            <strong id="metricUnconfigured">—</strong>
-            <small>saldo com limites zerados</small>
-          </article>
-          <article class="metric metric--violet">
-            <span class="metric__label">SC sem OF</span>
-            <strong id="metricPendingSc">—</strong>
-            <small>compras confirmadas</small>
-          </article>
-          <article class="metric metric--charcoal">
-            <span class="metric__label">Saldo negativo</span>
-            <strong id="metricNegative">—</strong>
-            <small>em ao menos uma posição</small>
-          </article>
-        </div>
+          <div class="metrics-grid" aria-label="Indicadores">
+            <article class="metric metric--blue">
+              <span class="metric__label">Total de itens</span>
+              <strong id="metricItems">—</strong>
+              <small>códigos catalogados</small>
+            </article>
+            <article class="metric metric--steel">
+              <span class="metric__label">Códigos com estoque</span>
+              <strong id="metricQuantity">—</strong>
+              <small>itens com saldo positivo</small>
+            </article>
+            <article class="metric metric--navy">
+              <span class="metric__label">Valor do estoque</span>
+              <strong id="metricValue">—</strong>
+              <small>valor atual consolidado</small>
+            </article>
+            <article class="metric metric--slate">
+              <span class="metric__label">Fora de estoque</span>
+              <strong id="metricOutOfStock">—</strong>
+              <small>sem limites e sem saldo</small>
+            </article>
+            <article class="metric metric--amber">
+              <span class="metric__label">Abaixo do mínimo</span>
+              <strong id="metricBelowMin">—</strong>
+              <small>em ao menos uma posição</small>
+            </article>
+            <article class="metric metric--red">
+              <span class="metric__label">Acima do máximo</span>
+              <strong id="metricAboveMax">—</strong>
+              <small>com máximo parametrizado</small>
+            </article>
+            <article class="metric metric--cyan">
+              <span class="metric__label">Saldo sem Min&amp;Máx</span>
+              <strong id="metricUnconfigured">—</strong>
+              <small>saldo com limites zerados</small>
+            </article>
+            <article class="metric metric--violet">
+              <span class="metric__label">SC sem OF</span>
+              <strong id="metricPendingSc">—</strong>
+              <small>compras confirmadas</small>
+            </article>
+            <article class="metric metric--charcoal">
+              <span class="metric__label">Saldo negativo</span>
+              <strong id="metricNegative">—</strong>
+              <small>em ao menos uma posição</small>
+            </article>
+          </div>
+        </section>
 
-        <section class="filter-panel" aria-labelledby="filterTitle">
+        <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="filterTitle">
+          <section class="filter-panel" aria-labelledby="filterTitle">
           <div class="filter-panel__header">
             <div>
               <span class="eyebrow">Consulta</span>
@@ -149,9 +160,9 @@
               <span>Somente itens com saldo positivo</span>
             </label>
           </div>
-        </section>
+          </section>
 
-        <section class="results" aria-labelledby="resultsTitle">
+          <section class="results" aria-labelledby="resultsTitle">
           <div class="section-heading results__heading">
             <div>
               <span class="eyebrow">Catálogo</span>
@@ -174,6 +185,75 @@
           <div class="load-more-wrap">
             <button id="loadMoreButton" class="button button--secondary is-hidden" type="button">Carregar mais</button>
             <span id="visibleCount" class="visible-count"></span>
+          </div>
+          </section>
+        </section>
+
+        <section id="page-necessidade-compra" class="page-panel is-hidden" data-page-panel="necessidade-compra" aria-labelledby="purchaseNeedTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Reposição</span>
+              <h2 id="purchaseNeedTitle">Necessidade de Compra</h2>
+              <p class="section-description">Posições com saldo abaixo do mínimo. A sugestão repõe até o máximo; quando não há máximo positivo, repõe até o mínimo.</p>
+            </div>
+            <span class="context-label">Baseado no Saldo_Online</span>
+          </div>
+
+          <div class="need-summary" aria-label="Resumo da necessidade de compra">
+            <article><span>Itens para comprar</span><strong id="purchaseNeedItems">—</strong></article>
+            <article><span>Posições abaixo do mínimo</span><strong id="purchaseNeedPositions">—</strong></article>
+            <article><span>Sem máximo informado</span><strong id="purchaseNeedWithoutMax">—</strong></article>
+          </div>
+
+          <section class="filter-panel filter-panel--compact" aria-label="Filtrar necessidade de compra">
+            <label class="field field--search">
+              <span>Localizar necessidade</span>
+              <span class="field__control">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+                <input id="purchaseSearchInput" type="search" autocomplete="off" placeholder="Código, descrição, filial ou local">
+              </span>
+            </label>
+          </section>
+
+          <div class="table-heading purchase-table-heading">
+            <div>
+              <h3>Posições que precisam de reposição</h3>
+              <p id="purchaseNeedResultCount">0 posições</p>
+            </div>
+          </div>
+          <div id="purchaseNeedTableWrap" class="table-wrap"></div>
+        </section>
+
+        <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="reviewTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Parametrização</span>
+              <h2 id="reviewTitle">Revisão de Min e Máx</h2>
+              <p class="section-description">Área preparada para analisar consumo e apoiar a revisão dos limites de estoque.</p>
+            </div>
+            <span class="context-label">03 - Consumo.csv</span>
+          </div>
+
+          <div id="consumptionWaiting" class="construction-state">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40h32M13 40l3-23h16l3 23M14.5 28h19M18 12h12M24 12V6"></path></svg>
+            <span>Revisão de Min e Máx</span>
+            <h3>Em Construção - Aguardando CSV</h3>
+            <p>Adicione o arquivo <strong>03 - Consumo.csv</strong> na raiz do repositório.</p>
+          </div>
+
+          <div id="consumptionAvailable" class="consumption-available is-hidden">
+            <div class="need-summary">
+              <article><span>Arquivo localizado</span><strong>03 - Consumo.csv</strong></article>
+              <article><span>Registros</span><strong id="consumptionRowCount">—</strong></article>
+              <article><span>Colunas</span><strong id="consumptionColumnCount">—</strong></article>
+            </div>
+            <div class="table-heading">
+              <div>
+                <h3>Prévia dos dados de consumo</h3>
+                <p>A estrutura será usada para configurar as regras definitivas de revisão de mínimo e máximo.</p>
+              </div>
+            </div>
+            <div id="consumptionPreviewWrap" class="table-wrap"></div>
           </div>
         </section>
       </section>
