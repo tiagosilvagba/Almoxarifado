@@ -31,20 +31,24 @@
   --focus-color: rgba(32, 134, 210, 0.32);
   --filter-count-bg: #a9dcff;
   --theme-wash: rgba(18, 58, 99, 0.05);
-  --shadow-sm: 0 2px 9px rgba(7, 26, 45, 0.07);
-  --shadow-md: 0 12px 34px rgba(7, 26, 45, 0.13);
-  --shadow-lg: 0 24px 70px rgba(7, 26, 45, 0.22);
-  --radius-sm: 8px;
-  --radius-md: 13px;
-  --radius-lg: 18px;
+  --theme-image: url("imagens/temas/industrial.webp");
+  --page-overlay: rgba(245, 249, 252, 0.91);
+  --surface: rgba(255, 255, 255, 0.94);
+  --shadow-sm: 0 3px 12px rgba(7, 26, 45, 0.08), 0 1px 2px rgba(7, 26, 45, 0.05);
+  --shadow-md: 0 16px 42px rgba(7, 26, 45, 0.14), 0 3px 10px rgba(7, 26, 45, 0.06);
+  --shadow-lg: 0 28px 80px rgba(7, 26, 45, 0.24);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
 }
 
 html[data-theme="jbs"] {
-  --navy-950: #36070c; --navy-900: #650b14; --navy-800: #86111c; --navy-700: #a41724;
-  --blue-600: #c8102e; --blue-500: #e3212d; --blue-100: #fde4e7;
-  --steel-700: #72585b; --steel-500: #92787b; --steel-300: #d0bfc1; --steel-200: #e4d7d9; --steel-100: #f2e9ea; --steel-50: #faf6f6;
-  --text: #2d171a; --muted: #725c60; --topbar-text: #ffecef; --active-accent: #ffffff;
-  --focus-color: rgba(200, 16, 46, 0.32); --filter-count-bg: #ffffff; --theme-wash: rgba(200, 16, 46, 0.055);
+  --navy-950: #001b3f; --navy-900: #002b62; --navy-800: #003f86; --navy-700: #0758a7;
+  --blue-600: #0068b5; --blue-500: #1697dc; --blue-100: #dceffc;
+  --steel-700: #41647f; --steel-500: #718da3; --steel-300: #b8cbd9; --steel-200: #d4e2eb; --steel-100: #e8f0f5; --steel-50: #f3f8fb;
+  --text: #102b40; --muted: #58758b; --topbar-text: #d9efff; --active-accent: #43b8f2;
+  --focus-color: rgba(22, 151, 220, 0.38); --filter-count-bg: #8ed8ff; --theme-wash: rgba(0, 104, 181, 0.075);
+  --theme-image: url("imagens/temas/jbs.webp"); --page-overlay: rgba(240, 248, 253, 0.91);
 }
 
 html[data-theme="seara"] {
@@ -53,6 +57,7 @@ html[data-theme="seara"] {
   --steel-700: #75633c; --steel-500: #95835d; --steel-300: #d4c9a9; --steel-200: #e7dfc8; --steel-100: #f4efdf; --steel-50: #fbf9f0;
   --text: #2e210d; --muted: #71664f; --topbar-text: #fff5c7; --active-accent: #f3c500;
   --focus-color: rgba(243, 197, 0, 0.42); --filter-count-bg: #f3c500; --theme-wash: rgba(243, 197, 0, 0.08);
+  --theme-image: url("imagens/temas/seara.webp"); --page-overlay: rgba(255, 251, 239, 0.92);
 }
 
 html[data-theme="graphite"] {
@@ -61,6 +66,7 @@ html[data-theme="graphite"] {
   --steel-700: #4d5a64; --steel-500: #74818a; --steel-300: #bdc6cc; --steel-200: #d8dee2; --steel-100: #e9edef; --steel-50: #f5f6f7;
   --text: #1d252b; --muted: #65717a; --topbar-text: #dce5eb; --active-accent: #59b7e8;
   --focus-color: rgba(73, 162, 212, 0.35); --filter-count-bg: #9bd6f4; --theme-wash: rgba(29, 37, 45, 0.06);
+  --theme-image: url("imagens/temas/graphite.webp"); --page-overlay: rgba(244, 247, 249, 0.92);
 }
 
 html[data-theme="operations"] {
@@ -69,6 +75,7 @@ html[data-theme="operations"] {
   --steel-700: #48695e; --steel-500: #718c83; --steel-300: #b8cec7; --steel-200: #d4e2dd; --steel-100: #e7f0ed; --steel-50: #f3f8f6;
   --text: #17352c; --muted: #5e776f; --topbar-text: #d9f4e9; --active-accent: #6be0b8;
   --focus-color: rgba(37, 168, 124, 0.34); --filter-count-bg: #96ebcd; --theme-wash: rgba(22, 128, 94, 0.06);
+  --theme-image: url("imagens/temas/operations.webp"); --page-overlay: rgba(242, 249, 246, 0.92);
 }
 
 html[data-theme="logistics"] {
@@ -77,6 +84,7 @@ html[data-theme="logistics"] {
   --steel-700: #726047; --steel-500: #93816a; --steel-300: #d1c4b2; --steel-200: #e4dacd; --steel-100: #f1ebe3; --steel-50: #faf7f2;
   --text: #352819; --muted: #766955; --topbar-text: #ffedd0; --active-accent: #ffc45c;
   --focus-color: rgba(226, 148, 25, 0.38); --filter-count-bg: #ffd48b; --theme-wash: rgba(181, 107, 9, 0.065);
+  --theme-image: url("imagens/temas/logistics.webp"); --page-overlay: rgba(252, 248, 241, 0.92);
 }
 
 html[data-theme="corporate"] {
@@ -85,6 +93,7 @@ html[data-theme="corporate"] {
   --steel-700: #665d79; --steel-500: #887f99; --steel-300: #c9c2d4; --steel-200: #dfdae7; --steel-100: #eeeaf3; --steel-50: #f8f6fa;
   --text: #2b223b; --muted: #70677e; --topbar-text: #eee8fb; --active-accent: #b79bef;
   --focus-color: rgba(138, 104, 209, 0.36); --filter-count-bg: #d3c0f8; --theme-wash: rgba(107, 75, 176, 0.06);
+  --theme-image: url("imagens/temas/corporate.webp"); --page-overlay: rgba(248, 246, 252, 0.92);
 }
 
 html[data-theme="ocean"] {
@@ -93,6 +102,7 @@ html[data-theme="ocean"] {
   --steel-700: #496d74; --steel-500: #739097; --steel-300: #bbd0d4; --steel-200: #d6e3e6; --steel-100: #e8f0f2; --steel-50: #f3f8f9;
   --text: #17353b; --muted: #5e7a80; --topbar-text: #d8f4f8; --active-accent: #57d4e5;
   --focus-color: rgba(22, 171, 197, 0.35); --filter-count-bg: #91e1ec; --theme-wash: rgba(7, 137, 163, 0.06);
+  --theme-image: url("imagens/temas/ocean.webp"); --page-overlay: rgba(241, 249, 250, 0.92);
 }
 
 html[data-theme="neutral"] {
@@ -101,6 +111,7 @@ html[data-theme="neutral"] {
   --steel-700: #5b6670; --steel-500: #818b94; --steel-300: #c6cdd2; --steel-200: #dce1e4; --steel-100: #eceff1; --steel-50: #f8f9fa;
   --text: #252a2f; --muted: #6b747c; --topbar-text: #edf0f2; --active-accent: #8ec3e7;
   --focus-color: rgba(79, 137, 180, 0.34); --filter-count-bg: #b9d8ed; --theme-wash: rgba(72, 81, 90, 0.045);
+  --theme-image: url("imagens/temas/neutral.webp"); --page-overlay: rgba(250, 251, 252, 0.93);
 }
 
 html[data-theme="contrast"] {
@@ -109,6 +120,7 @@ html[data-theme="contrast"] {
   --steel-700: #242424; --steel-500: #505050; --steel-300: #8f8f8f; --steel-200: #bdbdbd; --steel-100: #e0e0e0; --steel-50: #ffffff;
   --text: #000000; --muted: #333333; --topbar-text: #ffffff; --active-accent: #ffd900;
   --focus-color: rgba(255, 217, 0, 0.7); --filter-count-bg: #ffd900; --theme-wash: rgba(0, 0, 0, 0.035);
+  --theme-image: url("imagens/temas/contrast.webp"); --page-overlay: rgba(255, 255, 255, 0.92);
   --shadow-sm: 0 0 0 2px #111111; --shadow-md: 0 0 0 3px #111111; --shadow-lg: 0 0 0 4px #000000;
 }
 
@@ -125,7 +137,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, var(--theme-wash), transparent 240px),
+    linear-gradient(var(--page-overlay), var(--page-overlay)),
+    linear-gradient(180deg, var(--theme-wash), transparent 320px),
+    var(--theme-image) center top / cover fixed no-repeat,
     var(--steel-50);
   color: var(--text);
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -162,10 +176,11 @@ select:focus-visible {
   top: 0;
   color: var(--white);
   background:
-    linear-gradient(110deg, rgba(255, 255, 255, 0.08), transparent 45%),
-    var(--navy-900);
-  border-bottom: 4px solid var(--blue-500);
-  box-shadow: 0 6px 22px rgba(7, 26, 45, 0.2);
+    linear-gradient(110deg, rgba(255, 255, 255, 0.12), transparent 48%),
+    color-mix(in srgb, var(--navy-900) 94%, transparent);
+  border-bottom: 3px solid var(--blue-500);
+  box-shadow: 0 10px 35px rgba(7, 26, 45, 0.22);
+  backdrop-filter: blur(18px) saturate(125%);
 }
 
 .topbar__content {
@@ -201,7 +216,8 @@ select:focus-visible {
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: 160ms ease;
+  border-radius: 10px 10px 0 0;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
 .app-nav__tab::after {
@@ -218,6 +234,7 @@ select:focus-visible {
 .app-nav__tab:hover {
   color: var(--white);
   background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
 }
 
 .app-nav__tab.is-active {
@@ -242,8 +259,9 @@ select:focus-visible {
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 22px rgba(0, 0, 0, 0.14);
 }
 
 .brand__mark svg {
@@ -347,7 +365,8 @@ select:focus-visible {
   padding: 40px;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-lg);
-  background: var(--white);
+  background: var(--surface);
+  backdrop-filter: blur(18px);
   box-shadow: var(--shadow-sm);
 }
 
@@ -457,8 +476,16 @@ select:focus-visible {
   border: 1px solid var(--steel-200);
   border-top: 4px solid var(--metric-accent, var(--blue-600));
   border-radius: var(--radius-md);
-  background: var(--white);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), var(--surface));
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.metric:hover {
+  border-color: color-mix(in srgb, var(--metric-accent) 38%, var(--steel-200));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
 }
 
 .metric::after {
@@ -526,8 +553,9 @@ select:focus-visible {
   padding: 20px;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-lg);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
 }
 
 .dashboard-detail .table-heading {
@@ -548,8 +576,9 @@ select:focus-visible {
   padding: 22px;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-lg);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
 }
 
 .global-filter-bar {
@@ -563,9 +592,9 @@ select:focus-visible {
   padding: 10px 12px;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.96);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(18px) saturate(125%);
 }
 
 .button--filter {
@@ -822,9 +851,10 @@ select:focus-visible {
   overflow: hidden;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-md);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
-  transition: 180ms ease;
+  backdrop-filter: blur(16px);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .item-card:hover {
@@ -1045,7 +1075,8 @@ select:focus-visible {
 .button--primary {
   border: 1px solid var(--blue-600);
   color: var(--white);
-  background: var(--blue-600);
+  background: linear-gradient(135deg, var(--blue-600), var(--navy-700));
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--blue-600) 24%, transparent);
 }
 
 .button--secondary {
@@ -1081,8 +1112,9 @@ select:focus-visible {
   overflow: hidden;
   border: 0;
   border-radius: var(--radius-lg);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(20px);
 }
 
 .item-modal::backdrop {
@@ -1347,6 +1379,8 @@ select:focus-visible {
   overflow: auto;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .need-summary {
@@ -1361,8 +1395,9 @@ select:focus-visible {
   border: 1px solid var(--steel-200);
   border-left: 4px solid var(--blue-600);
   border-radius: var(--radius-md);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
 }
 
 .need-summary span {
@@ -1480,18 +1515,18 @@ select:focus-visible {
   z-index: 1;
   top: 0;
   color: var(--navy-800);
-  background: #eaf1f6;
+  background: color-mix(in srgb, var(--steel-100) 86%, var(--white));
   font-size: 0.7rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .data-table tbody tr:nth-child(even) {
-  background: #f9fbfc;
+  background: color-mix(in srgb, var(--steel-50) 74%, transparent);
 }
 
 .data-table tbody tr:hover {
-  background: #eef6fc;
+  background: color-mix(in srgb, var(--blue-100) 72%, transparent);
 }
 
 .data-table tbody tr:last-child td {
