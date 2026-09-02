@@ -90,7 +90,7 @@ function cacheUi() {
   const ids = [
     "statusLine", "refreshButton", "themeSelect", "loadingPanel", "loadingTitle", "loadingMessage",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
-    "metricValue", "metricOutOfStock", "metricBelowMin", "metricAboveMax",
+    "metricValue", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "branchChart", "stockChart", "valueChart", "searchInput",
     "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
@@ -432,7 +432,8 @@ async function handleWorkerMessage(event) {
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date());
-    ui.statusLine.textContent = `${integerFormatter.format(state.items.length)} itens · dados carregados às ${time}`;
+    const visibleItems = state.items.filter((item) => !item.flags.inactiveOnly).length;
+    ui.statusLine.textContent = `${integerFormatter.format(visibleItems)} itens ativos · dados carregados às ${time}`;
     ui.loadingPanel.classList.add("is-hidden");
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
@@ -503,6 +504,7 @@ function prepareItems() {
   state.itemByCode.clear();
 
   for (const item of state.items) {
+    item.flags.locationAdjustment = itemNeedsLocationAdjustment(item);
     item.searchText = normalizeSearch([
       item.code,
       item.name,
@@ -528,6 +530,7 @@ function populateFilters() {
   const suppliers = new Set();
 
   for (const item of state.items) {
+    if (item.flags.inactiveOnly) continue;
     for (const category of item.categories || []) if (category) categories.add(category);
     for (const unit of item.units || []) if (unit) units.add(unit);
     for (const supplier of item.suppliers || []) if (supplier) suppliers.add(supplier);
@@ -609,6 +612,7 @@ function refreshDependentFilters(changedId) {
 function collectDependentOptions(targetFilterId) {
   const options = new Map();
   for (const item of state.items) {
+    if (item.flags.inactiveOnly) continue;
     if (!itemMatchesDraftFilters(item, targetFilterId)) continue;
 
     if (targetFilterId === "categoryFilter") {
@@ -649,6 +653,8 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
+  if (item.flags.inactiveOnly) return false;
+
   if (query && !item.searchText.includes(query)) return false;
   if (category && !(item.categories || []).includes(category)) return false;
   if (unit && !(item.units || []).includes(unit)) return false;
@@ -660,7 +666,8 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
     return true;
   });
   if ((branch || location || status || positiveOnly) && !positions.length) return false;
-  if (status && !positions.some((position) => positionMatchesStatus(position, status))) return false;
+  if (status === "adjust-location" && !itemNeedsLocationAdjustment(item, branch, location)) return false;
+  if (status && status !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, status))) return false;
   if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
   return true;
 }
@@ -722,6 +729,7 @@ function applyFilters() {
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
   state.filteredItems = state.items.filter((item) => {
+    if (item.flags.inactiveOnly) return false;
     if (query && !item.searchText.includes(query)) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
       if (branch && position.branchCode !== branch) return false;
@@ -729,7 +737,8 @@ function applyFilters() {
       return true;
     });
     if ((branch || location) && !matchingPositions.length) return false;
-    if (stockStatus && !matchingPositions.some((position) => positionMatchesStatus(position, stockStatus))) return false;
+    if (stockStatus === "adjust-location" && !itemNeedsLocationAdjustment(item, branch, location)) return false;
+    if (stockStatus && stockStatus !== "adjust-location" && !matchingPositions.some((position) => positionMatchesStatus(position, stockStatus))) return false;
     if (category && !(item.categories || []).includes(category)) return false;
     if (unit && !(item.units || []).includes(unit)) return false;
     if (supplier && !(item.suppliers || []).includes(supplier)) return false;
@@ -756,6 +765,20 @@ function positionMatchesStatus(position, status) {
   return true;
 }
 
+function itemNeedsLocationAdjustment(item, branch = "", location = "") {
+  const positions = (item.positions || []).filter((position) => !branch || position.branchCode === branch);
+  for (const balancePosition of positions) {
+    if (!(balancePosition.quantity > 0)) continue;
+    for (const limitsPosition of positions) {
+      if (limitsPosition.locationKey === balancePosition.locationKey) continue;
+      if (!((limitsPosition.minimum || 0) + (limitsPosition.maximum || 0) > 0)) continue;
+      if (location && balancePosition.locationKey !== location && limitsPosition.locationKey !== location) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
 function updateDashboardMetrics() {
   const branch = ui.branchFilter.value;
   const location = ui.locationFilter.value;
@@ -764,7 +787,6 @@ function updateDashboardMetrics() {
   const codesWithStock = new Set();
   const zeroCodes = new Set();
   let value = 0;
-  const outOfStockCodes = new Set();
   const belowMinCodes = new Set();
   const aboveMaxCodes = new Set();
   const unconfiguredCodes = new Set();
@@ -772,10 +794,11 @@ function updateDashboardMetrics() {
   const pendingSc = new Set(collectPendingScRows().map(({ sc }) => sc.code));
 
   for (const item of state.filteredItems) {
+    if (!(item.positions || []).length) continue;
     const positions = (item.positions || []).filter((position) => {
       if (branch && position.branchCode !== branch) return false;
       if (location && position.locationKey !== location) return false;
-      if (stockStatus && !positionMatchesStatus(position, stockStatus)) return false;
+      if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
       return true;
     });
     if (!positions.length && (branch || location)) continue;
@@ -787,8 +810,6 @@ function updateDashboardMetrics() {
       codesWithStock.add(item.code);
     } else if (itemLimits > 0) {
       zeroCodes.add(item.code);
-    } else {
-      outOfStockCodes.add(item.code);
     }
 
     for (const position of positions) {
@@ -807,13 +828,12 @@ function updateDashboardMetrics() {
   ui.metricZero.textContent = integerFormatter.format(zeroCodes.size);
   ui.metricValue.textContent = compactCurrencyFormatter.format(value);
   ui.metricValue.title = currencyFormatter.format(value);
-  ui.metricOutOfStock.textContent = integerFormatter.format(outOfStockCodes.size);
   ui.metricBelowMin.textContent = integerFormatter.format(belowMinCodes.size);
   ui.metricAboveMax.textContent = integerFormatter.format(aboveMaxCodes.size);
   ui.metricUnconfigured.textContent = integerFormatter.format(unconfiguredCodes.size);
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
   ui.metricNegative.textContent = integerFormatter.format(negativeCodes.size);
-  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos = ${integerFormatter.format(codesWithStock.size)} com saldo + ${integerFormatter.format(zeroCodes.size)} zerados + ${integerFormatter.format(outOfStockCodes.size)} fora de estoque`;
+  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos ativos = ${integerFormatter.format(codesWithStock.size)} com saldo + ${integerFormatter.format(zeroCodes.size)} zerados parametrizados`;
   ui.metricsContext.textContent = location
     ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
     : branch
@@ -939,7 +959,8 @@ function collectPendingScRows() {
         return true;
       });
       if (!positions.length) continue;
-      if (stockStatus && !positions.some((position) => positionMatchesStatus(position, stockStatus))) continue;
+      if (stockStatus === "adjust-location" && !itemNeedsLocationAdjustment(item, branch, ui.locationFilter.value)) continue;
+      if (stockStatus && stockStatus !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, stockStatus))) continue;
       if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) continue;
     }
     const pendingCodes = new Set(item.pendingScCodes || []);
@@ -963,7 +984,7 @@ function renderPurchaseNeeds() {
     if (!filteredCodes.has(item.code)) return false;
     if (branch && position.branchCode !== branch) return false;
     if (location && position.locationKey !== location) return false;
-    if (stockStatus && !positionMatchesStatus(position, stockStatus)) return false;
+    if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
     return true;
   });
 
@@ -1070,7 +1091,7 @@ function getVisiblePurchaseNeeds() {
     if (!filteredCodes.has(item.code)) return false;
     if (branch && position.branchCode !== branch) return false;
     if (location && position.locationKey !== location) return false;
-    if (stockStatus && !positionMatchesStatus(position, stockStatus)) return false;
+    if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
     return true;
   });
 }
@@ -1195,7 +1216,8 @@ function itemMatchesTransactionFilters(item) {
       return true;
     });
     if (!positions.length) return false;
-    if (status && !positions.some((position) => positionMatchesStatus(position, status))) return false;
+    if (status === "adjust-location" && !itemNeedsLocationAdjustment(item, ui.branchFilter.value, location)) return false;
+    if (status && status !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, status))) return false;
     if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
   }
   return true;
@@ -1360,6 +1382,7 @@ function statusBadges(item) {
   if (item.flags.belowMin) badges.push(["Abaixo do mínimo", "warning"]);
   if (item.flags.aboveMax) badges.push(["Acima do máximo", "danger"]);
   if (item.flags.unconfigured) badges.push(["Com saldo sem Min&Máx", "info"]);
+  if (item.flags.locationAdjustment) badges.push(["Ajustar local de estoque", "warning"]);
   if ((item.pendingScCodes || []).length) badges.push(["SC sem OF", "violet"]);
   if (!badges.length && item.balanceTotal > 0) badges.push(["Saldo disponível", "success"]);
   return badges;
@@ -1798,6 +1821,12 @@ function inventoryWorker() {
         const unitCost = parseNumber(get("Vl Custo Unitario Atual")) ?? 0;
         const stockValue = parseNumber(get("Vl Saldo Atual")) ?? 0;
         const limitsSumZero = minimum + maximum === 0;
+        item._hasStockSource = true;
+        if (quantity === 0 && limitsSumZero) {
+          item._inactivePositionCount += 1;
+          return;
+        }
+        item._hasActivePosition = true;
 
         const position = {
           branchCode: clean(get("Cd Filial")),
@@ -1913,7 +1942,7 @@ function inventoryWorker() {
 
         const pending = Boolean(
           scCode
-          && normalizeText(scStatus) === "compra confirmada"
+          && ["compra confirmada", "comprador negociando"].includes(normalizeText(scStatus))
           && scCancelled.toUpperCase() !== "S"
           && !ofCode
         );
@@ -1935,7 +1964,9 @@ function inventoryWorker() {
       progress("Preparando os cards e os indicadores…");
       const output = [];
       for (const item of items.values()) {
-        item.flags.purchaseOnly = item.positions.length === 0;
+        item.flags.inactiveOnly = item._hasStockSource && !item._hasActivePosition;
+        item.hiddenInactivePositionCount = item._inactivePositionCount;
+        item.flags.purchaseOnly = item.positions.length === 0 && !item._hasStockSource;
         item.name ||= "Item sem descrição";
         item.detailedName ||= item.name;
         item.positions.sort((a, b) => `${a.branchCode}-${a.localCode}`.localeCompare(`${b.branchCode}-${b.localCode}`, "pt-BR", { numeric: true }));
@@ -1948,6 +1979,9 @@ function inventoryWorker() {
         delete item._units;
         delete item._suppliers;
         delete item._pendingScCodes;
+        delete item._hasStockSource;
+        delete item._hasActivePosition;
+        delete item._inactivePositionCount;
         output.push(item);
       }
 
@@ -2123,6 +2157,9 @@ function inventoryWorker() {
         _units: new Set(),
         _suppliers: new Set(),
         _pendingScCodes: new Set(),
+        _hasStockSource: false,
+        _hasActivePosition: false,
+        _inactivePositionCount: 0,
       });
     }
     return items.get(code);

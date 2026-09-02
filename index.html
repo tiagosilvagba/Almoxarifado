@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260902-12">
-    <script src="script.js?v=20260902-12" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-13">
+    <script src="script.js?v=20260902-13" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -112,6 +112,7 @@
                 <option value="below-min">Itens abaixo do mínimo</option>
                 <option value="above-max">Itens acima do máximo</option>
                 <option value="within-range">Itens dentro do range</option>
+                <option value="adjust-location">Ajustar local de estoque</option>
               </select>
             </label>
             <label class="switch-field">
@@ -157,11 +158,6 @@
               <strong id="metricValue">—</strong>
               <small>valor atual consolidado</small>
             </article>
-            <article class="metric metric--slate">
-              <span class="metric__label">Fora de estoque</span>
-              <strong id="metricOutOfStock">—</strong>
-              <small>saldo zero sem parametrização de limites</small>
-            </article>
             <article class="metric metric--amber">
               <span class="metric__label">Abaixo do mínimo</span>
               <strong id="metricBelowMin">—</strong>
@@ -180,7 +176,7 @@
             <article class="metric metric--violet">
               <span class="metric__label">SC sem OF</span>
               <strong id="metricPendingSc">—</strong>
-              <small>compras confirmadas</small>
+              <small>confirmadas ou em negociação</small>
             </article>
             <article class="metric metric--charcoal">
               <span class="metric__label">Saldo negativo</span>
@@ -268,7 +264,7 @@
             <div>
               <span class="eyebrow">Compras pendentes</span>
               <h2 id="pendingScTitle">SC Pendente de OF</h2>
-              <p class="section-description">Solicitações com compra confirmada, não canceladas e sem código de OF gerado.</p>
+              <p class="section-description">Solicitações com compra confirmada ou comprador negociando, não canceladas e sem código de OF gerado.</p>
             </div>
             <span id="pendingScListCount" class="context-label">0 registros</span>
           </div>
