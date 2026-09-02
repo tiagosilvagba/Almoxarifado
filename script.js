@@ -2,7 +2,7 @@
 
 const CONFIG = Object.freeze({
   saldoFile: "00 - Saldo_Online.csv",
-  comprasFile: "01 - Compras_Almox.csv",
+  comprasFile: "01 - Compras_Almox.csv.gz",
   consumoFile: "03 - Consumo.csv",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
@@ -80,6 +80,7 @@ if (typeof document !== "undefined") {
 async function init() {
   cacheUi();
   initializeTheme();
+  initializeDensity();
   bindEvents();
   navigateToPage(pageFromHash(), false);
   await loadLocalPhotoCache();
@@ -88,26 +89,28 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "refreshButton", "themeSelect", "loadingPanel", "loadingTitle", "loadingMessage",
+    "statusLine", "refreshButton", "themeSelect", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
-    "metricValue", "metricBelowMin", "metricAboveMax",
-    "metricUnconfigured", "metricPendingSc", "metricNegative", "branchChart", "stockChart", "valueChart", "searchInput",
+    "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
+    "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
+    "dashboardPriorityList", "dashboardExcessList", "procurementFunnel", "searchInput",
     "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
-    "filterSummary", "resultCount", "cardsGrid", "emptyState",
+    "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
-    "modalSubtitle", "modalClose", "modalBadges", "modalGallery", "modalBalance",
+    "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBalance",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
-    "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedWithoutMax",
+    "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
     "purchaseNeedResultCount", "purchaseNeedTableWrap",
-    "pendingScListCount", "pendingScTableWrap", "exportPurchaseNeedButton", "exportPendingScButton",
+    "pendingScListCount", "pendingScTableWrap", "exportPurchaseNeedButton", "exportPendingScButton", "exportProcurementButton",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
     "purchaseModalDetails", "purchaseModalOpenItem", "pendingScModal", "pendingScModalClose",
     "pendingScModalCode", "pendingScModalTitle", "pendingScModalSubtitle", "pendingScModalSummary",
     "pendingScModalDetails", "pendingScModalOpenItem", "procurementCount", "procurementGrid",
+    "procurementAwaiting", "procurementOpen", "procurementPartial", "procurementReceived",
     "procurementLoadMore", "procurementVisibleCount", "procurementModal", "procurementModalClose",
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "photoInput", "photoUploadButton", "photoUploadStatus",
@@ -127,6 +130,7 @@ function cacheUi() {
 
 function bindEvents() {
   ui.themeSelect.addEventListener("change", () => applyTheme(ui.themeSelect.value, true));
+  ui.densityToggle.addEventListener("click", toggleDensity);
   for (const select of [
     ui.branchFilter,
     ui.locationFilter,
@@ -144,10 +148,20 @@ function bindEvents() {
     event.preventDefault();
     applyAllFilters(true);
   });
+  ui.catalogSort.addEventListener("change", applyFilters);
+  ui.catalogView.addEventListener("change", () => ui.cardsGrid.classList.toggle("is-list-view", ui.catalogView.value === "list"));
 
   ui.clearFilters.addEventListener("click", clearFilters);
   ui.applyFiltersButton.addEventListener("click", () => applyAllFilters(true));
   ui.filterToggleButton.addEventListener("click", toggleFilters);
+  ui.filterSummary.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-clear-filter]");
+    if (!trigger) return;
+    const id = trigger.dataset.clearFilter;
+    if (id === "positiveBalanceFilter") ui.positiveBalanceFilter.checked = false;
+    else if (ui[id]) ui[id].value = "";
+    handleAutomaticFilter(id);
+  });
   ui.closeFiltersButton.addEventListener("click", closeFilters);
   ui.globalFiltersPanel.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeFilters();
@@ -170,6 +184,7 @@ function bindEvents() {
   });
   ui.exportPurchaseNeedButton.addEventListener("click", exportPurchaseNeeds);
   ui.exportPendingScButton.addEventListener("click", exportPendingSc);
+  ui.exportProcurementButton.addEventListener("click", exportProcurement);
 
   ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
   ui.purchaseNeedModal.addEventListener("click", (event) => {
@@ -219,6 +234,27 @@ function bindEvents() {
     if (remove) removeLocalPhoto(remove.dataset.localPhotoId);
   });
   for (const chart of [ui.branchChart, ui.stockChart]) chart.addEventListener("click", handleChartFilter);
+  ui.dashboardPriorityList.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-purchase-need-key]");
+    if (trigger) openPurchaseNeedModal(trigger.dataset.purchaseNeedKey);
+  });
+  ui.dashboardExcessList.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-item-code]");
+    if (trigger) openItem(trigger.dataset.itemCode);
+  });
+  document.addEventListener("click", (event) => {
+    const pageLink = event.target.closest("[data-page-link]");
+    if (pageLink) navigateToPage(pageLink.dataset.pageLink, true);
+    const filterLink = event.target.closest("[data-filter-link]");
+    if (filterLink) {
+      ui.stockStatusFilter.value = filterLink.dataset.filterLink;
+      handleAutomaticFilter("stockStatusFilter");
+      navigateToPage("catalogo", true);
+    }
+    const sortLink = event.target.closest("[data-sort-link]");
+    if (sortLink) { ui.catalogSort.value = sortLink.dataset.sortLink; applyFilters(); navigateToPage("catalogo", true); }
+    if (event.target.closest("[data-positive-link]")) { ui.positiveBalanceFilter.checked = true; handleAutomaticFilter("positiveBalanceFilter"); navigateToPage("catalogo", true); }
+  });
 
   for (const pageTab of ui.pageTabs) {
     pageTab.addEventListener("click", (event) => {
@@ -235,6 +271,8 @@ function bindEvents() {
   });
 
   ui.modalClose.addEventListener("click", closeModal);
+  ui.modalPrevious.addEventListener("click", () => navigateItemModal(-1));
+  ui.modalNext.addEventListener("click", () => navigateItemModal(1));
   ui.itemModal.addEventListener("click", (event) => {
     if (event.target === ui.itemModal) closeModal();
   });
@@ -246,6 +284,22 @@ function bindEvents() {
   for (const tab of ui.tabs) {
     tab.addEventListener("click", () => activateTab(tab.dataset.tab));
   }
+}
+
+function initializeDensity() {
+  let compact = false;
+  try { compact = localStorage.getItem("almoxarifado-density") === "compact"; } catch { compact = false; }
+  document.documentElement.dataset.density = compact ? "compact" : "comfortable";
+  ui.densityToggle.setAttribute("aria-pressed", String(compact));
+  ui.densityToggle.textContent = compact ? "Modo confortável" : "Modo compacto";
+}
+
+function toggleDensity() {
+  const compact = document.documentElement.dataset.density !== "compact";
+  document.documentElement.dataset.density = compact ? "compact" : "comfortable";
+  ui.densityToggle.setAttribute("aria-pressed", String(compact));
+  ui.densityToggle.textContent = compact ? "Modo confortável" : "Modo compacto";
+  try { localStorage.setItem("almoxarifado-density", compact ? "compact" : "comfortable"); } catch { /* preferência válida apenas nesta sessão */ }
 }
 
 function initializeTheme() {
@@ -339,11 +393,11 @@ function closeFilters() {
 
 function applyAllFilters(shouldClose = false) {
   applyFilters();
-  updateDashboardMetrics();
-  renderDashboardCharts();
   renderPendingScList();
   renderPurchaseNeeds();
   buildProcurementRows();
+  updateDashboardMetrics();
+  renderDashboardCharts();
   updateFilterSummary();
   if (shouldClose) closeFilters();
 }
@@ -356,17 +410,19 @@ function handleAutomaticFilter(changedId) {
 function updateFilterSummary() {
   const labels = [];
   const query = ui.searchInput.value.trim();
-  if (query) labels.push(`Busca: ${query}`);
-  if (ui.branchFilter.value) labels.push(ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`);
-  if (ui.locationFilter.value) labels.push(ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado");
+  if (query) labels.push(["searchInput", `Busca: ${query}`]);
+  if (ui.branchFilter.value) labels.push(["branchFilter", ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`]);
+  if (ui.locationFilter.value) labels.push(["locationFilter", ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"]);
   for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.stockStatusFilter]) {
-    if (select.value) labels.push(select.selectedOptions[0]?.textContent || select.value);
+    if (select.value) labels.push([select.id, select.selectedOptions[0]?.textContent || select.value]);
   }
-  if (ui.positiveBalanceFilter.checked) labels.push("Somente saldo positivo");
+  if (ui.positiveBalanceFilter.checked) labels.push(["positiveBalanceFilter", "Somente saldo positivo"]);
 
   ui.activeFilterCount.textContent = String(labels.length);
   ui.activeFilterCount.classList.toggle("is-hidden", !labels.length);
-  ui.filterSummary.textContent = labels.length ? labels.join(" · ") : "Todas as filiais · todos os itens";
+  ui.filterSummary.innerHTML = labels.length
+    ? labels.map(([id, label]) => `<button type="button" data-clear-filter="${escapeHtml(id)}" title="Remover filtro ${escapeHtml(label)}"><span>${escapeHtml(label)}</span><b aria-hidden="true">×</b></button>`).join("")
+    : "Todas as filiais · todos os itens";
 }
 
 async function loadCatalog() {
@@ -432,8 +488,9 @@ async function handleWorkerMessage(event) {
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date());
-    const visibleItems = state.items.filter((item) => !item.flags.inactiveOnly).length;
-    ui.statusLine.textContent = `${integerFormatter.format(visibleItems)} itens ativos · dados carregados às ${time}`;
+    const activeStockItems = state.items.filter((item) => !item.flags.inactiveOnly && item.positions.length).length;
+    const purchaseOnlyItems = state.items.filter((item) => item.flags.purchaseOnly).length;
+    ui.statusLine.textContent = `${integerFormatter.format(activeStockItems)} no estoque ativo · ${integerFormatter.format(purchaseOnlyItems)} somente em compras · ${time}`;
     ui.loadingPanel.classList.add("is-hidden");
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
@@ -512,6 +569,11 @@ function prepareItems() {
       ...(item.categories || []),
       ...(item.suppliers || []),
       ...(item.units || []),
+      ...(item.history || []).flatMap((record) => [
+        record.sc?.code, record.sc?.status,
+        record.of?.code, record.of?.status, record.of?.supplier,
+        record.rec?.invoice, record.rec?.series, record.rec?.supplier,
+      ]),
     ].join(" "));
     state.itemByCode.set(item.code, item);
   }
@@ -746,11 +808,32 @@ function applyFilters() {
     return true;
   });
 
+  const sort = ui.catalogSort.value;
+  state.filteredItems.sort((a, b) => {
+    if (sort === "description") return a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" });
+    if (sort === "balance") return b.balanceTotal - a.balanceTotal || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
+    if (sort === "value") return b.stockValueTotal - a.stockValueTotal || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
+    if (sort === "critical") return itemCriticality(b) - itemCriticality(a) || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
+    return a.code.localeCompare(b.code, "pt-BR", { numeric: true, sensitivity: "base" });
+  });
+
   ui.resultCount.textContent = pluralize(state.filteredItems.length, "item", "itens");
 
   state.renderedCount = 0;
   ui.cardsGrid.replaceChildren();
   renderNextBatch();
+}
+
+function itemCriticality(item) {
+  const positions = currentScopedPositions(item, false);
+  if (positions.some((position) => position.quantity < 0)) return 7;
+  if (positions.some((position) => position.quantity === 0 && position.minimum + position.maximum > 0)) return 6;
+  if (positions.some((position) => position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum)) return 5;
+  if (item.flags.locationAdjustment) return 4;
+  if (positions.some((position) => position.maximum > 0 && position.quantity > position.maximum)) return 3;
+  if (positions.some((position) => position.quantity > 0 && position.minimum + position.maximum === 0)) return 2;
+  if (item.flags.purchaseOnly) return 1;
+  return 0;
 }
 
 function positionMatchesStatus(position, status) {
@@ -762,6 +845,8 @@ function positionMatchesStatus(position, status) {
   if (status === "below-min") return minimum > 0 && quantity > 0 && quantity < minimum;
   if (status === "above-max") return maximum > 0 && quantity > maximum;
   if (status === "within-range") return minimum > 0 && maximum > 0 && quantity >= minimum && quantity <= maximum;
+  if (status === "unconfigured") return quantity > 0 && minimum + maximum === 0;
+  if (status === "negative") return quantity < 0;
   return true;
 }
 
@@ -779,10 +864,37 @@ function itemNeedsLocationAdjustment(item, branch = "", location = "") {
   return false;
 }
 
-function updateDashboardMetrics() {
+function currentScopedPositions(item, includeStatus = true) {
   const branch = ui.branchFilter.value;
   const location = ui.locationFilter.value;
-  const stockStatus = ui.stockStatusFilter.value;
+  const status = includeStatus ? ui.stockStatusFilter.value : "";
+  return (item.positions || []).filter((position) => {
+    if (branch && position.branchCode !== branch) return false;
+    if (location && position.locationKey !== location) return false;
+    if (status && status !== "adjust-location" && !positionMatchesStatus(position, status)) return false;
+    return true;
+  });
+}
+
+function strictOpenOfRecords() {
+  const branch = effectiveBranchFilter();
+  const supplier = ui.supplierFilter.value;
+  const query = normalizeSearch(ui.searchInput.value);
+  const rows = new Map();
+  for (const item of state.filteredItems) {
+    for (const record of item.history || []) {
+      const of = record.of;
+      if (!of?.code || !(of.balance > 0)) continue;
+      if (branch && record.branchCode !== branch) continue;
+      if (supplier && normalizeSearch(of.supplier) !== normalizeSearch(supplier)) continue;
+      if (query && !recordMatchesQuery(item, record, query)) continue;
+      if (!rows.has(of.code)) rows.set(of.code, { item, record, of });
+    }
+  }
+  return [...rows.values()];
+}
+
+function updateDashboardMetrics() {
   const scopedItems = new Set();
   const codesWithStock = new Set();
   const zeroCodes = new Set();
@@ -792,17 +904,14 @@ function updateDashboardMetrics() {
   const unconfiguredCodes = new Set();
   const negativeCodes = new Set();
   const pendingSc = new Set(collectPendingScRows().map(({ sc }) => sc.code));
+  const openOf = strictOpenOfRecords();
+  let excessValue = 0;
 
   for (const item of state.filteredItems) {
     if (!(item.positions || []).length) continue;
-    const positions = (item.positions || []).filter((position) => {
-      if (branch && position.branchCode !== branch) return false;
-      if (location && position.locationKey !== location) return false;
-      if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
-      return true;
-    });
-    if (!positions.length && (branch || location)) continue;
-    if (positions.length || (!branch && !location)) scopedItems.add(item.code);
+    const positions = currentScopedPositions(item);
+    if (!positions.length) continue;
+    scopedItems.add(item.code);
 
     const itemBalance = positions.reduce((sum, position) => sum + (position.quantity || 0), 0);
     const itemLimits = positions.reduce((sum, position) => sum + (position.minimum || 0) + (position.maximum || 0), 0);
@@ -818,9 +927,13 @@ function updateDashboardMetrics() {
       if (position.aboveMax) aboveMaxCodes.add(item.code);
       if (position.unconfigured) unconfiguredCodes.add(item.code);
       if (position.negative) negativeCodes.add(item.code);
+      if (position.maximum > 0 && position.quantity > position.maximum) {
+        excessValue += (position.quantity - position.maximum) * (position.unitCost || 0);
+      }
     }
-
   }
+
+  const purchaseValue = getVisiblePurchaseNeeds().reduce((sum, need) => sum + (need.estimatedValue || 0), 0);
 
   ui.metricItems.textContent = integerFormatter.format(scopedItems.size);
   ui.metricQuantity.textContent = integerFormatter.format(codesWithStock.size);
@@ -828,25 +941,42 @@ function updateDashboardMetrics() {
   ui.metricZero.textContent = integerFormatter.format(zeroCodes.size);
   ui.metricValue.textContent = compactCurrencyFormatter.format(value);
   ui.metricValue.title = currencyFormatter.format(value);
+  ui.metricPurchaseValue.textContent = compactCurrencyFormatter.format(purchaseValue);
+  ui.metricPurchaseValue.title = currencyFormatter.format(purchaseValue);
+  ui.metricExcessValue.textContent = compactCurrencyFormatter.format(excessValue);
+  ui.metricExcessValue.title = currencyFormatter.format(excessValue);
   ui.metricBelowMin.textContent = integerFormatter.format(belowMinCodes.size);
   ui.metricAboveMax.textContent = integerFormatter.format(aboveMaxCodes.size);
   ui.metricUnconfigured.textContent = integerFormatter.format(unconfiguredCodes.size);
   ui.metricPendingSc.textContent = integerFormatter.format(pendingSc.size);
   ui.metricNegative.textContent = integerFormatter.format(negativeCodes.size);
-  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos ativos = ${integerFormatter.format(codesWithStock.size)} com saldo + ${integerFormatter.format(zeroCodes.size)} zerados parametrizados`;
-  ui.metricsContext.textContent = location
+  ui.metricOpenOf.textContent = integerFormatter.format(openOf.length);
+  ui.metricActionProcesses.textContent = integerFormatter.format(pendingSc.size + openOf.length);
+  const dateAnomalies = countFutureDateAnomalies();
+  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos ativos = ${integerFormatter.format(codesWithStock.size)} com saldo + ${integerFormatter.format(zeroCodes.size)} zerados parametrizados${dateAnomalies ? ` · Atenção: ${pluralize(dateAnomalies, "data futura atípica", "datas futuras atípicas")}` : ""}`;
+  ui.metricsContext.textContent = ui.locationFilter.value
     ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
-    : branch
-      ? ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${branch}`
+    : ui.branchFilter.value
+      ? ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`
       : "Todas as filiais · códigos únicos";
 }
 
+function countFutureDateAnomalies() {
+  const limit = Date.now() + 366 * 86400000;
+  const records = new Set();
+  for (const item of state.filteredItems) for (const record of item.history || []) {
+    for (const [key, value] of [[`SC:${record.sc?.code}:entrega`, record.sc?.deliveryDate], [`OF:${record.of?.code}:entrega`, record.of?.deliveryDate], [`REC:${record.rec?.invoice}:entrada`, record.rec?.entryDate]]) {
+      const timestamp = dateTimestamp(value);
+      if (timestamp > limit) records.add(key);
+    }
+  }
+  return records.size;
+}
+
 function renderDashboardCharts() {
-  const selectedBranch = ui.branchFilter.value;
   const branchData = new Map();
   for (const item of state.filteredItems) {
-    for (const position of item.positions || []) {
-      if (selectedBranch && position.branchCode !== selectedBranch) continue;
+    for (const position of currentScopedPositions(item)) {
       if (!branchData.has(position.branchCode)) branchData.set(position.branchCode, { label: [position.branchCode, position.branchName].filter(Boolean).join(" · "), codes: new Set(), value: 0 });
       const entry = branchData.get(position.branchCode);
       entry.codes.add(item.code);
@@ -859,19 +989,50 @@ function renderDashboardCharts() {
     <span class="chart-bar__label">${escapeHtml(value.label)}</span><span class="chart-bar__track"><i style="width:${(value.codes.size / maxCodes) * 100}%"></i></span><strong>${integerFormatter.format(value.codes.size)}</strong>
   </button>`).join("") || `<div class="chart-empty">Sem dados para os filtros atuais.</div>`;
 
-  const statuses = [
-    ["zero", "Zerados", state.filteredItems.filter((item) => item.positions.some((position) => position.quantity === 0 && (position.minimum || 0) + (position.maximum || 0) > 0)).length, "var(--cyan)"],
-    ["below-min", "Abaixo do mínimo", state.filteredItems.filter((item) => item.positions.some((position) => position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum)).length, "var(--amber)"],
-    ["above-max", "Acima do máximo", state.filteredItems.filter((item) => item.positions.some((position) => position.maximum > 0 && position.quantity > position.maximum)).length, "var(--red)"],
-    ["within-range", "Dentro do range", state.filteredItems.filter((item) => item.positions.some((position) => position.minimum > 0 && position.maximum > 0 && position.quantity >= position.minimum && position.quantity <= position.maximum)).length, "var(--green)"],
+  const statusDefinitions = [
+    ["zero", "Zerados parametrizados", "var(--cyan)"],
+    ["below-min", "Abaixo do mínimo", "var(--amber)"],
+    ["above-max", "Acima do máximo", "var(--red)"],
+    ["within-range", "Dentro do range", "var(--green)"],
   ];
-  const total = Math.max(1, statuses.reduce((sum, status) => sum + status[2], 0));
-  let cursor = 0;
-  const segments = statuses.map((status) => { const start = cursor; cursor += (status[2] / total) * 100; return `${status[3]} ${start}% ${cursor}%`; }).join(",");
-  ui.stockChart.innerHTML = `<div class="donut" style="--donut-segments:conic-gradient(${segments})"><strong>${integerFormatter.format(total)}</strong><span>ocorrências</span></div><div class="donut-legend">${statuses.map(([key, label, count, color]) => `<button type="button" data-chart-status="${key}"><i style="background:${color}"></i><span>${label}</span><strong>${integerFormatter.format(count)}</strong></button>`).join("")}</div>`;
+  const statuses = statusDefinitions.map(([key, label, color]) => [key, label, state.filteredItems.filter((item) => currentScopedPositions(item, false).some((position) => positionMatchesStatus(position, key))).length, color]);
+  const maxStatus = Math.max(1, ...statuses.map((status) => status[2]));
+  ui.stockChart.innerHTML = statuses.map(([key, label, count, color]) => `<button class="status-bar" type="button" data-chart-status="${key}"><span><i style="background:${color}"></i>${escapeHtml(label)}</span><span class="status-bar__track"><i style="width:${(count / maxStatus) * 100}%;background:${color}"></i></span><strong>${integerFormatter.format(count)}</strong></button>`).join("");
 
   const maxValue = Math.max(1, ...branches.map(([, value]) => value.value));
   ui.valueChart.innerHTML = branches.map(([, value]) => `<div class="chart-bar chart-bar--static"><span class="chart-bar__label">${escapeHtml(value.label)}</span><span class="chart-bar__track"><i style="width:${(value.value / maxValue) * 100}%"></i></span><strong>${compactCurrencyFormatter.format(value.value)}</strong></div>`).join("") || `<div class="chart-empty">Sem valores para os filtros atuais.</div>`;
+  renderProcurementFunnel();
+  renderDecisionLists();
+}
+
+function renderProcurementFunnel() {
+  const sc = new Set();
+  const of = new Set();
+  const rec = new Set();
+  for (const { record } of state.procurementRows) {
+    if (record.sc?.code) sc.add(record.sc.code);
+    if (record.of?.code) of.add(record.of.code);
+    if (record.rec?.invoice) rec.add(`${record.rec.invoice}::${record.rec.series || ""}`);
+  }
+  const max = Math.max(1, sc.size, of.size, rec.size);
+  ui.procurementFunnel.innerHTML = [
+    ["SC", "Solicitações", sc.size, "var(--violet)"],
+    ["OF", "Ordens de fornecimento", of.size, "var(--blue-600)"],
+    ["REC", "Recebimentos", rec.size, "var(--green)"],
+  ].map(([prefix, label, count, color]) => `<button type="button" data-page-link="consulta-sc-of" style="--funnel-color:${color};--funnel-width:${Math.max(18, count / max * 100)}%"><span>${prefix}</span><strong>${integerFormatter.format(count)}</strong><small>${label}</small><i></i></button>`).join("");
+}
+
+function renderDecisionLists() {
+  const needs = getVisiblePurchaseNeeds().filter((need) => need.netSuggested > 0).sort((a, b) => b.estimatedValue - a.estimatedValue).slice(0, 5);
+  ui.dashboardPriorityList.innerHTML = needs.map((need) => `<button type="button" data-purchase-need-key="${escapeHtml(need.key)}"><span><strong>${escapeHtml(need.item.code)} · ${escapeHtml(need.item.name)}</strong><small>${escapeHtml([need.position.branchCode, need.position.localCode].filter(Boolean).join(" · "))}</small></span><b>${currencyFormatter.format(need.estimatedValue)}</b></button>`).join("") || `<p class="chart-empty">Sem necessidade para o recorte atual.</p>`;
+
+  const excess = [];
+  for (const item of state.filteredItems) for (const position of currentScopedPositions(item)) {
+    if (!(position.maximum > 0 && position.quantity > position.maximum)) continue;
+    excess.push({ item, position, value: (position.quantity - position.maximum) * (position.unitCost || 0) });
+  }
+  excess.sort((a, b) => b.value - a.value);
+  ui.dashboardExcessList.innerHTML = excess.slice(0, 5).map(({ item, position, value }) => `<button type="button" data-item-code="${escapeHtml(item.code)}"><span><strong>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</strong><small>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · "))} · excesso ${numberFormatter.format(position.quantity - position.maximum)}</small></span><b>${currencyFormatter.format(value)}</b></button>`).join("") || `<p class="chart-empty">Sem excesso para o recorte atual.</p>`;
 }
 
 function handleChartFilter(event) {
@@ -886,19 +1047,33 @@ function buildPurchaseNeeds() {
   const needs = [];
 
   for (const item of state.items) {
+    const availableOfByBranch = new Map();
     for (const position of item.positions || []) {
       if (!(position.minimum > 0 && position.quantity < position.minimum)) continue;
       const target = position.maximum > 0 ? position.maximum : position.minimum;
+      const grossSuggested = Math.max(target - position.quantity, 0);
+      if (!availableOfByBranch.has(position.branchCode)) availableOfByBranch.set(position.branchCode, getItemOpenOfBalance(item, position.branchCode));
+      const openOfBalance = Math.min(availableOfByBranch.get(position.branchCode) || 0, grossSuggested);
+      availableOfByBranch.set(position.branchCode, Math.max((availableOfByBranch.get(position.branchCode) || 0) - openOfBalance, 0));
+      const netSuggested = Math.max(grossSuggested - openOfBalance, 0);
+      const referencePrice = position.unitCost || latestPurchasePrice(item) || 0;
       needs.push({
         item,
         position,
         target,
-        suggested: Math.max(target - position.quantity, 0),
+        suggested: grossSuggested,
+        openOfBalance,
+        netSuggested,
+        referencePrice,
+        estimatedValue: netSuggested * referencePrice,
+        rupture: position.quantity <= 0,
       });
     }
   }
 
   state.purchaseNeeds = needs.sort((a, b) => {
+    if (a.rupture !== b.rupture) return a.rupture ? -1 : 1;
+    if (a.estimatedValue !== b.estimatedValue) return b.estimatedValue - a.estimatedValue;
     const codeOrder = a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true, sensitivity: "base" });
     if (codeOrder) return codeOrder;
     return a.position.locationKey.localeCompare(b.position.locationKey, "pt-BR", { numeric: true });
@@ -910,10 +1085,28 @@ function buildPurchaseNeeds() {
   });
 }
 
+function latestPurchasePrice(item) {
+  for (const record of item.history || []) {
+    const value = firstDefined(record.rec?.unitValue, record.of?.unitValue);
+    if (value > 0) return value;
+  }
+  return 0;
+}
+
+function getItemOpenOfBalance(item, branchCode = "") {
+  const orders = new Map();
+  for (const record of item.history || []) {
+    if (!record.of?.code || !(record.of.balance > 0)) continue;
+    if (branchCode && record.branchCode !== branchCode) continue;
+    if (!orders.has(record.of.code)) orders.set(record.of.code, record.of.balance);
+  }
+  return [...orders.values()].reduce((sum, value) => sum + value, 0);
+}
+
 function renderPendingScList() {
   const rows = collectPendingScRows().sort((a, b) => {
-    const codeOrder = a.sc.code.localeCompare(b.sc.code, "pt-BR", { numeric: true });
-    return codeOrder || a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true });
+    const dateOrder = dateTimestamp(a.sc.date) - dateTimestamp(b.sc.date);
+    return dateOrder || a.sc.code.localeCompare(b.sc.code, "pt-BR", { numeric: true });
   });
   const uniqueSc = new Set(rows.map(({ sc }) => sc.code));
   state.pendingScRows = rows;
@@ -930,17 +1123,17 @@ function renderPendingScList() {
   }
 
   ui.pendingScTableWrap.innerHTML = rows.map(({ item, record, sc, key }) => `<button class="report-card report-card--sc" type="button" data-pending-sc-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill status-pill--pending">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(formatDate(sc.date, "Sem data"))}</span></span>
+    <span class="report-card__top"><span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(ageLabel(sc.date))}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="report-card__meta"><span><small>Filial</small><strong>${escapeHtml(record.branch || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
-    <span class="report-card__footer"><span>${escapeHtml(sc.category || "Sem categoria")}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
+    <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
   </button>`).join("");
 }
 
 function collectPendingScRows() {
   const rowsByKey = new Map();
-  const branch = ui.branchFilter.value;
+  const branch = effectiveBranchFilter();
   const query = normalizeSearch(ui.searchInput.value);
   const category = ui.categoryFilter.value;
   const unit = ui.unitFilter.value;
@@ -968,6 +1161,7 @@ function collectPendingScRows() {
       const sc = record.sc;
       if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
       if (branch && record.branchCode !== branch) continue;
+      if (query && !recordMatchesQuery(item, record, query)) continue;
       const key = `${sc.code}::${item.code}`;
       if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
     }
@@ -990,8 +1184,13 @@ function renderPurchaseNeeds() {
 
   const itemCodes = new Set(visible.map(({ item }) => item.code));
   const withoutMaximum = visible.filter(({ position }) => !(position.maximum > 0)).length;
+  const ruptures = visible.filter(({ rupture }) => rupture).length;
+  const estimatedValue = visible.reduce((sum, need) => sum + need.estimatedValue, 0);
   ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
   ui.purchaseNeedPositions.textContent = integerFormatter.format(visible.length);
+  ui.purchaseNeedRuptures.textContent = integerFormatter.format(ruptures);
+  ui.purchaseNeedEstimated.textContent = compactCurrencyFormatter.format(estimatedValue);
+  ui.purchaseNeedEstimated.title = currencyFormatter.format(estimatedValue);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
   ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "posição", "posições")} exibida${visible.length === 1 ? "" : "s"}`;
 
@@ -1000,19 +1199,19 @@ function renderPurchaseNeeds() {
     return;
   }
 
-  ui.purchaseNeedTableWrap.innerHTML = visible.map(({ item, position, suggested, key }) => `<button class="report-card report-card--need" type="button" data-purchase-need-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill status-pill--need">Comprar ${numberFormatter.format(suggested)}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+  ui.purchaseNeedTableWrap.innerHTML = visible.map(({ item, position, netSuggested, openOfBalance, estimatedValue, rupture, key }) => `<button class="report-card report-card--need${rupture ? " is-critical" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${rupture ? "status-pill--critical" : "status-pill--need"}">${rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
-    <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Mínimo</small><strong>${formatOptionalNumber(position.minimum)}</strong></span><span><small>Máximo</small><strong>${formatOptionalNumber(position.maximum)}</strong></span></span>
-    <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</span><strong>${escapeHtml(position.localCode || "—")}</strong></span>
+    <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>OF aberta</small><strong>${numberFormatter.format(openOfBalance)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>
+    <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
   </button>`).join("");
 }
 
 function openPurchaseNeedModal(key) {
   const need = state.purchaseNeedByKey.get(key);
   if (!need) return;
-  const { item, position, target, suggested } = need;
+  const { item, position, target, suggested, openOfBalance, netSuggested, referencePrice, estimatedValue, rupture } = need;
   state.activePurchaseNeed = need;
   state.lastFocusedElement = document.activeElement;
 
@@ -1029,13 +1228,18 @@ function openPurchaseNeedModal(key) {
     <article><span>Mínimo</span><strong>${formatOptionalNumber(position.minimum)}</strong></article>
     <article><span>Máximo</span><strong>${formatOptionalNumber(position.maximum)}</strong></article>
     <article><span>Meta</span><strong>${numberFormatter.format(target)}</strong></article>
-    <article><span>Comprar</span><strong>${numberFormatter.format(suggested)}</strong></article>`;
+    <article><span>Necessidade bruta</span><strong>${numberFormatter.format(suggested)}</strong></article>
+    <article><span>Saldo em OF aberta</span><strong>${numberFormatter.format(openOfBalance)}</strong></article>
+    <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
+    <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
   ui.purchaseModalDetails.innerHTML = `
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
     <div><dt>Filial</dt><dd>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</dd></div>
     <div><dt>Local</dt><dd>${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · ") || "—")}</dd></div>
     <div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "—")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
+    <div><dt>Prioridade</dt><dd>${rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
+    <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
     <div><dt>Critério da sugestão</dt><dd>${position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
 
   if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
@@ -1061,15 +1265,20 @@ function openPendingScModal(key) {
     <article><span>Quantidade</span><strong>${formatOptionalNumber(sc.quantity)}</strong></article>
     <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></article>
     <article><span>Criação</span><strong>${escapeHtml(formatDate(sc.date))}</strong></article>
-    <article><span>Entrega</span><strong>${escapeHtml(formatDate(sc.deliveryDate))}</strong></article>`;
+    <article><span>Entrega</span><strong>${escapeHtml(formatDate(sc.deliveryDate))}</strong></article>
+    <article><span>Tempo aguardando</span><strong>${escapeHtml(ageLabel(sc.date))}</strong></article>`;
   ui.pendingScModalDetails.innerHTML = `
     <div><dt>Situação</dt><dd>${escapeHtml(sc.status || "—")}</dd></div>
     <div><dt>Cancelada</dt><dd>${escapeHtml(sc.cancelled || "Não")}</dd></div>
     <div><dt>Categoria</dt><dd>${escapeHtml(sc.category || "—")}</dd></div>
     <div><dt>Motivo</dt><dd>${escapeHtml(sc.reason || "—")}</dd></div>
     <div><dt>Filial</dt><dd>${escapeHtml(record.branch || "—")}</dd></div>
+    <div><dt>Empresa</dt><dd>${escapeHtml(sc.company || "—")}</dd></div>
+    <div><dt>Centro de custo aprovador</dt><dd>${escapeHtml(sc.costCenter || "—")}</dd></div>
+    <div><dt>Local de estoque</dt><dd>${escapeHtml(sc.stockLocation || "—")}</dd></div>
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
     <div><dt>Descrição detalhada</dt><dd>${escapeHtml(item.detailedName || item.name)}</dd></div>
+    <div><dt>Observação</dt><dd>${escapeHtml(sc.observation || "—")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
     <div><dt>OF</dt><dd>Não gerada</dd></div>`;
   if (typeof ui.pendingScModal.showModal === "function") ui.pendingScModal.showModal();
@@ -1097,37 +1306,64 @@ function getVisiblePurchaseNeeds() {
 }
 
 function exportPurchaseNeeds() {
-  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested }) => [
+  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, netSuggested, referencePrice, estimatedValue, rupture }) => [
     item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
     position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
-    position.shelf, position.division, position.quantity, position.minimum, position.maximum, target, suggested,
+    position.shelf, position.division, position.quantity, position.minimum, position.maximum, target, suggested, openOfBalance, netSuggested,
+    referencePrice, estimatedValue, rupture ? "Ruptura" : "Abaixo do mínimo com saldo",
     position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
     position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
   ]);
   exportExcelReport({
     title: "Necessidade de Compra",
     filename: "necessidade-de-compra.xls",
-    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Quantidade a comprar", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
     rows,
-    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19]),
-    currencyColumns: new Set([18, 19]),
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24]),
+    currencyColumns: new Set([19, 20, 23, 24]),
   });
 }
 
 function exportPendingSc() {
   const rows = state.pendingScRows.map(({ item, record, sc }) => [
-    sc.code, sc.status, sc.cancelled, sc.date, sc.deliveryDate, sc.quantity, sc.estimatedValue,
+    sc.code, sc.status, sc.cancelled, sc.date, sc.deliveryDate, ageDays(sc.date), isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
     sc.category, sc.reason, item.code, item.name, item.detailedName, (item.categories || []).join(" | "),
     (item.units || []).join(" | "), record.branch, (item.suppliers || []).join(" | "), "", "Não gerada",
   ]);
   exportExcelReport({
     title: "SC Pendente de OF",
     filename: "sc-pendente-de-of.xls",
-    headers: ["SC", "Situação SC", "Cancelada", "Data de criação", "Data de entrega", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
+    headers: ["SC", "Situação SC", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
     rows,
-    numericColumns: new Set([5, 6]),
-    currencyColumns: new Set([6]),
+    numericColumns: new Set([5, 7, 8]),
+    currencyColumns: new Set([8]),
     dateColumns: new Set([3, 4]),
+  });
+}
+
+function exportProcurement() {
+  const rows = state.procurementRows.map(({ item, record }) => {
+    const { sc, of, rec } = record;
+    return [
+      item.code, item.name, item.detailedName, record.branchCode, record.branch,
+      sc?.code, sc?.status, sc?.date, sc?.deliveryDate, sc?.quantity, sc?.estimatedValue, sc?.category, sc?.reason, sc?.cancelled, sc?.company, sc?.costCenter, sc?.stockLocation,
+      of?.code, of?.status, of?.date, of?.deliveryDate, of?.supplierCode, of?.supplier, of?.requestedQuantity, of?.deliveredQuantity, of?.balance, of?.unitValue, of?.currency, of?.paymentTerms, of?.paymentMethod, of?.freight, of?.icms, of?.ipi, of?.closed, of?.blocked, of?.type, of?.carrier,
+      rec?.invoice, rec?.series, rec?.issueDate, rec?.entryDate, rec?.supplierCode, rec?.supplier, rec?.quantity, rec?.unitValue, rec?.documentValue, rec?.currency, rec?.paymentTerms, rec?.paymentMethod, rec?.freight, rec?.icms, rec?.ipi,
+    ];
+  });
+  exportExcelReport({
+    title: "Consulta SC OF e Recebimentos",
+    filename: "consulta-sc-of-recebimentos.xls",
+    headers: [
+      "Código do item", "Descrição", "Descrição detalhada", "Código filial", "Filial",
+      "SC - Código", "SC - Situação", "SC - Data de criação", "SC - Data de entrega", "SC - Quantidade", "SC - Valor estimado", "SC - Categoria", "SC - Motivo", "SC - Cancelada", "SC - Empresa", "SC - Centro de custo", "SC - Local de estoque",
+      "OF - Código", "OF - Situação", "OF - Data", "OF - Data de entrega", "OF - Código fornecedor", "OF - Fornecedor", "OF - Quantidade solicitada", "OF - Quantidade entregue", "OF - Saldo", "OF - Valor unitário", "OF - Moeda", "OF - Condição de pagamento", "OF - Forma de pagamento", "OF - Frete", "OF - ICMS", "OF - IPI", "OF - Fechada", "OF - Bloqueada", "OF - Tipo", "OF - Transportador",
+      "REC - Nota fiscal", "REC - Série", "REC - Data de emissão", "REC - Data de entrada", "REC - Código fornecedor", "REC - Fornecedor", "REC - Quantidade", "REC - Valor unitário", "REC - Valor do documento", "REC - Moeda", "REC - Condição de pagamento", "REC - Forma de pagamento", "REC - Frete", "REC - ICMS", "REC - IPI",
+    ],
+    rows,
+    numericColumns: new Set([9, 10, 23, 24, 25, 26, 30, 31, 32, 43, 44, 45, 49, 50, 51]),
+    currencyColumns: new Set([10, 26, 44, 45]),
+    dateColumns: new Set([7, 8, 19, 20, 39, 40]),
   });
 }
 
@@ -1185,12 +1421,16 @@ function escapeXml(value) {
 }
 
 function buildProcurementRows() {
-  const branch = ui.branchFilter.value;
+  const branch = effectiveBranchFilter();
+  const supplier = ui.supplierFilter.value;
+  const query = normalizeSearch(ui.searchInput.value);
   const rows = [];
   for (const item of state.items.filter(itemMatchesTransactionFilters)) {
     for (const record of item.history || []) {
       if (!record.sc?.code && !record.of?.code) continue;
       if (branch && record.branchCode !== branch) continue;
+      if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
+      if (query && !recordMatchesQuery(item, record, query)) continue;
       rows.push({ item, record });
     }
   }
@@ -1201,7 +1441,34 @@ function buildProcurementRows() {
   state.procurementVisible = 0;
   ui.procurementGrid.replaceChildren();
   ui.procurementCount.textContent = pluralize(rows.length, "processo", "processos");
+  const awaiting = new Set();
+  const open = new Set();
+  const partial = new Set();
+  const received = new Set();
+  for (const { record } of rows) {
+    if (record.sc?.code && !record.of?.code) awaiting.add(record.sc.code);
+    if (record.of?.code && record.of.balance > 0) open.add(record.of.code);
+    if (record.of?.code && record.of.requestedQuantity > 0 && record.of.deliveredQuantity > 0 && record.of.deliveredQuantity < record.of.requestedQuantity) partial.add(record.of.code);
+    if (record.rec?.invoice) received.add(`${record.rec.invoice}::${record.rec.series || ""}`);
+  }
+  ui.procurementAwaiting.textContent = integerFormatter.format(awaiting.size);
+  ui.procurementOpen.textContent = integerFormatter.format(open.size);
+  ui.procurementPartial.textContent = integerFormatter.format(partial.size);
+  ui.procurementReceived.textContent = integerFormatter.format(received.size);
   renderNextProcurementBatch();
+}
+
+function recordMatchesQuery(item, record, query) {
+  return normalizeSearch([
+    item.code, item.name, item.detailedName,
+    record.sc?.code, record.sc?.status,
+    record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode,
+    record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
+  ].join(" ")).includes(query);
+}
+
+function effectiveBranchFilter() {
+  return ui.branchFilter.value || String(ui.locationFilter.value || "").split("::")[0] || "";
 }
 
 function itemMatchesTransactionFilters(item) {
@@ -1240,16 +1507,25 @@ function renderNextProcurementBatch() {
     card.type = "button";
     card.className = "report-card report-card--process";
     card.dataset.procurementKey = key;
-    card.innerHTML = `<span class="report-card__top"><span class="status-pill status-pill--process">${of?.code ? `OF ${escapeHtml(of.code)}` : `SC ${escapeHtml(sc?.code || "—")}`}</span><span>${escapeHtml(record.branch || "—")}</span></span>
+    const process = processStatus(record);
+    card.innerHTML = `<span class="report-card__top"><span class="status-pill ${process.type}">${escapeHtml(process.label)}</span><span>${escapeHtml(record.branch || "—")}</span></span>
       <strong class="report-card__title">${escapeHtml(item.name)}</strong><span class="report-card__code">Código ${escapeHtml(item.code)}</span>
       <span class="process-mini"><span class="${sc ? "is-complete" : ""}">SC<strong>${escapeHtml(sc?.code || "—")}</strong></span><i></i><span class="${of ? "is-complete" : ""}">OF<strong>${escapeHtml(of?.code || "—")}</strong></span><i></i><span class="${rec ? "is-complete" : ""}">REC<strong>${escapeHtml(rec?.invoice || "—")}</strong></span></span>
-      <span class="report-card__footer"><span>${escapeHtml((of?.supplier || rec?.supplier) || "Fornecedor não informado")}</span><strong>${escapeHtml(formatDate(rec?.entryDate || of?.date || sc?.date))}</strong></span>`;
+      <span class="report-card__footer"><span>${escapeHtml((of?.supplier || rec?.supplier) || "Fornecedor não informado")}</span><strong>${escapeHtml(process.detail)}</strong></span>`;
     fragment.append(card);
   }
   ui.procurementGrid.append(fragment);
   state.procurementVisible = end;
   ui.procurementVisibleCount.textContent = `${integerFormatter.format(end)} de ${integerFormatter.format(state.procurementRows.length)} processos`;
   ui.procurementLoadMore.classList.toggle("is-hidden", end >= state.procurementRows.length);
+}
+
+function processStatus(record) {
+  const { sc, of, rec } = record;
+  if (!of?.code) return { label: `SC ${sc?.code || "—"} · aguardando OF`, detail: ageLabel(sc?.date), type: isOverdue(sc?.deliveryDate) ? "status-pill--critical" : "status-pill--pending" };
+  if (of.balance > 0) return { label: `OF ${of.code} · saldo pendente`, detail: `${numberFormatter.format(of.balance)} pendente`, type: isOverdue(of.deliveryDate) ? "status-pill--critical" : "status-pill--need" };
+  if (rec?.invoice) return { label: `OF ${of.code} · recebida`, detail: formatDate(rec.entryDate || rec.issueDate), type: "status-pill--success" };
+  return { label: `OF ${of.code}`, detail: formatDate(of.date), type: "status-pill--process" };
 }
 
 function openProcurementModal(key) {
@@ -1269,6 +1545,7 @@ function openProcurementModal(key) {
   ui.procurementModalDetails.innerHTML = [
     renderProcessGroup("SC", "Solicitação de Compra", sc, [
       ["Código", sc?.code], ["Situação", sc?.status], ["Data de criação", formatDate(sc?.date)], ["Data de entrega", formatDate(sc?.deliveryDate)],
+      ["Tempo desde a criação", sc ? ageLabel(sc.date) : "Não informado"], ["Entrega vencida", sc ? (isOverdue(sc.deliveryDate) ? "Sim" : "Não") : "Não informado"],
       ["Empresa", sc?.company], ["Filial", [sc?.branchCode, sc?.branchName].filter(Boolean).join(" · ")], ["Centro de custo aprovador", sc?.costCenter], ["Sequência", sc?.sequence],
       ["Código do produto", sc?.productCode], ["Produto", sc?.productName], ["Descrição do material", sc?.materialDescription], ["Unidade", sc?.unit],
       ["Quantidade", formatProcessNumber(sc?.quantity)], ["Valor estimado", formatProcessCurrency(sc?.estimatedValue)], ["Categoria", sc?.category], ["Motivo", sc?.reason],
@@ -1278,6 +1555,7 @@ function openProcurementModal(key) {
     ]),
     renderProcessGroup("OF", "Ordem de Fornecimento", of, [
       ["Código", of?.code], ["Situação", of?.status], ["Data de emissão", formatDate(of?.date)], ["Data de entrega", formatDate(of?.deliveryDate)],
+      ["Tempo entre SC e OF", durationLabel(sc?.date, of?.date)], ["Entrega vencida", of ? (isOverdue(of.deliveryDate) && of.balance > 0 ? "Sim" : "Não") : "Não informado"],
       ["Empresa de entrega", of?.deliveryCompany], ["Filial de entrega", [of?.deliveryBranchCode, of?.deliveryBranchName].filter(Boolean).join(" · ")], ["UF", of?.state],
       ["Empresa de pagamento", of?.paymentCompany], ["Filial de pagamento", [of?.paymentBranchCode, of?.paymentBranchName].filter(Boolean).join(" · ")],
       ["Código do fornecedor", of?.supplierCode], ["Fornecedor", of?.supplier], ["Código do produto", of?.productCode], ["Produto", of?.productName], ["Unidade", of?.unit],
@@ -1288,6 +1566,7 @@ function openProcurementModal(key) {
     ]),
     renderProcessGroup("REC", "Recebimento", rec, [
       ["Número da nota fiscal", rec?.invoice], ["Série", rec?.series], ["Data de emissão", formatDate(rec?.issueDate)], ["Data de entrada", formatDate(rec?.entryDate)],
+      ["Tempo entre OF e recebimento", durationLabel(of?.date, rec?.entryDate)],
       ["Empresa", rec?.company], ["Filial", [rec?.branchCode, rec?.branchName].filter(Boolean).join(" · ")], ["UF", rec?.state],
       ["Empresa de pagamento", rec?.paymentCompany], ["Filial de pagamento", [rec?.paymentBranchCode, rec?.paymentBranchName].filter(Boolean).join(" · ")],
       ["Código do fornecedor", rec?.supplierCode], ["Fornecedor", rec?.supplier], ["Código do produto", rec?.productCode], ["Produto", rec?.productName], ["Unidade", rec?.unit],
@@ -1423,7 +1702,10 @@ function openItem(code) {
 
   state.activeItem = item;
   state.historyVisible = CONFIG.historyBatch;
-  state.lastFocusedElement = document.activeElement;
+  if (!ui.itemModal.open) state.lastFocusedElement = document.activeElement;
+  const currentIndex = state.filteredItems.findIndex((entry) => entry.code === item.code);
+  ui.modalPrevious.disabled = currentIndex <= 0;
+  ui.modalNext.disabled = currentIndex < 0 || currentIndex >= state.filteredItems.length - 1;
 
   ui.modalCode.textContent = `Código ${item.code}`;
   ui.modalTitle.textContent = item.name;
@@ -1434,12 +1716,15 @@ function openItem(code) {
   ui.modalPositionCount.textContent = integerFormatter.format(item.positions.length);
   ui.modalHistoryCount.textContent = integerFormatter.format(item.history.length);
 
+  const lastPurchase = item.history.find((record) => record.rec?.entryDate || record.of?.date || record.sc?.date);
   const details = [
     ["Descrição detalhada", item.detailedName || item.name],
     ["Categoria / grupo", (item.categories || []).join(" · ") || "Não informado"],
     ["Unidade", (item.units || []).join(", ") || "Não informada"],
     ["Filiais", unique(item.positions.map((position) => position.branchName || position.branchCode)).join(" · ") || "Sem posição"],
     ["Fornecedores", (item.suppliers || []).join(" · ") || "Sem fornecedor no histórico"],
+    ["Última movimentação de compra", formatDate(lastPurchase?.rec?.entryDate || lastPurchase?.of?.date || lastPurchase?.sc?.date)],
+    ["Último preço conhecido", latestPurchasePrice(item) > 0 ? currencyFormatter.format(latestPurchasePrice(item)) : "Não informado"],
   ];
   ui.modalDetails.innerHTML = details.map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
 
@@ -1449,6 +1734,13 @@ function openItem(code) {
   activateTab("summary");
 
   if (!ui.itemModal.open) ui.itemModal.showModal();
+}
+
+function navigateItemModal(direction) {
+  if (!state.activeItem) return;
+  const index = state.filteredItems.findIndex((item) => item.code === state.activeItem.code);
+  const next = state.filteredItems[index + direction];
+  if (next) openItem(next.code);
 }
 
 function closeModal() {
@@ -1756,6 +2048,11 @@ function formatOptionalNumber(value) {
 function formatDate(value, fallback = "—") {
   const text = String(value ?? "").trim();
   if (!text) return fallback;
+  if (/^\d{5}(?:\.\d+)?$/.test(text)) {
+    const serial = Number(text);
+    const date = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+    if (Number.isFinite(date.getTime())) return `${String(date.getUTCDate()).padStart(2, "0")}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${date.getUTCFullYear()}`;
+  }
   let match = text.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
   if (match) {
     const year = match[3].length === 2 ? `20${match[3]}` : match[3];
@@ -1764,6 +2061,36 @@ function formatDate(value, fallback = "—") {
   match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (match) return `${match[3].padStart(2, "0")}/${match[2].padStart(2, "0")}/${match[1]}`;
   return text;
+}
+
+function dateTimestamp(value) {
+  const formatted = formatDate(value, "");
+  const match = formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1])) : 0;
+}
+
+function ageLabel(value) {
+  const days = ageDays(value);
+  if (days === null) return "Data não informada";
+  return `${integerFormatter.format(days)} ${days === 1 ? "dia" : "dias"}`;
+}
+
+function ageDays(value) {
+  const timestamp = dateTimestamp(value);
+  return timestamp ? Math.max(0, Math.floor((Date.now() - timestamp) / 86400000)) : null;
+}
+
+function isOverdue(value) {
+  const timestamp = dateTimestamp(value);
+  return Boolean(timestamp && timestamp < Date.now() - 86400000);
+}
+
+function durationLabel(start, end) {
+  const startTime = dateTimestamp(start);
+  const endTime = dateTimestamp(end);
+  if (!startTime || !endTime || endTime < startTime) return "Não informado";
+  const days = Math.round((endTime - startTime) / 86400000);
+  return `${integerFormatter.format(days)} ${days === 1 ? "dia" : "dias"}`;
 }
 
 function excelDateValue(value) {
@@ -2124,7 +2451,14 @@ function inventoryWorker() {
   async function fetchText(url, label) {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`${label}: arquivo não encontrado (${response.status}).`);
-    return decoder.decode(await response.arrayBuffer());
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      if (typeof DecompressionStream === "undefined") throw new Error(`${label}: este navegador não oferece suporte à leitura segura do arquivo compactado.`);
+      const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return decoder.decode(await new Response(stream).arrayBuffer());
+    }
+    return decoder.decode(buffer);
   }
 
   async function fetchOptionalText(url) {
@@ -2293,6 +2627,8 @@ function inventoryWorker() {
   function dateKey(value) {
     const text = clean(value);
     if (!text) return 0;
+
+    if (/^\d{5}(?:\.\d+)?$/.test(text)) return Date.UTC(1899, 11, 30) + Number(text) * 86400000;
 
     const br = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
     if (br) return Date.UTC(Number(br[3]), Number(br[2]) - 1, Number(br[1]), Number(br[4] || 0), Number(br[5] || 0));

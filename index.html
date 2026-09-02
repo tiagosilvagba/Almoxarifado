@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260902-14">
-    <script src="script.js?v=20260902-14" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-15">
+    <script src="script.js?v=20260902-15" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -41,6 +41,7 @@
               <option value="contrast">Alto Contraste</option>
             </select>
           </label>
+          <button id="densityToggle" class="density-toggle" type="button" aria-pressed="false" title="Alternar modo compacto">Modo compacto</button>
           <button id="refreshButton" class="icon-button" type="button" title="Recarregar os arquivos CSV" aria-label="Recarregar os arquivos CSV">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 11a8.1 8.1 0 1 0-2.3 6.7M20 4v7h-7"></path>
@@ -93,10 +94,10 @@
 
           <div class="filters-grid">
             <label class="field field--search">
-              <span>Código ou descrição</span>
+              <span>Código, descrição, SC, OF ou NF</span>
               <span class="field__control">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-                <input id="searchInput" type="search" autocomplete="off" placeholder="Digite um código, item ou grupo">
+                <input id="searchInput" type="search" autocomplete="off" placeholder="Busque item, SC, OF, NF ou fornecedor">
               </span>
             </label>
             <label class="field"><span>Filial</span><select id="branchFilter"><option value="">Todas as filiais</option></select></label>
@@ -112,6 +113,8 @@
                 <option value="below-min">Itens abaixo do mínimo</option>
                 <option value="above-max">Itens acima do máximo</option>
                 <option value="within-range">Itens dentro do range</option>
+                <option value="unconfigured">Com saldo sem Min&amp;Máx</option>
+                <option value="negative">Saldo negativo</option>
                 <option value="adjust-location">Ajustar local de estoque</option>
               </select>
             </label>
@@ -137,52 +140,46 @@
             <span id="metricsContext" class="context-label">Base completa</span>
           </div>
 
-          <div class="metrics-grid" aria-label="Indicadores">
-            <article class="metric metric--blue">
-              <span class="metric__label">Total de itens</span>
+          <div class="metrics-grid metrics-grid--primary" aria-label="Indicadores principais">
+            <button class="metric metric--blue" type="button" data-page-link="catalogo">
+              <span class="metric__label">Códigos ativos de estoque</span>
               <strong id="metricItems">—</strong>
-              <small>códigos catalogados</small>
-            </article>
-            <article class="metric metric--steel">
-              <span class="metric__label">Itens com saldo</span>
-              <strong id="metricQuantity">—</strong>
-              <small>códigos com saldo diferente de zero</small>
-            </article>
-            <article class="metric metric--cyan">
-              <span class="metric__label">Itens zerados</span>
-              <strong id="metricZero">—</strong>
-              <small>saldo zero com Min + Máx maior que zero</small>
-            </article>
-            <article class="metric metric--navy">
+              <small>com saldo ou limites parametrizados</small>
+            </button>
+            <button class="metric metric--navy" type="button" data-sort-link="value">
               <span class="metric__label">Valor do estoque</span>
               <strong id="metricValue">—</strong>
               <small>valor atual consolidado</small>
-            </article>
-            <article class="metric metric--amber">
-              <span class="metric__label">Abaixo do mínimo</span>
-              <strong id="metricBelowMin">—</strong>
-              <small>códigos com saldo abaixo do mínimo</small>
-            </article>
-            <article class="metric metric--red">
-              <span class="metric__label">Acima do máximo</span>
-              <strong id="metricAboveMax">—</strong>
-              <small>com máximo parametrizado</small>
-            </article>
-            <article class="metric metric--cyan">
-              <span class="metric__label">Saldo sem Min&amp;Máx</span>
-              <strong id="metricUnconfigured">—</strong>
-              <small>saldo com limites zerados</small>
-            </article>
-            <article class="metric metric--violet">
-              <span class="metric__label">SC sem OF</span>
-              <strong id="metricPendingSc">—</strong>
-              <small>confirmadas ou em negociação</small>
-            </article>
-            <article class="metric metric--charcoal">
+            </button>
+            <button class="metric metric--amber" type="button" data-page-link="necessidade-compra">
+              <span class="metric__label">Valor estimado para reposição</span>
+              <strong id="metricPurchaseValue">—</strong>
+              <small>necessidade líquida após OFs abertas</small>
+            </button>
+            <button class="metric metric--red" type="button" data-filter-link="above-max">
+              <span class="metric__label">Valor acima do máximo</span>
+              <strong id="metricExcessValue">—</strong>
+              <small>capital estimado em excesso</small>
+            </button>
+            <button class="metric metric--violet" type="button" data-page-link="consulta-sc-of">
+              <span class="metric__label">Pendências documentais</span>
+              <strong id="metricActionProcesses">—</strong>
+              <small>SC sem OF ou OF com saldo pendente</small>
+            </button>
+          </div>
+          <div class="metrics-grid metrics-grid--secondary" aria-label="Indicadores de atenção e qualidade">
+            <button class="metric metric--steel" type="button" data-page-link="catalogo"><span class="metric__label">Itens com saldo</span><strong id="metricQuantity">—</strong><small>saldo consolidado diferente de zero</small></button>
+            <button class="metric metric--cyan" type="button" data-filter-link="zero"><span class="metric__label">Zerados parametrizados</span><strong id="metricZero">—</strong><small>saldo zero com Min + Máx positivo</small></button>
+            <button class="metric metric--amber" type="button" data-filter-link="below-min"><span class="metric__label">Abaixo do mínimo</span><strong id="metricBelowMin">—</strong><small>saldo positivo abaixo do mínimo</small></button>
+            <button class="metric metric--red" type="button" data-filter-link="above-max"><span class="metric__label">Acima do máximo</span><strong id="metricAboveMax">—</strong><small>com máximo parametrizado</small></button>
+            <button class="metric metric--cyan" type="button" data-filter-link="unconfigured"><span class="metric__label">Saldo sem Min&amp;Máx</span><strong id="metricUnconfigured">—</strong><small>saldo positivo sem limites</small></button>
+            <button class="metric metric--violet" type="button" data-page-link="sc-pendente-of"><span class="metric__label">SC sem OF</span><strong id="metricPendingSc">—</strong><small>confirmadas ou em negociação</small></button>
+            <button class="metric metric--charcoal" type="button" data-filter-link="negative">
               <span class="metric__label">Saldo negativo</span>
               <strong id="metricNegative">—</strong>
               <small>em ao menos uma posição</small>
-            </article>
+            </button>
+            <button class="metric metric--slate" type="button" data-page-link="consulta-sc-of"><span class="metric__label">OF com saldo pendente</span><strong id="metricOpenOf">—</strong><small>ordens ainda não totalmente atendidas</small></button>
           </div>
           <section class="analytics-grid" aria-label="Análises interativas do estoque">
             <article class="analytics-card">
@@ -190,13 +187,21 @@
               <div id="branchChart" class="bar-chart"></div>
             </article>
             <article class="analytics-card">
-              <div class="analytics-card__heading"><div><span class="eyebrow">Composição</span><h3>Ocorrências por regra</h3></div><small>Clique para filtrar</small></div>
-              <div id="stockChart" class="donut-layout"></div>
+              <div class="analytics-card__heading"><div><span class="eyebrow">Alertas independentes</span><h3>Códigos por situação</h3></div><small>Um código pode ter posições distintas</small></div>
+              <div id="stockChart" class="status-chart"></div>
             </article>
             <article class="analytics-card analytics-card--wide">
               <div class="analytics-card__heading"><div><span class="eyebrow">Financeiro</span><h3>Valor do estoque por filial</h3></div><small>Valores consolidados</small></div>
               <div id="valueChart" class="bar-chart bar-chart--value"></div>
             </article>
+            <article class="analytics-card analytics-card--wide">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Fluxo de compras</span><h3>SC → OF → Recebimento</h3></div><button class="text-action" type="button" data-page-link="consulta-sc-of">Abrir processos</button></div>
+              <div id="procurementFunnel" class="procurement-funnel"></div>
+            </article>
+          </section>
+          <section class="decision-grid" aria-label="Prioridades para decisão">
+            <article class="analytics-card"><div class="analytics-card__heading"><div><span class="eyebrow">Reposição</span><h3>Maiores necessidades estimadas</h3></div><button class="text-action" type="button" data-page-link="necessidade-compra">Ver todas</button></div><div id="dashboardPriorityList" class="decision-list"></div></article>
+            <article class="analytics-card"><div class="analytics-card__heading"><div><span class="eyebrow">Capital imobilizado</span><h3>Maiores excessos estimados</h3></div><button class="text-action" type="button" data-filter-link="above-max">Ver todos</button></div><div id="dashboardExcessList" class="decision-list"></div></article>
           </section>
           <p id="metricReconciliation" class="metric-reconciliation" aria-live="polite"></p>
 
@@ -211,7 +216,7 @@
             </div>
             <div class="results__summary">
               <strong id="resultCount">0 itens</strong>
-              <span>Ordenados por código</span>
+              <div class="catalog-controls"><label class="compact-select"><span>Visual</span><select id="catalogView"><option value="cards">Cards</option><option value="list">Lista compacta</option></select></label><label class="compact-select"><span>Ordenar</span><select id="catalogSort"><option value="code">Código</option><option value="description">Descrição</option><option value="balance">Maior saldo</option><option value="value">Maior valor</option><option value="critical">Maior criticidade</option></select></label></div>
             </div>
           </div>
 
@@ -243,6 +248,8 @@
           <div class="need-summary" aria-label="Resumo da necessidade de compra">
             <article><span>Itens para comprar</span><strong id="purchaseNeedItems">—</strong></article>
             <article><span>Posições abaixo do mínimo</span><strong id="purchaseNeedPositions">—</strong></article>
+            <article><span>Rupturas</span><strong id="purchaseNeedRuptures">—</strong></article>
+            <article><span>Valor líquido estimado</span><strong id="purchaseNeedEstimated">—</strong></article>
             <article><span>Sem máximo informado</span><strong id="purchaseNeedWithoutMax">—</strong></article>
           </div>
 
@@ -288,7 +295,13 @@
               <h2 id="procurementTitle">Consulta de SC e OF</h2>
               <p class="section-description">Consulte solicitações, ordens de fornecimento e recebimentos vinculados aos itens filtrados.</p>
             </div>
-            <span id="procurementCount" class="context-label">0 processos</span>
+            <div class="heading-actions"><span id="procurementCount" class="context-label">0 processos</span><button id="exportProcurementButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar Excel</button></div>
+          </div>
+          <div class="need-summary process-summary" aria-label="Resumo dos processos de compra">
+            <article><span>SC aguardando OF</span><strong id="procurementAwaiting">—</strong></article>
+            <article><span>OF com saldo pendente</span><strong id="procurementOpen">—</strong></article>
+            <article><span>OF com entrega parcial</span><strong id="procurementPartial">—</strong></article>
+            <article><span>Recebimentos localizados</span><strong id="procurementReceived">—</strong></article>
           </div>
           <div id="procurementGrid" class="report-card-grid" aria-live="polite"></div>
           <div class="load-more-wrap">
@@ -312,6 +325,7 @@
             <span>Revisão de Min e Máx</span>
             <h3>Em Construção - Aguardando CSV</h3>
             <p>Adicione o arquivo <strong>03 - Consumo.csv</strong> na raiz do repositório.</p>
+            <p class="construction-hint">Estrutura recomendada: código do item, filial, local, data ou competência, quantidade consumida e tipo de movimento. Com esses campos o sistema poderá calcular cobertura, giro, estoque de segurança e sugestões de Min&amp;Máx.</p>
           </div>
 
           <div id="consumptionAvailable" class="consumption-available is-hidden">
@@ -404,9 +418,11 @@
             <h2 id="modalTitle">Detalhes do item</h2>
             <p id="modalSubtitle"></p>
           </div>
-          <button id="modalClose" class="modal-close" type="button" aria-label="Fechar detalhes">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
-          </button>
+          <div class="modal-nav-actions">
+            <button id="modalPrevious" class="modal-close" type="button" aria-label="Item anterior" title="Item anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+            <button id="modalNext" class="modal-close" type="button" aria-label="Próximo item" title="Próximo item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+            <button id="modalClose" class="modal-close" type="button" aria-label="Fechar detalhes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button>
+          </div>
         </header>
 
         <div id="modalBadges" class="modal-badges"></div>
