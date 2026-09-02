@@ -9,6 +9,7 @@ const CONFIG = Object.freeze({
   maxImages: 6,
   historyBatch: 20,
   procurementBatch: 60,
+  reportBatch: 60,
 });
 
 const THEME_IDS = new Set([
@@ -58,9 +59,12 @@ const state = {
   historyVisible: CONFIG.historyBatch,
   lastFocusedElement: null,
   purchaseNeeds: [],
+  visiblePurchaseNeeds: [],
+  purchaseNeedVisible: 0,
   purchaseNeedByKey: new Map(),
   activePurchaseNeed: null,
   pendingScRows: [],
+  pendingScVisible: 0,
   pendingScByKey: new Map(),
   activePendingSc: null,
   procurementRows: [],
@@ -70,6 +74,8 @@ const state = {
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
   minMaxReviews: [],
+  visibleMinMaxReviews: [],
+  minMaxReviewVisible: 0,
   minMaxReviewByKey: new Map(),
   activeMinMaxReview: null,
 };
@@ -106,8 +112,8 @@ function cacheUi() {
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
-    "purchaseNeedResultCount", "purchaseNeedTableWrap",
-    "pendingScListCount", "pendingScTableWrap", "exportPurchaseNeedButton", "exportPendingScButton", "exportProcurementButton",
+    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount",
+    "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "exportPendingScButton", "exportProcurementButton",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
     "purchaseModalDetails", "purchaseModalOpenItem", "pendingScModal", "pendingScModalClose",
@@ -118,7 +124,7 @@ function cacheUi() {
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "photoInput", "photoUploadButton", "photoUploadStatus",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
-    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid",
+    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
     "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem",
   ];
@@ -187,6 +193,8 @@ function bindEvents() {
     const trigger = event.target.closest("[data-pending-sc-key]");
     if (trigger) openPendingScModal(trigger.dataset.pendingScKey);
   });
+  ui.purchaseNeedLoadMore.addEventListener("click", renderNextPurchaseNeedBatch);
+  ui.pendingScLoadMore.addEventListener("click", renderNextPendingScBatch);
   ui.exportPurchaseNeedButton.addEventListener("click", exportPurchaseNeeds);
   ui.exportPendingScButton.addEventListener("click", exportPendingSc);
   ui.exportProcurementButton.addEventListener("click", exportProcurement);
@@ -236,6 +244,7 @@ function bindEvents() {
     const trigger = event.target.closest("[data-review-key]");
     if (trigger) openMinMaxReviewModal(trigger.dataset.reviewKey);
   });
+  ui.reviewLoadMore.addEventListener("click", renderNextMinMaxReviewBatch);
   ui.reviewModalClose.addEventListener("click", closeMinMaxReviewModal);
   ui.reviewModal.addEventListener("click", (event) => {
     if (event.target === ui.reviewModal) closeMinMaxReviewModal();
@@ -1205,6 +1214,7 @@ function renderPendingScList() {
   });
   const uniqueSc = new Set(rows.map(({ sc }) => sc.code));
   state.pendingScRows = rows;
+  state.pendingScVisible = 0;
   state.pendingScByKey.clear();
   rows.forEach((row, index) => {
     row.key = `pending-sc-${index}`;
@@ -1214,16 +1224,28 @@ function renderPendingScList() {
 
   if (!rows.length) {
     ui.pendingScTableWrap.innerHTML = `<div class="table-empty">Nenhuma SC sem OF corresponde aos filtros aplicados.</div>`;
+    ui.pendingScLoadMore.classList.add("is-hidden");
+    ui.pendingScVisibleCount.textContent = "";
     return;
   }
+  ui.pendingScTableWrap.replaceChildren();
+  renderNextPendingScBatch();
+}
 
-  ui.pendingScTableWrap.innerHTML = rows.map(({ item, record, sc, key }) => `<button class="report-card report-card--sc" type="button" data-pending-sc-key="${escapeHtml(key)}">
+function renderNextPendingScBatch() {
+  const start = state.pendingScVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.pendingScRows.length);
+  if (start >= end) return;
+  ui.pendingScTableWrap.insertAdjacentHTML("beforeend", state.pendingScRows.slice(start, end).map(({ item, record, sc, key }) => `<button class="report-card report-card--sc" type="button" data-pending-sc-key="${escapeHtml(key)}">
     <span class="report-card__top"><span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(ageLabel(sc.date))}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="report-card__meta"><span><small>Filial</small><strong>${escapeHtml(record.branch || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
     <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
-  </button>`).join("");
+  </button>`).join(""));
+  state.pendingScVisible = end;
+  ui.pendingScVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.pendingScRows.length)} solicitações`;
+  ui.pendingScLoadMore.classList.toggle("is-hidden", end >= state.pendingScRows.length);
 }
 
 function collectPendingScRows() {
@@ -1288,20 +1310,34 @@ function renderPurchaseNeeds() {
   ui.purchaseNeedEstimated.title = currencyFormatter.format(estimatedValue);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
   ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "posição", "posições")} exibida${visible.length === 1 ? "" : "s"}`;
+  state.visiblePurchaseNeeds = visible;
+  state.purchaseNeedVisible = 0;
 
   if (!visible.length) {
     ui.purchaseNeedTableWrap.innerHTML = `<div class="table-empty">Nenhuma necessidade de compra corresponde à busca informada.</div>`;
+    ui.purchaseNeedLoadMore.classList.add("is-hidden");
+    ui.purchaseNeedVisibleCount.textContent = "";
     return;
   }
+  ui.purchaseNeedTableWrap.replaceChildren();
+  renderNextPurchaseNeedBatch();
+}
 
-  ui.purchaseNeedTableWrap.innerHTML = visible.map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, rupture, key }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+function renderNextPurchaseNeedBatch() {
+  const start = state.purchaseNeedVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
+  if (start >= end) return;
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, rupture, key }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
     <span class="report-card__top"><span class="status-pill ${netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>
     ${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}
     <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
-  </button>`).join("");
+  </button>`).join(""));
+  state.purchaseNeedVisible = end;
+  ui.purchaseNeedVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visiblePurchaseNeeds.length)} necessidades`;
+  ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.visiblePurchaseNeeds.length);
 }
 
 function openPurchaseNeedModal(key) {
@@ -1711,13 +1747,24 @@ function renderConsumptionReview() {
   ui.reviewInsufficientCount.textContent = integerFormatter.format(insufficient);
   ui.reviewAverageLeadTime.textContent = leadTimes.length ? `${numberFormatter.format(averageLeadTime)} dias` : "Sem histórico";
   ui.reviewResultCount.textContent = pluralize(visible.length, "posição", "posições");
+  state.visibleMinMaxReviews = visible;
+  state.minMaxReviewVisible = 0;
 
   if (!visible.length) {
     ui.reviewCardsGrid.innerHTML = `<div class="table-empty">Nenhuma posição corresponde aos filtros ou aos dados de consumo disponíveis.</div>`;
+    ui.reviewLoadMore.classList.add("is-hidden");
+    ui.reviewVisibleCount.textContent = "";
     return;
   }
+  ui.reviewCardsGrid.replaceChildren();
+  renderNextMinMaxReviewBatch();
+}
 
-  ui.reviewCardsGrid.innerHTML = visible.map((review) => {
+function renderNextMinMaxReviewBatch() {
+  const start = state.minMaxReviewVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.visibleMinMaxReviews.length);
+  if (start >= end) return;
+  const html = state.visibleMinMaxReviews.slice(start, end).map((review) => {
     const status = review.status === "ideal" ? ["Parâmetros ideais", "success"]
       : review.status === "insufficient" ? ["Histórico insuficiente", "neutral"]
         : ["Ajuste recomendado", review.direction === "increase" ? "warning" : "info"];
@@ -1733,6 +1780,10 @@ function renderConsumptionReview() {
       <span class="report-card__footer"><span>${escapeHtml([review.position.branchCode, review.position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>Ver análise</strong></span>
     </button>`;
   }).join("");
+  ui.reviewCardsGrid.insertAdjacentHTML("beforeend", html);
+  state.minMaxReviewVisible = end;
+  ui.reviewVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visibleMinMaxReviews.length)} análises`;
+  ui.reviewLoadMore.classList.toggle("is-hidden", end >= state.visibleMinMaxReviews.length);
 }
 
 function buildMinMaxReviews() {
