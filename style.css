@@ -1524,6 +1524,21 @@ button.chart-bar:hover { background: var(--blue-100); }
 .process-stages span { color: var(--muted); font-size: 0.75rem; }
 .process-stages strong { margin-top: 6px; overflow-wrap: anywhere; color: var(--navy-900); }
 .process-stages small { margin-top: 4px; color: var(--muted); }
+.process-stages b { color: var(--blue-600); }
+
+.process-detail-groups { display: grid; gap: 16px; }
+.process-detail-group { overflow: hidden; border: 1px solid var(--steel-200); border-radius: var(--radius-md); background: var(--surface); }
+.process-detail-group > header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--steel-200); background: var(--steel-50); }
+.process-detail-group > header > span { width: 44px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: var(--white); background: var(--blue-600); font-size: 0.76rem; font-weight: 850; }
+.process-detail-group.is-missing > header > span { background: var(--steel-500); }
+.process-detail-group > header strong, .process-detail-group > header small { display: block; }
+.process-detail-group > header strong { color: var(--navy-900); }
+.process-detail-group > header small { margin-top: 2px; color: var(--muted); font-size: 0.75rem; }
+.process-detail-group dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.process-detail-group dl > div { min-width: 0; padding: 12px 16px; border-bottom: 1px solid var(--steel-100); }
+.process-detail-group dl > div:nth-child(odd) { border-right: 1px solid var(--steel-100); }
+.process-detail-group dt { color: var(--muted); font-size: 0.72rem; font-weight: 750; }
+.process-detail-group dd { margin: 4px 0 0; overflow-wrap: anywhere; color: var(--navy-950); font-size: 0.86rem; font-weight: 650; }
 
 #purchaseNeedTableWrap tbody tr {
   cursor: pointer;
@@ -1849,6 +1864,8 @@ button.chart-bar:hover { background: var(--blue-100); }
   .donut-layout { grid-template-columns: 120px 1fr; gap: 10px; }
   .donut { width: 112px; }
   .process-stages { grid-template-columns: 1fr; }
+  .process-detail-group dl { grid-template-columns: 1fr; }
+  .process-detail-group dl > div:nth-child(odd) { border-right: 0; }
   .photo-upload-actions { display: grid; }
   .photo-upload-actions .button { justify-content: center; }
 

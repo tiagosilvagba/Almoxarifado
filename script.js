@@ -930,7 +930,7 @@ function renderPendingScList() {
   }
 
   ui.pendingScTableWrap.innerHTML = rows.map(({ item, record, sc, key }) => `<button class="report-card report-card--sc" type="button" data-pending-sc-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill status-pill--pending">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(sc.date || "Sem data")}</span></span>
+    <span class="report-card__top"><span class="status-pill status-pill--pending">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(formatDate(sc.date, "Sem data"))}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="report-card__meta"><span><small>Filial</small><strong>${escapeHtml(record.branch || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
@@ -1060,8 +1060,8 @@ function openPendingScModal(key) {
   ui.pendingScModalSummary.innerHTML = `
     <article><span>Quantidade</span><strong>${formatOptionalNumber(sc.quantity)}</strong></article>
     <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></article>
-    <article><span>Criação</span><strong>${escapeHtml(sc.date || "—")}</strong></article>
-    <article><span>Entrega</span><strong>${escapeHtml(sc.deliveryDate || "—")}</strong></article>`;
+    <article><span>Criação</span><strong>${escapeHtml(formatDate(sc.date))}</strong></article>
+    <article><span>Entrega</span><strong>${escapeHtml(formatDate(sc.deliveryDate))}</strong></article>`;
   ui.pendingScModalDetails.innerHTML = `
     <div><dt>Situação</dt><dd>${escapeHtml(sc.status || "—")}</dd></div>
     <div><dt>Cancelada</dt><dd>${escapeHtml(sc.cancelled || "Não")}</dd></div>
@@ -1127,16 +1127,19 @@ function exportPendingSc() {
     rows,
     numericColumns: new Set([5, 6]),
     currencyColumns: new Set([6]),
+    dateColumns: new Set([3, 4]),
   });
 }
 
-function exportExcelReport({ title, filename, headers, rows, numericColumns, currencyColumns }) {
+function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
   const styles = getComputedStyle(document.documentElement);
   const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
   const accentColor = cssColorToHex(styles.getPropertyValue("--blue-500"), "2086D2");
   const filterText = ui.filterSummary.textContent || "Todos os registros";
   const cell = (value, index, header = false) => {
     if (header) return `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+    const date = dateColumns.has(index) ? excelDateValue(value) : "";
+    if (date) return `<Cell ss:StyleID="Date"><Data ss:Type="DateTime">${date}</Data></Cell>`;
     const numeric = numericColumns.has(index) && value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
     const style = currencyColumns.has(index) ? "Currency" : numeric ? "Number" : "Text";
     return `<Cell ss:StyleID="${style}"><Data ss:Type="${numeric ? "Number" : "String"}">${escapeXml(numeric ? Number(value) : value ?? "")}</Data></Cell>`;
@@ -1153,6 +1156,7 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns, cur
       <Style ss:ID="Text"><Alignment ss:Vertical="Top" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
       <Style ss:ID="Number"><Alignment ss:Horizontal="Right" ss:Vertical="Top"/><NumberFormat ss:Format="#,##0.00"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
       <Style ss:ID="Currency"><Alignment ss:Horizontal="Right" ss:Vertical="Top"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
+      <Style ss:ID="Date"><Alignment ss:Horizontal="Center" ss:Vertical="Top"/><NumberFormat ss:Format="dd/mm/yyyy"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
     </Styles>
     <Worksheet ss:Name="${escapeXml(title.slice(0, 31))}"><Table>${columns}
       <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · Gestão de Almoxarifado</Data></Cell></Row>
@@ -1239,7 +1243,7 @@ function renderNextProcurementBatch() {
     card.innerHTML = `<span class="report-card__top"><span class="status-pill status-pill--process">${of?.code ? `OF ${escapeHtml(of.code)}` : `SC ${escapeHtml(sc?.code || "—")}`}</span><span>${escapeHtml(record.branch || "—")}</span></span>
       <strong class="report-card__title">${escapeHtml(item.name)}</strong><span class="report-card__code">Código ${escapeHtml(item.code)}</span>
       <span class="process-mini"><span class="${sc ? "is-complete" : ""}">SC<strong>${escapeHtml(sc?.code || "—")}</strong></span><i></i><span class="${of ? "is-complete" : ""}">OF<strong>${escapeHtml(of?.code || "—")}</strong></span><i></i><span class="${rec ? "is-complete" : ""}">REC<strong>${escapeHtml(rec?.invoice || "—")}</strong></span></span>
-      <span class="report-card__footer"><span>${escapeHtml((of?.supplier || rec?.supplier) || "Fornecedor não informado")}</span><strong>${escapeHtml(rec?.entryDate || of?.date || sc?.date || "—")}</strong></span>`;
+      <span class="report-card__footer"><span>${escapeHtml((of?.supplier || rec?.supplier) || "Fornecedor não informado")}</span><strong>${escapeHtml(formatDate(rec?.entryDate || of?.date || sc?.date))}</strong></span>`;
     fragment.append(card);
   }
   ui.procurementGrid.append(fragment);
@@ -1259,17 +1263,38 @@ function openProcurementModal(key) {
   ui.procurementModalTitle.textContent = item.name;
   ui.procurementModalSubtitle.textContent = record.branch || "Filial não informada";
   ui.procurementModalStages.innerHTML = `
-    <article class="${sc ? "is-complete" : ""}"><span>Solicitação de compra</span><strong>${escapeHtml(sc?.code || "Não gerada")}</strong><small>${escapeHtml(sc?.status || sc?.date || "—")}</small></article>
-    <article class="${of ? "is-complete" : ""}"><span>Ordem de fornecimento</span><strong>${escapeHtml(of?.code || "Não gerada")}</strong><small>${escapeHtml(of?.status || of?.date || "—")}</small></article>
-    <article class="${rec ? "is-complete" : ""}"><span>Recebimento</span><strong>${escapeHtml(rec?.invoice ? `NF ${rec.invoice}` : "Não recebido")}</strong><small>${escapeHtml(rec?.entryDate || rec?.issueDate || "—")}</small></article>`;
-  const details = [
-    ["SC · Criação", sc?.date], ["SC · Entrega", sc?.deliveryDate], ["SC · Quantidade", sc?.quantity == null ? "" : numberFormatter.format(sc.quantity)],
-    ["SC · Valor estimado", sc?.estimatedValue == null ? "" : currencyFormatter.format(sc.estimatedValue)], ["SC · Motivo", sc?.reason],
-    ["OF · Fornecedor", of?.supplier], ["OF · Entrega", of?.deliveryDate], ["OF · Quantidade solicitada", of?.requestedQuantity == null ? "" : numberFormatter.format(of.requestedQuantity)],
-    ["OF · Quantidade entregue", of?.deliveredQuantity == null ? "" : numberFormatter.format(of.deliveredQuantity)], ["OF · Valor unitário", of?.unitValue == null ? "" : currencyFormatter.format(of.unitValue)],
-    ["REC · Nota fiscal", rec?.invoice], ["REC · Entrada", rec?.entryDate], ["REC · Quantidade", rec?.quantity == null ? "" : numberFormatter.format(rec.quantity)], ["REC · Valor do documento", rec?.documentValue == null ? "" : currencyFormatter.format(rec.documentValue)],
-  ].filter(([, value]) => value !== null && value !== undefined && value !== "");
-  ui.procurementModalDetails.innerHTML = details.map(([term, value]) => `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
+    <article class="${sc ? "is-complete" : ""}"><span><b>SC</b> · Solicitação de Compra</span><strong>${escapeHtml(sc?.code || "Não gerada")}</strong><small>${escapeHtml(sc?.status || "Situação não informada")} · ${escapeHtml(formatDate(sc?.date))}</small></article>
+    <article class="${of ? "is-complete" : ""}"><span><b>OF</b> · Ordem de Fornecimento</span><strong>${escapeHtml(of?.code || "Não gerada")}</strong><small>${escapeHtml(of?.status || "Situação não informada")} · ${escapeHtml(formatDate(of?.date))}</small></article>
+    <article class="${rec ? "is-complete" : ""}"><span><b>REC</b> · Recebimento</span><strong>${escapeHtml(rec?.invoice ? `NF ${rec.invoice}` : "Não recebido")}</strong><small>${escapeHtml(formatDate(rec?.entryDate || rec?.issueDate))}</small></article>`;
+  ui.procurementModalDetails.innerHTML = [
+    renderProcessGroup("SC", "Solicitação de Compra", sc, [
+      ["Código", sc?.code], ["Situação", sc?.status], ["Data de criação", formatDate(sc?.date)], ["Data de entrega", formatDate(sc?.deliveryDate)],
+      ["Empresa", sc?.company], ["Filial", [sc?.branchCode, sc?.branchName].filter(Boolean).join(" · ")], ["Centro de custo aprovador", sc?.costCenter], ["Sequência", sc?.sequence],
+      ["Código do produto", sc?.productCode], ["Produto", sc?.productName], ["Descrição do material", sc?.materialDescription], ["Unidade", sc?.unit],
+      ["Quantidade", formatProcessNumber(sc?.quantity)], ["Valor estimado", formatProcessCurrency(sc?.estimatedValue)], ["Categoria", sc?.category], ["Motivo", sc?.reason],
+      ["Regularização", sc?.regularization], ["Observação", sc?.observation], ["Empresa destino", sc?.destinationCompany], ["Filial destino", sc?.destinationBranch],
+      ["PI", sc?.investmentPlan], ["Cancelada", formatFlag(sc?.cancelled)], ["Local de estoque", sc?.stockLocation], ["CCU da etiqueta", sc?.allocationCostCenter],
+      ["Conta", sc?.account], ["Percentual de rateio", sc?.allocationPercent], ["Imobilizado", formatFlag(sc?.asset)],
+    ]),
+    renderProcessGroup("OF", "Ordem de Fornecimento", of, [
+      ["Código", of?.code], ["Situação", of?.status], ["Data de emissão", formatDate(of?.date)], ["Data de entrega", formatDate(of?.deliveryDate)],
+      ["Empresa de entrega", of?.deliveryCompany], ["Filial de entrega", [of?.deliveryBranchCode, of?.deliveryBranchName].filter(Boolean).join(" · ")], ["UF", of?.state],
+      ["Empresa de pagamento", of?.paymentCompany], ["Filial de pagamento", [of?.paymentBranchCode, of?.paymentBranchName].filter(Boolean).join(" · ")],
+      ["Código do fornecedor", of?.supplierCode], ["Fornecedor", of?.supplier], ["Código do produto", of?.productCode], ["Produto", of?.productName], ["Unidade", of?.unit],
+      ["Quantidade solicitada", formatProcessNumber(of?.requestedQuantity)], ["Saldo", formatProcessNumber(of?.balance)], ["Quantidade entregue", formatProcessNumber(of?.deliveredQuantity)],
+      ["Valor unitário", formatProcessCurrency(of?.unitValue)], ["Fechada", formatFlag(of?.closed)], ["Bloqueada", formatFlag(of?.blocked)], ["Alíquota ICMS", of?.icms], ["Alíquota IPI", of?.ipi],
+      ["Frete", of?.freight], ["Moeda", of?.currency], ["Condição de pagamento", of?.paymentTerms], ["Forma de pagamento", of?.paymentMethod], ["Tipo", of?.type],
+      ["Observação", of?.observation], ["Motivo do fechamento", of?.closingReason], ["Transportador", of?.carrier],
+    ]),
+    renderProcessGroup("REC", "Recebimento", rec, [
+      ["Número da nota fiscal", rec?.invoice], ["Série", rec?.series], ["Data de emissão", formatDate(rec?.issueDate)], ["Data de entrada", formatDate(rec?.entryDate)],
+      ["Empresa", rec?.company], ["Filial", [rec?.branchCode, rec?.branchName].filter(Boolean).join(" · ")], ["UF", rec?.state],
+      ["Empresa de pagamento", rec?.paymentCompany], ["Filial de pagamento", [rec?.paymentBranchCode, rec?.paymentBranchName].filter(Boolean).join(" · ")],
+      ["Código do fornecedor", rec?.supplierCode], ["Fornecedor", rec?.supplier], ["Código do produto", rec?.productCode], ["Produto", rec?.productName], ["Unidade", rec?.unit],
+      ["Quantidade", formatProcessNumber(rec?.quantity)], ["Valor unitário fiscal", formatProcessCurrency(rec?.unitValue)], ["Valor do documento", formatProcessCurrency(rec?.documentValue)],
+      ["Alíquota ICMS", rec?.icms], ["Alíquota IPI", rec?.ipi], ["Frete", rec?.freight], ["Moeda", rec?.currency], ["Condição de pagamento", rec?.paymentTerms], ["Forma de pagamento", rec?.paymentMethod],
+    ]),
+  ].join("");
   if (typeof ui.procurementModal.showModal === "function") ui.procurementModal.showModal(); else ui.procurementModal.setAttribute("open", "");
   ui.procurementModalClose.focus();
 }
@@ -1295,7 +1320,7 @@ function renderConsumptionReview() {
   }
 
   const heading = headers.map((header) => `<th>${escapeHtml(header || "Sem título")}</th>`).join("");
-  const rows = (consumption.rows || []).map((row) => `<tr>${headers.map((_, index) => `<td class="cell-wrap">${escapeHtml(row[index] || "")}</td>`).join("")}</tr>`).join("");
+  const rows = (consumption.rows || []).map((row) => `<tr>${headers.map((header, index) => `<td class="cell-wrap">${escapeHtml(isDateColumn(header) ? formatDate(row[index], "") : row[index] || "")}</td>`).join("")}</tr>`).join("");
   ui.consumptionPreviewWrap.innerHTML = `<table class="data-table"><thead><tr>${heading}</tr></thead><tbody>${rows || `<tr><td colspan="${headers.length}">CSV sem registros.</td></tr>`}</tbody></table>`;
 }
 
@@ -1652,7 +1677,7 @@ function renderHistory(item) {
     const documentValue = firstDefined(record.rec?.documentValue, record.sc?.estimatedValue);
 
     return `<tr>
-      <td>${escapeHtml(date)}</td>
+      <td>${escapeHtml(formatDate(date))}</td>
       <td>${stageCell(record.sc, "sc")}</td>
       <td>${stageCell(record.of, "of")}</td>
       <td>${stageCell(record.rec, "rec")}</td>
@@ -1688,9 +1713,9 @@ function stageCell(stage, type) {
     return `<span class="stage-cell"><strong>${escapeHtml(stage.code || "—")}</strong><span>${escapeHtml(stage.status || "Situação não informada")}</span></span>`;
   }
   if (type === "of") {
-    return `<span class="stage-cell"><strong>${escapeHtml(stage.code || "—")}</strong><span>${escapeHtml(stage.status || stage.date || "Emitida")}</span></span>`;
+    return `<span class="stage-cell"><strong>${escapeHtml(stage.code || "—")}</strong><span>${escapeHtml(stage.status || (stage.date ? formatDate(stage.date) : "Emitida"))}</span></span>`;
   }
-  return `<span class="stage-cell"><strong>${escapeHtml(stage.invoice ? `NF ${stage.invoice}` : "Recebido")}</strong><span>${escapeHtml(stage.entryDate || stage.issueDate || "Data não informada")}</span></span>`;
+  return `<span class="stage-cell"><strong>${escapeHtml(stage.invoice ? `NF ${stage.invoice}` : "Recebido")}</strong><span>${escapeHtml(formatDate(stage.entryDate || stage.issueDate, "Data não informada"))}</span></span>`;
 }
 
 function imagesForItem(item, includeFallbackSet) {
@@ -1726,6 +1751,50 @@ function firstDefined(...values) {
 
 function formatOptionalNumber(value) {
   return value == null ? "—" : numberFormatter.format(value);
+}
+
+function formatDate(value, fallback = "—") {
+  const text = String(value ?? "").trim();
+  if (!text) return fallback;
+  let match = text.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+  if (match) {
+    const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+    return `${match[1].padStart(2, "0")}/${match[2].padStart(2, "0")}/${year}`;
+  }
+  match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (match) return `${match[3].padStart(2, "0")}/${match[2].padStart(2, "0")}/${match[1]}`;
+  return text;
+}
+
+function excelDateValue(value) {
+  const formatted = formatDate(value, "");
+  const match = formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}T00:00:00.000` : "";
+}
+
+function isDateColumn(header) {
+  return /(^|\b)(data|dt)(\b|\.)|emiss[aã]o|entrada|entrega/i.test(String(header || ""));
+}
+
+function formatProcessNumber(value) {
+  return value == null ? "Não informado" : numberFormatter.format(value);
+}
+
+function formatProcessCurrency(value) {
+  return value == null ? "Não informado" : currencyFormatter.format(value);
+}
+
+function formatFlag(value) {
+  const normalized = normalizeSearch(value);
+  if (!normalized) return "Não informado";
+  if (["s", "sim", "1", "true"].includes(normalized)) return "Sim";
+  if (["n", "nao", "0", "false"].includes(normalized)) return "Não";
+  return value;
+}
+
+function renderProcessGroup(prefix, title, stage, fields) {
+  const rows = fields.map(([term, value]) => `<div><dt>${escapeHtml(prefix)} · ${escapeHtml(term)}</dt><dd>${escapeHtml(value === null || value === undefined || value === "" ? "Não informado" : value)}</dd></div>`).join("");
+  return `<section class="process-detail-group ${stage ? "is-available" : "is-missing"}"><header><span>${escapeHtml(prefix)}</span><div><strong>${escapeHtml(title)}</strong><small>${stage ? "Dados disponíveis no processo" : "Etapa ainda não gerada"}</small></div></header><dl>${rows}</dl></section>`;
 }
 
 function normalizeCode(value) {
@@ -1892,6 +1961,25 @@ function inventoryWorker() {
           category,
           reason: clean(get("SC - Motivo")),
           cancelled: scCancelled,
+          costCenter: clean(get("SC - Centro Custo Aprovador")),
+          company: clean(get("SC - Empresa")),
+          branchCode: clean(get("SC - Filial")),
+          branchName: clean(get("SC - Descr. Filial")),
+          sequence: clean(get("SC - Seq.")),
+          productCode: scProduct,
+          productName: clean(get("SC - Nome Produto")),
+          materialDescription: detailedName,
+          unit: clean(get("SC - Unid. Medida")),
+          regularization: clean(get("SC - Regularização")),
+          observation: clean(get("SC - OBS")),
+          destinationCompany: clean(get("SC - Empresa Destino")),
+          destinationBranch: clean(get("SC - Filial Destino")),
+          investmentPlan: clean(get("SC - PI")),
+          stockLocation: clean(get("SC - Local Estoque")),
+          allocationCostCenter: clean(get("SC - CCU Etq")),
+          account: clean(get("SC - Conta")),
+          allocationPercent: clean(get("SC - % Rateio")),
+          asset: clean(get("SC - Imobilizado")),
         } : null;
 
         const of = ofCode ? {
@@ -1906,6 +1994,27 @@ function inventoryWorker() {
           closed: clean(get("OF - Fechado")),
           blocked: clean(get("OF - Bloqueado")),
           currency: clean(get("OF - Moeda")),
+          deliveryCompany: clean(get("OF - Empresa Entrega")),
+          deliveryBranchCode: clean(get("OF - Filial Entrega")),
+          deliveryBranchName: clean(get("OF - Descr. Filial Entrega")),
+          state: clean(get("OF - UF")),
+          paymentCompany: clean(get("OF - Empresa Pagto")),
+          paymentBranchCode: clean(get("OF - Filial Pagto")),
+          paymentBranchName: clean(get("OF - Nome Filial Pagto")),
+          supplierCode: [clean(get("OF - Cód. Base")), clean(get("OF - Dígito Base"))].filter(Boolean).join("-"),
+          productCode: ofProduct,
+          productName: clean(get("OF - Nome Produto")),
+          unit: clean(get("OF - Unidade Medida")),
+          balance: parseNumber(get("OF - Saldo")),
+          icms: clean(get("OF - Alíquota ICMS")),
+          ipi: clean(get("OF - Alíquota IPI")),
+          freight: clean(get("OF - Frete")),
+          paymentTerms: clean(get("OF - Condição Pagto")),
+          paymentMethod: clean(get("OF - Forma Pagto")),
+          type: clean(get("OF - Tipo")),
+          observation: clean(get("OF - OBS")),
+          closingReason: clean(get("OF - Motivo Fechamento")),
+          carrier: clean(get("OF - Transportador")),
         } : null;
 
         const invoice = clean(get("REC - Nr NF"));
@@ -1919,6 +2028,22 @@ function inventoryWorker() {
           unitValue: parseNumber(get("REC - Valor Un. Fiscal")),
           documentValue: parseNumber(get("REC - Valor Doc.")),
           currency: clean(get("REC - Moeda")),
+          company: clean(get("REC - Empresa")),
+          branchCode: clean(get("REC - Filial")),
+          branchName: clean(get("REC - Nome Filial")),
+          state: clean(get("REC - UF Filial")),
+          paymentCompany: clean(get("REC - Empresa Pagto")),
+          paymentBranchCode: clean(get("REC - Filial Pagto")),
+          paymentBranchName: clean(get("REC - Nome Filial Pagto")),
+          supplierCode: [clean(get("REC - Cód. Base")), clean(get("REC - Dígito"))].filter(Boolean).join("-"),
+          productCode: recProduct,
+          productName: clean(get("REC - Nome Produto")),
+          unit: clean(get("REC - Unid. Medida")),
+          icms: clean(get("REC - Alíquota ICMS")),
+          ipi: clean(get("REC - Alíquota IPI")),
+          freight: clean(get("REC - Frete")),
+          paymentTerms: clean(get("REC - Condição Pagto")),
+          paymentMethod: clean(get("REC - Forma Pagto")),
         } : null;
 
         const branch = first(
@@ -2178,5 +2303,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker };
+  module.exports = { inventoryWorker, formatDate };
 }
