@@ -1195,9 +1195,9 @@ button.chart-bar:hover { background: var(--blue-100); }
 }
 
 .item-modal {
-  width: min(1180px, calc(100% - 28px));
+  width: min(1480px, calc(100% - 16px));
   max-width: none;
-  max-height: min(92vh, 960px);
+  max-height: calc(100vh - 16px);
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -1234,7 +1234,7 @@ button.chart-bar:hover { background: var(--blue-100); }
 
 .purchase-modal-content {
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
 .purchase-summary-cards { grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); }
@@ -1258,7 +1258,7 @@ button.chart-bar:hover { background: var(--blue-100); }
 }
 
 .modal-shell {
-  max-height: min(92vh, 960px);
+  max-height: calc(100vh - 16px);
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
 }
@@ -1344,8 +1344,48 @@ button.chart-bar:hover { background: var(--blue-100); }
 .modal-content {
   min-height: 0;
   overflow: auto;
-  padding: 24px;
+  padding: 16px 18px 18px;
+  scrollbar-width: none;
 }
+.modal-content::-webkit-scrollbar { display: none; }
+
+.operational-insights {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+.operational-insights article {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--steel-200);
+  border-radius: 10px;
+  background: var(--steel-50);
+}
+.operational-insights span,
+.operational-insights strong,
+.operational-insights small { display: block; }
+.operational-insights span { color: var(--muted); font-size: 0.7rem; font-weight: 750; }
+.operational-insights strong { margin-top: 4px; overflow-wrap: anywhere; color: var(--navy-900); font-size: 0.98rem; }
+.operational-insights small { margin-top: 2px; color: var(--muted); font-size: 0.66rem; }
+.operational-insights__projection {
+  border-color: color-mix(in srgb, var(--green) 34%, var(--steel-200)) !important;
+  background: var(--green-soft) !important;
+}
+
+.pending-sc-subject {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--violet) 28%, var(--steel-200));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--violet-soft) 60%, var(--surface));
+}
+.pending-sc-subject > div { min-width: 0; }
+.pending-sc-subject strong,
+.pending-sc-subject small { display: block; }
+.pending-sc-subject strong { color: var(--navy-950); font-size: 0.95rem; }
+.pending-sc-subject small { margin-top: 3px; color: var(--muted); font-size: 0.76rem; }
 
 .summary-layout {
   display: grid;
@@ -1423,8 +1463,8 @@ button.chart-bar:hover { background: var(--blue-100); }
 }
 
 .summary-cards article {
-  min-height: 96px;
-  padding: 15px;
+  min-height: 78px;
+  padding: 11px 12px;
   border: 1px solid var(--steel-200);
   border-radius: var(--radius-sm);
   background: var(--steel-50);
@@ -1441,7 +1481,7 @@ button.chart-bar:hover { background: var(--blue-100); }
   display: block;
   margin-top: 7px;
   color: var(--navy-900);
-  font-size: 1.3rem;
+  font-size: 1.12rem;
 }
 
 .details-list {
@@ -1455,7 +1495,7 @@ button.chart-bar:hover { background: var(--blue-100); }
 .details-list dt,
 .details-list dd {
   margin: 0;
-  padding: 11px 8px;
+  padding: 8px;
   border-bottom: 1px solid var(--steel-200);
   font-size: 0.84rem;
 }
@@ -1709,6 +1749,20 @@ button.chart-bar:hover { background: var(--blue-100); }
 .process-detail-group dt { color: var(--muted); font-size: 0.78rem; font-weight: 750; }
 .process-detail-group dd { margin: 4px 0 0; overflow-wrap: anywhere; color: var(--navy-950); font-size: 0.86rem; font-weight: 650; }
 
+@media (min-width: 1100px) {
+  .modal-shell--procurement .process-detail-groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .modal-shell--procurement .process-detail-group dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .modal-shell--procurement .process-detail-group dl > div { padding: 6px 8px; }
+  .modal-shell--procurement .process-detail-group dt { font-size: 0.66rem; }
+  .modal-shell--procurement .process-detail-group dd { margin-top: 2px; font-size: 0.7rem; line-height: 1.25; }
+  .modal-shell--procurement .process-detail-group > header { padding: 9px 10px; }
+}
+
 #purchaseNeedTableWrap tbody tr {
   cursor: pointer;
 }
@@ -1845,6 +1899,14 @@ button.chart-bar:hover { background: var(--blue-100); }
   font-size: 0.78rem;
   white-space: nowrap;
 }
+
+.item-modal .data-table {
+  table-layout: fixed;
+  white-space: normal;
+  font-size: 0.7rem;
+}
+.item-modal .data-table th,
+.item-modal .data-table td { padding: 7px 6px; overflow-wrap: anywhere; }
 
 .data-table th,
 .data-table td {
@@ -1998,6 +2060,8 @@ button.chart-bar:hover { background: var(--blue-100); }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .operational-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
   .review-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .review-detail-grid { grid-template-columns: 1fr; }
 
@@ -2039,6 +2103,8 @@ button.chart-bar:hover { background: var(--blue-100); }
   .report-card { min-height: 220px; }
   .procurement-people { grid-template-columns: 1fr; }
   .review-modal-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .operational-insights { grid-template-columns: 1fr; }
+  .pending-sc-subject { align-items: flex-start; flex-direction: column; }
 
   .brand h1 {
     font-size: 1.16rem;

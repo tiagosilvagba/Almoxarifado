@@ -116,17 +116,17 @@ function cacheUi() {
     "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "exportPendingScButton", "exportProcurementButton",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
-    "purchaseModalDetails", "purchaseModalOpenItem", "pendingScModal", "pendingScModalClose",
+    "purchaseModalDetails", "purchaseModalOpenItem", "purchaseModalOperational", "pendingScModal", "pendingScModalClose",
     "pendingScModalCode", "pendingScModalTitle", "pendingScModalSubtitle", "pendingScModalSummary",
-    "pendingScModalDetails", "pendingScModalOpenItem", "procurementCount", "procurementGrid",
+    "pendingScModalDetails", "pendingScModalOpenItem", "pendingScSubject", "pendingScModalOperational", "procurementCount", "procurementGrid",
     "procurementAwaiting", "procurementOpen", "procurementPartial", "procurementReceived",
     "procurementLoadMore", "procurementVisibleCount", "procurementModal", "procurementModalClose",
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
-    "procurementModalDetails", "procurementModalOpenItem", "photoInput", "photoUploadButton", "photoUploadStatus",
+    "procurementModalDetails", "procurementModalOpenItem", "procurementModalOperational", "photoInput", "photoUploadButton", "photoUploadStatus",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
     "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
-    "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem",
+    "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem", "modalOperationalInsights",
   ];
 
   for (const id of ids) {
@@ -1368,6 +1368,7 @@ function openPurchaseNeedModal(key) {
     <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
     <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
     <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
+  renderOperationalInsights(ui.purchaseModalOperational, getOperationalInsight(item, position.branchCode, position));
   ui.purchaseModalDetails.innerHTML = `
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
     <div><dt>Filial</dt><dd>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</dd></div>
@@ -1400,15 +1401,17 @@ function openPendingScModal(key) {
   const { item, record, sc } = row;
   state.activePendingSc = row;
   state.lastFocusedElement = document.activeElement;
-  ui.pendingScModalCode.textContent = `SC ${sc.code}`;
-  ui.pendingScModalTitle.textContent = item.name;
-  ui.pendingScModalSubtitle.textContent = `Item ${item.code} · ${record.branch || "Filial não informada"}`;
+  ui.pendingScModalCode.textContent = `Solicitação de Compra · SC ${sc.code}`;
+  ui.pendingScModalTitle.textContent = "Aguardando geração de OF";
+  ui.pendingScModalSubtitle.textContent = `${item.name} · Item ${item.code} · ${record.branch || "Filial não informada"}`;
+  ui.pendingScSubject.innerHTML = `<span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">${isOverdue(sc.deliveryDate) ? "Entrega prevista vencida" : "Processo pendente"}</span><div><strong>SC ${escapeHtml(sc.code)} sem Ordem de Fornecimento</strong><small>Solicitada por ${escapeHtml(sc.requesterName || "usuário não informado")} em ${escapeHtml(formatDate(sc.date))}</small></div>`;
   ui.pendingScModalSummary.innerHTML = `
     <article><span>Quantidade</span><strong>${formatOptionalNumber(sc.quantity)}</strong></article>
     <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></article>
     <article><span>Criação</span><strong>${escapeHtml(formatDate(sc.date))}</strong></article>
     <article><span>Entrega</span><strong>${escapeHtml(formatDate(sc.deliveryDate))}</strong></article>
     <article><span>Tempo aguardando</span><strong>${escapeHtml(ageLabel(sc.date))}</strong></article>`;
+  renderOperationalInsights(ui.pendingScModalOperational, getOperationalInsight(item, record.branchCode));
   ui.pendingScModalDetails.innerHTML = `
     <div><dt>Situação</dt><dd>${escapeHtml(sc.status || "—")}</dd></div>
     <div><dt>Cancelada</dt><dd>${escapeHtml(sc.cancelled || "Não")}</dd></div>
@@ -1720,6 +1723,7 @@ function openProcurementModal(key) {
     <article class="${sc ? "is-complete" : ""}"><span><b>SC</b> · Solicitação de Compra</span><strong>${escapeHtml(sc?.code || "Não gerada")}</strong><small>${escapeHtml(sc?.status || "Situação não informada")} · ${escapeHtml(formatDate(sc?.date))}</small></article>
     <article class="${of ? "is-complete" : ""}"><span><b>OF</b> · Ordem de Fornecimento</span><strong>${escapeHtml(of?.code || "Não gerada")}</strong><small>${escapeHtml(of?.status || "Situação não informada")} · ${escapeHtml(formatDate(of?.date))}</small></article>
     <article class="${rec ? "is-complete" : ""}"><span><b>REC</b> · Recebimento</span><strong>${escapeHtml(rec?.invoice ? `NF ${rec.invoice}` : "Não recebido")}</strong><small>${escapeHtml(formatDate(rec?.entryDate || rec?.issueDate))}</small></article>`;
+  renderOperationalInsights(ui.procurementModalOperational, getOperationalInsight(item, record.branchCode));
   ui.procurementModalDetails.innerHTML = [
     renderProcessGroup("SC", "Solicitação de Compra", sc, [
       ["Código", sc?.code], ["Situação", sc?.status], ["Data de criação", formatDate(sc?.date)], ["Data de entrega", formatDate(sc?.deliveryDate)],
@@ -1905,6 +1909,56 @@ function withinRecommendationRange(current, recommended) {
   return Math.abs(current - recommended) <= Math.max(1, recommended * 0.2);
 }
 
+function getOperationalInsight(item, branchCode = "", positionHint = null) {
+  let reviews = state.minMaxReviews.filter((review) => review.item.code === item.code);
+  if (branchCode) reviews = reviews.filter((review) => review.position.branchCode === branchCode);
+  if (positionHint) {
+    const exact = reviews.find((review) => review.position.locationKey === positionHint.locationKey);
+    if (exact) reviews = [exact];
+  }
+  let positions = positionHint ? [positionHint] : (item.positions || []).filter((position) => !branchCode || position.branchCode === branchCode);
+  if (reviews.length) positions = reviews.map((review) => review.position);
+  const averageMonthlyConsumption = reviews.reduce((sum, review) => sum + review.averageMonthlyConsumption, 0);
+  const balance = positions.reduce((sum, position) => sum + (position.quantity || 0), 0);
+  const recommendedMinimum = reviews.length
+    ? reviews.reduce((sum, review) => sum + (review.recommendedMinimum || 0), 0)
+    : positions.reduce((sum, position) => sum + (position.minimum || 0), 0);
+  const realLeadTimes = reviews.filter((review) => review.leadTimeSource === "real").map((review) => review.leadTimeDays);
+  const fallbackLeadTimes = reviews.map((review) => review.leadTimeDays).filter((value) => value >= 0);
+  const leadTimes = realLeadTimes.length ? realLeadTimes : fallbackLeadTimes;
+  const leadTimeDays = leadTimes.length ? median(leadTimes) : null;
+  let nextPurchase = "Sem consumo suficiente";
+  let nextPurchaseDetail = "Não foi possível projetar uma data";
+  if (averageMonthlyConsumption > 0) {
+    const dailyConsumption = averageMonthlyConsumption / 30;
+    const daysUntilReorder = Math.max(0, Math.floor((balance - recommendedMinimum) / dailyConsumption));
+    if (daysUntilReorder === 0) {
+      nextPurchase = "Comprar agora";
+      nextPurchaseDetail = balance <= recommendedMinimum ? "Saldo no ponto de reposição" : "Reposição prevista em até 1 dia";
+    } else {
+      const date = new Date(Date.now() + daysUntilReorder * 86400000);
+      nextPurchase = new Intl.DateTimeFormat("pt-BR").format(date);
+      nextPurchaseDetail = `Em aproximadamente ${pluralize(daysUntilReorder, "dia", "dias")}`;
+    }
+  }
+  return {
+    leadTimeDays,
+    leadTimeSource: realLeadTimes.length ? "histórico real" : leadTimes.length ? "referência estimada" : "sem histórico",
+    averageMonthlyConsumption,
+    balance,
+    nextPurchase,
+    nextPurchaseDetail,
+  };
+}
+
+function renderOperationalInsights(container, insight) {
+  container.innerHTML = `
+    <article><span>Lead time</span><strong>${insight.leadTimeDays == null ? "Não disponível" : `${integerFormatter.format(insight.leadTimeDays)} dias`}</strong><small>${escapeHtml(insight.leadTimeSource)}</small></article>
+    <article><span>Consumo médio mensal</span><strong>${numberFormatter.format(insight.averageMonthlyConsumption)}</strong><small>média dos meses disponíveis</small></article>
+    <article><span>Saldo atual</span><strong>${numberFormatter.format(insight.balance)}</strong><small>posição considerada</small></article>
+    <article class="operational-insights__projection"><span>Próxima compra</span><strong>${escapeHtml(insight.nextPurchase)}</strong><small>${escapeHtml(insight.nextPurchaseDetail)}</small></article>`;
+}
+
 function openMinMaxReviewModal(key) {
   const review = state.minMaxReviewByKey.get(key);
   if (!review) return;
@@ -1917,10 +1971,12 @@ function openMinMaxReviewModal(key) {
   ui.reviewModalSummary.innerHTML = `
     <article><span>Consumo médio/mês</span><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></article>
     <article><span>Lead time utilizado</span><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></article>
+    <article><span>Saldo atual</span><strong>${numberFormatter.format(position.quantity)}</strong></article>
     <article><span>Mínimo atual</span><strong>${formatOptionalNumber(review.currentMinimum)}</strong></article>
     <article><span>Máximo atual</span><strong>${formatOptionalNumber(review.currentMaximum)}</strong></article>
     <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong></article>
-    <article><span>Máximo sugerido</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong></article>`;
+    <article><span>Máximo sugerido</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong></article>
+    <article><span>Próxima compra</span><strong>${escapeHtml(getOperationalInsight(item, position.branchCode, position).nextPurchase)}</strong></article>`;
   const message = review.status === "ideal"
     ? "Os parâmetros atuais estão dentro da faixa aceitável de ±20% da recomendação calculada."
     : review.status === "insufficient"
@@ -2061,6 +2117,7 @@ function openItem(code) {
   ui.modalStockValue.textContent = currencyFormatter.format(item.stockValueTotal);
   ui.modalPositionCount.textContent = integerFormatter.format(item.positions.length);
   ui.modalHistoryCount.textContent = integerFormatter.format(item.history.length);
+  renderOperationalInsights(ui.modalOperationalInsights, getOperationalInsight(item));
 
   const lastPurchase = item.history.find((record) => record.rec?.entryDate || record.of?.date || record.sc?.date);
   const details = [
