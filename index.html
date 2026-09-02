@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260902-17">
-    <script src="script.js?v=20260902-17" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-18">
+    <script src="script.js?v=20260902-18" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -329,18 +329,21 @@
           </div>
 
           <div id="consumptionAvailable" class="consumption-available is-hidden">
-            <div class="need-summary">
-              <article><span>Arquivo localizado</span><strong>03 - Consumo.csv</strong></article>
-              <article><span>Registros</span><strong id="consumptionRowCount">—</strong></article>
-              <article><span>Colunas</span><strong id="consumptionColumnCount">—</strong></article>
+            <div class="need-summary review-summary">
+              <article><span>Itens analisados</span><strong id="reviewItemCount">—</strong></article>
+              <article><span>Parâmetros ideais</span><strong id="reviewIdealCount">—</strong></article>
+              <article><span>Recomendação de ajuste</span><strong id="reviewAdjustCount">—</strong></article>
+              <article><span>Sem histórico suficiente</span><strong id="reviewInsufficientCount">—</strong></article>
+              <article><span>Lead time médio</span><strong id="reviewAverageLeadTime">—</strong></article>
             </div>
             <div class="table-heading">
               <div>
-                <h3>Prévia dos dados de consumo</h3>
-                <p>A estrutura será usada para configurar as regras definitivas de revisão de mínimo e máximo.</p>
+                <h3>Análise por item e posição</h3>
+                <p>Consumo mensal, lead time real, parâmetros atuais e sugestão calculada para reposição.</p>
               </div>
+              <span id="reviewResultCount" class="context-label">—</span>
             </div>
-            <div id="consumptionPreviewWrap" class="table-wrap"></div>
+            <div id="reviewCardsGrid" class="report-card-grid review-card-grid" aria-live="polite"></div>
           </div>
         </section>
       </section>
@@ -406,6 +409,29 @@
           <div id="procurementModalStages" class="process-stages"></div>
           <div id="procurementModalDetails" class="process-detail-groups"></div>
           <div class="purchase-modal-actions"><button id="procurementModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="reviewModal" class="item-modal review-modal" aria-labelledby="reviewModalTitle">
+      <div class="modal-shell modal-shell--review">
+        <header class="modal-header modal-header--review">
+          <div>
+            <span id="reviewModalCode" class="modal-code"></span>
+            <h2 id="reviewModalTitle">Revisão de Min e Máx</h2>
+            <p id="reviewModalSubtitle"></p>
+          </div>
+          <button id="reviewModalClose" class="modal-close" type="button" aria-label="Fechar revisão do item">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content review-modal-content">
+          <div id="reviewModalSummary" class="summary-cards review-modal-summary"></div>
+          <div id="reviewModalRecommendation" class="review-recommendation"></div>
+          <div id="reviewModalDetails" class="review-detail-grid"></div>
+          <div class="purchase-modal-actions">
+            <button id="reviewModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
+          </div>
         </div>
       </div>
     </dialog>
