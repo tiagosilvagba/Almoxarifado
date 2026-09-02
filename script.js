@@ -1241,7 +1241,7 @@ function renderNextPendingScBatch() {
     <span class="report-card__top"><span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(ageLabel(sc.date))}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
-    <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
+    <span class="item-card__address">${escapeHtml(formatItemAddress(item, record.branchCode))}</span>
     <span class="report-card__meta"><span><small>Solicitante</small><strong>${escapeHtml(sc.requesterName || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
     <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
   </button>`).join(""));
@@ -1333,6 +1333,7 @@ function renderNextPurchaseNeedBatch() {
     <span class="report-card__top"><span class="status-pill ${netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+    <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
     <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>
     ${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}
     <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
@@ -2156,6 +2157,13 @@ function renderStorageAddresses(item) {
         <span><small>Divisão</small><strong>${escapeHtml(position.division || "Não informada")}</strong></span>
       </div>
     </article>`).join("")}</div>`;
+}
+
+function formatItemAddress(item, branchCode = "") {
+  const scoped = (item.positions || []).filter((position) => !branchCode || position.branchCode === branchCode);
+  const position = scoped.find((entry) => entry.quantity > 0) || scoped[0];
+  if (!position) return "Endereço não informado";
+  return `Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`;
 }
 
 function navigateItemModal(direction) {
