@@ -103,7 +103,7 @@ function cacheUi() {
     "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
     "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBalance",
-    "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails",
+    "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
     "purchaseNeedResultCount", "purchaseNeedTableWrap",
@@ -1975,6 +1975,7 @@ function openItem(code) {
     ["Último preço conhecido", latestPurchasePrice(item) > 0 ? currencyFormatter.format(latestPurchasePrice(item)) : "Não informado"],
   ];
   ui.modalDetails.innerHTML = details.map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
+  renderStorageAddresses(item);
 
   renderGallery(item);
   renderStock(item);
@@ -1982,6 +1983,24 @@ function openItem(code) {
   activateTab("summary");
 
   if (!ui.itemModal.open) ui.itemModal.showModal();
+}
+
+function renderStorageAddresses(item) {
+  const positions = item.positions || [];
+  const heading = `<header><span class="storage-address-block__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M9 5v14M15 5v14"></path></svg></span><div><strong>Endereço de armazenagem</strong><small>Localização física do item</small></div></header>`;
+  if (!positions.length) {
+    ui.modalAddressBlock.innerHTML = `${heading}<p class="storage-address-empty">Este item não possui posição de estoque cadastrada.</p>`;
+    return;
+  }
+  ui.modalAddressBlock.innerHTML = `${heading}<div class="storage-address-list">${positions.map((position) => `
+    <article>
+      <span class="storage-address-context">${escapeHtml([position.branchCode, position.localCode, position.localName].filter(Boolean).join(" · ") || "Posição não identificada")}</span>
+      <div class="storage-address-fields">
+        <span><small>Prateleira</small><strong>${escapeHtml(position.shelf || "Não informada")}</strong></span>
+        <span><small>Repartição</small><strong>${escapeHtml(position.partition || "Não informada")}</strong></span>
+        <span><small>Divisão</small><strong>${escapeHtml(position.division || "Não informada")}</strong></span>
+      </div>
+    </article>`).join("")}</div>`;
 }
 
 function navigateItemModal(direction) {
@@ -2485,6 +2504,7 @@ function inventoryWorker() {
           stockValue,
           forecast: parseNumber(get("Qt Previsao Consumo")),
           shelf: clean(get("Cd Prateleira")),
+          partition: clean(get("Cd Reparticao")),
           division: clean(get("Cd Divisao")),
           belowMin: minimum > 0 && quantity < minimum,
           aboveMax: maximum > 0 && quantity > maximum,
