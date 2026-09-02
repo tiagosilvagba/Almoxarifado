@@ -1575,6 +1575,16 @@ button.chart-bar:hover { background: var(--blue-100); }
 .report-card__footer { color: var(--muted); font-size: 0.8rem; }
 .report-card__footer span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .report-card__footer strong { flex: 0 0 auto; color: var(--navy-900); }
+.purchase-coverage-note {
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--navy-800);
+  background: var(--blue-100);
+  font-size: 0.75rem;
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
 
 .process-mini { display: grid; grid-template-columns: 1fr 16px 1fr 16px 1fr; align-items: center; gap: 5px; margin-top: auto; }
 .process-mini > span { min-width: 0; padding: 8px; border: 1px solid var(--steel-200); border-radius: 8px; color: var(--muted); background: var(--steel-50); font-size: 0.74rem; }
