@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260902-20">
-    <script src="script.js?v=20260902-20" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-21">
+    <script src="script.js?v=20260902-21" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -264,6 +264,10 @@
             </button>
           </div>
           <div id="purchaseNeedTableWrap" class="report-card-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="purchaseNeedLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais necessidades</button>
+            <span id="purchaseNeedVisibleCount" class="visible-count"></span>
+          </div>
         </section>
 
         <section id="page-sc-pendente-of" class="page-panel is-hidden" data-page-panel="sc-pendente-of" aria-labelledby="pendingScTitle">
@@ -286,6 +290,10 @@
             </button>
           </div>
           <div id="pendingScTableWrap" class="report-card-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="pendingScLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais solicitações</button>
+            <span id="pendingScVisibleCount" class="visible-count"></span>
+          </div>
         </section>
 
         <section id="page-consulta-sc-of" class="page-panel is-hidden" data-page-panel="consulta-sc-of" aria-labelledby="procurementTitle">
@@ -344,6 +352,10 @@
               <span id="reviewResultCount" class="context-label">—</span>
             </div>
             <div id="reviewCardsGrid" class="report-card-grid review-card-grid" aria-live="polite"></div>
+            <div class="load-more-wrap">
+              <button id="reviewLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais análises</button>
+              <span id="reviewVisibleCount" class="visible-count"></span>
+            </div>
           </div>
         </section>
       </section>
