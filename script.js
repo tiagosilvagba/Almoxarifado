@@ -2,7 +2,12 @@
 
 const CONFIG = Object.freeze({
   saldoFile: "00 - Saldo_Online.csv",
-  comprasFile: "01 - Compras_Almox.csv.gz",
+  comprasFiles: [
+    "01 - Compras_Almox.part-01.dat",
+    "01 - Compras_Almox.part-02.dat",
+    "01 - Compras_Almox.part-03.dat",
+    "01 - Compras_Almox.part-04.dat",
+  ],
   consumoFile: "03 - Consumo.csv",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
@@ -449,7 +454,7 @@ async function loadCatalog() {
 
     worker.postMessage({
       saldoUrl: new URL(CONFIG.saldoFile, document.baseURI).href,
-      comprasUrl: new URL(CONFIG.comprasFile, document.baseURI).href,
+      comprasUrls: CONFIG.comprasFiles.map((file) => new URL(file, document.baseURI).href),
       consumoUrl: new URL(CONFIG.consumoFile, document.baseURI).href,
     });
   } catch (error) {
@@ -2177,13 +2182,15 @@ function inventoryWorker() {
 
   self.onmessage = async (event) => {
     try {
-      const { saldoUrl, comprasUrl, consumoUrl } = event.data;
+      const { saldoUrl, comprasUrl, comprasUrls, consumoUrl } = event.data;
       progress("Baixando os arquivos de saldo e compras…");
-      const [saldoText, comprasText, consumoText] = await Promise.all([
+      const purchaseUrls = comprasUrls?.length ? comprasUrls : [comprasUrl];
+      const [saldoText, comprasParts, consumoText] = await Promise.all([
         fetchText(saldoUrl, "Saldo_Online"),
-        fetchText(comprasUrl, "Compras_Almox"),
+        Promise.all(purchaseUrls.map((url, index) => fetchText(url, `Compras_Almox ${index + 1}`))),
         fetchOptionalText(consumoUrl),
       ]);
+      const comprasText = comprasParts.join("\n");
 
       const items = new Map();
       let saldoRows = 0;
