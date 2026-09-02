@@ -124,7 +124,7 @@ function cacheUi() {
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "photoInput", "photoUploadButton", "photoUploadStatus",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
-    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount",
+    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
     "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem",
   ];
@@ -198,6 +198,7 @@ function bindEvents() {
   ui.exportPurchaseNeedButton.addEventListener("click", exportPurchaseNeeds);
   ui.exportPendingScButton.addEventListener("click", exportPendingSc);
   ui.exportProcurementButton.addEventListener("click", exportProcurement);
+  ui.exportMinMaxReviewButton.addEventListener("click", exportMinMaxReviews);
 
   ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
   ui.purchaseNeedModal.addEventListener("click", (event) => {
@@ -602,8 +603,8 @@ function prepareItems() {
       ...(item.suppliers || []),
       ...(item.units || []),
       ...(item.history || []).flatMap((record) => [
-        record.sc?.code, record.sc?.status,
-        record.of?.code, record.of?.status, record.of?.supplier,
+        record.sc?.code, record.sc?.status, record.sc?.requesterName,
+        record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierEmail,
         record.rec?.invoice, record.rec?.series, record.rec?.supplier,
       ]),
     ].join(" "));
@@ -1240,7 +1241,8 @@ function renderNextPendingScBatch() {
     <span class="report-card__top"><span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(ageLabel(sc.date))}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
-    <span class="report-card__meta"><span><small>Filial</small><strong>${escapeHtml(record.branch || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
+    <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
+    <span class="report-card__meta"><span><small>Solicitante</small><strong>${escapeHtml(sc.requesterName || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
     <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
   </button>`).join(""));
   state.pendingScVisible = end;
@@ -1370,7 +1372,9 @@ function openPurchaseNeedModal(key) {
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
     <div><dt>Filial</dt><dd>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</dd></div>
     <div><dt>Local</dt><dd>${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · ") || "—")}</dd></div>
+    <div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "—")}</dd></div>
     <div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "—")}</dd></div>
+    <div><dt>Divisão</dt><dd>${escapeHtml(position.division || "—")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
     <div><dt>Prioridade</dt><dd>${rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
     <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
@@ -1412,6 +1416,7 @@ function openPendingScModal(key) {
     <div><dt>Motivo</dt><dd>${escapeHtml(sc.reason || "—")}</dd></div>
     <div><dt>Filial</dt><dd>${escapeHtml(record.branch || "—")}</dd></div>
     <div><dt>Empresa</dt><dd>${escapeHtml(sc.company || "—")}</dd></div>
+    <div><dt>Usuário solicitante</dt><dd>${escapeHtml(sc.requesterName || "—")}</dd></div>
     <div><dt>Centro de custo aprovador</dt><dd>${escapeHtml(sc.costCenter || "—")}</dd></div>
     <div><dt>Local de estoque</dt><dd>${escapeHtml(sc.stockLocation || "—")}</dd></div>
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
@@ -1465,18 +1470,18 @@ function exportPurchaseNeeds() {
 
 function exportPendingSc() {
   const rows = state.pendingScRows.map(({ item, record, sc }) => [
-    sc.code, sc.status, sc.cancelled, sc.date, sc.deliveryDate, ageDays(sc.date), isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
+    sc.code, sc.status, sc.requesterName, sc.cancelled, sc.date, sc.deliveryDate, ageDays(sc.date), isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
     sc.category, sc.reason, item.code, item.name, item.detailedName, (item.categories || []).join(" | "),
     (item.units || []).join(" | "), record.branch, (item.suppliers || []).join(" | "), "", "Não gerada",
   ]);
   exportExcelReport({
     title: "SC Pendente de OF",
     filename: "sc-pendente-de-of.xls",
-    headers: ["SC", "Situação SC", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
+    headers: ["SC", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
     rows,
-    numericColumns: new Set([5, 7, 8]),
-    currencyColumns: new Set([8]),
-    dateColumns: new Set([3, 4]),
+    numericColumns: new Set([6, 8, 9]),
+    currencyColumns: new Set([9]),
+    dateColumns: new Set([4, 5]),
   });
 }
 
@@ -1485,8 +1490,8 @@ function exportProcurement() {
     const { sc, of, rec } = record;
     return [
       item.code, item.name, item.detailedName, record.branchCode, record.branch,
-      sc?.code, sc?.status, sc?.date, sc?.deliveryDate, sc?.quantity, sc?.estimatedValue, sc?.category, sc?.reason, sc?.cancelled, sc?.company, sc?.costCenter, sc?.stockLocation,
-      of?.code, of?.status, of?.date, of?.deliveryDate, of?.supplierCode, of?.supplier, of?.requestedQuantity, of?.deliveredQuantity, of?.balance, of?.unitValue, of?.currency, of?.paymentTerms, of?.paymentMethod, of?.freight, of?.icms, of?.ipi, of?.closed, of?.blocked, of?.type, of?.carrier,
+      sc?.code, sc?.status, sc?.date, sc?.deliveryDate, sc?.quantity, sc?.estimatedValue, sc?.category, sc?.reason, sc?.cancelled, sc?.company, sc?.requesterName, sc?.costCenter, sc?.stockLocation,
+      of?.code, of?.status, of?.date, of?.deliveryDate, of?.supplierCode, of?.supplier, of?.supplierEmail, of?.requestedQuantity, of?.deliveredQuantity, of?.balance, of?.unitValue, of?.currency, of?.paymentTerms, of?.paymentMethod, of?.freight, of?.icms, of?.ipi, of?.closed, of?.blocked, of?.type, of?.carrier,
       rec?.invoice, rec?.series, rec?.issueDate, rec?.entryDate, rec?.supplierCode, rec?.supplier, rec?.quantity, rec?.unitValue, rec?.documentValue, rec?.currency, rec?.paymentTerms, rec?.paymentMethod, rec?.freight, rec?.icms, rec?.ipi,
     ];
   });
@@ -1495,14 +1500,47 @@ function exportProcurement() {
     filename: "consulta-sc-of-recebimentos.xls",
     headers: [
       "Código do item", "Descrição", "Descrição detalhada", "Código filial", "Filial",
-      "SC - Código", "SC - Situação", "SC - Data de criação", "SC - Data de entrega", "SC - Quantidade", "SC - Valor estimado", "SC - Categoria", "SC - Motivo", "SC - Cancelada", "SC - Empresa", "SC - Centro de custo", "SC - Local de estoque",
-      "OF - Código", "OF - Situação", "OF - Data", "OF - Data de entrega", "OF - Código fornecedor", "OF - Fornecedor", "OF - Quantidade solicitada", "OF - Quantidade entregue", "OF - Saldo", "OF - Valor unitário", "OF - Moeda", "OF - Condição de pagamento", "OF - Forma de pagamento", "OF - Frete", "OF - ICMS", "OF - IPI", "OF - Fechada", "OF - Bloqueada", "OF - Tipo", "OF - Transportador",
+      "SC - Código", "SC - Situação", "SC - Data de criação", "SC - Data de entrega", "SC - Quantidade", "SC - Valor estimado", "SC - Categoria", "SC - Motivo", "SC - Cancelada", "SC - Empresa", "SC - Usuário solicitante", "SC - Centro de custo", "SC - Local de estoque",
+      "OF - Código", "OF - Situação", "OF - Data", "OF - Data de entrega", "OF - Código fornecedor", "OF - Fornecedor", "OF - E-mail do fornecedor", "OF - Quantidade solicitada", "OF - Quantidade entregue", "OF - Saldo", "OF - Valor unitário", "OF - Moeda", "OF - Condição de pagamento", "OF - Forma de pagamento", "OF - Frete", "OF - ICMS", "OF - IPI", "OF - Fechada", "OF - Bloqueada", "OF - Tipo", "OF - Transportador",
       "REC - Nota fiscal", "REC - Série", "REC - Data de emissão", "REC - Data de entrada", "REC - Código fornecedor", "REC - Fornecedor", "REC - Quantidade", "REC - Valor unitário", "REC - Valor do documento", "REC - Moeda", "REC - Condição de pagamento", "REC - Forma de pagamento", "REC - Frete", "REC - ICMS", "REC - IPI",
     ],
     rows,
-    numericColumns: new Set([9, 10, 23, 24, 25, 26, 30, 31, 32, 43, 44, 45, 49, 50, 51]),
-    currencyColumns: new Set([10, 26, 44, 45]),
-    dateColumns: new Set([7, 8, 19, 20, 39, 40]),
+    numericColumns: new Set([9, 10, 25, 26, 27, 28, 32, 33, 34, 45, 46, 47, 51, 52, 53]),
+    currencyColumns: new Set([10, 28, 46, 47]),
+    dateColumns: new Set([7, 8, 20, 21, 41, 42]),
+  });
+}
+
+function exportMinMaxReviews() {
+  const rows = state.visibleMinMaxReviews.map((review) => {
+    const { item, position } = review;
+    const status = review.status === "ideal" ? "Parâmetros ideais"
+      : review.status === "adjust" ? "Ajuste recomendado" : "Histórico insuficiente";
+    const monthlyHistory = Object.entries(review.consumption.monthlyTotals || {})
+      .map(([month, value]) => `${month}: ${numberFormatter.format(value)}`)
+      .join(" | ");
+    return [
+      item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
+      position.branchCode, position.branchName, position.localCode, position.localName,
+      position.partition, position.shelf, position.division, position.quantity,
+      review.currentMinimum, review.currentMaximum, review.averageMonthlyConsumption, review.monthCount,
+      review.leadTimeDays, review.leadTimeSource === "real" ? "Histórico real" : "Referência estimada",
+      review.leadSamples.length, review.leadSamples.join(" | "), review.recommendedMinimum, review.recommendedMaximum,
+      status, review.direction === "increase" ? "Elevar parâmetros" : "Reduzir parâmetros", monthlyHistory,
+      "Mínimo = consumo diário × lead time; Máximo = mínimo + 30 dias de consumo; tolerância de ±20%",
+    ];
+  });
+  exportExcelReport({
+    title: "Revisão de Min e Máx",
+    filename: "revisao-minimo-maximo.xls",
+    headers: [
+      "Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Código local", "Local de estoque",
+      "Repartição", "Prateleira", "Divisão", "Saldo atual", "Mínimo atual", "Máximo atual", "Consumo médio mensal", "Meses analisados",
+      "Lead time em dias", "Origem do lead time", "Amostras de lead time", "Tempos encontrados", "Mínimo sugerido", "Máximo sugerido",
+      "Validação", "Alteração proposta", "Consumo por mês", "Critério de cálculo",
+    ],
+    rows,
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 19, 21, 22]),
   });
 }
 
@@ -1600,8 +1638,8 @@ function buildProcurementRows() {
 function recordMatchesQuery(item, record, query) {
   return normalizeSearch([
     item.code, item.name, item.detailedName,
-    record.sc?.code, record.sc?.status,
-    record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode,
+    record.sc?.code, record.sc?.status, record.sc?.requesterName,
+    record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
     record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
   ].join(" ")).includes(query);
 }
@@ -1650,7 +1688,8 @@ function renderNextProcurementBatch() {
     card.innerHTML = `<span class="report-card__top"><span class="status-pill ${process.type}">${escapeHtml(process.label)}</span><span>${escapeHtml(record.branch || "—")}</span></span>
       <strong class="report-card__title">${escapeHtml(item.name)}</strong><span class="report-card__code">Código ${escapeHtml(item.code)}</span>
       <span class="process-mini"><span class="${sc ? "is-complete" : ""}">SC<strong>${escapeHtml(sc?.code || "—")}</strong></span><i></i><span class="${of ? "is-complete" : ""}">OF<strong>${escapeHtml(of?.code || "—")}</strong></span><i></i><span class="${rec ? "is-complete" : ""}">REC<strong>${escapeHtml(rec?.invoice || "—")}</strong></span></span>
-      <span class="report-card__footer"><span>${escapeHtml((of?.supplier || rec?.supplier) || "Fornecedor não informado")}</span><strong>${escapeHtml(process.detail)}</strong></span>`;
+      <span class="procurement-people"><span><small>Solicitante</small><strong>${escapeHtml(sc?.requesterName || "Não informado")}</strong></span><span><small>Fornecedor</small><strong>${escapeHtml((of?.supplier || rec?.supplier) || "Não informado")}</strong></span><span><small>E-mail</small><strong>${escapeHtml(of?.supplierEmail || "Não informado")}</strong></span></span>
+      <span class="report-card__footer"><span>${escapeHtml(record.branch || "Filial não informada")}</span><strong>${escapeHtml(process.detail)}</strong></span>`;
     fragment.append(card);
   }
   ui.procurementGrid.append(fragment);
@@ -1685,7 +1724,7 @@ function openProcurementModal(key) {
     renderProcessGroup("SC", "Solicitação de Compra", sc, [
       ["Código", sc?.code], ["Situação", sc?.status], ["Data de criação", formatDate(sc?.date)], ["Data de entrega", formatDate(sc?.deliveryDate)],
       ["Tempo desde a criação", sc ? ageLabel(sc.date) : "Não informado"], ["Entrega vencida", sc ? (isOverdue(sc.deliveryDate) ? "Sim" : "Não") : "Não informado"],
-      ["Empresa", sc?.company], ["Filial", [sc?.branchCode, sc?.branchName].filter(Boolean).join(" · ")], ["Centro de custo aprovador", sc?.costCenter], ["Sequência", sc?.sequence],
+      ["Empresa", sc?.company], ["Filial", [sc?.branchCode, sc?.branchName].filter(Boolean).join(" · ")], ["Usuário solicitante", sc?.requesterName], ["Centro de custo aprovador", sc?.costCenter], ["Sequência", sc?.sequence],
       ["Código do produto", sc?.productCode], ["Produto", sc?.productName], ["Descrição do material", sc?.materialDescription], ["Unidade", sc?.unit],
       ["Quantidade", formatProcessNumber(sc?.quantity)], ["Valor estimado", formatProcessCurrency(sc?.estimatedValue)], ["Categoria", sc?.category], ["Motivo", sc?.reason],
       ["Regularização", sc?.regularization], ["Observação", sc?.observation], ["Empresa destino", sc?.destinationCompany], ["Filial destino", sc?.destinationBranch],
@@ -1697,7 +1736,7 @@ function openProcurementModal(key) {
       ["Tempo entre SC e OF", durationLabel(sc?.date, of?.date)], ["Entrega vencida", of ? (isOverdue(of.deliveryDate) && of.balance > 0 ? "Sim" : "Não") : "Não informado"],
       ["Empresa de entrega", of?.deliveryCompany], ["Filial de entrega", [of?.deliveryBranchCode, of?.deliveryBranchName].filter(Boolean).join(" · ")], ["UF", of?.state],
       ["Empresa de pagamento", of?.paymentCompany], ["Filial de pagamento", [of?.paymentBranchCode, of?.paymentBranchName].filter(Boolean).join(" · ")],
-      ["Código do fornecedor", of?.supplierCode], ["Fornecedor", of?.supplier], ["Código do produto", of?.productCode], ["Produto", of?.productName], ["Unidade", of?.unit],
+      ["Código do fornecedor", of?.supplierCode], ["Fornecedor", of?.supplier], ["E-mail do fornecedor", of?.supplierEmail], ["Código do produto", of?.productCode], ["Produto", of?.productName], ["Unidade", of?.unit],
       ["Quantidade solicitada", formatProcessNumber(of?.requestedQuantity)], ["Saldo", formatProcessNumber(of?.balance)], ["Quantidade entregue", formatProcessNumber(of?.deliveredQuantity)],
       ["Valor unitário", formatProcessCurrency(of?.unitValue)], ["Fechada", formatFlag(of?.closed)], ["Bloqueada", formatFlag(of?.blocked)], ["Alíquota ICMS", of?.icms], ["Alíquota IPI", of?.ipi],
       ["Frete", of?.freight], ["Moeda", of?.currency], ["Condição de pagamento", of?.paymentTerms], ["Forma de pagamento", of?.paymentMethod], ["Tipo", of?.type],
@@ -1772,6 +1811,7 @@ function renderNextMinMaxReviewBatch() {
       <span class="report-card__top"><span class="status-pill status-pill--${status[1]}">${status[0]}</span><span>${escapeHtml(review.monthCount ? `${review.monthCount} meses` : "Sem consumo")}</span></span>
       <strong class="report-card__title">${escapeHtml(review.item.name)}</strong>
       <span class="report-card__code">Código ${escapeHtml(review.item.code)}</span>
+      <span class="item-card__address">${escapeHtml(`Repartição ${review.position.partition || "—"} · Prateleira ${review.position.shelf || "—"} · Divisão ${review.position.division || "—"}`)}</span>
       <span class="review-card__comparison">
         <span><small>Mín. atual</small><strong>${formatOptionalNumber(review.currentMinimum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMinimum)}</i></span>
         <span><small>Máx. atual</small><strong>${formatOptionalNumber(review.currentMaximum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMaximum)}</i></span>
@@ -1892,7 +1932,7 @@ function openMinMaxReviewModal(key) {
   ui.reviewModalDetails.innerHTML = `
     <section><h3>Consumo mensal</h3><div class="monthly-consumption-list">${months.map(([month, value]) => `<span><small>${escapeHtml(month)}</small><strong>${numberFormatter.format(value)}</strong></span>`).join("")}</div></section>
     <section><h3>Base do lead time</h3><dl><div><dt>Origem</dt><dd>${review.leadTimeSource === "real" ? "Mediana entre criação da SC e entrada do recebimento" : "Padrão estimado de 30 dias"}</dd></div><div><dt>Amostras válidas</dt><dd>${integerFormatter.format(review.leadSamples.length)}</dd></div><div><dt>Tempos encontrados</dt><dd>${review.leadSamples.length ? review.leadSamples.map((value) => `${value} dias`).join(", ") : "Nenhum recebimento relacionado"}</dd></div></dl></section>
-    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Custo unitário</dt><dd>${currencyFormatter.format(position.unitCost || 0)}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div></dl></section>`;
+    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "Não informada")}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div><div><dt>Divisão</dt><dd>${escapeHtml(position.division || "Não informada")}</dd></div><div><dt>Custo unitário</dt><dd>${currencyFormatter.format(position.unitCost || 0)}</dd></div></dl></section>`;
   if (typeof ui.reviewModal.showModal === "function") ui.reviewModal.showModal(); else ui.reviewModal.setAttribute("open", "");
   ui.reviewModalClose.focus();
 }
@@ -1938,6 +1978,12 @@ function renderCard(item) {
   const images = imagesForItem(item, false);
   const primaryImage = images[0];
   const badges = statusBadges(item);
+  const addressPosition = item.positions.find((position) => position.quantity > 0) || item.positions[0];
+  const address = addressPosition ? [
+    `Repartição ${addressPosition.partition || "—"}`,
+    `Prateleira ${addressPosition.shelf || "—"}`,
+    `Divisão ${addressPosition.division || "—"}`,
+  ].join(" · ") : "Endereço não informado";
 
   card.innerHTML = `
     <button class="item-card__open" type="button" data-item-code="${escapeHtml(item.code)}" aria-label="Abrir detalhes do item ${escapeHtml(item.code)}">
@@ -1956,6 +2002,7 @@ function renderCard(item) {
           <span class="item-card__code">Código ${escapeHtml(item.code)}</span>
           <h3>${escapeHtml(item.name)}</h3>
           <p class="item-card__category">${escapeHtml(primaryCategory(item))}</p>
+          <span class="item-card__address">${escapeHtml(address)}</span>
         </span>
         <span class="card-badges">${badges.map(badgeHtml).join("")}</span>
         <span class="item-card__numbers">
@@ -2047,8 +2094,8 @@ function renderStorageAddresses(item) {
     <article>
       <span class="storage-address-context">${escapeHtml([position.branchCode, position.localCode, position.localName].filter(Boolean).join(" · ") || "Posição não identificada")}</span>
       <div class="storage-address-fields">
-        <span><small>Prateleira</small><strong>${escapeHtml(position.shelf || "Não informada")}</strong></span>
         <span><small>Repartição</small><strong>${escapeHtml(position.partition || "Não informada")}</strong></span>
+        <span><small>Prateleira</small><strong>${escapeHtml(position.shelf || "Não informada")}</strong></span>
         <span><small>Divisão</small><strong>${escapeHtml(position.division || "Não informada")}</strong></span>
       </div>
     </article>`).join("")}</div>`;
@@ -2608,6 +2655,7 @@ function inventoryWorker() {
           reason: clean(get("SC - Motivo")),
           cancelled: scCancelled,
           costCenter: clean(get("SC - Centro Custo Aprovador")),
+          requesterName: clean(get("SC - Nome Solicitante")),
           company: clean(get("SC - Empresa")),
           branchCode: clean(get("SC - Filial")),
           branchName: clean(get("SC - Descr. Filial")),
@@ -2648,6 +2696,7 @@ function inventoryWorker() {
           paymentBranchCode: clean(get("OF - Filial Pagto")),
           paymentBranchName: clean(get("OF - Nome Filial Pagto")),
           supplierCode: [clean(get("OF - Cód. Base")), clean(get("OF - Dígito Base"))].filter(Boolean).join("-"),
+          supplierEmail: clean(get("OF - Email Fornecedor")),
           productCode: ofProduct,
           productName: clean(get("OF - Nome Produto")),
           unit: clean(get("OF - Unidade Medida")),
