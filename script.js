@@ -1070,22 +1070,27 @@ function buildPurchaseNeeds() {
   const needs = [];
 
   for (const item of state.items) {
-    const availableOfByBranch = new Map();
+    const commitmentsByBranch = getItemPurchaseCommitments(item);
     for (const position of item.positions || []) {
       if (!(position.minimum > 0 && position.quantity < position.minimum)) continue;
       const target = position.maximum > 0 ? position.maximum : position.minimum;
       const grossSuggested = Math.max(target - position.quantity, 0);
-      if (!availableOfByBranch.has(position.branchCode)) availableOfByBranch.set(position.branchCode, getItemOpenOfBalance(item, position.branchCode));
-      const openOfBalance = Math.min(availableOfByBranch.get(position.branchCode) || 0, grossSuggested);
-      availableOfByBranch.set(position.branchCode, Math.max((availableOfByBranch.get(position.branchCode) || 0) - openOfBalance, 0));
-      const netSuggested = Math.max(grossSuggested - openOfBalance, 0);
+      const coverage = allocatePurchaseCoverage(commitmentsByBranch.get(position.branchCode), grossSuggested);
+      const netSuggested = Math.max(grossSuggested - coverage.total, 0);
       const referencePrice = position.unitCost || latestPurchasePrice(item) || 0;
       needs.push({
         item,
         position,
         target,
         suggested: grossSuggested,
-        openOfBalance,
+        openOfBalance: coverage.ofQuantity,
+        pendingScQuantity: coverage.scQuantity,
+        coveredQuantity: coverage.total,
+        ofCodes: coverage.ofCodes,
+        scCodes: coverage.scCodes,
+        coverageSource: coverage.ofQuantity > 0 && coverage.scQuantity > 0 ? "OF + SC"
+          : coverage.ofQuantity > 0 ? "OF"
+            : coverage.scQuantity > 0 ? "SC" : "Sem cobertura",
         netSuggested,
         referencePrice,
         estimatedValue: netSuggested * referencePrice,
@@ -1116,14 +1121,81 @@ function latestPurchasePrice(item) {
   return 0;
 }
 
-function getItemOpenOfBalance(item, branchCode = "") {
+function getItemPurchaseCommitments(item) {
   const orders = new Map();
+  const requests = new Map();
   for (const record of item.history || []) {
-    if (!record.of?.code || !(record.of.balance > 0)) continue;
-    if (branchCode && record.branchCode !== branchCode) continue;
-    if (!orders.has(record.of.code)) orders.set(record.of.code, record.of.balance);
+    const branchCode = record.branchCode || "";
+    if (record.of?.code && record.of.balance > 0) {
+      const existing = orders.get(record.of.code);
+      if (!existing || record.of.balance > existing.quantity) {
+        orders.set(record.of.code, { code: record.of.code, branchCode, quantity: record.of.balance });
+      }
+    }
+    if (record.sc?.code) {
+      const existing = requests.get(record.sc.code) || {
+        code: record.sc.code,
+        branchCode,
+        quantity: 0,
+        status: record.sc.status,
+        cancelled: record.sc.cancelled,
+        hasOf: false,
+      };
+      existing.hasOf ||= Boolean(record.of?.code);
+      existing.quantity = Math.max(existing.quantity, record.sc.quantity || 0);
+      existing.branchCode ||= branchCode;
+      existing.status ||= record.sc.status;
+      existing.cancelled ||= record.sc.cancelled;
+      requests.set(record.sc.code, existing);
+    }
   }
-  return [...orders.values()].reduce((sum, value) => sum + value, 0);
+  const byBranch = new Map();
+  const ensureBranch = (branchCode) => {
+    if (!byBranch.has(branchCode)) byBranch.set(branchCode, { ofs: [], scs: [] });
+    return byBranch.get(branchCode);
+  };
+  for (const order of orders.values()) {
+    ensureBranch(order.branchCode).ofs.push({ ...order, remaining: order.quantity });
+  }
+  for (const request of requests.values()) {
+    if (request.hasOf || !(request.quantity > 0) || !isActiveScForPurchaseCoverage(request)) continue;
+    ensureBranch(request.branchCode).scs.push({ ...request, remaining: request.quantity });
+  }
+  return byBranch;
+}
+
+function isActiveScForPurchaseCoverage(sc) {
+  if (["s", "sim", "1", "true"].includes(normalizeSearch(sc.cancelled))) return false;
+  const status = normalizeSearch(sc.status);
+  return !/(cancelad|reprovad|exclu[ií]d|encerrad)/.test(status);
+}
+
+function allocatePurchaseCoverage(pool, grossSuggested) {
+  let remainingNeed = grossSuggested;
+  const result = { ofQuantity: 0, scQuantity: 0, total: 0, ofCodes: [], scCodes: [] };
+  if (!pool || !(remainingNeed > 0)) return result;
+  const allocate = (records, type) => {
+    for (const record of records) {
+      if (!(remainingNeed > 0)) break;
+      const used = Math.min(record.remaining || 0, remainingNeed);
+      if (!(used > 0)) continue;
+      record.remaining -= used;
+      remainingNeed -= used;
+      result.total += used;
+      if (type === "of") {
+        result.ofQuantity += used;
+        result.ofCodes.push(record.code);
+      } else {
+        result.scQuantity += used;
+        result.scCodes.push(record.code);
+      }
+    }
+  };
+  allocate(pool.ofs, "of");
+  allocate(pool.scs, "sc");
+  result.ofCodes = unique(result.ofCodes);
+  result.scCodes = unique(result.scCodes);
+  return result;
 }
 
 function renderPendingScList() {
@@ -1222,11 +1294,12 @@ function renderPurchaseNeeds() {
     return;
   }
 
-  ui.purchaseNeedTableWrap.innerHTML = visible.map(({ item, position, netSuggested, openOfBalance, estimatedValue, rupture, key }) => `<button class="report-card report-card--need${rupture ? " is-critical" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill ${rupture ? "status-pill--critical" : "status-pill--need"}">${rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+  ui.purchaseNeedTableWrap.innerHTML = visible.map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, rupture, key }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
-    <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>OF aberta</small><strong>${numberFormatter.format(openOfBalance)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>
+    <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>
+    ${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}
     <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
   </button>`).join("");
 }
@@ -1234,7 +1307,7 @@ function renderPurchaseNeeds() {
 function openPurchaseNeedModal(key) {
   const need = state.purchaseNeedByKey.get(key);
   if (!need) return;
-  const { item, position, target, suggested, openOfBalance, netSuggested, referencePrice, estimatedValue, rupture } = need;
+  const { item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture } = need;
   state.activePurchaseNeed = need;
   state.lastFocusedElement = document.activeElement;
 
@@ -1253,6 +1326,8 @@ function openPurchaseNeedModal(key) {
     <article><span>Meta</span><strong>${numberFormatter.format(target)}</strong></article>
     <article><span>Necessidade bruta</span><strong>${numberFormatter.format(suggested)}</strong></article>
     <article><span>Saldo em OF aberta</span><strong>${numberFormatter.format(openOfBalance)}</strong></article>
+    <article><span>Quantidade em SC sem OF</span><strong>${numberFormatter.format(pendingScQuantity)}</strong></article>
+    <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
     <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
     <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
   ui.purchaseModalDetails.innerHTML = `
@@ -1263,6 +1338,10 @@ function openPurchaseNeedModal(key) {
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
     <div><dt>Prioridade</dt><dd>${rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
     <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
+    <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
+    <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
+    <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
+    <div><dt>Observação</dt><dd>${coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)}. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF para descontar desta necessidade."}</dd></div>
     <div><dt>Critério da sugestão</dt><dd>${position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
 
   if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
@@ -1329,21 +1408,22 @@ function getVisiblePurchaseNeeds() {
 }
 
 function exportPurchaseNeeds() {
-  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, netSuggested, referencePrice, estimatedValue, rupture }) => [
+  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture }) => [
     item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
     position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
-    position.shelf, position.division, position.quantity, position.minimum, position.maximum, target, suggested, openOfBalance, netSuggested,
-    referencePrice, estimatedValue, rupture ? "Ruptura" : "Abaixo do mínimo com saldo",
+    position.shelf, position.division, position.quantity, position.minimum, position.maximum, target, suggested, openOfBalance,
+    pendingScQuantity, coveredQuantity, coverageSource, ofCodes.join(" | "), scCodes.join(" | "), netSuggested,
+    referencePrice, estimatedValue, rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
     position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
     position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
   ]);
   exportExcelReport({
     title: "Necessidade de Compra",
     filename: "necessidade-de-compra.xls",
-    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta", "Quantidade coberta por SC sem OF", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
     rows,
-    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24]),
-    currencyColumns: new Set([19, 20, 23, 24]),
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 27, 28, 29]),
+    currencyColumns: new Set([24, 25, 28, 29]),
   });
 }
 
