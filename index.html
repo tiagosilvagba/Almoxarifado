@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260902-21">
-    <script src="script.js?v=20260902-21" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-22">
+    <script src="script.js?v=20260902-22" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -344,12 +344,18 @@
               <article><span>Sem histórico suficiente</span><strong id="reviewInsufficientCount">—</strong></article>
               <article><span>Lead time médio</span><strong id="reviewAverageLeadTime">—</strong></article>
             </div>
-            <div class="table-heading">
+            <div class="table-heading report-heading">
               <div>
                 <h3>Análise por item e posição</h3>
                 <p>Consumo mensal, lead time real, parâmetros atuais e sugestão calculada para reposição.</p>
               </div>
-              <span id="reviewResultCount" class="context-label">—</span>
+              <div class="heading-actions">
+                <span id="reviewResultCount" class="context-label">—</span>
+                <button id="exportMinMaxReviewButton" class="button button--export" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>
+                  Exportar Excel
+                </button>
+              </div>
             </div>
             <div id="reviewCardsGrid" class="report-card-grid review-card-grid" aria-live="polite"></div>
             <div class="load-more-wrap">
@@ -492,8 +498,8 @@
                   <article><span>Posições</span><strong id="modalPositionCount">—</strong></article>
                   <article><span>Registros de compras</span><strong id="modalHistoryCount">—</strong></article>
                 </div>
-                <dl id="modalDetails" class="details-list"></dl>
                 <section id="modalAddressBlock" class="storage-address-block" aria-label="Endereço de armazenagem"></section>
+                <dl id="modalDetails" class="details-list"></dl>
               </div>
             </div>
           </section>

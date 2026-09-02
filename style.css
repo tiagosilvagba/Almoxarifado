@@ -1051,6 +1051,18 @@ button.chart-bar:hover { background: var(--blue-100); }
   white-space: nowrap;
 }
 
+.item-card__address {
+  display: block;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--steel-500);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .card-badges,
 .modal-badges {
   display: flex;
@@ -1657,6 +1669,21 @@ button.chart-bar:hover { background: var(--blue-100); }
 .process-mini > span.is-complete { border-color: color-mix(in srgb, var(--green) 34%, var(--steel-200)); color: var(--green); background: var(--green-soft); }
 .process-mini strong { display: block; overflow: hidden; margin-top: 2px; color: var(--navy-900); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
 .process-mini i { height: 2px; background: var(--steel-300); }
+.procurement-people {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.procurement-people > span {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--steel-50);
+}
+.procurement-people small,
+.procurement-people strong { display: block; }
+.procurement-people small { color: var(--muted); font-size: 0.67rem; }
+.procurement-people strong { margin-top: 2px; overflow: hidden; color: var(--navy-900); font-size: 0.73rem; text-overflow: ellipsis; white-space: nowrap; }
 .modal-shell--procurement { border-top-color: var(--blue-500); }
 .modal-header--procurement { background: linear-gradient(120deg, var(--navy-900), var(--blue-600)); }
 .process-stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -2010,6 +2037,7 @@ button.chart-bar:hover { background: var(--blue-100); }
   .button--export { width: 100%; justify-content: center; }
   .report-card-grid { grid-template-columns: 1fr; }
   .report-card { min-height: 220px; }
+  .procurement-people { grid-template-columns: 1fr; }
   .review-modal-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .brand h1 {
