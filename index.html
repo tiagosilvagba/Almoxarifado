@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-11">
-    <script src="script.js?v=20260901-11" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-12">
+    <script src="script.js?v=20260902-12" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -29,8 +29,8 @@
           <label class="theme-picker">
             <span>Tema</span>
             <select id="themeSelect" aria-label="Escolher tema visual">
-              <option value="jbs">JBS</option>
-              <option value="seara">Seara</option>
+              <option value="polar">Azul Polar</option>
+              <option value="rubi">Rubi Dourado</option>
               <option value="industrial">Industrial Azul</option>
               <option value="graphite">Grafite</option>
               <option value="operations">Verde Operação</option>
@@ -54,6 +54,7 @@
           <a class="app-nav__tab" href="#catalogo" data-page="catalogo" role="tab" aria-selected="false" aria-controls="page-catalogo">Catálogo</a>
           <a class="app-nav__tab" href="#necessidade-compra" data-page="necessidade-compra" role="tab" aria-selected="false" aria-controls="page-necessidade-compra">Necessidade de Compra</a>
           <a class="app-nav__tab" href="#sc-pendente-of" data-page="sc-pendente-of" role="tab" aria-selected="false" aria-controls="page-sc-pendente-of">SC Pendente de OF</a>
+          <a class="app-nav__tab" href="#consulta-sc-of" data-page="consulta-sc-of" role="tab" aria-selected="false" aria-controls="page-consulta-sc-of">Consulta SC e OF</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de Min e Máx</a>
         </nav>
       </div>
@@ -187,6 +188,20 @@
               <small>em ao menos uma posição</small>
             </article>
           </div>
+          <section class="analytics-grid" aria-label="Análises interativas do estoque">
+            <article class="analytics-card">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Distribuição</span><h3>Códigos por filial</h3></div><small>Clique para filtrar</small></div>
+              <div id="branchChart" class="bar-chart"></div>
+            </article>
+            <article class="analytics-card">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Composição</span><h3>Ocorrências por regra</h3></div><small>Clique para filtrar</small></div>
+              <div id="stockChart" class="donut-layout"></div>
+            </article>
+            <article class="analytics-card analytics-card--wide">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Financeiro</span><h3>Valor do estoque por filial</h3></div><small>Valores consolidados</small></div>
+              <div id="valueChart" class="bar-chart bar-chart--value"></div>
+            </article>
+          </section>
           <p id="metricReconciliation" class="metric-reconciliation" aria-live="polite"></p>
 
         </section>
@@ -270,6 +285,22 @@
           <div id="pendingScTableWrap" class="report-card-grid" aria-live="polite"></div>
         </section>
 
+        <section id="page-consulta-sc-of" class="page-panel is-hidden" data-page-panel="consulta-sc-of" aria-labelledby="procurementTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Processos de compra</span>
+              <h2 id="procurementTitle">Consulta de SC e OF</h2>
+              <p class="section-description">Consulte solicitações, ordens de fornecimento e recebimentos vinculados aos itens filtrados.</p>
+            </div>
+            <span id="procurementCount" class="context-label">0 processos</span>
+          </div>
+          <div id="procurementGrid" class="report-card-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="procurementLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais processos</button>
+            <span id="procurementVisibleCount" class="visible-count"></span>
+          </div>
+        </section>
+
         <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="reviewTitle">
           <div class="section-heading">
             <div>
@@ -349,6 +380,26 @@
       </div>
     </dialog>
 
+    <dialog id="procurementModal" class="item-modal purchase-need-modal" aria-labelledby="procurementModalTitle">
+      <div class="modal-shell modal-shell--purchase modal-shell--procurement">
+        <header class="modal-header modal-header--procurement">
+          <div>
+            <span id="procurementModalCode" class="modal-code"></span>
+            <h2 id="procurementModalTitle">Processo de compra</h2>
+            <p id="procurementModalSubtitle"></p>
+          </div>
+          <button id="procurementModalClose" class="modal-close" type="button" aria-label="Fechar processo de compra">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content">
+          <div id="procurementModalStages" class="process-stages"></div>
+          <dl id="procurementModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions"><button id="procurementModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="itemModal" class="item-modal" aria-labelledby="modalTitle">
       <div class="modal-shell">
         <header class="modal-header">
@@ -373,7 +424,17 @@
         <div class="modal-content">
           <section id="panel-summary" class="tab-panel" role="tabpanel" aria-labelledby="tab-summary">
             <div class="summary-layout">
-              <div id="modalGallery" class="gallery"></div>
+              <div class="gallery-panel">
+                <div id="modalGallery" class="gallery"></div>
+                <div class="photo-upload-actions">
+                  <input id="photoInput" class="visually-hidden" type="file" accept="image/*" capture="environment" multiple>
+                  <button id="photoUploadButton" class="button button--primary" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4l2-3h4l2 3h4v11H4z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+                    Adicionar foto
+                  </button>
+                  <small id="photoUploadStatus">Até 6 fotos salvas neste aparelho</small>
+                </div>
+              </div>
               <div class="item-summary">
                 <div class="summary-cards">
                   <article><span>Saldo total</span><strong id="modalBalance">—</strong></article>

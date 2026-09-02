@@ -6,12 +6,13 @@ const CONFIG = Object.freeze({
   consumoFile: "03 - Consumo.csv",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
-  maxImages: 5,
+  maxImages: 6,
   historyBatch: 20,
+  procurementBatch: 60,
 });
 
 const THEME_IDS = new Set([
-  "jbs", "seara", "industrial", "graphite", "operations",
+  "polar", "rubi", "industrial", "graphite", "operations",
   "logistics", "corporate", "ocean", "neutral", "contrast",
 ]);
 
@@ -62,6 +63,11 @@ const state = {
   pendingScRows: [],
   pendingScByKey: new Map(),
   activePendingSc: null,
+  procurementRows: [],
+  procurementByKey: new Map(),
+  procurementVisible: 0,
+  activeProcurement: null,
+  localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
 };
 
@@ -76,6 +82,7 @@ async function init() {
   initializeTheme();
   bindEvents();
   navigateToPage(pageFromHash(), false);
+  await loadLocalPhotoCache();
   await loadCatalog();
 }
 
@@ -84,7 +91,7 @@ function cacheUi() {
     "statusLine", "refreshButton", "themeSelect", "loadingPanel", "loadingTitle", "loadingMessage",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricOutOfStock", "metricBelowMin", "metricAboveMax",
-    "metricUnconfigured", "metricPendingSc", "metricNegative", "searchInput",
+    "metricUnconfigured", "metricPendingSc", "metricNegative", "branchChart", "stockChart", "valueChart", "searchInput",
     "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
@@ -100,7 +107,10 @@ function cacheUi() {
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
     "purchaseModalDetails", "purchaseModalOpenItem", "pendingScModal", "pendingScModalClose",
     "pendingScModalCode", "pendingScModalTitle", "pendingScModalSubtitle", "pendingScModalSummary",
-    "pendingScModalDetails", "pendingScModalOpenItem",
+    "pendingScModalDetails", "pendingScModalOpenItem", "procurementCount", "procurementGrid",
+    "procurementLoadMore", "procurementVisibleCount", "procurementModal", "procurementModalClose",
+    "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
+    "procurementModalDetails", "procurementModalOpenItem", "photoInput", "photoUploadButton", "photoUploadStatus",
     "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
     "consumptionColumnCount", "consumptionPreviewWrap",
   ];
@@ -187,6 +197,28 @@ function bindEvents() {
     closePendingScModal();
     if (code) window.setTimeout(() => openItem(code), 0);
   });
+  ui.procurementLoadMore.addEventListener("click", renderNextProcurementBatch);
+  ui.procurementGrid.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-procurement-key]");
+    if (trigger) openProcurementModal(trigger.dataset.procurementKey);
+  });
+  ui.procurementModalClose.addEventListener("click", closeProcurementModal);
+  ui.procurementModal.addEventListener("click", (event) => {
+    if (event.target === ui.procurementModal) closeProcurementModal();
+  });
+  ui.procurementModal.addEventListener("close", () => { state.activeProcurement = null; state.lastFocusedElement?.focus?.(); });
+  ui.procurementModalOpenItem.addEventListener("click", () => {
+    const code = state.activeProcurement?.item.code;
+    closeProcurementModal();
+    if (code) window.setTimeout(() => openItem(code), 0);
+  });
+  ui.photoUploadButton.addEventListener("click", () => ui.photoInput.click());
+  ui.photoInput.addEventListener("change", handlePhotoUpload);
+  ui.modalGallery.addEventListener("click", (event) => {
+    const remove = event.target.closest("[data-local-photo-id]");
+    if (remove) removeLocalPhoto(remove.dataset.localPhotoId);
+  });
+  for (const chart of [ui.branchChart, ui.stockChart]) chart.addEventListener("click", handleChartFilter);
 
   for (const pageTab of ui.pageTabs) {
     pageTab.addEventListener("click", (event) => {
@@ -239,13 +271,13 @@ function applyTheme(theme, persist) {
 
 function pageFromHash() {
   const page = window.location.hash.replace(/^#/, "");
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "revisao-min-max"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "revisao-min-max"].includes(page)
     ? page
     : "dashboard";
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "revisao-min-max"].includes(page)
+  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "revisao-min-max"].includes(page)
     ? page
     : "dashboard";
 
@@ -287,6 +319,7 @@ function pageTitle(page) {
     catalogo: "Catálogo",
     "necessidade-compra": "Necessidade de Compra",
     "sc-pendente-of": "SC Pendente de OF",
+    "consulta-sc-of": "Consulta SC e OF",
     "revisao-min-max": "Revisão de Min e Máx",
   })[page];
 }
@@ -307,8 +340,10 @@ function closeFilters() {
 function applyAllFilters(shouldClose = false) {
   applyFilters();
   updateDashboardMetrics();
+  renderDashboardCharts();
   renderPendingScList();
   renderPurchaseNeeds();
+  buildProcurementRows();
   updateFilterSummary();
   if (shouldClose) closeFilters();
 }
@@ -734,7 +769,7 @@ function updateDashboardMetrics() {
   const aboveMaxCodes = new Set();
   const unconfiguredCodes = new Set();
   const negativeCodes = new Set();
-  const pendingSc = new Set();
+  const pendingSc = new Set(collectPendingScRows().map(({ sc }) => sc.code));
 
   for (const item of state.filteredItems) {
     const positions = (item.positions || []).filter((position) => {
@@ -764,7 +799,6 @@ function updateDashboardMetrics() {
       if (position.negative) negativeCodes.add(item.code);
     }
 
-    for (const sc of item.pendingScCodes || []) pendingSc.add(sc);
   }
 
   ui.metricItems.textContent = integerFormatter.format(scopedItems.size);
@@ -785,6 +819,47 @@ function updateDashboardMetrics() {
     : branch
       ? ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${branch}`
       : "Todas as filiais · códigos únicos";
+}
+
+function renderDashboardCharts() {
+  const selectedBranch = ui.branchFilter.value;
+  const branchData = new Map();
+  for (const item of state.filteredItems) {
+    for (const position of item.positions || []) {
+      if (selectedBranch && position.branchCode !== selectedBranch) continue;
+      if (!branchData.has(position.branchCode)) branchData.set(position.branchCode, { label: [position.branchCode, position.branchName].filter(Boolean).join(" · "), codes: new Set(), value: 0 });
+      const entry = branchData.get(position.branchCode);
+      entry.codes.add(item.code);
+      entry.value += position.stockValue || 0;
+    }
+  }
+  const branches = [...branchData.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR", { numeric: true }));
+  const maxCodes = Math.max(1, ...branches.map(([, value]) => value.codes.size));
+  ui.branchChart.innerHTML = branches.map(([code, value]) => `<button class="chart-bar" type="button" data-chart-branch="${escapeHtml(code)}" aria-label="Filtrar filial ${escapeHtml(value.label)}">
+    <span class="chart-bar__label">${escapeHtml(value.label)}</span><span class="chart-bar__track"><i style="width:${(value.codes.size / maxCodes) * 100}%"></i></span><strong>${integerFormatter.format(value.codes.size)}</strong>
+  </button>`).join("") || `<div class="chart-empty">Sem dados para os filtros atuais.</div>`;
+
+  const statuses = [
+    ["zero", "Zerados", state.filteredItems.filter((item) => item.positions.some((position) => position.quantity === 0 && (position.minimum || 0) + (position.maximum || 0) > 0)).length, "var(--cyan)"],
+    ["below-min", "Abaixo do mínimo", state.filteredItems.filter((item) => item.positions.some((position) => position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum)).length, "var(--amber)"],
+    ["above-max", "Acima do máximo", state.filteredItems.filter((item) => item.positions.some((position) => position.maximum > 0 && position.quantity > position.maximum)).length, "var(--red)"],
+    ["within-range", "Dentro do range", state.filteredItems.filter((item) => item.positions.some((position) => position.minimum > 0 && position.maximum > 0 && position.quantity >= position.minimum && position.quantity <= position.maximum)).length, "var(--green)"],
+  ];
+  const total = Math.max(1, statuses.reduce((sum, status) => sum + status[2], 0));
+  let cursor = 0;
+  const segments = statuses.map((status) => { const start = cursor; cursor += (status[2] / total) * 100; return `${status[3]} ${start}% ${cursor}%`; }).join(",");
+  ui.stockChart.innerHTML = `<div class="donut" style="--donut-segments:conic-gradient(${segments})"><strong>${integerFormatter.format(total)}</strong><span>ocorrências</span></div><div class="donut-legend">${statuses.map(([key, label, count, color]) => `<button type="button" data-chart-status="${key}"><i style="background:${color}"></i><span>${label}</span><strong>${integerFormatter.format(count)}</strong></button>`).join("")}</div>`;
+
+  const maxValue = Math.max(1, ...branches.map(([, value]) => value.value));
+  ui.valueChart.innerHTML = branches.map(([, value]) => `<div class="chart-bar chart-bar--static"><span class="chart-bar__label">${escapeHtml(value.label)}</span><span class="chart-bar__track"><i style="width:${(value.value / maxValue) * 100}%"></i></span><strong>${compactCurrencyFormatter.format(value.value)}</strong></div>`).join("") || `<div class="chart-empty">Sem valores para os filtros atuais.</div>`;
+}
+
+function handleChartFilter(event) {
+  const branch = event.target.closest("[data-chart-branch]")?.dataset.chartBranch;
+  const status = event.target.closest("[data-chart-status]")?.dataset.chartStatus;
+  if (branch) ui.branchFilter.value = ui.branchFilter.value === branch ? "" : branch;
+  if (status) ui.stockStatusFilter.value = ui.stockStatusFilter.value === status ? "" : status;
+  handleAutomaticFilter(branch ? "branchFilter" : "stockStatusFilter");
 }
 
 function buildPurchaseNeeds() {
@@ -816,20 +891,7 @@ function buildPurchaseNeeds() {
 }
 
 function renderPendingScList() {
-  const rowsByKey = new Map();
-
-  for (const item of state.filteredItems) {
-    const pendingCodes = new Set(item.pendingScCodes || []);
-    if (!pendingCodes.size) continue;
-    for (const record of item.history || []) {
-      const sc = record.sc;
-      if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
-      const key = `${sc.code}::${item.code}`;
-      if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
-    }
-  }
-
-  const rows = [...rowsByKey.values()].sort((a, b) => {
+  const rows = collectPendingScRows().sort((a, b) => {
     const codeOrder = a.sc.code.localeCompare(b.sc.code, "pt-BR", { numeric: true });
     return codeOrder || a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true });
   });
@@ -854,6 +916,42 @@ function renderPendingScList() {
     <span class="report-card__meta"><span><small>Filial</small><strong>${escapeHtml(record.branch || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
     <span class="report-card__footer"><span>${escapeHtml(sc.category || "Sem categoria")}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
   </button>`).join("");
+}
+
+function collectPendingScRows() {
+  const rowsByKey = new Map();
+  const branch = ui.branchFilter.value;
+  const query = normalizeSearch(ui.searchInput.value);
+  const category = ui.categoryFilter.value;
+  const unit = ui.unitFilter.value;
+  const supplier = ui.supplierFilter.value;
+  const stockStatus = ui.stockStatusFilter.value;
+  const positiveOnly = ui.positiveBalanceFilter.checked;
+  for (const item of state.items) {
+    if (query && !item.searchText.includes(query)) continue;
+    if (category && !(item.categories || []).includes(category)) continue;
+    if (unit && !(item.units || []).includes(unit)) continue;
+    if (supplier && !(item.suppliers || []).includes(supplier)) continue;
+    if (stockStatus || positiveOnly || ui.locationFilter.value) {
+      const positions = (item.positions || []).filter((position) => {
+        if (branch && position.branchCode !== branch) return false;
+        if (ui.locationFilter.value && position.locationKey !== ui.locationFilter.value) return false;
+        return true;
+      });
+      if (!positions.length) continue;
+      if (stockStatus && !positions.some((position) => positionMatchesStatus(position, stockStatus))) continue;
+      if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) continue;
+    }
+    const pendingCodes = new Set(item.pendingScCodes || []);
+    for (const record of item.history || []) {
+      const sc = record.sc;
+      if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
+      if (branch && record.branchCode !== branch) continue;
+      const key = `${sc.code}::${item.code}`;
+      if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
+    }
+  }
+  return [...rowsByKey.values()];
 }
 
 function renderPurchaseNeeds() {
@@ -1061,6 +1159,104 @@ function escapeXml(value) {
   return String(value ?? "").replace(/[<>&"']/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[character]);
 }
 
+function buildProcurementRows() {
+  const branch = ui.branchFilter.value;
+  const rows = [];
+  for (const item of state.items.filter(itemMatchesTransactionFilters)) {
+    for (const record of item.history || []) {
+      if (!record.sc?.code && !record.of?.code) continue;
+      if (branch && record.branchCode !== branch) continue;
+      rows.push({ item, record });
+    }
+  }
+  rows.sort((a, b) => (b.record.sortKey || 0) - (a.record.sortKey || 0));
+  state.procurementRows = rows;
+  state.procurementByKey.clear();
+  rows.forEach((row, index) => { row.key = `process-${index}`; state.procurementByKey.set(row.key, row); });
+  state.procurementVisible = 0;
+  ui.procurementGrid.replaceChildren();
+  ui.procurementCount.textContent = pluralize(rows.length, "processo", "processos");
+  renderNextProcurementBatch();
+}
+
+function itemMatchesTransactionFilters(item) {
+  const query = normalizeSearch(ui.searchInput.value);
+  if (query && !item.searchText.includes(query)) return false;
+  if (ui.categoryFilter.value && !(item.categories || []).includes(ui.categoryFilter.value)) return false;
+  if (ui.unitFilter.value && !(item.units || []).includes(ui.unitFilter.value)) return false;
+  if (ui.supplierFilter.value && !(item.suppliers || []).includes(ui.supplierFilter.value)) return false;
+  const status = ui.stockStatusFilter.value;
+  const positiveOnly = ui.positiveBalanceFilter.checked;
+  const location = ui.locationFilter.value;
+  if (status || positiveOnly || location) {
+    const positions = (item.positions || []).filter((position) => {
+      if (ui.branchFilter.value && position.branchCode !== ui.branchFilter.value) return false;
+      if (location && position.locationKey !== location) return false;
+      return true;
+    });
+    if (!positions.length) return false;
+    if (status && !positions.some((position) => positionMatchesStatus(position, status))) return false;
+    if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
+  }
+  return true;
+}
+
+function renderNextProcurementBatch() {
+  const start = state.procurementVisible;
+  const end = Math.min(start + CONFIG.procurementBatch, state.procurementRows.length);
+  if (start >= end) return;
+  const fragment = document.createDocumentFragment();
+  for (const { item, record, key } of state.procurementRows.slice(start, end)) {
+    const sc = record.sc;
+    const of = record.of;
+    const rec = record.rec;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "report-card report-card--process";
+    card.dataset.procurementKey = key;
+    card.innerHTML = `<span class="report-card__top"><span class="status-pill status-pill--process">${of?.code ? `OF ${escapeHtml(of.code)}` : `SC ${escapeHtml(sc?.code || "—")}`}</span><span>${escapeHtml(record.branch || "—")}</span></span>
+      <strong class="report-card__title">${escapeHtml(item.name)}</strong><span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+      <span class="process-mini"><span class="${sc ? "is-complete" : ""}">SC<strong>${escapeHtml(sc?.code || "—")}</strong></span><i></i><span class="${of ? "is-complete" : ""}">OF<strong>${escapeHtml(of?.code || "—")}</strong></span><i></i><span class="${rec ? "is-complete" : ""}">REC<strong>${escapeHtml(rec?.invoice || "—")}</strong></span></span>
+      <span class="report-card__footer"><span>${escapeHtml((of?.supplier || rec?.supplier) || "Fornecedor não informado")}</span><strong>${escapeHtml(rec?.entryDate || of?.date || sc?.date || "—")}</strong></span>`;
+    fragment.append(card);
+  }
+  ui.procurementGrid.append(fragment);
+  state.procurementVisible = end;
+  ui.procurementVisibleCount.textContent = `${integerFormatter.format(end)} de ${integerFormatter.format(state.procurementRows.length)} processos`;
+  ui.procurementLoadMore.classList.toggle("is-hidden", end >= state.procurementRows.length);
+}
+
+function openProcurementModal(key) {
+  const row = state.procurementByKey.get(key);
+  if (!row) return;
+  const { item, record } = row;
+  const { sc, of, rec } = record;
+  state.activeProcurement = row;
+  state.lastFocusedElement = document.activeElement;
+  ui.procurementModalCode.textContent = `Item ${item.code}`;
+  ui.procurementModalTitle.textContent = item.name;
+  ui.procurementModalSubtitle.textContent = record.branch || "Filial não informada";
+  ui.procurementModalStages.innerHTML = `
+    <article class="${sc ? "is-complete" : ""}"><span>Solicitação de compra</span><strong>${escapeHtml(sc?.code || "Não gerada")}</strong><small>${escapeHtml(sc?.status || sc?.date || "—")}</small></article>
+    <article class="${of ? "is-complete" : ""}"><span>Ordem de fornecimento</span><strong>${escapeHtml(of?.code || "Não gerada")}</strong><small>${escapeHtml(of?.status || of?.date || "—")}</small></article>
+    <article class="${rec ? "is-complete" : ""}"><span>Recebimento</span><strong>${escapeHtml(rec?.invoice ? `NF ${rec.invoice}` : "Não recebido")}</strong><small>${escapeHtml(rec?.entryDate || rec?.issueDate || "—")}</small></article>`;
+  const details = [
+    ["SC · Criação", sc?.date], ["SC · Entrega", sc?.deliveryDate], ["SC · Quantidade", sc?.quantity == null ? "" : numberFormatter.format(sc.quantity)],
+    ["SC · Valor estimado", sc?.estimatedValue == null ? "" : currencyFormatter.format(sc.estimatedValue)], ["SC · Motivo", sc?.reason],
+    ["OF · Fornecedor", of?.supplier], ["OF · Entrega", of?.deliveryDate], ["OF · Quantidade solicitada", of?.requestedQuantity == null ? "" : numberFormatter.format(of.requestedQuantity)],
+    ["OF · Quantidade entregue", of?.deliveredQuantity == null ? "" : numberFormatter.format(of.deliveredQuantity)], ["OF · Valor unitário", of?.unitValue == null ? "" : currencyFormatter.format(of.unitValue)],
+    ["REC · Nota fiscal", rec?.invoice], ["REC · Entrada", rec?.entryDate], ["REC · Quantidade", rec?.quantity == null ? "" : numberFormatter.format(rec.quantity)], ["REC · Valor do documento", rec?.documentValue == null ? "" : currencyFormatter.format(rec.documentValue)],
+  ].filter(([, value]) => value !== null && value !== undefined && value !== "");
+  ui.procurementModalDetails.innerHTML = details.map(([term, value]) => `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
+  if (typeof ui.procurementModal.showModal === "function") ui.procurementModal.showModal(); else ui.procurementModal.setAttribute("open", "");
+  ui.procurementModalClose.focus();
+}
+
+function closeProcurementModal() {
+  if (typeof ui.procurementModal.close === "function" && ui.procurementModal.open) ui.procurementModal.close();
+  else ui.procurementModal.removeAttribute("open");
+}
+
 function renderConsumptionReview() {
   const consumption = state.consumption || { available: false };
   ui.consumptionWaiting.classList.toggle("is-hidden", consumption.available);
@@ -1225,6 +1421,11 @@ function activateTab(name) {
 
 function renderGallery(item) {
   const images = imagesForItem(item, true).slice(0, CONFIG.maxImages);
+  const savedCount = (state.localPhotos.get(normalizeCode(item.code)) || []).length;
+  ui.photoUploadStatus.textContent = savedCount
+    ? `${pluralize(savedCount, "foto salva", "fotos salvas")} neste aparelho · máximo 6`
+    : "Até 6 fotos salvas neste aparelho";
+  ui.photoUploadButton.disabled = images.filter((image) => !image.fallback).length >= CONFIG.maxImages;
   if (!images.length) {
     ui.modalGallery.innerHTML = `<div class="gallery__main"><span class="image-placeholder"><span>${packageIcon()}<span>Imagem não cadastrada</span></span></span></div>`;
     return;
@@ -1248,6 +1449,8 @@ function renderGallery(item) {
   mainImage.addEventListener("error", showUnavailable);
 
   images.forEach((image, index) => {
+    const wrap = document.createElement("span");
+    wrap.className = "gallery__thumb-wrap";
     const button = document.createElement("button");
     button.type = "button";
     button.className = `gallery__thumb${index === 0 ? " is-active" : ""}`;
@@ -1255,15 +1458,119 @@ function renderGallery(item) {
     button.innerHTML = `<img src="${escapeHtml(image.url)}" alt="" loading="lazy">`;
     button.querySelector("img").addEventListener("error", () => button.remove(), { once: true });
     button.addEventListener("click", () => {
-      for (const thumb of thumbs.children) thumb.classList.remove("is-active");
+      for (const thumb of thumbs.querySelectorAll(".gallery__thumb")) thumb.classList.remove("is-active");
       button.classList.add("is-active");
       placeholder.classList.add("is-hidden");
       mainImage.classList.remove("is-hidden");
       mainImage.src = image.url;
       mainImage.alt = `${item.name} — foto ${index + 1}`;
     });
-    thumbs.append(button);
+    wrap.append(button);
+    if (image.localId) {
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "gallery__remove";
+      remove.dataset.localPhotoId = image.localId;
+      remove.setAttribute("aria-label", `Excluir ${image.name}`);
+      remove.textContent = "×";
+      wrap.append(remove);
+    }
+    thumbs.append(wrap);
   });
+}
+
+async function handlePhotoUpload() {
+  const item = state.activeItem;
+  const files = [...(ui.photoInput.files || [])].filter((file) => file.type.startsWith("image/"));
+  ui.photoInput.value = "";
+  if (!item || !files.length) return;
+  const code = normalizeCode(item.code);
+  const remoteCount = (state.imageIndex.get(code) || []).length;
+  const local = state.localPhotos.get(code) || [];
+  const available = Math.max(0, CONFIG.maxImages - remoteCount - local.length);
+  if (!available) { ui.photoUploadStatus.textContent = "Limite de 6 fotos atingido"; return; }
+  const selected = files.slice(0, available);
+  const usedSequences = new Set([
+    ...(state.imageIndex.get(code) || []).map((image) => Number(image.order)),
+    ...local.map((photo) => Number(String(photo.id).split("::").pop())),
+  ]);
+  const freeSequences = Array.from({ length: CONFIG.maxImages }, (_, index) => index + 1).filter((sequence) => !usedSequences.has(sequence));
+  try {
+    for (let index = 0; index < selected.length; index += 1) {
+      const file = selected[index];
+      const sequence = freeSequences[index];
+      const extension = ({ "image/png": "png", "image/webp": "webp", "image/heic": "heic", "image/heif": "heif" })[file.type] || "jpg";
+      const name = `${item.code} - ${String(sequence).padStart(2, "0")}.${extension}`;
+      await saveLocalPhoto({ id: `${code}::${String(sequence).padStart(2, "0")}`, itemCode: code, name, blob: file, createdAt: Date.now() + index });
+    }
+    await loadLocalPhotoCache();
+    renderGallery(item);
+    refreshRenderedCard(item.code);
+  } catch (error) {
+    ui.photoUploadStatus.textContent = `Não foi possível salvar: ${error.message}`;
+  }
+}
+
+async function removeLocalPhoto(id) {
+  if (!id || !state.activeItem) return;
+  if (!window.confirm("Excluir esta foto salva neste aparelho?")) return;
+  const db = await openPhotoDatabase();
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction("photos", "readwrite");
+    transaction.objectStore("photos").delete(id);
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+  });
+  await loadLocalPhotoCache();
+  renderGallery(state.activeItem);
+  refreshRenderedCard(state.activeItem.code);
+}
+
+function refreshRenderedCard(code) {
+  const button = ui.cardsGrid.querySelector(`[data-item-code="${CSS.escape(String(code))}"]`);
+  const oldCard = button?.closest(".item-card");
+  const item = state.itemByCode.get(code);
+  if (oldCard && item) oldCard.replaceWith(renderCard(item));
+}
+
+function openPhotoDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("gestao-almoxarifado-fotos", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("photos", { keyPath: "id" });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveLocalPhoto(photo) {
+  const db = await openPhotoDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("photos", "readwrite");
+    transaction.objectStore("photos").put(photo);
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+async function loadLocalPhotoCache() {
+  if (typeof indexedDB === "undefined") return;
+  try {
+    const db = await openPhotoDatabase();
+    const photos = await new Promise((resolve, reject) => {
+      const request = db.transaction("photos", "readonly").objectStore("photos").getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+    for (const entries of state.localPhotos.values()) for (const photo of entries) URL.revokeObjectURL(photo.url);
+    state.localPhotos.clear();
+    for (const photo of photos) {
+      if (!state.localPhotos.has(photo.itemCode)) state.localPhotos.set(photo.itemCode, []);
+      state.localPhotos.get(photo.itemCode).push({ ...photo, localId: photo.id, url: URL.createObjectURL(photo.blob) });
+    }
+    for (const entries of state.localPhotos.values()) entries.sort((a, b) => a.createdAt - b.createdAt);
+  } catch {
+    // O catálogo continua funcional se o navegador bloquear o armazenamento local.
+  }
 }
 
 function renderStock(item) {
@@ -1364,14 +1671,16 @@ function stageCell(stage, type) {
 }
 
 function imagesForItem(item, includeFallbackSet) {
+  const local = state.localPhotos.get(normalizeCode(item.code)) || [];
   const indexed = state.imageIndex.get(normalizeCode(item.code));
-  if (indexed?.length) return indexed.slice(0, CONFIG.maxImages);
+  const available = [...(indexed || []), ...local].slice(0, CONFIG.maxImages);
+  if (available.length) return available;
 
   const count = includeFallbackSet ? CONFIG.maxImages : 1;
   return Array.from({ length: count }, (_, index) => {
     const order = String(index + 1).padStart(2, "0");
     const name = `${item.code} - ${order}.jpg`;
-    return { order: index + 1, name, url: localImageUrl(name) };
+    return { order: index + 1, name, url: localImageUrl(name), fallback: true };
   });
 }
 
@@ -1588,11 +1897,17 @@ function inventoryWorker() {
           clean(get("OF - Descr. Filial Entrega")),
           clean(get("SC - Descr. Filial")),
         );
+        const branchCode = first(
+          clean(get("REC - Filial")),
+          clean(get("OF - Filial Entrega")),
+          clean(get("SC - Filial")),
+        );
         const record = {
           sc,
           of,
           rec,
           branch,
+          branchCode,
           sortKey: dateKey(first(rec?.entryDate, rec?.issueDate, of?.date, sc?.date)),
         };
 
