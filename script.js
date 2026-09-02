@@ -59,6 +59,9 @@ const state = {
   purchaseNeeds: [],
   purchaseNeedByKey: new Map(),
   activePurchaseNeed: null,
+  pendingScRows: [],
+  pendingScByKey: new Map(),
+  activePendingSc: null,
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
 };
 
@@ -92,9 +95,12 @@ function cacheUi() {
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedWithoutMax",
     "purchaseNeedResultCount", "purchaseNeedTableWrap",
-    "pendingScListCount", "pendingScTableWrap", "purchaseNeedModal", "purchaseModalClose",
+    "pendingScListCount", "pendingScTableWrap", "exportPurchaseNeedButton", "exportPendingScButton",
+    "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
-    "purchaseModalDetails", "purchaseModalOpenItem",
+    "purchaseModalDetails", "purchaseModalOpenItem", "pendingScModal", "pendingScModalClose",
+    "pendingScModalCode", "pendingScModalTitle", "pendingScModalSubtitle", "pendingScModalSummary",
+    "pendingScModalDetails", "pendingScModalOpenItem",
     "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
     "consumptionColumnCount", "consumptionPreviewWrap",
   ];
@@ -149,9 +155,11 @@ function bindEvents() {
     if (trigger) openPurchaseNeedModal(trigger.dataset.purchaseNeedKey);
   });
   ui.pendingScTableWrap.addEventListener("click", (event) => {
-    const trigger = event.target.closest("[data-item-code]");
-    if (trigger) openItem(trigger.dataset.itemCode);
+    const trigger = event.target.closest("[data-pending-sc-key]");
+    if (trigger) openPendingScModal(trigger.dataset.pendingScKey);
   });
+  ui.exportPurchaseNeedButton.addEventListener("click", exportPurchaseNeeds);
+  ui.exportPendingScButton.addEventListener("click", exportPendingSc);
 
   ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
   ui.purchaseNeedModal.addEventListener("click", (event) => {
@@ -164,6 +172,19 @@ function bindEvents() {
   ui.purchaseModalOpenItem.addEventListener("click", () => {
     const code = state.activePurchaseNeed?.item.code;
     closePurchaseNeedModal();
+    if (code) window.setTimeout(() => openItem(code), 0);
+  });
+  ui.pendingScModalClose.addEventListener("click", closePendingScModal);
+  ui.pendingScModal.addEventListener("click", (event) => {
+    if (event.target === ui.pendingScModal) closePendingScModal();
+  });
+  ui.pendingScModal.addEventListener("close", () => {
+    state.activePendingSc = null;
+    state.lastFocusedElement?.focus?.();
+  });
+  ui.pendingScModalOpenItem.addEventListener("click", () => {
+    const code = state.activePendingSc?.item.code;
+    closePendingScModal();
     if (code) window.setTimeout(() => openItem(code), 0);
   });
 
@@ -218,13 +239,13 @@ function applyTheme(theme, persist) {
 
 function pageFromHash() {
   const page = window.location.hash.replace(/^#/, "");
-  return ["dashboard", "catalogo", "necessidade-compra", "revisao-min-max"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "revisao-min-max"].includes(page)
     ? page
     : "dashboard";
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = ["dashboard", "catalogo", "necessidade-compra", "revisao-min-max"].includes(page)
+  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "revisao-min-max"].includes(page)
     ? page
     : "dashboard";
 
@@ -265,6 +286,7 @@ function pageTitle(page) {
     dashboard: "Dashboard",
     catalogo: "Catálogo",
     "necessidade-compra": "Necessidade de Compra",
+    "sc-pendente-of": "SC Pendente de OF",
     "revisao-min-max": "Revisão de Min e Máx",
   })[page];
 }
@@ -812,6 +834,12 @@ function renderPendingScList() {
     return codeOrder || a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true });
   });
   const uniqueSc = new Set(rows.map(({ sc }) => sc.code));
+  state.pendingScRows = rows;
+  state.pendingScByKey.clear();
+  rows.forEach((row, index) => {
+    row.key = `pending-sc-${index}`;
+    state.pendingScByKey.set(row.key, row);
+  });
   ui.pendingScListCount.textContent = `${pluralize(uniqueSc.size, "SC", "SCs")} · ${pluralize(rows.length, "item", "itens")}`;
 
   if (!rows.length) {
@@ -819,24 +847,13 @@ function renderPendingScList() {
     return;
   }
 
-  const body = rows.map(({ item, record, sc }) => `<tr>
-    <td><strong>${escapeHtml(sc.code)}</strong></td>
-    <td><button class="table-link" type="button" data-item-code="${escapeHtml(item.code)}">${escapeHtml(item.code)}</button></td>
-    <td class="cell-wrap">${escapeHtml(item.name)}</td>
-    <td class="cell-wrap">${escapeHtml(record.branch || "—")}</td>
-    <td>${escapeHtml(sc.date || "—")}</td>
-    <td>${escapeHtml(sc.deliveryDate || "—")}</td>
-    <td class="number">${formatOptionalNumber(sc.quantity)}</td>
-    <td class="number">${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</td>
-    <td class="cell-wrap">${escapeHtml(sc.category || "—")}</td>
-    <td class="cell-wrap">${escapeHtml(sc.reason || "—")}</td>
-    <td>${escapeHtml(sc.status || "—")}</td>
-  </tr>`).join("");
-
-  ui.pendingScTableWrap.innerHTML = `<table class="data-table">
-    <thead><tr><th>SC</th><th>Código</th><th>Item</th><th>Filial</th><th>Criação</th><th>Entrega</th><th class="number">Quantidade</th><th class="number">Valor estimado</th><th>Categoria</th><th>Motivo</th><th>Situação</th></tr></thead>
-    <tbody>${body}</tbody>
-  </table>`;
+  ui.pendingScTableWrap.innerHTML = rows.map(({ item, record, sc, key }) => `<button class="report-card report-card--sc" type="button" data-pending-sc-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill status-pill--pending">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(sc.date || "Sem data")}</span></span>
+    <strong class="report-card__title">${escapeHtml(item.name)}</strong>
+    <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+    <span class="report-card__meta"><span><small>Filial</small><strong>${escapeHtml(record.branch || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
+    <span class="report-card__footer"><span>${escapeHtml(sc.category || "Sem categoria")}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
+  </button>`).join("");
 }
 
 function renderPurchaseNeeds() {
@@ -864,27 +881,13 @@ function renderPurchaseNeeds() {
     return;
   }
 
-  const rows = visible.map(({ item, position, target, suggested, key }) => `<tr data-purchase-need-key="${escapeHtml(key)}">
-    <td><button class="table-link" type="button" data-purchase-need-key="${escapeHtml(key)}">${escapeHtml(item.code)}</button></td>
-    <td class="cell-wrap">${escapeHtml(item.name)}</td>
-    <td>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · "))}</td>
-    <td class="cell-wrap">${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · "))}</td>
-    <td>${escapeHtml((item.units || []).join(", ") || "—")}</td>
-    <td class="number">${numberFormatter.format(position.quantity)}</td>
-    <td class="number">${numberFormatter.format(position.minimum)}</td>
-    <td class="number">${formatOptionalNumber(position.maximum)}</td>
-    <td class="number">${numberFormatter.format(target)}</td>
-    <td class="number"><strong>${numberFormatter.format(suggested)}</strong></td>
-  </tr>`).join("");
-
-  ui.purchaseNeedTableWrap.innerHTML = `<table class="data-table">
-    <thead><tr>
-      <th>Código</th><th>Item</th><th>Filial</th><th>Local</th><th>Unidade</th>
-      <th class="number">Saldo</th><th class="number">Mínimo</th><th class="number">Máximo</th>
-      <th class="number">Meta</th><th class="number">Comprar</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  ui.purchaseNeedTableWrap.innerHTML = visible.map(({ item, position, suggested, key }) => `<button class="report-card report-card--need" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill status-pill--need">Comprar ${numberFormatter.format(suggested)}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+    <strong class="report-card__title">${escapeHtml(item.name)}</strong>
+    <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+    <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Mínimo</small><strong>${formatOptionalNumber(position.minimum)}</strong></span><span><small>Máximo</small><strong>${formatOptionalNumber(position.maximum)}</strong></span></span>
+    <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</span><strong>${escapeHtml(position.localCode || "—")}</strong></span>
+  </button>`).join("");
 }
 
 function openPurchaseNeedModal(key) {
@@ -924,6 +927,138 @@ function openPurchaseNeedModal(key) {
 function closePurchaseNeedModal() {
   if (typeof ui.purchaseNeedModal.close === "function" && ui.purchaseNeedModal.open) ui.purchaseNeedModal.close();
   else ui.purchaseNeedModal.removeAttribute("open");
+}
+
+function openPendingScModal(key) {
+  const row = state.pendingScByKey.get(key);
+  if (!row) return;
+  const { item, record, sc } = row;
+  state.activePendingSc = row;
+  state.lastFocusedElement = document.activeElement;
+  ui.pendingScModalCode.textContent = `SC ${sc.code}`;
+  ui.pendingScModalTitle.textContent = item.name;
+  ui.pendingScModalSubtitle.textContent = `Item ${item.code} · ${record.branch || "Filial não informada"}`;
+  ui.pendingScModalSummary.innerHTML = `
+    <article><span>Quantidade</span><strong>${formatOptionalNumber(sc.quantity)}</strong></article>
+    <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></article>
+    <article><span>Criação</span><strong>${escapeHtml(sc.date || "—")}</strong></article>
+    <article><span>Entrega</span><strong>${escapeHtml(sc.deliveryDate || "—")}</strong></article>`;
+  ui.pendingScModalDetails.innerHTML = `
+    <div><dt>Situação</dt><dd>${escapeHtml(sc.status || "—")}</dd></div>
+    <div><dt>Cancelada</dt><dd>${escapeHtml(sc.cancelled || "Não")}</dd></div>
+    <div><dt>Categoria</dt><dd>${escapeHtml(sc.category || "—")}</dd></div>
+    <div><dt>Motivo</dt><dd>${escapeHtml(sc.reason || "—")}</dd></div>
+    <div><dt>Filial</dt><dd>${escapeHtml(record.branch || "—")}</dd></div>
+    <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
+    <div><dt>Descrição detalhada</dt><dd>${escapeHtml(item.detailedName || item.name)}</dd></div>
+    <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
+    <div><dt>OF</dt><dd>Não gerada</dd></div>`;
+  if (typeof ui.pendingScModal.showModal === "function") ui.pendingScModal.showModal();
+  else ui.pendingScModal.setAttribute("open", "");
+  ui.pendingScModalClose.focus();
+}
+
+function closePendingScModal() {
+  if (typeof ui.pendingScModal.close === "function" && ui.pendingScModal.open) ui.pendingScModal.close();
+  else ui.pendingScModal.removeAttribute("open");
+}
+
+function getVisiblePurchaseNeeds() {
+  const branch = ui.branchFilter.value;
+  const location = ui.locationFilter.value;
+  const stockStatus = ui.stockStatusFilter.value;
+  const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
+  return state.purchaseNeeds.filter(({ item, position }) => {
+    if (!filteredCodes.has(item.code)) return false;
+    if (branch && position.branchCode !== branch) return false;
+    if (location && position.locationKey !== location) return false;
+    if (stockStatus && !positionMatchesStatus(position, stockStatus)) return false;
+    return true;
+  });
+}
+
+function exportPurchaseNeeds() {
+  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested }) => [
+    item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
+    position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
+    position.shelf, position.division, position.quantity, position.minimum, position.maximum, target, suggested,
+    position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
+    position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
+  ]);
+  exportExcelReport({
+    title: "Necessidade de Compra",
+    filename: "necessidade-de-compra.xls",
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Quantidade a comprar", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
+    rows,
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19]),
+    currencyColumns: new Set([18, 19]),
+  });
+}
+
+function exportPendingSc() {
+  const rows = state.pendingScRows.map(({ item, record, sc }) => [
+    sc.code, sc.status, sc.cancelled, sc.date, sc.deliveryDate, sc.quantity, sc.estimatedValue,
+    sc.category, sc.reason, item.code, item.name, item.detailedName, (item.categories || []).join(" | "),
+    (item.units || []).join(" | "), record.branch, (item.suppliers || []).join(" | "), "", "Não gerada",
+  ]);
+  exportExcelReport({
+    title: "SC Pendente de OF",
+    filename: "sc-pendente-de-of.xls",
+    headers: ["SC", "Situação SC", "Cancelada", "Data de criação", "Data de entrega", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
+    rows,
+    numericColumns: new Set([5, 6]),
+    currencyColumns: new Set([6]),
+  });
+}
+
+function exportExcelReport({ title, filename, headers, rows, numericColumns, currencyColumns }) {
+  const styles = getComputedStyle(document.documentElement);
+  const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
+  const accentColor = cssColorToHex(styles.getPropertyValue("--blue-500"), "2086D2");
+  const filterText = ui.filterSummary.textContent || "Todos os registros";
+  const cell = (value, index, header = false) => {
+    if (header) return `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+    const numeric = numericColumns.has(index) && value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    const style = currencyColumns.has(index) ? "Currency" : numeric ? "Number" : "Text";
+    return `<Cell ss:StyleID="${style}"><Data ss:Type="${numeric ? "Number" : "String"}">${escapeXml(numeric ? Number(value) : value ?? "")}</Data></Cell>`;
+  };
+  const columns = headers.map((header) => `<Column ss:AutoFitWidth="0" ss:Width="${/descri|fornecedor|motivo|local/i.test(header) ? 190 : /data|situação|categoria|filial|critério/i.test(header) ? 120 : 88}"/>`).join("");
+  const dataRows = rows.map((row) => `<Row>${headers.map((_, index) => cell(row[index], index)).join("")}</Row>`).join("");
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>
+  <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+    <Styles>
+      <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Aptos" ss:Size="10"/></Style>
+      <Style ss:ID="Title"><Alignment ss:Vertical="Center"/><Font ss:FontName="Aptos Display" ss:Size="18" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#${headerColor}" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="Subtitle"><Font ss:FontName="Aptos" ss:Size="10" ss:Color="#445566"/><Interior ss:Color="#EAF1F6" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="Header"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Aptos" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#${accentColor}" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/></Borders></Style>
+      <Style ss:ID="Text"><Alignment ss:Vertical="Top" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
+      <Style ss:ID="Number"><Alignment ss:Horizontal="Right" ss:Vertical="Top"/><NumberFormat ss:Format="#,##0.00"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
+      <Style ss:ID="Currency"><Alignment ss:Horizontal="Right" ss:Vertical="Top"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
+    </Styles>
+    <Worksheet ss:Name="${escapeXml(title.slice(0, 31))}"><Table>${columns}
+      <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · Gestão de Almoxarifado</Data></Cell></Row>
+      <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} registros · Exportado em ${escapeXml(new Date().toLocaleString("pt-BR"))}</Data></Cell></Row>
+      <Row ss:Height="8"></Row><Row ss:Height="30">${headers.map((header, index) => cell(header, index, true)).join("")}</Row>${dataRows}
+    </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>4</SplitHorizontal><TopRowBottomPane>4</TopRowBottomPane><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet>
+  </Workbook>`;
+  const blob = new Blob(["\ufeff", xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function cssColorToHex(color, fallback) {
+  const match = String(color).match(/\d+/g);
+  if (!match || match.length < 3) return fallback;
+  return match.slice(0, 3).map((value) => Number(value).toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+function escapeXml(value) {
+  return String(value ?? "").replace(/[<>&"']/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[character]);
 }
 
 function renderConsumptionReview() {

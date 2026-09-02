@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260901-10">
-    <script src="script.js?v=20260901-10" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260901-11">
+    <script src="script.js?v=20260901-11" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -53,6 +53,7 @@
           <a class="app-nav__tab is-active" href="#dashboard" data-page="dashboard" role="tab" aria-selected="true" aria-controls="page-dashboard">Dashboard</a>
           <a class="app-nav__tab" href="#catalogo" data-page="catalogo" role="tab" aria-selected="false" aria-controls="page-catalogo">Catálogo</a>
           <a class="app-nav__tab" href="#necessidade-compra" data-page="necessidade-compra" role="tab" aria-selected="false" aria-controls="page-necessidade-compra">Necessidade de Compra</a>
+          <a class="app-nav__tab" href="#sc-pendente-of" data-page="sc-pendente-of" role="tab" aria-selected="false" aria-controls="page-sc-pendente-of">SC Pendente de OF</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de Min e Máx</a>
         </nav>
       </div>
@@ -188,17 +189,6 @@
           </div>
           <p id="metricReconciliation" class="metric-reconciliation" aria-live="polite"></p>
 
-          <section class="dashboard-detail" aria-labelledby="pendingScTitle">
-            <div class="table-heading">
-              <div>
-                <span class="eyebrow">Compras pendentes</span>
-                <h3 id="pendingScTitle">SC sem OF gerada</h3>
-                <p>Solicitações com compra confirmada, não canceladas e sem código de OF.</p>
-              </div>
-              <span id="pendingScListCount" class="context-label">0 registros</span>
-            </div>
-            <div id="pendingScTableWrap" class="table-wrap"></div>
-          </section>
         </section>
 
         <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="resultsTitle">
@@ -245,13 +235,39 @@
             <article><span>Sem máximo informado</span><strong id="purchaseNeedWithoutMax">—</strong></article>
           </div>
 
-          <div class="table-heading purchase-table-heading">
+          <div class="table-heading purchase-table-heading report-heading">
             <div>
               <h3>Posições que precisam de reposição</h3>
               <p id="purchaseNeedResultCount">0 posições</p>
             </div>
+            <button id="exportPurchaseNeedButton" class="button button--export" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>
+              Exportar Excel
+            </button>
           </div>
-          <div id="purchaseNeedTableWrap" class="table-wrap"></div>
+          <div id="purchaseNeedTableWrap" class="report-card-grid" aria-live="polite"></div>
+        </section>
+
+        <section id="page-sc-pendente-of" class="page-panel is-hidden" data-page-panel="sc-pendente-of" aria-labelledby="pendingScTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Compras pendentes</span>
+              <h2 id="pendingScTitle">SC Pendente de OF</h2>
+              <p class="section-description">Solicitações com compra confirmada, não canceladas e sem código de OF gerado.</p>
+            </div>
+            <span id="pendingScListCount" class="context-label">0 registros</span>
+          </div>
+          <div class="table-heading report-heading">
+            <div>
+              <h3>Solicitações encontradas</h3>
+              <p>Selecione um cartão para consultar todos os detalhes da solicitação.</p>
+            </div>
+            <button id="exportPendingScButton" class="button button--export" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>
+              Exportar Excel
+            </button>
+          </div>
+          <div id="pendingScTableWrap" class="report-card-grid" aria-live="polite"></div>
         </section>
 
         <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="reviewTitle">
@@ -306,6 +322,28 @@
           <dl id="purchaseModalDetails" class="details-list purchase-details"></dl>
           <div class="purchase-modal-actions">
             <button id="purchaseModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="pendingScModal" class="item-modal purchase-need-modal" aria-labelledby="pendingScModalTitle">
+      <div class="modal-shell modal-shell--purchase modal-shell--pending">
+        <header class="modal-header modal-header--pending">
+          <div>
+            <span id="pendingScModalCode" class="modal-code"></span>
+            <h2 id="pendingScModalTitle">Detalhes da solicitação</h2>
+            <p id="pendingScModalSubtitle"></p>
+          </div>
+          <button id="pendingScModalClose" class="modal-close" type="button" aria-label="Fechar detalhes da solicitação">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content">
+          <div id="pendingScModalSummary" class="summary-cards pending-sc-summary"></div>
+          <dl id="pendingScModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions">
+            <button id="pendingScModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
           </div>
         </div>
       </div>
