@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260902-22">
-    <script src="script.js?v=20260902-22" defer></script>
+    <link rel="stylesheet" href="style.css?v=20260902-23">
+    <script src="script.js?v=20260902-23" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -381,6 +381,7 @@
         </header>
         <div class="modal-content purchase-modal-content">
           <div id="purchaseModalSummary" class="summary-cards purchase-summary-cards"></div>
+          <div id="purchaseModalOperational" class="operational-insights"></div>
           <dl id="purchaseModalDetails" class="details-list purchase-details"></dl>
           <div class="purchase-modal-actions">
             <button id="purchaseModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
@@ -402,7 +403,9 @@
           </button>
         </header>
         <div class="modal-content purchase-modal-content">
+          <div id="pendingScSubject" class="pending-sc-subject"></div>
           <div id="pendingScModalSummary" class="summary-cards pending-sc-summary"></div>
+          <div id="pendingScModalOperational" class="operational-insights"></div>
           <dl id="pendingScModalDetails" class="details-list purchase-details"></dl>
           <div class="purchase-modal-actions">
             <button id="pendingScModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
@@ -425,6 +428,7 @@
         </header>
         <div class="modal-content purchase-modal-content">
           <div id="procurementModalStages" class="process-stages"></div>
+          <div id="procurementModalOperational" class="operational-insights"></div>
           <div id="procurementModalDetails" class="process-detail-groups"></div>
           <div class="purchase-modal-actions"><button id="procurementModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
         </div>
@@ -498,6 +502,7 @@
                   <article><span>Posições</span><strong id="modalPositionCount">—</strong></article>
                   <article><span>Registros de compras</span><strong id="modalHistoryCount">—</strong></article>
                 </div>
+                <div id="modalOperationalInsights" class="operational-insights"></div>
                 <section id="modalAddressBlock" class="storage-address-block" aria-label="Endereço de armazenagem"></section>
                 <dl id="modalDetails" class="details-list"></dl>
               </div>
