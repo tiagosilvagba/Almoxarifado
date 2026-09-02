@@ -69,6 +69,9 @@ const state = {
   activeProcurement: null,
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
+  minMaxReviews: [],
+  minMaxReviewByKey: new Map(),
+  activeMinMaxReview: null,
 };
 
 const ui = {};
@@ -114,8 +117,10 @@ function cacheUi() {
     "procurementLoadMore", "procurementVisibleCount", "procurementModal", "procurementModalClose",
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "photoInput", "photoUploadButton", "photoUploadStatus",
-    "consumptionWaiting", "consumptionAvailable", "consumptionRowCount",
-    "consumptionColumnCount", "consumptionPreviewWrap",
+    "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
+    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid",
+    "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
+    "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem",
   ];
 
   for (const id of ids) {
@@ -225,6 +230,23 @@ function bindEvents() {
   ui.procurementModalOpenItem.addEventListener("click", () => {
     const code = state.activeProcurement?.item.code;
     closeProcurementModal();
+    if (code) window.setTimeout(() => openItem(code), 0);
+  });
+  ui.reviewCardsGrid.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-review-key]");
+    if (trigger) openMinMaxReviewModal(trigger.dataset.reviewKey);
+  });
+  ui.reviewModalClose.addEventListener("click", closeMinMaxReviewModal);
+  ui.reviewModal.addEventListener("click", (event) => {
+    if (event.target === ui.reviewModal) closeMinMaxReviewModal();
+  });
+  ui.reviewModal.addEventListener("close", () => {
+    state.activeMinMaxReview = null;
+    state.lastFocusedElement?.focus?.();
+  });
+  ui.reviewModalOpenItem.addEventListener("click", () => {
+    const code = state.activeMinMaxReview?.item.code;
+    closeMinMaxReviewModal();
     if (code) window.setTimeout(() => openItem(code), 0);
   });
   ui.photoUploadButton.addEventListener("click", () => ui.photoInput.click());
@@ -398,6 +420,7 @@ function applyAllFilters(shouldClose = false) {
   buildProcurementRows();
   updateDashboardMetrics();
   renderDashboardCharts();
+  renderConsumptionReview();
   updateFilterSummary();
   if (shouldClose) closeFilters();
 }
@@ -480,7 +503,7 @@ async function handleWorkerMessage(event) {
     prepareItems();
     populateFilters();
     buildPurchaseNeeds();
-    renderConsumptionReview();
+    buildMinMaxReviews();
     applyAllFilters(false);
     navigateToPage(pageFromHash(), false);
 
@@ -1589,18 +1612,163 @@ function renderConsumptionReview() {
   ui.consumptionAvailable.classList.toggle("is-hidden", !consumption.available);
   if (!consumption.available) return;
 
-  ui.consumptionRowCount.textContent = integerFormatter.format(consumption.rowCount || 0);
-  ui.consumptionColumnCount.textContent = integerFormatter.format(consumption.headers?.length || 0);
+  const visibleCodes = new Set(state.filteredItems.map((item) => item.code));
+  const branch = ui.branchFilter.value;
+  const location = ui.locationFilter.value;
+  const visible = state.minMaxReviews.filter((review) => {
+    if (!visibleCodes.has(review.item.code)) return false;
+    if (branch && review.position.branchCode !== branch) return false;
+    if (location && review.position.locationKey !== location) return false;
+    return true;
+  });
+  const ideal = visible.filter((review) => review.status === "ideal").length;
+  const insufficient = visible.filter((review) => review.status === "insufficient").length;
+  const leadTimes = visible.filter((review) => review.leadTimeSource === "real").map((review) => review.leadTimeDays);
+  const averageLeadTime = leadTimes.length ? leadTimes.reduce((sum, value) => sum + value, 0) / leadTimes.length : 0;
+  ui.reviewItemCount.textContent = integerFormatter.format(new Set(visible.map((review) => review.item.code)).size);
+  ui.reviewIdealCount.textContent = integerFormatter.format(ideal);
+  ui.reviewAdjustCount.textContent = integerFormatter.format(visible.length - ideal - insufficient);
+  ui.reviewInsufficientCount.textContent = integerFormatter.format(insufficient);
+  ui.reviewAverageLeadTime.textContent = leadTimes.length ? `${numberFormatter.format(averageLeadTime)} dias` : "Sem histórico";
+  ui.reviewResultCount.textContent = pluralize(visible.length, "posição", "posições");
 
-  const headers = (consumption.headers || []).slice(0, 12);
-  if (!headers.length) {
-    ui.consumptionPreviewWrap.innerHTML = `<div class="table-empty">O CSV foi localizado, mas não possui cabeçalhos legíveis.</div>`;
+  if (!visible.length) {
+    ui.reviewCardsGrid.innerHTML = `<div class="table-empty">Nenhuma posição corresponde aos filtros ou aos dados de consumo disponíveis.</div>`;
     return;
   }
 
-  const heading = headers.map((header) => `<th>${escapeHtml(header || "Sem título")}</th>`).join("");
-  const rows = (consumption.rows || []).map((row) => `<tr>${headers.map((header, index) => `<td class="cell-wrap">${escapeHtml(isDateColumn(header) ? formatDate(row[index], "") : row[index] || "")}</td>`).join("")}</tr>`).join("");
-  ui.consumptionPreviewWrap.innerHTML = `<table class="data-table"><thead><tr>${heading}</tr></thead><tbody>${rows || `<tr><td colspan="${headers.length}">CSV sem registros.</td></tr>`}</tbody></table>`;
+  ui.reviewCardsGrid.innerHTML = visible.map((review) => {
+    const status = review.status === "ideal" ? ["Parâmetros ideais", "success"]
+      : review.status === "insufficient" ? ["Histórico insuficiente", "neutral"]
+        : ["Ajuste recomendado", review.direction === "increase" ? "warning" : "info"];
+    return `<button class="report-card review-card review-card--${review.status}" type="button" data-review-key="${escapeHtml(review.key)}">
+      <span class="report-card__top"><span class="status-pill status-pill--${status[1]}">${status[0]}</span><span>${escapeHtml(review.monthCount ? `${review.monthCount} meses` : "Sem consumo")}</span></span>
+      <strong class="report-card__title">${escapeHtml(review.item.name)}</strong>
+      <span class="report-card__code">Código ${escapeHtml(review.item.code)}</span>
+      <span class="review-card__comparison">
+        <span><small>Mín. atual</small><strong>${formatOptionalNumber(review.currentMinimum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMinimum)}</i></span>
+        <span><small>Máx. atual</small><strong>${formatOptionalNumber(review.currentMaximum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMaximum)}</i></span>
+      </span>
+      <span class="report-card__meta"><span><small>Consumo médio/mês</small><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></span><span><small>Lead time</small><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></span></span>
+      <span class="report-card__footer"><span>${escapeHtml([review.position.branchCode, review.position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>Ver análise</strong></span>
+    </button>`;
+  }).join("");
+}
+
+function buildMinMaxReviews() {
+  const consumptionByPosition = new Map((state.consumption.records || []).map((record) => [
+    `${normalizeCode(record.code)}::${record.branchCode}::${record.localCode}`,
+    record,
+  ]));
+  const reviews = [];
+  for (const item of state.items) {
+    if (item.flags.inactiveOnly || !item.positions.length) continue;
+    const leadByBranch = calculateItemLeadTimes(item);
+    for (const position of item.positions) {
+      const consumption = consumptionByPosition.get(`${item.code}::${position.branchCode}::${position.localCode}`);
+      if (!consumption) continue;
+      const monthlyValues = Object.values(consumption.monthlyTotals || {}).map((value) => Math.max(Number(value) || 0, 0));
+      const monthCount = monthlyValues.length;
+      const averageMonthlyConsumption = monthCount ? monthlyValues.reduce((sum, value) => sum + value, 0) / monthCount : 0;
+      const leadSamples = leadByBranch.get(position.branchCode) || leadByBranch.get("") || [];
+      const leadTimeDays = leadSamples.length ? median(leadSamples) : 30;
+      const recommendedMinimum = Math.ceil(averageMonthlyConsumption / 30 * leadTimeDays);
+      const recommendedMaximum = Math.ceil(averageMonthlyConsumption / 30 * (leadTimeDays + 30));
+      const currentMinimum = position.minimum ?? 0;
+      const currentMaximum = position.maximum ?? 0;
+      const enoughHistory = monthCount >= 2 && leadSamples.length > 0 && averageMonthlyConsumption > 0;
+      const minIdeal = withinRecommendationRange(currentMinimum, recommendedMinimum);
+      const maxIdeal = withinRecommendationRange(currentMaximum, recommendedMaximum);
+      const status = !enoughHistory ? "insufficient" : minIdeal && maxIdeal ? "ideal" : "adjust";
+      const currentTotal = currentMinimum + currentMaximum;
+      const recommendedTotal = recommendedMinimum + recommendedMaximum;
+      reviews.push({
+        item, position, consumption, monthCount, averageMonthlyConsumption, leadTimeDays,
+        leadTimeSource: leadSamples.length ? "real" : "estimated", leadSamples,
+        currentMinimum, currentMaximum, recommendedMinimum, recommendedMaximum, status,
+        direction: recommendedTotal >= currentTotal ? "increase" : "reduce",
+      });
+    }
+  }
+  reviews.sort((a, b) => {
+    const statusOrder = { adjust: 0, insufficient: 1, ideal: 2 };
+    return statusOrder[a.status] - statusOrder[b.status]
+      || Math.abs((b.recommendedMaximum || 0) - (b.currentMaximum || 0)) - Math.abs((a.recommendedMaximum || 0) - (a.currentMaximum || 0))
+      || a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true });
+  });
+  state.minMaxReviews = reviews;
+  state.minMaxReviewByKey.clear();
+  reviews.forEach((review, index) => {
+    review.key = `review-${index}`;
+    state.minMaxReviewByKey.set(review.key, review);
+  });
+}
+
+function calculateItemLeadTimes(item) {
+  const samples = new Map([["", []]]);
+  const seen = new Set();
+  for (const record of item.history || []) {
+    if (!record.sc?.date || !record.rec?.entryDate) continue;
+    const key = `${record.sc.code || ""}::${record.of?.code || ""}::${record.rec.invoice || ""}::${record.rec.series || ""}`;
+    if (seen.has(key)) continue;
+    const start = dateTimestamp(record.sc.date);
+    const end = dateTimestamp(record.rec.entryDate);
+    const days = start && end ? Math.round((end - start) / 86400000) : 0;
+    if (days < 0 || days > 730) continue;
+    seen.add(key);
+    if (!samples.has(record.branchCode)) samples.set(record.branchCode, []);
+    samples.get(record.branchCode).push(days);
+    samples.get("").push(days);
+  }
+  return samples;
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
+}
+
+function withinRecommendationRange(current, recommended) {
+  if (recommended === 0) return current === 0;
+  return Math.abs(current - recommended) <= Math.max(1, recommended * 0.2);
+}
+
+function openMinMaxReviewModal(key) {
+  const review = state.minMaxReviewByKey.get(key);
+  if (!review) return;
+  state.activeMinMaxReview = review;
+  state.lastFocusedElement = document.activeElement;
+  const { item, position } = review;
+  ui.reviewModalCode.textContent = `Item ${item.code}`;
+  ui.reviewModalTitle.textContent = item.name;
+  ui.reviewModalSubtitle.textContent = [position.branchCode, position.branchName, position.localCode, position.localName].filter(Boolean).join(" · ");
+  ui.reviewModalSummary.innerHTML = `
+    <article><span>Consumo médio/mês</span><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></article>
+    <article><span>Lead time utilizado</span><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></article>
+    <article><span>Mínimo atual</span><strong>${formatOptionalNumber(review.currentMinimum)}</strong></article>
+    <article><span>Máximo atual</span><strong>${formatOptionalNumber(review.currentMaximum)}</strong></article>
+    <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong></article>
+    <article><span>Máximo sugerido</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong></article>`;
+  const message = review.status === "ideal"
+    ? "Os parâmetros atuais estão dentro da faixa aceitável de ±20% da recomendação calculada."
+    : review.status === "insufficient"
+      ? "Não há histórico suficiente para uma validação conclusiva. A sugestão é indicativa e usa 30 dias quando não existe lead time real."
+      : `${review.direction === "increase" ? "Elevar" : "Reduzir"} os parâmetros para aproximar a cobertura do consumo e do prazo real de reposição.`;
+  ui.reviewModalRecommendation.className = `review-recommendation review-recommendation--${review.status}`;
+  ui.reviewModalRecommendation.innerHTML = `<span>${review.status === "ideal" ? "Parâmetro validado" : review.status === "adjust" ? "Alteração proposta" : "Análise indicativa"}</span><strong>${escapeHtml(message)}</strong><small>Mínimo = consumo diário × lead time. Máximo = mínimo + 30 dias de consumo. Validação com tolerância de ±20%.</small>`;
+  const months = Object.entries(review.consumption.monthlyTotals || {});
+  ui.reviewModalDetails.innerHTML = `
+    <section><h3>Consumo mensal</h3><div class="monthly-consumption-list">${months.map(([month, value]) => `<span><small>${escapeHtml(month)}</small><strong>${numberFormatter.format(value)}</strong></span>`).join("")}</div></section>
+    <section><h3>Base do lead time</h3><dl><div><dt>Origem</dt><dd>${review.leadTimeSource === "real" ? "Mediana entre criação da SC e entrada do recebimento" : "Padrão estimado de 30 dias"}</dd></div><div><dt>Amostras válidas</dt><dd>${integerFormatter.format(review.leadSamples.length)}</dd></div><div><dt>Tempos encontrados</dt><dd>${review.leadSamples.length ? review.leadSamples.map((value) => `${value} dias`).join(", ") : "Nenhum recebimento relacionado"}</dd></div></dl></section>
+    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Custo unitário</dt><dd>${currencyFormatter.format(position.unitCost || 0)}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div></dl></section>`;
+  if (typeof ui.reviewModal.showModal === "function") ui.reviewModal.showModal(); else ui.reviewModal.setAttribute("open", "");
+  ui.reviewModalClose.focus();
+}
+
+function closeMinMaxReviewModal() {
+  if (typeof ui.reviewModal.close === "function" && ui.reviewModal.open) ui.reviewModal.close();
+  else ui.reviewModal.removeAttribute("open");
 }
 
 function renderNextBatch() {
@@ -2473,18 +2641,33 @@ function inventoryWorker() {
   }
 
   function parseConsumptionCsv(text) {
-    if (text === null) return { available: false, headers: [], rows: [], rowCount: 0 };
-
+    if (text === null) return { available: false, headers: [], records: [], rowCount: 0 };
     let headers = [];
-    const rows = [];
+    const records = new Map();
     let rowCount = 0;
     parseCsv(text, (csvHeaders, row) => {
       if (!headers.length) headers = csvHeaders.map(clean);
       rowCount += 1;
-      if (rows.length < 20) rows.push(row.slice(0, 12));
+      const get = rowGetter(csvHeaders, row);
+      const code = normalizeItemCode(get("Cod_Item"));
+      const branchCode = clean(get("Cd Filial"));
+      const localCode = clean(get("Local"));
+      const month = clean(get("mÊs"));
+      const quantity = parseNumber(get("Qt Movimento")) ?? 0;
+      if (!code || !branchCode || !localCode || !month || isEchoHeader(code)) return;
+      const key = `${code}::${branchCode}::${localCode}`;
+      if (!records.has(key)) records.set(key, {
+        code,
+        branchCode,
+        branchName: clean(get("Nm Filial")),
+        localCode,
+        localName: clean(get("Ds Local Estoque")),
+        monthlyTotals: {},
+      });
+      const record = records.get(key);
+      record.monthlyTotals[month] = (record.monthlyTotals[month] || 0) + quantity;
     });
-
-    return { available: true, headers, rows, rowCount };
+    return { available: true, headers, records: [...records.values()], rowCount };
   }
 
   function progress(message) {
