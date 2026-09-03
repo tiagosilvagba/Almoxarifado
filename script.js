@@ -13,7 +13,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark VI";
+const APP_VERSION = "Mark VII";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -3542,7 +3542,7 @@ function inventoryWorker() {
       progress("Baixando os arquivos de saldo e compras…");
       const [saldoText, comprasSources, consumoText] = await Promise.all([
         fetchText(saldoUrl, "Saldo_Online"),
-        fetchMonthlyPurchases(comprasApiUrl, comprasFallbackUrl),
+        fetchPurchaseParts(comprasApiUrl, comprasFallbackUrl),
         fetchOptionalText(consumoUrl),
       ]);
 
@@ -3840,24 +3840,24 @@ function inventoryWorker() {
     }
   }
 
-  async function fetchMonthlyPurchases(apiUrl, fallbackUrl) {
-    let monthlyFiles = [];
+  async function fetchPurchaseParts(apiUrl, fallbackUrl) {
+    let partFiles = [];
     if (apiUrl) {
       try {
         const response = await fetch(apiUrl, { cache: "no-store", headers: { Accept: "application/vnd.github+json" } });
         if (response.ok) {
           const entries = await response.json();
-          monthlyFiles = (Array.isArray(entries) ? entries : [])
-            .filter((entry) => entry?.type === "file" && /^01 - Compras_Almox_[A-Za-zÀ-ÿ]{3,9}_\d{4}(?:_[A-Za-z0-9-]+)?\.csv$/i.test(entry.name || "") && entry.download_url)
+          partFiles = (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry?.type === "file" && /^01 - Compras_Almox_Parte_\d+\.csv$/i.test(entry.name || "") && entry.download_url)
             .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" }));
         }
       } catch {
-        monthlyFiles = [];
+        partFiles = [];
       }
     }
 
-    if (monthlyFiles.length) {
-      const loaded = await Promise.allSettled(monthlyFiles.map(async (file) => ({
+    if (partFiles.length) {
+      const loaded = await Promise.allSettled(partFiles.map(async (file) => ({
         name: file.name,
         text: await fetchText(file.download_url, file.name),
       })));
