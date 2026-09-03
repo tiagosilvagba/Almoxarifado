@@ -785,3 +785,278 @@
     justify-content: center;
   }
 }
+
+
+/* Theme layout identities — 2026-09-03 */
+
+:root {
+  --layout-shell: 1480px; --layout-gap: 28px; --layout-card-radius: 16px; --layout-panel-radius: 22px;
+  --layout-card-shadow: var(--shadow-sm); --layout-card-border: 1px solid var(--steel-200);
+  --layout-card-min: 270px; --layout-report-min: 310px;
+}
+html[data-theme="polar"] { --layout-shell:1540px;--layout-gap:30px;--layout-card-radius:20px;--layout-panel-radius:26px;--layout-card-min:290px;--layout-report-min:330px; }
+html[data-theme="rubi"] { --layout-shell:1400px;--layout-gap:30px;--layout-card-radius:8px;--layout-panel-radius:12px;--layout-card-shadow:0 12px 30px rgba(64,6,9,.1);--layout-card-min:300px; }
+html[data-theme="graphite"] { --layout-shell:1440px;--layout-gap:20px;--layout-card-radius:6px;--layout-panel-radius:8px;--layout-card-shadow:0 3px 10px rgba(17,22,27,.09);--layout-card-min:260px;--layout-report-min:300px; }
+html[data-theme="operations"] { --layout-shell:1560px;--layout-gap:18px;--layout-card-radius:12px;--layout-panel-radius:16px;--layout-card-min:255px;--layout-report-min:300px; }
+html[data-theme="logistics"] { --layout-shell:1500px;--layout-gap:24px;--layout-card-radius:14px;--layout-panel-radius:20px;--layout-card-min:280px;--layout-report-min:320px; }
+html[data-theme="corporate"] { --layout-shell:1420px;--layout-gap:30px;--layout-card-radius:24px;--layout-panel-radius:30px;--layout-card-shadow:0 16px 42px rgba(48,32,90,.12);--layout-card-min:290px;--layout-report-min:330px; }
+html[data-theme="ocean"] { --surface:rgba(255,255,255,.76);--layout-shell:1500px;--layout-gap:26px;--layout-card-radius:26px;--layout-panel-radius:30px;--layout-card-shadow:0 16px 42px rgba(4,68,81,.11);--layout-card-min:285px;--layout-report-min:320px; }
+html[data-theme="neutral"] { --layout-shell:1380px;--layout-gap:34px;--layout-card-radius:12px;--layout-panel-radius:16px;--layout-card-shadow:0 1px 3px rgba(32,37,43,.06);--layout-card-min:300px;--layout-report-min:340px; }
+html[data-theme="contrast"] { --layout-shell:1480px;--layout-gap:24px;--layout-card-radius:0;--layout-panel-radius:0;--layout-card-shadow:0 0 0 2px #111;--layout-card-border:2px solid #111;--layout-card-min:280px; }
+
+html[data-theme="aurora"] {
+  --navy-950: #101b3f; --navy-900: #172554; --navy-800: #233876; --navy-700: #3154a4;
+  --blue-600: #4f46e5; --blue-500: #06b6d4; --blue-100: #e8eaff;
+  --steel-700: #475569; --steel-500: #718096; --steel-300: #c6d0e1; --steel-200: #dce3f0; --steel-100: #edf1f8; --steel-50: #f6f8fc;
+  --text: #17213d; --muted: #65718b; --topbar-text: #e9edff; --active-accent: #67e8f9;
+  --focus-color: rgba(79, 70, 229, 0.32); --filter-count-bg: #a5f3fc; --theme-wash: rgba(99, 102, 241, 0.11);
+  --theme-image: none; --page-overlay: rgba(247, 249, 255, 0.7); --surface: rgba(255, 255, 255, 0.78);
+  --shadow-sm: 0 8px 28px rgba(39, 51, 112, 0.09), 0 1px 3px rgba(39, 51, 112, 0.08);
+  --shadow-md: 0 22px 54px rgba(39, 51, 112, 0.16), 0 6px 16px rgba(39, 51, 112, 0.08);
+  --shadow-lg: 0 34px 90px rgba(20, 31, 80, 0.28);
+  --layout-shell: 1520px; --layout-gap: 24px; --layout-card-radius: 22px; --layout-panel-radius: 28px;
+  --layout-card-shadow: 0 12px 34px rgba(55, 65, 130, 0.1); --layout-card-border: 1px solid rgba(160, 174, 215, 0.38);
+  --layout-card-min: 285px; --layout-report-min: 325px;
+}
+
+
+/* Identidades completas de layout: cada tema altera forma, ritmo e hierarquia. */
+.shell { width: min(var(--layout-shell), calc(100% - 40px)); }
+.catalog-content,
+.page-panel { gap: var(--layout-gap); }
+.cards-grid { grid-template-columns: repeat(auto-fill, minmax(var(--layout-card-min), 1fr)); }
+.report-card-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--layout-report-min)), 1fr)); }
+.metric,
+.analytics-card,
+.filter-panel,
+.global-filter-bar,
+.item-card,
+.need-summary article,
+.report-card {
+  border-radius: var(--layout-card-radius);
+  box-shadow: var(--layout-card-shadow);
+}
+.loading-panel,
+.item-modal { border-radius: var(--layout-panel-radius); }
+.metric,
+.analytics-card,
+.item-card,
+.need-summary article,
+.report-card { border: var(--layout-card-border); }
+.topbar,
+.app-nav__tab,
+.metric,
+.analytics-card,
+.item-card,
+.report-card,
+.filter-panel,
+.global-filter-bar,
+.need-summary article,
+.item-modal {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, border-radius 220ms ease, box-shadow 220ms ease, transform 180ms ease;
+}
+
+/* Aurora UI — glassmorphism leve e navegação em cápsulas. */
+html[data-theme="aurora"] body {
+  background:
+    radial-gradient(circle at 8% 5%, rgba(103, 232, 249, 0.22), transparent 28rem),
+    radial-gradient(circle at 92% 12%, rgba(129, 140, 248, 0.2), transparent 32rem),
+    linear-gradient(145deg, #f8fbff 0%, #f4f3ff 48%, #f3fbfd 100%);
+}
+html[data-theme="aurora"] .topbar {
+  margin: 10px 12px 0;
+  overflow: hidden;
+  border: 1px solid rgba(199, 210, 254, 0.26);
+  border-bottom: 0;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% -80%, rgba(103, 232, 249, 0.38), transparent 42%),
+    linear-gradient(120deg, rgba(23, 37, 84, 0.97), rgba(67, 56, 202, 0.94));
+  box-shadow: 0 18px 50px rgba(32, 42, 105, 0.22);
+}
+html[data-theme="aurora"] .topbar__content { min-height: 76px; }
+html[data-theme="aurora"] .app-nav-wrap { padding: 7px; border-top-color: rgba(255,255,255,.09); background: rgba(10, 19, 58, .2); }
+html[data-theme="aurora"] .app-nav { gap: 7px; }
+html[data-theme="aurora"] .app-nav__tab { min-height: 40px; padding: 9px 15px; border-radius: 999px; }
+html[data-theme="aurora"] .app-nav__tab::after { display: none; }
+html[data-theme="aurora"] .app-nav__tab.is-active { color: var(--navy-950); background: rgba(255,255,255,.94); box-shadow: 0 8px 22px rgba(10,19,58,.18); }
+html[data-theme="aurora"] .theme-picker select,
+html[data-theme="aurora"] .density-toggle,
+html[data-theme="aurora"] .icon-button { border-color: rgba(255,255,255,.2); border-radius: 14px; background: rgba(255,255,255,.1); backdrop-filter: blur(12px); }
+html[data-theme="aurora"] .main-content { padding-top: 34px; }
+html[data-theme="aurora"] .metric { border-top: 1px solid rgba(160,174,215,.38); background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.62)); }
+html[data-theme="aurora"] .metric::before { content:""; position:absolute; inset: 0 auto 0 0; width: 5px; border-radius: inherit; background: linear-gradient(180deg, var(--metric-accent), color-mix(in srgb, var(--metric-accent) 25%, transparent)); }
+html[data-theme="aurora"] .metric::after { right:-35px; bottom:-48px; width:135px; height:135px; filter: blur(2px); }
+html[data-theme="aurora"] .analytics-card,
+html[data-theme="aurora"] .filter-panel,
+html[data-theme="aurora"] .global-filter-bar,
+html[data-theme="aurora"] .item-card,
+html[data-theme="aurora"] .report-card,
+html[data-theme="aurora"] .need-summary article { background: rgba(255,255,255,.72); backdrop-filter: blur(22px) saturate(135%); }
+html[data-theme="aurora"] .modal-header { background: linear-gradient(120deg, #172554, #4338ca 72%, #0891b2); }
+
+/* Azul Polar — visual amplo, claro e aerodinâmico. */
+html[data-theme="polar"] .topbar { border-bottom-width: 1px; background: linear-gradient(105deg, rgba(0,27,63,.97), rgba(0,104,181,.91)); }
+html[data-theme="polar"] .app-nav-wrap { background: rgba(0,27,63,.2); }
+html[data-theme="polar"] .app-nav { justify-content: center; }
+html[data-theme="polar"] .app-nav__tab { margin-block: 5px; border-radius: 12px; }
+html[data-theme="polar"] .app-nav__tab.is-active { background: rgba(255,255,255,.14); }
+html[data-theme="polar"] .metric { min-height: 142px; border-top: 0; border-bottom: 5px solid var(--metric-accent); }
+html[data-theme="polar"] .item-card__image { height: 210px; }
+html[data-theme="polar"] .section-heading h2 { font-size: clamp(1.4rem,2.2vw,1.8rem); }
+
+/* Rubi Dourado — composição executiva e editorial. */
+html[data-theme="rubi"] .topbar { border-bottom: 5px solid #f3c500; background: linear-gradient(100deg, #400609, #8d0b15 68%, #5b070c); }
+html[data-theme="rubi"] .brand h1,
+html[data-theme="rubi"] .section-heading h2,
+html[data-theme="rubi"] .analytics-card__heading h3 { font-family: Georgia, "Times New Roman", serif; letter-spacing: 0; }
+html[data-theme="rubi"] .app-nav { justify-content: center; gap: 0; }
+html[data-theme="rubi"] .app-nav__tab { border-radius: 0; border-inline: 1px solid rgba(255,255,255,.08); }
+html[data-theme="rubi"] .app-nav__tab.is-active { color: #ffe76b; background: rgba(0,0,0,.14); }
+html[data-theme="rubi"] .metric { border-top: 0; border-left: 5px solid var(--metric-accent); }
+html[data-theme="rubi"] .analytics-card,
+html[data-theme="rubi"] .item-card,
+html[data-theme="rubi"] .report-card { border-bottom: 3px solid color-mix(in srgb, #f3c500 35%, var(--steel-200)); }
+html[data-theme="rubi"] .button--primary { border-radius: 4px; background: linear-gradient(135deg,#8d0b15,#400609); }
+
+/* Industrial Azul — painel técnico, compacto e objetivo. */
+html[data-theme="industrial"] body { background-size: auto, auto, 560px auto, auto; }
+html[data-theme="industrial"] .topbar { border-bottom-width: 4px; }
+html[data-theme="industrial"] .brand__mark,
+html[data-theme="industrial"] .theme-picker select,
+html[data-theme="industrial"] .density-toggle,
+html[data-theme="industrial"] .icon-button { border-radius: 6px; }
+html[data-theme="industrial"] .app-nav__tab { border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: .035em; }
+html[data-theme="industrial"] .metric { min-height: 118px; border-top: 0; border-left: 5px solid var(--metric-accent); border-radius: 6px; }
+html[data-theme="industrial"] .metrics-grid,
+html[data-theme="industrial"] .analytics-grid,
+html[data-theme="industrial"] .report-card-grid { gap: 10px; }
+html[data-theme="industrial"] .analytics-card,
+html[data-theme="industrial"] .filter-panel,
+html[data-theme="industrial"] .global-filter-bar,
+html[data-theme="industrial"] .item-card,
+html[data-theme="industrial"] .report-card { border-radius: 7px; }
+html[data-theme="industrial"] .eyebrow { letter-spacing: .16em; }
+
+/* Grafite — minimalismo plano com alta densidade de informação. */
+html[data-theme="graphite"] .topbar { border-bottom: 1px solid #74818a; background: rgba(17,22,27,.96); box-shadow: 0 5px 18px rgba(17,22,27,.18); }
+html[data-theme="graphite"] .topbar__content { min-height: 68px; }
+html[data-theme="graphite"] .app-nav-wrap { background: #1d252d; }
+html[data-theme="graphite"] .app-nav__tab { min-height: 42px; border-radius: 0; }
+html[data-theme="graphite"] .metric,
+html[data-theme="graphite"] .analytics-card,
+html[data-theme="graphite"] .item-card,
+html[data-theme="graphite"] .report-card,
+html[data-theme="graphite"] .need-summary article { box-shadow: none; }
+html[data-theme="graphite"] .metric { min-height: 110px; border-top-width: 2px; }
+html[data-theme="graphite"] .item-card__image { height: 165px; filter: saturate(.68); }
+html[data-theme="graphite"] .button,
+html[data-theme="graphite"] select,
+html[data-theme="graphite"] input { border-radius: 4px; }
+
+/* Verde Operação — central de comando para leitura rápida. */
+html[data-theme="operations"] .topbar { background: linear-gradient(105deg,#08291f,#125b45 65%,#0b382b); }
+html[data-theme="operations"] .app-nav__tab { border-radius: 8px; }
+html[data-theme="operations"] .app-nav__tab.is-active { color:#08291f; background:#96ebcd; }
+html[data-theme="operations"] .app-nav__tab.is-active::after { display:none; }
+html[data-theme="operations"] .metrics-grid--primary { grid-template-columns: repeat(5,minmax(150px,1fr)); }
+html[data-theme="operations"] .metric { min-height: 110px; padding: 14px; border-top: 0; border-left: 4px solid var(--metric-accent); }
+html[data-theme="operations"] .metric strong { font-size: clamp(1.5rem,2.4vw,2rem); }
+html[data-theme="operations"] .analytics-card__heading { padding-bottom: 10px; border-bottom: 1px solid var(--steel-200); }
+html[data-theme="operations"] .report-card { min-height: 210px; }
+
+/* Âmbar Logística — ritmo, direção e destaques laterais. */
+html[data-theme="logistics"] .topbar { background: linear-gradient(112deg,#321b05,#70420d 70%,#9a5b08); }
+html[data-theme="logistics"] .app-nav__tab.is-active { color:#321b05; background:#ffc45c; }
+html[data-theme="logistics"] .app-nav__tab.is-active::after { display:none; }
+html[data-theme="logistics"] .metric { border-top: 0; border-left: 7px solid var(--metric-accent); }
+html[data-theme="logistics"] .need-summary article,
+html[data-theme="logistics"] .report-card { border-top: 1px solid var(--steel-200); border-left: 5px solid var(--card-accent,var(--blue-600)); }
+html[data-theme="logistics"] .analytics-card { background: linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,244,219,.62)); }
+html[data-theme="logistics"] .button { border-radius: 999px; }
+
+/* Roxo Corporativo — premium, espaçado e acolhedor. */
+html[data-theme="corporate"] .topbar { margin-inline: 18px; border: 0; border-radius: 0 0 30px 30px; background: linear-gradient(120deg,#1c1038,#443078 72%,#6b4bb0); }
+html[data-theme="corporate"] .app-nav-wrap { padding: 7px 12px 11px; border: 0; background: transparent; }
+html[data-theme="corporate"] .app-nav { justify-content: center; gap: 7px; }
+html[data-theme="corporate"] .app-nav__tab { min-height: 40px; border-radius: 999px; }
+html[data-theme="corporate"] .app-nav__tab::after { display:none; }
+html[data-theme="corporate"] .app-nav__tab.is-active { background:rgba(255,255,255,.17); box-shadow:inset 0 0 0 1px rgba(255,255,255,.16); }
+html[data-theme="corporate"] .metric { border-top: 0; }
+html[data-theme="corporate"] .metric::before { content:""; position:absolute; inset:0 0 auto; height:5px; background:linear-gradient(90deg,var(--metric-accent),transparent); }
+html[data-theme="corporate"] .section-heading { padding-inline: 8px; }
+
+/* Oceano — superfícies translúcidas e formas orgânicas. */
+html[data-theme="ocean"] .topbar { margin:8px 10px 0; border:1px solid rgba(87,212,229,.28); border-radius:28px; background:linear-gradient(115deg,rgba(4,42,51,.96),rgba(7,137,163,.9)); }
+html[data-theme="ocean"] .app-nav-wrap { padding:6px; border:0; background:rgba(4,42,51,.16); }
+html[data-theme="ocean"] .app-nav { justify-content:center; }
+html[data-theme="ocean"] .app-nav__tab { border-radius:18px 18px 7px 18px; }
+html[data-theme="ocean"] .app-nav__tab.is-active { background:rgba(255,255,255,.15); }
+html[data-theme="ocean"] .metric,
+html[data-theme="ocean"] .analytics-card,
+html[data-theme="ocean"] .item-card,
+html[data-theme="ocean"] .report-card,
+html[data-theme="ocean"] .filter-panel { background:rgba(255,255,255,.7); backdrop-filter:blur(24px) saturate(130%); }
+html[data-theme="ocean"] .metric { border-top:0; }
+html[data-theme="ocean"] .metric::before { content:""; position:absolute; width:54px; height:5px; left:18px; top:0; border-radius:0 0 99px 99px; background:var(--metric-accent); }
+
+/* Claro Neutro — máxima limpeza e foco no conteúdo. */
+html[data-theme="neutral"] body { background:#f7f8fa; }
+html[data-theme="neutral"] .topbar { border-bottom:1px solid #dce1e4; color:var(--text); background:rgba(255,255,255,.96); box-shadow:0 2px 10px rgba(32,37,43,.06); }
+html[data-theme="neutral"] .brand p,
+html[data-theme="neutral"] .theme-picker { color:var(--muted); }
+html[data-theme="neutral"] .brand__mark { color:#fff; background:var(--navy-800); }
+html[data-theme="neutral"] .theme-picker select { color:var(--text); border-color:var(--steel-200); background:#fff; }
+html[data-theme="neutral"] .density-toggle,
+html[data-theme="neutral"] .icon-button { color:var(--navy-800); border-color:var(--steel-200); background:var(--steel-50); }
+html[data-theme="neutral"] .app-nav-wrap { border-top:1px solid var(--steel-100); background:#fff; }
+html[data-theme="neutral"] .app-nav { justify-content:center; }
+html[data-theme="neutral"] .app-nav__tab { color:var(--muted); border-radius:0; }
+html[data-theme="neutral"] .app-nav__tab.is-active { color:var(--navy-900); background:transparent; }
+html[data-theme="neutral"] .metric,
+html[data-theme="neutral"] .analytics-card,
+html[data-theme="neutral"] .item-card,
+html[data-theme="neutral"] .report-card,
+html[data-theme="neutral"] .filter-panel,
+html[data-theme="neutral"] .need-summary article { background:#fff; box-shadow:none; }
+html[data-theme="neutral"] .metric { border-top:1px solid var(--steel-200); }
+html[data-theme="neutral"] .metric::before { content:""; position:absolute; left:0; top:18px; bottom:18px; width:3px; background:var(--metric-accent); }
+
+/* Alto Contraste — acessibilidade com hierarquia inequívoca. */
+html[data-theme="contrast"] body { background:#fff; }
+html[data-theme="contrast"] .topbar { border-bottom:6px solid #ffd900; background:#000; }
+html[data-theme="contrast"] .app-nav-wrap { background:#000; }
+html[data-theme="contrast"] .app-nav__tab { border-radius:0; color:#fff; text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:5px; }
+html[data-theme="contrast"] .app-nav__tab.is-active { color:#000; background:#ffd900; text-decoration:none; }
+html[data-theme="contrast"] .app-nav__tab.is-active::after { display:none; }
+html[data-theme="contrast"] .metric,
+html[data-theme="contrast"] .analytics-card,
+html[data-theme="contrast"] .item-card,
+html[data-theme="contrast"] .report-card,
+html[data-theme="contrast"] .filter-panel,
+html[data-theme="contrast"] .need-summary article { border:2px solid #000; box-shadow:none; background:#fff; }
+html[data-theme="contrast"] .metric { border-top:8px solid var(--metric-accent); }
+html[data-theme="contrast"] button:focus-visible,
+html[data-theme="contrast"] input:focus-visible,
+html[data-theme="contrast"] select:focus-visible { outline:5px solid #ffd900; outline-offset:3px; }
+
+@media (max-width: 1100px) {
+  html[data-theme="operations"] .metrics-grid--primary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  html[data-theme="aurora"] .topbar,
+  html[data-theme="ocean"] .topbar { margin:6px 6px 0; border-radius:20px; }
+  html[data-theme="corporate"] .topbar { margin-inline:8px; }
+}
+
+@media (max-width: 560px) {
+  .shell { width:min(var(--layout-shell),calc(100% - 20px)); }
+  html[data-theme="aurora"] .topbar,
+  html[data-theme="ocean"] .topbar,
+  html[data-theme="corporate"] .topbar { margin:0; border-radius:0; }
+  html[data-theme="aurora"] .app-nav,
+  html[data-theme="polar"] .app-nav,
+  html[data-theme="corporate"] .app-nav,
+  html[data-theme="ocean"] .app-nav,
+  html[data-theme="neutral"] .app-nav { justify-content:flex-start; }
+  html[data-theme="operations"] .metrics-grid--primary { grid-template-columns:1fr; }
+}
+
