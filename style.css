@@ -1525,3 +1525,37 @@ html[data-theme="theme-t"] .branch-balance-grid article { background:linear-grad
   .loading-panel > div:nth-child(2) { min-width:0; width:100%; }
   .base-update-badge { display:flex; width:max-content; margin:4px 0 0; }
 }
+
+/* Mark XII — impacto financeiro e exclusão visual de anomalias no consumo. */
+.review-card__impact { display:grid; gap:2px; padding:8px 10px; border:1px solid var(--steel-200); border-radius:10px; background:var(--steel-50); }
+.review-card__impact small { color:var(--muted); font-size:.68rem; }
+.review-card__impact strong { font-size:.8rem; }
+.review-card__impact i { color:var(--muted); font-size:.65rem; font-style:normal; }
+.review-card__impact--increase strong,.impact-value--increase { color:#a14d00 !important; }
+.review-card__impact--reduce strong,.impact-value--reduce { color:#087443 !important; }
+.review-card__impact--neutral strong,.impact-value--neutral { color:var(--blue-600) !important; }
+
+#reviewModal .review-modal-summary { grid-template-columns:repeat(5,minmax(0,1fr)); }
+#reviewModal .summary-cards article small { display:block; margin-top:2px; color:var(--muted); font-size:.59rem; line-height:1.2; }
+#reviewModal .review-impact-summary--increase { border-color:rgba(245,158,11,.42); background:var(--amber-soft); }
+#reviewModal .review-impact-summary--reduce { border-color:rgba(16,185,129,.4); background:var(--green-soft); }
+#reviewModal .review-detail-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+#reviewModal .monthly-consumption-list span { position:relative; border:1px solid transparent; }
+#reviewModal .monthly-consumption-list span i { display:block; margin-top:2px; color:#087443; font-size:.56rem; font-style:normal; font-weight:750; line-height:1.15; }
+#reviewModal .monthly-consumption-list span.is-outlier { border-color:rgba(245,158,11,.42); background:var(--amber-soft); }
+#reviewModal .monthly-consumption-list span.is-outlier strong { text-decoration:line-through; text-decoration-thickness:1px; }
+#reviewModal .monthly-consumption-list span.is-outlier i { color:#a14d00; }
+#reviewModal .review-financial-impact { border-color:rgba(14,165,233,.32); background:linear-gradient(145deg,var(--surface),rgba(224,242,254,.55)); }
+
+@media (max-width:1100px) {
+  #reviewModal .review-modal-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  #reviewModal .review-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:700px) {
+  #reviewModal .review-modal-summary,#reviewModal .review-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:430px) {
+  #reviewModal .review-modal-summary,#reviewModal .review-detail-grid { grid-template-columns:1fr; }
+}
