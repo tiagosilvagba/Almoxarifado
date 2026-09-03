@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark III";
+const APP_VERSION = "Mark IV";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -1137,7 +1137,7 @@ function populateFilters() {
 
     for (const position of item.positions || []) {
       if (position.branchCode) {
-        branches.set(position.branchCode, [position.branchCode, position.branchName].filter(Boolean).join(" · "));
+        branches.set(position.branchKey, [position.branchCode, position.branchName].filter(Boolean).join(" · "));
       }
       if (position.locationKey) {
         const label = [
@@ -1157,13 +1157,13 @@ function populateFilters() {
   fillSelect(ui.supplierFilter, [...suppliers].map((value) => [value, value]), "Todos os fornecedores");
 }
 
-function updateLocationFilter(select, branchCode) {
+function updateLocationFilter(select, branchKey) {
   const currentValue = select.value;
   const locations = new Map();
 
   for (const item of state.items) {
     for (const position of item.positions || []) {
-      if (branchCode && position.branchCode !== branchCode) continue;
+      if (!positionMatchesBranch(position, branchKey)) continue;
       if (!position.locationKey) continue;
       locations.set(position.locationKey, [
         position.branchCode,
@@ -1233,7 +1233,7 @@ function collectDependentOptions(targetFilterId) {
       .filter((position) => !status || positionMatchesStatus(position, status));
     for (const position of positions) {
       if (targetFilterId === "branchFilter" && position.branchCode) {
-        options.set(position.branchCode, [position.branchCode, position.branchName].filter(Boolean).join(" · "));
+        options.set(position.branchKey, [position.branchCode, position.branchName].filter(Boolean).join(" · "));
       }
       if (targetFilterId === "locationFilter" && position.locationKey) {
         options.set(position.locationKey, [position.branchCode, position.localCode, position.localName].filter(Boolean).join(" · "));
@@ -1260,10 +1260,10 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   if (category && !(item.categories || []).includes(category)) return false;
   if (unit && !(item.units || []).includes(unit)) return false;
   if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-  if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branch)) return false;
+  if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch))) return false;
 
   const positions = (item.positions || []).filter((position) => {
-    if (branch && position.branchCode !== branch) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     return true;
   });
@@ -1278,7 +1278,7 @@ function draftPositions(item, excludedFilterId) {
   const branch = excludedFilterId === "branchFilter" ? "" : ui.branchFilter.value;
   const location = excludedFilterId === "locationFilter" ? "" : ui.locationFilter.value;
   return (item.positions || []).filter((position) => {
-    if (branch && position.branchCode !== branch) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     return true;
   });
@@ -1336,7 +1336,7 @@ function applyFilters(renderCatalog = true) {
     if (item.flags.inactiveOnly) return false;
     if (query && !item.searchText.includes(query)) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
-      if (branch && position.branchCode !== branch) return false;
+      if (!positionMatchesBranch(position, branch)) return false;
       if (location && position.locationKey !== location) return false;
       return true;
     });
@@ -1346,7 +1346,7 @@ function applyFilters(renderCatalog = true) {
     if (category && !(item.categories || []).includes(category)) return false;
     if (unit && !(item.units || []).includes(unit)) return false;
     if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-    if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branch)) return false;
+    if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch))) return false;
     if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
   });
@@ -1402,6 +1402,7 @@ function procurementRecordStatus(record) {
   const sc = record?.sc;
   const of = record?.of;
   if (!sc?.code || !isActiveScForPurchaseCoverage(sc)) return "";
+  if (of?.code && isClosedOf(of)) return "";
   const outstanding = Boolean(of?.code && (of.balance > 0 || (of.requestedQuantity > 0 && of.deliveredQuantity < of.requestedQuantity)));
   const dueDate = of?.code ? of.deliveryDate : sc.deliveryDate;
   if ((!of?.code || outstanding) && isOverdue(dueDate)) return "overdue";
@@ -1420,7 +1421,7 @@ function itemMatchesProcurementStatus(item, status, branch = "") {
 }
 
 function itemNeedsLocationAdjustment(item, branch = "", location = "") {
-  const positions = (item.positions || []).filter((position) => !branch || position.branchCode === branch);
+  const positions = (item.positions || []).filter((position) => positionMatchesBranch(position, branch));
   for (const balancePosition of positions) {
     if (!(balancePosition.quantity > 0)) continue;
     for (const limitsPosition of positions) {
@@ -1438,7 +1439,7 @@ function currentScopedPositions(item, includeStatus = true) {
   const location = ui.locationFilter.value;
   const status = includeStatus ? ui.stockStatusFilter.value : "";
   return (item.positions || []).filter((position) => {
-    if (branch && position.branchCode !== branch) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     if (status && status !== "adjust-location" && !positionMatchesStatus(position, status)) return false;
     return true;
@@ -1454,7 +1455,7 @@ function strictOpenOfRecords() {
   for (const item of state.filteredItems) {
     for (const record of item.history || []) {
       const of = record.of;
-      if (!of?.code || !(of.balance > 0)) continue;
+      if (!isOpenOfForPurchase(of)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && normalizeSearch(of.supplier) !== normalizeSearch(supplier)) continue;
@@ -1548,8 +1549,8 @@ function renderDashboardCharts() {
   const branchData = new Map();
   for (const item of state.filteredItems) {
     for (const position of currentScopedPositions(item)) {
-      if (!branchData.has(position.branchCode)) branchData.set(position.branchCode, { label: [position.branchCode, position.branchName].filter(Boolean).join(" · "), codes: new Set(), value: 0 });
-      const entry = branchData.get(position.branchCode);
+      if (!branchData.has(position.branchKey)) branchData.set(position.branchKey, { label: [position.branchCode, position.branchName].filter(Boolean).join(" · "), codes: new Set(), value: 0 });
+      const entry = branchData.get(position.branchKey);
       entry.codes.add(item.code);
       entry.value += position.stockValue || 0;
     }
@@ -1679,7 +1680,7 @@ function getItemPurchaseCommitments(item) {
   const requests = new Map();
   for (const record of item.history || []) {
     const branchCode = record.branchCode || "";
-    if (record.of?.code && record.of.balance > 0) {
+    if (isOpenOfForPurchase(record.of)) {
       const existing = orders.get(record.of.code);
       if (!existing || record.of.balance > existing.quantity) {
         orders.set(record.of.code, { code: record.of.code, branchCode, quantity: record.of.balance });
@@ -1721,6 +1722,27 @@ function isActiveScForPurchaseCoverage(sc) {
   if (["s", "sim", "1", "true"].includes(normalizeSearch(sc.cancelled))) return false;
   const status = normalizeSearch(sc.status);
   return !/(cancelad|reprovad|exclu[ií]d|encerrad)/.test(status);
+}
+
+function isClosedOf(of) {
+  if (!of) return false;
+  const status = normalizeSearch(of.status);
+  const closedFlag = normalizeSearch(of.closed);
+  return /(fechad|encerrad|closed)/.test(status) || ["s", "sim", "1", "true"].includes(closedFlag);
+}
+
+function isOpenOfForPurchase(of) {
+  return Boolean(of?.code && of.balance > 0 && !isClosedOf(of));
+}
+
+function branchCodeFromFilter(value) {
+  return String(value || "").split("::branch::")[0];
+}
+
+function positionMatchesBranch(position, selectedBranch) {
+  if (!selectedBranch) return true;
+  if (String(selectedBranch).includes("::branch::")) return position.branchKey === selectedBranch;
+  return position.branchCode === selectedBranch;
 }
 
 function allocatePurchaseCoverage(pool, grossSuggested) {
@@ -1810,12 +1832,12 @@ function collectPendingScRows() {
     if (supplier && !(item.suppliers || []).includes(supplier)) continue;
     if (stockStatus || positiveOnly || ui.locationFilter.value) {
       const positions = (item.positions || []).filter((position) => {
-        if (branch && position.branchCode !== branch) return false;
+        if (!positionMatchesBranch(position, ui.branchFilter.value || branch)) return false;
         if (ui.locationFilter.value && position.locationKey !== ui.locationFilter.value) return false;
         return true;
       });
       if (!positions.length) continue;
-      if (stockStatus === "adjust-location" && !itemNeedsLocationAdjustment(item, branch, ui.locationFilter.value)) continue;
+      if (stockStatus === "adjust-location" && !itemNeedsLocationAdjustment(item, ui.branchFilter.value || branch, ui.locationFilter.value)) continue;
       if (stockStatus && stockStatus !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, stockStatus))) continue;
       if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) continue;
     }
@@ -1840,7 +1862,7 @@ function renderPurchaseNeeds() {
   const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
   const visible = state.purchaseNeeds.filter(({ item, position }) => {
     if (!filteredCodes.has(item.code)) return false;
-    if (branch && position.branchCode !== branch) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
     return true;
@@ -1990,7 +2012,7 @@ function getVisiblePurchaseNeeds() {
   const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
   return state.purchaseNeeds.filter(({ item, position }) => {
     if (!filteredCodes.has(item.code)) return false;
-    if (branch && position.branchCode !== branch) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
     return true;
@@ -2398,8 +2420,8 @@ function buildProcurementRows() {
   const received = new Set();
   for (const { record } of rows) {
     if (record.sc?.code && !record.of?.code) awaiting.add(record.sc.code);
-    if (record.of?.code && record.of.balance > 0) open.add(record.of.code);
-    if (record.of?.code && record.of.requestedQuantity > 0 && record.of.deliveredQuantity > 0 && record.of.deliveredQuantity < record.of.requestedQuantity) partial.add(record.of.code);
+    if (isOpenOfForPurchase(record.of)) open.add(record.of.code);
+    if (isOpenOfForPurchase(record.of) && record.of.requestedQuantity > 0 && record.of.deliveredQuantity > 0 && record.of.deliveredQuantity < record.of.requestedQuantity) partial.add(record.of.code);
     if (record.rec?.invoice) received.add(`${record.rec.invoice}::${record.rec.series || ""}`);
   }
   ui.procurementAwaiting.textContent = integerFormatter.format(awaiting.size);
@@ -2419,7 +2441,7 @@ function recordMatchesQuery(item, record, query) {
 }
 
 function effectiveBranchFilter() {
-  return ui.branchFilter.value || String(ui.locationFilter.value || "").split("::")[0] || "";
+  return branchCodeFromFilter(ui.branchFilter.value) || String(ui.locationFilter.value || "").split("::")[0] || "";
 }
 
 function itemMatchesTransactionFilters(item) {
@@ -2434,7 +2456,7 @@ function itemMatchesTransactionFilters(item) {
   const location = ui.locationFilter.value;
   if (status || positiveOnly || location) {
     const positions = (item.positions || []).filter((position) => {
-      if (ui.branchFilter.value && position.branchCode !== ui.branchFilter.value) return false;
+      if (!positionMatchesBranch(position, ui.branchFilter.value)) return false;
       if (location && position.locationKey !== location) return false;
       return true;
     });
@@ -2512,7 +2534,7 @@ function openProcurementModal(key) {
     ]),
     renderProcessGroup("OF", "Ordem de Fornecimento", of, [
       ["Código", of?.code], ["Situação", of?.status], ["Data de emissão", formatDate(of?.date)], ["Data de entrega", formatDate(of?.deliveryDate)],
-      ["Tempo entre SC e OF", durationLabel(sc?.date, of?.date)], ["Entrega vencida", of ? (isOverdue(of.deliveryDate) && of.balance > 0 ? "Sim" : "Não") : "Não informado"],
+      ["Tempo entre SC e OF", durationLabel(sc?.date, of?.date)], ["Entrega vencida", of ? (isOverdue(of.deliveryDate) && isOpenOfForPurchase(of) ? "Sim" : "Não") : "Não informado"],
       ["Empresa de entrega", of?.deliveryCompany], ["Filial de entrega", [of?.deliveryBranchCode, of?.deliveryBranchName].filter(Boolean).join(" · ")], ["UF", of?.state],
       ["Empresa de pagamento", of?.paymentCompany], ["Filial de pagamento", [of?.paymentBranchCode, of?.paymentBranchName].filter(Boolean).join(" · ")],
       ["Código do fornecedor", of?.supplierCode], ["Fornecedor", of?.supplier], ["E-mail do fornecedor", of?.supplierEmail], ["Código do produto", of?.productCode], ["Produto", of?.productName], ["Unidade", of?.unit],
@@ -2551,7 +2573,7 @@ function renderConsumptionReview() {
   const location = ui.locationFilter.value;
   const visible = state.minMaxReviews.filter((review) => {
     if (!visibleCodes.has(review.item.code)) return false;
-    if (branch && review.position.branchCode !== branch) return false;
+    if (!positionMatchesBranch(review.position, branch)) return false;
     if (location && review.position.locationKey !== location) return false;
     return true;
   });
@@ -3518,6 +3540,7 @@ function inventoryWorker() {
           unconfigured: limitsSumZero && quantity > 0,
           negative: quantity < 0,
         };
+        position.branchKey = `${position.branchCode}::branch::${position.branchName}`;
         position.locationKey = `${position.branchCode}::${position.localCode}`;
 
         item.positions.push(position);
@@ -3783,10 +3806,14 @@ function inventoryWorker() {
   }
 
   function resolveStockBranchName(branchCode, localCode, partition, originalName) {
+    const normalizedBranch = clean(branchCode);
+    const normalizedLocal = clean(localCode);
     const normalizedPartition = clean(partition).toUpperCase();
     const preparedPartitions = new Set(["AP", "99", "SS"]);
     const isSingleLetter = /^[A-Z]$/.test(normalizedPartition);
-    if (clean(branchCode) === "704" && clean(localCode) === "299" && (preparedPartitions.has(normalizedPartition) || isSingleLetter)) {
+    const isPreparedLocal = normalizedLocal === "101" || (/^\d+$/.test(normalizedLocal) && Number(normalizedLocal) > 599);
+    const isPreparedPartition = normalizedLocal === "299" && (preparedPartitions.has(normalizedPartition) || isSingleLetter);
+    if (normalizedBranch === "704" && (isPreparedLocal || isPreparedPartition)) {
       return "ROLANDIA - ALM. PREPARADOS";
     }
     return originalName;
@@ -3940,5 +3967,4 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups };
-}
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments };
