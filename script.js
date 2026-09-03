@@ -13,7 +13,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark V";
+const APP_VERSION = "Mark VI";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -114,7 +114,7 @@ function cacheUi() {
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
     "dashboardPriorityList", "dashboardExcessList", "procurementFunnel", "searchInput",
-    "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter", "scStatusFilter",
+    "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter", "ccuClassificationFilter", "itemCodeFilter", "scStatusFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
     "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
@@ -160,6 +160,8 @@ function bindEvents() {
     ui.categoryFilter,
     ui.unitFilter,
     ui.supplierFilter,
+    ui.ccuClassificationFilter,
+    ui.itemCodeFilter,
     ui.stockStatusFilter,
     ui.scStatusFilter,
   ]) {
@@ -367,6 +369,15 @@ const PT_EN = Object.freeze({
   "Todas as unidades": "All units",
   "Fornecedor": "Supplier",
   "Todos os fornecedores": "All suppliers",
+  "Classificação da compra": "Purchase classification",
+  "Todas as classificações": "All classifications",
+  "Entrada no almoxarifado · CCU 1500": "Warehouse receipt · CCU 1500",
+  "Direto para a área · CCU diferente de 1500": "Direct to department · CCU other than 1500",
+  "Compra direta de item com saldo no almoxarifado": "Direct purchase of an item already in warehouse stock",
+  "Código do item em compra direta": "Item code in direct purchase",
+  "Todos os códigos": "All item codes",
+  "Saldo em OF aberta · CCU 1500": "Open PO balance · CCU 1500",
+  "SC sem OF · CCU 1500": "PR without PO · CCU 1500",
   "Situação do estoque": "Inventory status",
   "Todas as situações": "All statuses",
   "Itens zerados (Min + Máx > 0)": "Out-of-stock items (Min. + Max. > 0)",
@@ -952,7 +963,7 @@ function updateFilterSummary() {
   if (query) labels.push(["searchInput", `Busca: ${query}`]);
   if (ui.branchFilter.value) labels.push(["branchFilter", ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`]);
   if (ui.locationFilter.value) labels.push(["locationFilter", ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"]);
-  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
+  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.ccuClassificationFilter, ui.itemCodeFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
     if (select.value) labels.push([select.id, select.selectedOptions[0]?.textContent || select.value]);
   }
   if (ui.positiveBalanceFilter.checked) labels.push(["positiveBalanceFilter", "Somente saldo positivo"]);
@@ -1130,12 +1141,16 @@ function populateFilters() {
   const categories = new Set();
   const units = new Set();
   const suppliers = new Set();
+  const directPurchaseItems = new Map();
 
   for (const item of state.items) {
     if (item.flags.inactiveOnly) continue;
     for (const category of item.categories || []) if (category) categories.add(category);
     for (const unit of item.units || []) if (unit) units.add(unit);
     for (const supplier of item.suppliers || []) if (supplier) suppliers.add(supplier);
+    if (itemHasWarehouseStock(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
+      directPurchaseItems.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
+    }
 
     for (const position of item.positions || []) {
       if (position.branchCode) {
@@ -1157,6 +1172,7 @@ function populateFilters() {
   fillSelect(ui.categoryFilter, [...categories].map((value) => [value, value]), "Todas as categorias");
   fillSelect(ui.unitFilter, [...units].map((value) => [value, value]), "Todas as unidades");
   fillSelect(ui.supplierFilter, [...suppliers].map((value) => [value, value]), "Todos os fornecedores");
+  fillSelect(ui.itemCodeFilter, [...directPurchaseItems], "Todos os códigos");
 }
 
 function updateLocationFilter(select, branchKey) {
@@ -1252,6 +1268,8 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   const category = excludedFilterId === "categoryFilter" ? "" : ui.categoryFilter.value;
   const unit = excludedFilterId === "unitFilter" ? "" : ui.unitFilter.value;
   const supplier = excludedFilterId === "supplierFilter" ? "" : ui.supplierFilter.value;
+  const ccuClassification = ui.ccuClassificationFilter.value;
+  const itemCode = ui.itemCodeFilter.value;
   const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
   const scStatus = excludedFilterId === "scStatusFilter" ? "" : ui.scStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
@@ -1259,6 +1277,8 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   if (item.flags.inactiveOnly) return false;
 
   if (query && !item.searchText.includes(query)) return false;
+  if (itemCode && item.code !== itemCode) return false;
+  if (ccuClassification && !itemMatchesCcuClassification(item, ccuClassification)) return false;
   if (category && !(item.categories || []).includes(category)) return false;
   if (unit && !(item.units || []).includes(unit)) return false;
   if (supplier && !(item.suppliers || []).includes(supplier)) return false;
@@ -1315,6 +1335,8 @@ function clearFilters() {
   ui.categoryFilter.value = "";
   ui.unitFilter.value = "";
   ui.supplierFilter.value = "";
+  ui.ccuClassificationFilter.value = "";
+  ui.itemCodeFilter.value = "";
   ui.stockStatusFilter.value = "";
   ui.scStatusFilter.value = "";
   ui.positiveBalanceFilter.checked = false;
@@ -1330,6 +1352,8 @@ function applyFilters(renderCatalog = true) {
   const category = ui.categoryFilter.value;
   const unit = ui.unitFilter.value;
   const supplier = ui.supplierFilter.value;
+  const ccuClassification = ui.ccuClassificationFilter.value;
+  const itemCode = ui.itemCodeFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
   const scStatus = ui.scStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
@@ -1337,6 +1361,8 @@ function applyFilters(renderCatalog = true) {
   state.filteredItems = state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
     if (query && !item.searchText.includes(query)) return false;
+    if (itemCode && item.code !== itemCode) return false;
+    if (ccuClassification && !itemMatchesCcuClassification(item, ccuClassification)) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
       if (!positionMatchesBranch(position, branch)) return false;
       if (location && position.locationKey !== location) return false;
@@ -1458,6 +1484,7 @@ function strictOpenOfRecords() {
     for (const record of item.history || []) {
       const of = record.of;
       if (!isOpenOfForPurchase(of)) continue;
+      if (!recordMatchesCcuClassification(record, item, ui.ccuClassificationFilter.value)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && normalizeSearch(of.supplier) !== normalizeSearch(supplier)) continue;
@@ -1681,6 +1708,7 @@ function getItemPurchaseCommitments(item) {
   const orders = new Map();
   const requests = new Map();
   for (const record of item.history || []) {
+    if (!isWarehouseSc(record.sc)) continue;
     const branchCode = record.branchCode || "";
     if (isOpenOfForPurchase(record.of)) {
       const existing = orders.get(record.of.code);
@@ -1724,6 +1752,32 @@ function isActiveScForPurchaseCoverage(sc) {
   if (["s", "sim", "1", "true"].includes(normalizeSearch(sc.cancelled))) return false;
   const status = normalizeSearch(sc.status);
   return !/(cancelad|reprovad|exclu[ií]d|encerrad)/.test(status);
+}
+
+function isWarehouseSc(sc) {
+  return /^0*1500(?:[.,]0+)?$/.test(String(sc?.allocationCostCenter || "").trim());
+}
+
+function itemHasWarehouseStock(item) {
+  return (item.positions || []).some((position) => position.quantity > 0);
+}
+
+function recordMatchesCcuClassification(record, item, classification) {
+  if (!classification) return true;
+  if (!record?.sc?.code) return false;
+  if (classification === "warehouse") return isWarehouseSc(record.sc);
+  const direct = !isWarehouseSc(record.sc);
+  if (classification === "direct") return direct;
+  if (classification === "direct-with-stock") return direct && itemHasWarehouseStock(item);
+  return true;
+}
+
+function itemMatchesCcuClassification(item, classification) {
+  return (item.history || []).some((record) => recordMatchesCcuClassification(record, item, classification));
+}
+
+function purchaseClassificationLabel(sc) {
+  return isWarehouseSc(sc) ? "Entrada no almoxarifado · CCU 1500" : "Direto para a área · CCU diferente de 1500";
 }
 
 function isClosedOf(of) {
@@ -1826,8 +1880,12 @@ function collectPendingScRows() {
   const supplier = ui.supplierFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
   const scStatus = ui.scStatusFilter.value;
+  const ccuClassification = ui.ccuClassificationFilter.value;
+  const itemCode = ui.itemCodeFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
   for (const item of state.items) {
+    if (itemCode && item.code !== itemCode) continue;
+    if (ccuClassification && !itemMatchesCcuClassification(item, ccuClassification)) continue;
     if (query && !item.searchText.includes(query)) continue;
     if (category && !(item.categories || []).includes(category)) continue;
     if (unit && !(item.units || []).includes(unit)) continue;
@@ -1847,6 +1905,7 @@ function collectPendingScRows() {
     for (const record of item.history || []) {
       const sc = record.sc;
       if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
+      if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
@@ -1933,8 +1992,8 @@ function openPurchaseNeedModal(key) {
     <article><span>Máximo</span><strong>${formatOptionalNumber(position.maximum)}</strong></article>
     <article><span>Meta</span><strong>${numberFormatter.format(target)}</strong></article>
     <article><span>Necessidade bruta</span><strong>${numberFormatter.format(suggested)}</strong></article>
-    <article><span>Saldo em OF aberta</span><strong>${numberFormatter.format(openOfBalance)}</strong></article>
-    <article><span>Quantidade em SC sem OF</span><strong>${numberFormatter.format(pendingScQuantity)}</strong></article>
+    <article><span>Saldo em OF aberta · CCU 1500</span><strong>${numberFormatter.format(openOfBalance)}</strong></article>
+    <article><span>SC sem OF · CCU 1500</span><strong>${numberFormatter.format(pendingScQuantity)}</strong></article>
     <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
     <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
     <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
@@ -1952,7 +2011,7 @@ function openPurchaseNeedModal(key) {
     <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
     <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
     <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
-    <div><dt>Observação</dt><dd>${coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)}. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF para descontar desta necessidade."}</dd></div>
+    <div><dt>Observação</dt><dd>${coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
     <div><dt>Critério da sugestão</dt><dd>${position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
 
   if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
@@ -1991,6 +2050,8 @@ function openPendingScModal(key) {
     <div><dt>Empresa</dt><dd>${escapeHtml(sc.company || "—")}</dd></div>
     <div><dt>Usuário solicitante</dt><dd>${escapeHtml(sc.requesterName || "—")}</dd></div>
     <div><dt>Centro de custo aprovador</dt><dd>${escapeHtml(sc.costCenter || "—")}</dd></div>
+    <div><dt>CCU da etiqueta</dt><dd>${escapeHtml(sc.allocationCostCenter || "—")}</dd></div>
+    <div><dt>Classificação da compra</dt><dd>${escapeHtml(purchaseClassificationLabel(sc))}</dd></div>
     <div><dt>Local de estoque</dt><dd>${escapeHtml(sc.stockLocation || "—")}</dd></div>
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
     <div><dt>Descrição detalhada</dt><dd>${escapeHtml(item.detailedName || item.name)}</dd></div>
@@ -2034,7 +2095,7 @@ function exportPurchaseNeeds(format = "excel") {
   exportReport(format, {
     title: "Necessidade de Compra",
     filename: "necessidade-de-compra.xls",
-    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta", "Quantidade coberta por SC sem OF", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta · CCU 1500", "Quantidade coberta por SC sem OF · CCU 1500", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
     rows,
     numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 27, 28, 29]),
     currencyColumns: new Set([24, 25, 28, 29]),
@@ -2045,12 +2106,12 @@ function exportPendingSc(format = "excel") {
   const rows = state.pendingScRows.map(({ item, record, sc }) => [
     sc.code, sc.status, sc.requesterName, sc.cancelled, sc.date, sc.deliveryDate, ageDays(sc.date), isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
     sc.category, sc.reason, item.code, item.name, item.detailedName, (item.categories || []).join(" | "),
-    (item.units || []).join(" | "), record.branch, (item.suppliers || []).join(" | "), "", "Não gerada",
+    (item.units || []).join(" | "), record.branch, sc.allocationCostCenter, purchaseClassificationLabel(sc), (item.suppliers || []).join(" | "), "", "Não gerada",
   ]);
   exportReport(format, {
     title: "SC pendente de OF",
     filename: "sc-pendente-de-of.xls",
-    headers: ["SC", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
+    headers: ["SC", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "SC - CCU Etq", "Classificação da compra", "Fornecedores relacionados", "Código OF", "Situação OF"],
     rows,
     numericColumns: new Set([6, 8, 9]),
     currencyColumns: new Set([9]),
@@ -2063,7 +2124,7 @@ function exportProcurement(format = "excel") {
     const { sc, of, rec } = record;
     return [
       item.code, item.name, item.detailedName, record.branchCode, record.branch,
-      sc?.code, sc?.status, sc?.date, sc?.deliveryDate, sc?.quantity, sc?.estimatedValue, sc?.category, sc?.reason, sc?.cancelled, sc?.company, sc?.requesterName, sc?.costCenter, sc?.stockLocation,
+      sc?.code, sc?.status, sc?.date, sc?.deliveryDate, sc?.quantity, sc?.estimatedValue, sc?.category, sc?.reason, sc?.cancelled, sc?.company, sc?.requesterName, sc?.costCenter, sc?.stockLocation, sc?.allocationCostCenter, sc?.code ? purchaseClassificationLabel(sc) : "",
       of?.code, of?.status, of?.date, of?.deliveryDate, of?.supplierCode, of?.supplier, of?.supplierEmail, of?.requestedQuantity, of?.deliveredQuantity, of?.balance, of?.unitValue, of?.currency, of?.paymentTerms, of?.paymentMethod, of?.freight, of?.icms, of?.ipi, of?.closed, of?.blocked, of?.type, of?.carrier,
       rec?.invoice, rec?.series, rec?.issueDate, rec?.entryDate, rec?.supplierCode, rec?.supplier, rec?.quantity, rec?.unitValue, rec?.documentValue, rec?.currency, rec?.paymentTerms, rec?.paymentMethod, rec?.freight, rec?.icms, rec?.ipi,
     ];
@@ -2073,14 +2134,14 @@ function exportProcurement(format = "excel") {
     filename: "consulta-sc-of-recebimentos.xls",
     headers: [
       "Código do item", "Descrição", "Descrição detalhada", "Código filial", "Filial",
-      "SC - Código", "SC - Situação", "SC - Data de criação", "SC - Data de entrega", "SC - Quantidade", "SC - Valor estimado", "SC - Categoria", "SC - Motivo", "SC - Cancelada", "SC - Empresa", "SC - Usuário solicitante", "SC - Centro de custo", "SC - Local de estoque",
+      "SC - Código", "SC - Situação", "SC - Data de criação", "SC - Data de entrega", "SC - Quantidade", "SC - Valor estimado", "SC - Categoria", "SC - Motivo", "SC - Cancelada", "SC - Empresa", "SC - Usuário solicitante", "SC - Centro de custo", "SC - Local de estoque", "SC - CCU Etq", "Classificação da compra",
       "OF - Código", "OF - Situação", "OF - Data", "OF - Data de entrega", "OF - Código fornecedor", "OF - Fornecedor", "OF - E-mail do fornecedor", "OF - Quantidade solicitada", "OF - Quantidade entregue", "OF - Saldo", "OF - Valor unitário", "OF - Moeda", "OF - Condição de pagamento", "OF - Forma de pagamento", "OF - Frete", "OF - ICMS", "OF - IPI", "OF - Fechada", "OF - Bloqueada", "OF - Tipo", "OF - Transportador",
       "REC - Nota fiscal", "REC - Série", "REC - Data de emissão", "REC - Data de entrada", "REC - Código fornecedor", "REC - Fornecedor", "REC - Quantidade", "REC - Valor unitário", "REC - Valor do documento", "REC - Moeda", "REC - Condição de pagamento", "REC - Forma de pagamento", "REC - Frete", "REC - ICMS", "REC - IPI",
     ],
     rows,
-    numericColumns: new Set([9, 10, 25, 26, 27, 28, 32, 33, 34, 45, 46, 47, 51, 52, 53]),
-    currencyColumns: new Set([10, 28, 46, 47]),
-    dateColumns: new Set([7, 8, 20, 21, 41, 42]),
+    numericColumns: new Set([9, 10, 27, 28, 29, 30, 34, 35, 36, 47, 48, 49, 53, 54, 55]),
+    currencyColumns: new Set([10, 30, 48, 49]),
+    dateColumns: new Set([7, 8, 22, 23, 43, 44]),
   });
 }
 
@@ -2398,10 +2459,12 @@ function buildProcurementRows() {
   const supplier = ui.supplierFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
   const scStatus = ui.scStatusFilter.value;
+  const ccuClassification = ui.ccuClassificationFilter.value;
   const rows = [];
   for (const item of state.items.filter(itemMatchesTransactionFilters)) {
     for (const record of item.history || []) {
       if (!record.sc?.code && !record.of?.code) continue;
+      if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
@@ -2436,7 +2499,7 @@ function buildProcurementRows() {
 function recordMatchesQuery(item, record, query) {
   return normalizeSearch([
     item.code, item.name, item.detailedName,
-    record.sc?.code, record.sc?.status, record.sc?.requesterName,
+    record.sc?.code, record.sc?.status, record.sc?.requesterName, record.sc?.allocationCostCenter,
     record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
     record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
   ].join(" ")).includes(query);
@@ -2449,6 +2512,8 @@ function effectiveBranchFilter() {
 function itemMatchesTransactionFilters(item) {
   const query = normalizeSearch(ui.searchInput.value);
   if (query && !item.searchText.includes(query)) return false;
+  if (ui.itemCodeFilter.value && item.code !== ui.itemCodeFilter.value) return false;
+  if (ui.ccuClassificationFilter.value && !itemMatchesCcuClassification(item, ui.ccuClassificationFilter.value)) return false;
   if (ui.categoryFilter.value && !(item.categories || []).includes(ui.categoryFilter.value)) return false;
   if (ui.unitFilter.value && !(item.units || []).includes(ui.unitFilter.value)) return false;
   if (ui.supplierFilter.value && !(item.suppliers || []).includes(ui.supplierFilter.value)) return false;
@@ -2486,6 +2551,7 @@ function renderNextProcurementBatch() {
     const process = processStatus(record);
     card.innerHTML = `<span class="report-card__top"><span class="status-pill ${process.type}">${escapeHtml(process.label)}</span><span>${escapeHtml(record.branch || "—")}</span></span>
       <strong class="report-card__title">${escapeHtml(item.name)}</strong><span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+      <span class="report-card__code">${escapeHtml(sc?.code ? purchaseClassificationLabel(sc) : "Classificação não informada")}</span>
       <span class="process-mini"><span class="${sc ? "is-complete" : ""}">SC<strong>${escapeHtml(sc?.code || "—")}</strong></span><i></i><span class="${of ? "is-complete" : ""}">OF<strong>${escapeHtml(of?.code || "—")}</strong></span><i></i><span class="${rec ? "is-complete" : ""}">REC<strong>${escapeHtml(rec?.invoice || "—")}</strong></span></span>
       <span class="procurement-people"><span><small>Solicitante</small><strong>${escapeHtml(sc?.requesterName || "Não informado")}</strong></span><span><small>Fornecedor</small><strong>${escapeHtml((of?.supplier || rec?.supplier) || "Não informado")}</strong></span><span><small>E-mail</small><strong>${escapeHtml(of?.supplierEmail || "Não informado")}</strong></span></span>
       <span class="report-card__footer"><span>${escapeHtml(record.branch || "Filial não informada")}</span><strong>${escapeHtml(process.detail)}</strong></span>`;
@@ -2531,7 +2597,7 @@ function openProcurementModal(key) {
       ["Código do produto", sc?.productCode], ["Produto", sc?.productName], ["Descrição do material", sc?.materialDescription], ["Unidade", sc?.unit],
       ["Quantidade", formatProcessNumber(sc?.quantity)], ["Valor estimado", formatProcessCurrency(sc?.estimatedValue)], ["Categoria", sc?.category], ["Motivo", sc?.reason],
       ["Regularização", sc?.regularization], ["Observação", sc?.observation], ["Empresa destino", sc?.destinationCompany], ["Filial destino", sc?.destinationBranch],
-      ["PI", sc?.investmentPlan], ["Cancelada", formatFlag(sc?.cancelled)], ["Local de estoque", sc?.stockLocation], ["CCU da etiqueta", sc?.allocationCostCenter],
+      ["PI", sc?.investmentPlan], ["Cancelada", formatFlag(sc?.cancelled)], ["Local de estoque", sc?.stockLocation], ["CCU da etiqueta", sc?.allocationCostCenter], ["Classificação da compra", sc?.code ? purchaseClassificationLabel(sc) : "Não informado"],
       ["Conta", sc?.account], ["Percentual de rateio", sc?.allocationPercent], ["Imobilizado", formatFlag(sc?.asset)],
     ]),
     renderProcessGroup("OF", "Ordem de Fornecimento", of, [
@@ -2925,6 +2991,7 @@ function modalScopedHistory(item) {
   const scStatus = ui.scStatusFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
   return (item.history || []).filter((record) => {
+    if (!recordMatchesCcuClassification(record, item, ui.ccuClassificationFilter.value)) return false;
     if (branch && record.branchCode !== branch) return false;
     if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === supplier)) return false;
     if (scStatus && procurementRecordStatus(record) !== scStatus) return false;
@@ -3781,7 +3848,7 @@ function inventoryWorker() {
         if (response.ok) {
           const entries = await response.json();
           monthlyFiles = (Array.isArray(entries) ? entries : [])
-            .filter((entry) => entry?.type === "file" && /^01 - Compras_Almox_[A-Za-zÀ-ÿ]{3,9}_\d{4}\.csv$/i.test(entry.name || "") && entry.download_url)
+            .filter((entry) => entry?.type === "file" && /^01 - Compras_Almox_[A-Za-zÀ-ÿ]{3,9}_\d{4}(?:_[A-Za-z0-9-]+)?\.csv$/i.test(entry.name || "") && entry.download_url)
             .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" }));
         }
       } catch {
@@ -3997,5 +4064,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, recordMatchesCcuClassification };
 }
