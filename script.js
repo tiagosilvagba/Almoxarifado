@@ -12,8 +12,10 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
+const APP_VERSION = "Mark I";
+
 const THEME_IDS = new Set([
-  "aurora", "polar", "rubi", "industrial", "graphite", "operations",
+  "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
   "logistics", "corporate", "ocean", "neutral", "contrast",
 ]);
 
@@ -24,9 +26,9 @@ let languageObserver = null;
 if (typeof document !== "undefined") {
   try {
     const savedTheme = localStorage.getItem("almoxarifado-theme");
-    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "aurora";
+    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "theme-t";
   } catch {
-    document.documentElement.dataset.theme = "aurora";
+    document.documentElement.dataset.theme = "theme-t";
   }
 }
 
@@ -103,7 +105,7 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage",
+    "statusLine", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
@@ -118,7 +120,7 @@ function cacheUi() {
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
     "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount",
-    "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "exportPendingScButton", "exportProcurementButton",
+    "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "purchaseNeedExportFormat", "exportPendingScButton", "pendingScExportFormat", "exportProcurementButton", "procurementExportFormat",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
     "purchaseModalDetails", "purchaseModalOpenItem", "purchaseModalOperational", "pendingScModal", "pendingScModalClose",
@@ -129,7 +131,7 @@ function cacheUi() {
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "procurementModalOperational", "photoInput", "photoUploadButton", "photoUploadStatus",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
-    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton",
+    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
     "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem", "modalOperationalInsights",
   ];
@@ -202,10 +204,10 @@ function bindEvents() {
   });
   ui.purchaseNeedLoadMore.addEventListener("click", renderNextPurchaseNeedBatch);
   ui.pendingScLoadMore.addEventListener("click", renderNextPendingScBatch);
-  ui.exportPurchaseNeedButton.addEventListener("click", exportPurchaseNeeds);
-  ui.exportPendingScButton.addEventListener("click", exportPendingSc);
-  ui.exportProcurementButton.addEventListener("click", exportProcurement);
-  ui.exportMinMaxReviewButton.addEventListener("click", exportMinMaxReviews);
+  ui.exportPurchaseNeedButton.addEventListener("click", () => exportPurchaseNeeds(ui.purchaseNeedExportFormat.value));
+  ui.exportPendingScButton.addEventListener("click", () => exportPendingSc(ui.pendingScExportFormat.value));
+  ui.exportProcurementButton.addEventListener("click", () => exportProcurement(ui.procurementExportFormat.value));
+  ui.exportMinMaxReviewButton.addEventListener("click", () => exportMinMaxReviews(ui.minMaxExportFormat.value));
 
   ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
   ui.purchaseNeedModal.addEventListener("click", (event) => {
@@ -451,6 +453,8 @@ const PT_EN = Object.freeze({
   "Valor líquido estimado": "Estimated net value",
   "Sem máximo informado": "Without maximum",
   "Posições que precisam de reposição": "Positions requiring replenishment",
+  "Formato": "Format",
+  "Exportar": "Export",
   "Exportar Excel": "Export to Excel",
   "Carregar mais necessidades": "Load more requirements",
   "Compras pendentes": "Pending purchases",
@@ -785,13 +789,13 @@ function toggleDensity() {
 function initializeTheme() {
   const theme = THEME_IDS.has(document.documentElement.dataset.theme)
     ? document.documentElement.dataset.theme
-    : "aurora";
+    : "theme-t";
   ui.themeSelect.value = theme;
   applyTheme(theme, false);
 }
 
 function applyTheme(theme, persist) {
-  const selectedTheme = THEME_IDS.has(theme) ? theme : "aurora";
+  const selectedTheme = THEME_IDS.has(theme) ? theme : "theme-t";
   document.documentElement.dataset.theme = selectedTheme;
   const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--navy-800").trim();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor || "#123a63");
@@ -1931,7 +1935,7 @@ function getVisiblePurchaseNeeds() {
   });
 }
 
-function exportPurchaseNeeds() {
+function exportPurchaseNeeds(format = "excel") {
   const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture }) => [
     item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
     position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
@@ -1941,7 +1945,7 @@ function exportPurchaseNeeds() {
     position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
     position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
   ]);
-  exportExcelReport({
+  exportReport(format, {
     title: "Necessidade de Compra",
     filename: "necessidade-de-compra.xls",
     headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta", "Quantidade coberta por SC sem OF", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
@@ -1951,13 +1955,13 @@ function exportPurchaseNeeds() {
   });
 }
 
-function exportPendingSc() {
+function exportPendingSc(format = "excel") {
   const rows = state.pendingScRows.map(({ item, record, sc }) => [
     sc.code, sc.status, sc.requesterName, sc.cancelled, sc.date, sc.deliveryDate, ageDays(sc.date), isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
     sc.category, sc.reason, item.code, item.name, item.detailedName, (item.categories || []).join(" | "),
     (item.units || []).join(" | "), record.branch, (item.suppliers || []).join(" | "), "", "Não gerada",
   ]);
-  exportExcelReport({
+  exportReport(format, {
     title: "SC pendente de OF",
     filename: "sc-pendente-de-of.xls",
     headers: ["SC", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
@@ -1968,7 +1972,7 @@ function exportPendingSc() {
   });
 }
 
-function exportProcurement() {
+function exportProcurement(format = "excel") {
   const rows = state.procurementRows.map(({ item, record }) => {
     const { sc, of, rec } = record;
     return [
@@ -1978,7 +1982,7 @@ function exportProcurement() {
       rec?.invoice, rec?.series, rec?.issueDate, rec?.entryDate, rec?.supplierCode, rec?.supplier, rec?.quantity, rec?.unitValue, rec?.documentValue, rec?.currency, rec?.paymentTerms, rec?.paymentMethod, rec?.freight, rec?.icms, rec?.ipi,
     ];
   });
-  exportExcelReport({
+  exportReport(format, {
     title: "Consulta SC OF e Recebimentos",
     filename: "consulta-sc-of-recebimentos.xls",
     headers: [
@@ -1994,7 +1998,7 @@ function exportProcurement() {
   });
 }
 
-function exportMinMaxReviews() {
+function exportMinMaxReviews(format = "excel") {
   const rows = state.visibleMinMaxReviews.map((review) => {
     const { item, position } = review;
     const status = review.status === "ideal" ? "Parâmetros ideais"
@@ -2013,7 +2017,7 @@ function exportMinMaxReviews() {
       "Mínimo = consumo diário × lead time; Máximo = mínimo + 30 dias de consumo; tolerância de ±20%",
     ];
   });
-  exportExcelReport({
+  exportReport(format, {
     title: "Revisão de mín. e máx.",
     filename: "revisao-minimo-maximo.xls",
     headers: [
@@ -2027,24 +2031,38 @@ function exportMinMaxReviews() {
   });
 }
 
+function exportReport(format, config) {
+  if (format === "pdf") {
+    exportPdfReport({ ...config, filename: config.filename.replace(/\.xls$/i, ".pdf") });
+    return;
+  }
+  exportExcelReport(config);
+}
+
+function localizeReport({ title, headers, rows }) {
+  return {
+    title: translateUiText(title),
+    headers: headers.map((header) => translateUiText(header)),
+    rows: rows.map((row) => row.map((value) => typeof value === "string" ? translateUiText(value) : value)),
+  };
+}
+
 function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
-  title = translateUiText(title);
-  headers = headers.map((header) => translateUiText(header));
-  rows = rows.map((row) => row.map((value) => typeof value === "string" ? translateUiText(value) : value));
+  ({ title, headers, rows } = localizeReport({ title, headers, rows }));
   const styles = getComputedStyle(document.documentElement);
   const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
   const accentColor = cssColorToHex(styles.getPropertyValue("--blue-500"), "2086D2");
   const filterText = ui.filterSummary.textContent || "Todos os registros";
-  const cell = (value, index, header = false) => {
+  const cell = (value, index, header = false, alternate = false) => {
     if (header) return `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
     const date = dateColumns.has(index) ? excelDateValue(value) : "";
-    if (date) return `<Cell ss:StyleID="Date"><Data ss:Type="DateTime">${date}</Data></Cell>`;
-    const numeric = numericColumns.has(index) && value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
-    const style = currencyColumns.has(index) ? "Currency" : numeric ? "Number" : "Text";
+    if (date) return `<Cell ss:StyleID="Date${alternate ? "Even" : "Odd"}"><Data ss:Type="DateTime">${date}</Data></Cell>`;
+    const numeric = (numericColumns.has(index) || currencyColumns.has(index)) && value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    const style = `${currencyColumns.has(index) ? "Currency" : numeric ? "Number" : "Text"}${alternate ? "Even" : "Odd"}`;
     return `<Cell ss:StyleID="${style}"><Data ss:Type="${numeric ? "Number" : "String"}">${escapeXml(numeric ? Number(value) : value ?? "")}</Data></Cell>`;
   };
   const columns = headers.map((header) => `<Column ss:AutoFitWidth="0" ss:Width="${/descri|fornecedor|motivo|local/i.test(header) ? 190 : /data|situação|categoria|filial|critério/i.test(header) ? 120 : 88}"/>`).join("");
-  const dataRows = rows.map((row) => `<Row>${headers.map((_, index) => cell(row[index], index)).join("")}</Row>`).join("");
+  const dataRows = rows.map((row, rowIndex) => `<Row ss:AutoFitHeight="1" ss:Height="20">${headers.map((_, index) => cell(row[index], index, false, rowIndex % 2 === 1)).join("")}</Row>`).join("");
   const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>
   <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
     <Styles>
@@ -2052,18 +2070,34 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns = ne
       <Style ss:ID="Title"><Alignment ss:Vertical="Center"/><Font ss:FontName="Aptos Display" ss:Size="18" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#${headerColor}" ss:Pattern="Solid"/></Style>
       <Style ss:ID="Subtitle"><Font ss:FontName="Aptos" ss:Size="10" ss:Color="#445566"/><Interior ss:Color="#EAF1F6" ss:Pattern="Solid"/></Style>
       <Style ss:ID="Header"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Aptos" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#${accentColor}" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/></Borders></Style>
-      <Style ss:ID="Text"><Alignment ss:Vertical="Top" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
-      <Style ss:ID="Number"><Alignment ss:Horizontal="Right" ss:Vertical="Top"/><NumberFormat ss:Format="#,##0.00"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
-      <Style ss:ID="Currency"><Alignment ss:Horizontal="Right" ss:Vertical="Top"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
-      <Style ss:ID="Date"><Alignment ss:Horizontal="Center" ss:Vertical="Top"/><NumberFormat ss:Format="dd/mm/yyyy"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
+      <Style ss:ID="RowOdd"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#EDF2F6"/></Borders><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="RowEven" ss:Parent="RowOdd"><Interior ss:Color="#F3F7FA" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="TextOdd" ss:Parent="RowOdd"/><Style ss:ID="TextEven" ss:Parent="RowEven"/>
+      <Style ss:ID="NumberOdd" ss:Parent="RowOdd"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+      <Style ss:ID="NumberEven" ss:Parent="RowEven"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+      <Style ss:ID="CurrencyOdd" ss:Parent="RowOdd"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/></Style>
+      <Style ss:ID="CurrencyEven" ss:Parent="RowEven"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/></Style>
+      <Style ss:ID="DateOdd" ss:Parent="RowOdd"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="dd/mm/yyyy"/></Style>
+      <Style ss:ID="DateEven" ss:Parent="RowEven"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="dd/mm/yyyy"/></Style>
     </Styles>
     <Worksheet ss:Name="${escapeXml(title.slice(0, 31))}"><Table>${columns}
-      <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · ${escapeXml(translateUiText("Gestão de Almoxarifado"))}</Data></Cell></Row>
+      <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · ${escapeXml(translateUiText("Gestão de Almoxarifado"))} · ${APP_VERSION}</Data></Cell></Row>
       <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} ${activeLanguage === "en" ? "records" : "registros"} · ${activeLanguage === "en" ? "Exported on" : "Exportado em"} ${escapeXml(new Date().toLocaleString(activeLanguage === "en" ? "en-US" : "pt-BR"))}</Data></Cell></Row>
       <Row ss:Height="8"></Row><Row ss:Height="30">${headers.map((header, index) => cell(header, index, true)).join("")}</Row>${dataRows}
-    </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>4</SplitHorizontal><TopRowBottomPane>4</TopRowBottomPane><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet>
+    </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet>
   </Workbook>`;
   const blob = new Blob(["\ufeff", xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+  downloadBlob(blob, filename);
+}
+
+function exportPdfReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+  ({ title, headers, rows } = localizeReport({ title, headers, rows }));
+  const filterText = ui.filterSummary.textContent || (activeLanguage === "en" ? "All records" : "Todos os registros");
+  const blob = createPdfBlob({ title, headers, rows, filterText, numericColumns, currencyColumns, dateColumns });
+  downloadBlob(blob, filename);
+}
+
+function downloadBlob(blob, filename) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = filename;
@@ -2071,6 +2105,196 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns = ne
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function createPdfBlob({ title, headers, rows, filterText = "", numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+  const PAGE_WIDTH = 842;
+  const PAGE_HEIGHT = 595;
+  const MARGIN = 28;
+  const TABLE_WIDTH = PAGE_WIDTH - (MARGIN * 2);
+  const LINE_HEIGHT = 8;
+  const FOOTER_TOP = 25;
+  const pages = [];
+  const groups = buildPdfColumnGroups(headers);
+  const locale = activeLanguage === "en" ? "en-US" : "pt-BR";
+  const recordsLabel = activeLanguage === "en" ? "records" : "registros";
+  const exportedLabel = activeLanguage === "en" ? "Exported on" : "Exportado em";
+  const blockLabel = activeLanguage === "en" ? "Column block" : "Bloco de colunas";
+  const pageLabel = activeLanguage === "en" ? "Page" : "Página";
+  const exportedAt = new Date().toLocaleString(locale);
+
+  const numberValue = (value, index) => {
+    if (dateColumns.has(index)) return formatDate(value) || String(value ?? "");
+    const numeric = (numericColumns.has(index) || currencyColumns.has(index)) && value !== "" && value !== null && value !== undefined && Number.isFinite(Number(value));
+    if (!numeric) return String(value ?? "");
+    return currencyColumns.has(index)
+      ? Number(value).toLocaleString(locale, { style: "currency", currency: "BRL", maximumFractionDigits: 2 })
+      : Number(value).toLocaleString(locale, { maximumFractionDigits: 2 });
+  };
+
+  const addText = (commands, text, x, y, size = 7, bold = false, color = "0.08 0.14 0.22") => {
+    commands.push(`BT /${bold ? "F2" : "F1"} ${pdfNumber(size)} Tf ${color} rg 1 0 0 1 ${pdfNumber(x)} ${pdfNumber(y)} Tm (${pdfEscapeText(text)}) Tj ET`);
+  };
+  const fillRect = (commands, x, y, width, height, color) => commands.push(`q ${color} rg ${pdfNumber(x)} ${pdfNumber(y)} ${pdfNumber(width)} ${pdfNumber(height)} re f Q`);
+  const strokeRect = (commands, x, y, width, height, color = "0.82 0.87 0.91") => commands.push(`q ${color} RG 0.45 w ${pdfNumber(x)} ${pdfNumber(y)} ${pdfNumber(width)} ${pdfNumber(height)} re S Q`);
+
+  const startPage = (groupIndex, indices, widths) => {
+    const commands = [];
+    fillRect(commands, 0, PAGE_HEIGHT - 58, PAGE_WIDTH, 58, "0.015 0.035 0.065");
+    fillRect(commands, 0, PAGE_HEIGHT - 58, 8, 58, "0.05 0.75 0.95");
+    addText(commands, `${title} · ${APP_VERSION}`, MARGIN, PAGE_HEIGHT - 28, 15, true, "0.88 0.97 1");
+    const meta = `${filterText} · ${rows.length} ${recordsLabel} · ${exportedLabel} ${exportedAt}`;
+    addText(commands, clipPdfText(meta, 142), MARGIN, PAGE_HEIGHT - 44, 6.5, false, "0.62 0.78 0.88");
+    addText(commands, `${blockLabel} ${groupIndex + 1}/${groups.length}`, MARGIN, PAGE_HEIGHT - 76, 8.5, true, "0.04 0.32 0.5");
+    let x = MARGIN;
+    const headerTop = PAGE_HEIGHT - 84;
+    const headerHeight = 28;
+    indices.forEach((index, columnIndex) => {
+      const width = widths[columnIndex];
+      fillRect(commands, x, headerTop - headerHeight, width, headerHeight, columnIndex < 2 ? "0.035 0.16 0.27" : "0.02 0.38 0.58");
+      strokeRect(commands, x, headerTop - headerHeight, width, headerHeight, "0.25 0.63 0.76");
+      const headerLines = wrapPdfText(headers[index], width - 8, 6.4).slice(0, 3);
+      headerLines.forEach((line, lineIndex) => addText(commands, line, x + 4, headerTop - 10 - (lineIndex * 7), 6.4, true, "1 1 1"));
+      x += width;
+    });
+    const page = { commands, groupIndex };
+    pages.push(page);
+    return { page, y: headerTop - headerHeight, indices, widths };
+  };
+
+  groups.forEach((indices, groupIndex) => {
+    const widths = pdfColumnWidths(headers, rows, indices, TABLE_WIDTH);
+    let context = startPage(groupIndex, indices, widths);
+    rows.forEach((row, rowIndex) => {
+      const cellLines = indices.map((index, columnIndex) => wrapPdfText(numberValue(row[index], index), widths[columnIndex] - 8, 6.2));
+      const totalLines = Math.max(1, ...cellLines.map((lines) => lines.length));
+      let lineOffset = 0;
+      while (lineOffset < totalLines) {
+        let lineCapacity = Math.floor((context.y - FOOTER_TOP - 7) / LINE_HEIGHT);
+        if (lineCapacity < 1) {
+          context = startPage(groupIndex, indices, widths);
+          lineCapacity = Math.floor((context.y - FOOTER_TOP - 7) / LINE_HEIGHT);
+        }
+        const drawnLines = Math.min(totalLines - lineOffset, lineCapacity);
+        const rowHeight = Math.max(20, (drawnLines * LINE_HEIGHT) + 7);
+        const rowBottom = context.y - rowHeight;
+        const rowColor = rowIndex % 2 ? "0.94 0.965 0.98" : "1 1 1";
+        fillRect(context.page.commands, MARGIN, rowBottom, TABLE_WIDTH, rowHeight, rowColor);
+        let x = MARGIN;
+        indices.forEach((index, columnIndex) => {
+          const width = widths[columnIndex];
+          strokeRect(context.page.commands, x, rowBottom, width, rowHeight);
+          cellLines[columnIndex].slice(lineOffset, lineOffset + drawnLines).forEach((line, localLineIndex) => {
+            addText(context.page.commands, line, x + 4, context.y - 10 - (localLineIndex * LINE_HEIGHT), 6.2, false);
+          });
+          x += width;
+        });
+        context.y = rowBottom;
+        lineOffset += drawnLines;
+      }
+    });
+  });
+
+  pages.forEach((page, index) => {
+    fillRect(page.commands, 0, 0, PAGE_WIDTH, 20, "0.015 0.035 0.065");
+    addText(page.commands, `${APP_VERSION} · ${pageLabel} ${index + 1}/${pages.length}`, MARGIN, 7, 6.4, true, "0.62 0.88 0.96");
+    addText(page.commands, "Gestão de Almoxarifado", PAGE_WIDTH - 142, 7, 6.4, false, "0.62 0.78 0.88");
+  });
+
+  return assemblePdf(pages.map((page) => page.commands.join("\n")), PAGE_WIDTH, PAGE_HEIGHT);
+}
+
+function buildPdfColumnGroups(headers) {
+  if (headers.length <= 7) return [headers.map((_, index) => index)];
+  const identity = [0, 1].filter((index) => index < headers.length);
+  const remaining = headers.map((_, index) => index).filter((index) => !identity.includes(index));
+  const groups = [];
+  for (let index = 0; index < remaining.length; index += 4) groups.push([...identity, ...remaining.slice(index, index + 4)]);
+  return groups;
+}
+
+function pdfColumnWidths(headers, rows, indices, totalWidth) {
+  const weights = indices.map((index, columnIndex) => {
+    const sampleLength = rows.slice(0, 80).reduce((maximum, row) => Math.max(maximum, String(row[index] ?? "").length), headers[index].length);
+    if (columnIndex === 0) return 1.05;
+    if (columnIndex === 1) return 2.25;
+    if (/descri|fornecedor|motivo|critério|observ|consumo/i.test(headers[index])) return 1.8;
+    return Math.min(1.55, Math.max(0.8, sampleLength / 18));
+  });
+  const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
+  return weights.map((weight) => (weight / weightTotal) * totalWidth);
+}
+
+function wrapPdfText(value, width, fontSize) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return [""];
+  const maxCharacters = Math.max(4, Math.floor(width / (fontSize * 0.51)));
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const parts = word.length > maxCharacters ? word.match(new RegExp(`.{1,${maxCharacters}}`, "g")) : [word];
+    parts.forEach((part) => {
+      if (!current) current = part;
+      else if (`${current} ${part}`.length <= maxCharacters) current += ` ${part}`;
+      else { lines.push(current); current = part; }
+    });
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
+}
+
+function clipPdfText(value, maxCharacters) {
+  const text = String(value ?? "");
+  return text.length > maxCharacters ? `${text.slice(0, maxCharacters - 3)}...` : text;
+}
+
+function pdfNumber(value) {
+  return Number(value).toFixed(2).replace(/\.00$/, "");
+}
+
+function pdfEscapeText(value) {
+  return toWinAnsi(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[\r\n]/g, " ");
+}
+
+function toWinAnsi(value) {
+  const replacements = new Map([[0x20ac, 0x80], [0x201a, 0x82], [0x0192, 0x83], [0x201e, 0x84], [0x2026, 0x85], [0x2020, 0x86], [0x2021, 0x87], [0x2018, 0x91], [0x2019, 0x92], [0x201c, 0x93], [0x201d, 0x94], [0x2022, 0x95], [0x2013, 0x96], [0x2014, 0x97]]);
+  let result = "";
+  for (const character of String(value ?? "")) {
+    const code = character.codePointAt(0);
+    if (code <= 0xff) result += String.fromCharCode(code);
+    else if (replacements.has(code)) result += String.fromCharCode(replacements.get(code));
+    else if (code === 0x2192) result += "->";
+    else result += "?";
+  }
+  return result;
+}
+
+function assemblePdf(streams, width, height) {
+  const objects = [];
+  const pageIds = streams.map((_, index) => 5 + (index * 2));
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Count ${streams.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`;
+  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  streams.forEach((stream, index) => {
+    const pageId = pageIds[index];
+    const streamId = pageId + 1;
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${streamId} 0 R >>`;
+    objects[streamId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+  let binary = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  const offsets = [0];
+  for (let id = 1; id < objects.length; id += 1) {
+    offsets[id] = binary.length;
+    binary += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+  }
+  const xrefOffset = binary.length;
+  binary += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for (let id = 1; id < objects.length; id += 1) binary += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
+  binary += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0) & 0xff);
+  return new Blob([bytes], { type: "application/pdf" });
 }
 
 function cssColorToHex(color, fallback) {
@@ -3575,5 +3799,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups };
 }

@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=20260903-28">
-    <script src="script.js?v=20260903-28" defer></script>
+    <link rel="stylesheet" href="style.css?v=mark-i">
+    <script src="script.js?v=mark-i" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,13 +22,14 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p id="statusLine" aria-live="polite">Preparando catálogo…</p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="versionBadge" class="version-badge">Mark I</span></p>
           </div>
         </div>
         <div class="topbar__actions">
           <label class="theme-picker">
             <span>Tema</span>
             <select id="themeSelect" aria-label="Escolher tema visual">
+              <option value="theme-t">Theme T · Black Glass</option>
               <option value="aurora">Aurora UI · Mais moderno</option>
               <option value="polar">Azul Polar · Fluido</option>
               <option value="rubi">Rubi Dourado · Executivo</option>
@@ -272,10 +273,10 @@
               <h3>Posições que precisam de reposição</h3>
               <p id="purchaseNeedResultCount">0 posições</p>
             </div>
-            <button id="exportPurchaseNeedButton" class="button button--export" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>
-              Exportar Excel
-            </button>
+            <div class="export-control">
+              <label><span>Formato</span><select id="purchaseNeedExportFormat" aria-label="Formato da exportação de necessidades"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+              <button id="exportPurchaseNeedButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+            </div>
           </div>
           <div id="purchaseNeedTableWrap" class="report-card-grid" aria-live="polite"></div>
           <div class="load-more-wrap">
@@ -298,10 +299,10 @@
               <h3>Solicitações encontradas</h3>
               <p>Selecione um cartão para consultar todos os detalhes da solicitação.</p>
             </div>
-            <button id="exportPendingScButton" class="button button--export" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>
-              Exportar Excel
-            </button>
+            <div class="export-control">
+              <label><span>Formato</span><select id="pendingScExportFormat" aria-label="Formato da exportação de solicitações"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+              <button id="exportPendingScButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+            </div>
           </div>
           <div id="pendingScTableWrap" class="report-card-grid" aria-live="polite"></div>
           <div class="load-more-wrap">
@@ -317,7 +318,7 @@
               <h2 id="procurementTitle">Consulta de SC e OF</h2>
               <p class="section-description">Consulte solicitações, ordens de fornecimento e recebimentos vinculados aos itens filtrados.</p>
             </div>
-            <div class="heading-actions"><span id="procurementCount" class="context-label">0 processos</span><button id="exportProcurementButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar Excel</button></div>
+            <div class="heading-actions"><span id="procurementCount" class="context-label">0 processos</span><div class="export-control"><label><span>Formato</span><select id="procurementExportFormat" aria-label="Formato da exportação de processos"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="exportProcurementButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div>
           </div>
           <div class="need-summary process-summary" aria-label="Resumo dos processos de compra">
             <article><span>SC aguardando OF</span><strong id="procurementAwaiting">—</strong></article>
@@ -365,10 +366,10 @@
               </div>
               <div class="heading-actions">
                 <span id="reviewResultCount" class="context-label">—</span>
-                <button id="exportMinMaxReviewButton" class="button button--export" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>
-                  Exportar Excel
-                </button>
+                <div class="export-control">
+                  <label><span>Formato</span><select id="minMaxExportFormat" aria-label="Formato da exportação da revisão"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+                  <button id="exportMinMaxReviewButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+                </div>
               </div>
             </div>
             <div id="reviewCardsGrid" class="report-card-grid review-card-grid" aria-live="polite"></div>
