@@ -1360,3 +1360,141 @@ html[data-theme="theme-t"] .modal-tab.is-active { color:#dffbff; border-color:#4
   html[data-theme="theme-t"] .page-panel { border-radius:18px; }
   .version-badge { margin-left:5px; padding-inline:6px; }
 }
+
+/* Mark II — saldo por filial e camada de desempenho. */
+.branch-balance-section {
+  overflow: hidden;
+  border: 1px solid var(--steel-200);
+  border-radius: 12px;
+  background: var(--steel-50);
+}
+
+.branch-balance-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--steel-200);
+  background: linear-gradient(135deg,var(--steel-100),var(--surface));
+}
+
+.branch-balance-section > header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.branch-balance-section > header strong,
+.branch-balance-section > header small { display:block; }
+.branch-balance-section > header strong { color:var(--navy-900); font-size:.76rem; }
+.branch-balance-section > header small { margin-top:1px; color:var(--muted); font-size:.62rem; }
+
+.branch-balance-section__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color:#fff;
+  background:linear-gradient(145deg,var(--navy-700),var(--blue-500));
+  font-size:.78rem;
+  font-weight:900;
+}
+
+.branch-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(145px,1fr));
+  gap: 1px;
+  background: var(--steel-200);
+}
+
+.branch-balance-grid article {
+  min-width: 0;
+  padding: 9px 10px;
+  background: var(--surface);
+}
+
+.branch-balance-grid article > span,
+.branch-balance-grid article > strong,
+.branch-balance-grid article > small { display:block; }
+.branch-balance-grid article > span { overflow-wrap:anywhere; color:var(--muted); font-size:.64rem; font-weight:750; }
+.branch-balance-grid article > strong { margin-top:2px; color:var(--navy-900); font-size:1rem; line-height:1.1; }
+.branch-balance-grid article > small { margin-top:2px; color:var(--steel-500); font-size:.58rem; }
+.branch-balance-empty { grid-column:1/-1; margin:0; padding:12px; color:var(--muted); background:var(--surface); font-size:.7rem; }
+
+#itemModal .summary-cards--catalog-meta { grid-template-columns:repeat(3,minmax(0,1fr)); }
+
+/* Evita repintura em massa na troca de tema. */
+html.is-switching-theme *,
+html.is-switching-theme *::before,
+html.is-switching-theme *::after { transition:none !important; animation:none !important; }
+
+/* Os cartões fora da área visível deixam de consumir renderização do navegador. */
+.item-card,
+.report-card {
+  content-visibility: auto;
+  contain: layout paint style;
+  contain-intrinsic-size: auto 240px;
+}
+
+/* Transições ficam restritas aos elementos interativos, sem recalcular toda a página. */
+.metric,
+.analytics-card,
+.filter-panel,
+.global-filter-bar,
+.need-summary article,
+.item-modal { transition:none; }
+
+.item-card,
+.report-card { transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease; }
+
+/* O vidro permanece no cabeçalho e nos modais; listas usam superfícies equivalentes mais leves. */
+html[data-theme="aurora"] .metric,
+html[data-theme="aurora"] .analytics-card,
+html[data-theme="aurora"] .item-card,
+html[data-theme="aurora"] .report-card,
+html[data-theme="aurora"] .need-summary article,
+html[data-theme="ocean"] .metric,
+html[data-theme="ocean"] .analytics-card,
+html[data-theme="ocean"] .item-card,
+html[data-theme="ocean"] .report-card,
+html[data-theme="ocean"] .need-summary article,
+html[data-theme="theme-t"] .metric,
+html[data-theme="theme-t"] .analytics-card,
+html[data-theme="theme-t"] .item-card,
+html[data-theme="theme-t"] .report-card,
+html[data-theme="theme-t"] .need-summary article { backdrop-filter:none; -webkit-backdrop-filter:none; }
+
+html[data-theme="aurora"] .metric,
+html[data-theme="aurora"] .analytics-card,
+html[data-theme="aurora"] .item-card,
+html[data-theme="aurora"] .report-card,
+html[data-theme="aurora"] .need-summary article { background:rgba(255,255,255,.9); }
+
+html[data-theme="ocean"] .metric,
+html[data-theme="ocean"] .analytics-card,
+html[data-theme="ocean"] .item-card,
+html[data-theme="ocean"] .report-card,
+html[data-theme="ocean"] .need-summary article { background:rgba(248,254,255,.91); }
+
+html[data-theme="theme-t"] .metric,
+html[data-theme="theme-t"] .analytics-card,
+html[data-theme="theme-t"] .item-card,
+html[data-theme="theme-t"] .report-card,
+html[data-theme="theme-t"] .need-summary article { background:linear-gradient(150deg,#fff,#e5f0f6); }
+
+html[data-theme="theme-t"] .branch-balance-section { border-color:rgba(124,206,230,.34); background:#08131e; }
+html[data-theme="theme-t"] .branch-balance-section > header { border-color:rgba(124,206,230,.25); background:linear-gradient(135deg,#07121d,#102b3b); }
+html[data-theme="theme-t"] .branch-balance-section > header strong { color:#e9fbff; }
+html[data-theme="theme-t"] .branch-balance-section > header small { color:#9eb8c5; }
+html[data-theme="theme-t"] .branch-balance-grid { background:rgba(106,187,211,.24); }
+html[data-theme="theme-t"] .branch-balance-grid article { background:linear-gradient(150deg,#fafdff,#e7f1f6); }
+
+@media (max-width: 560px) {
+  #itemModal .summary-cards--catalog-meta { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .branch-balance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
