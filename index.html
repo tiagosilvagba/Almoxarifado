@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=mark-i">
-    <script src="script.js?v=mark-i" defer></script>
+    <link rel="stylesheet" href="style.css?v=mark-ii">
+    <script src="script.js?v=mark-ii" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="versionBadge" class="version-badge">Mark I</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="versionBadge" class="version-badge">Mark II</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -511,11 +511,14 @@
                 </div>
               </div>
               <div class="item-summary">
-                <div class="summary-cards">
-                  <article><span>Saldo total</span><strong id="modalBalance">—</strong></article>
-                  <article><span>Valor em estoque</span><strong id="modalStockValue">—</strong></article>
-                  <article><span>Posições</span><strong id="modalPositionCount">—</strong></article>
-                  <article><span>Registros de compras</span><strong id="modalHistoryCount">—</strong></article>
+                <section class="branch-balance-section" aria-labelledby="branchBalanceTitle">
+                  <header><div><span class="branch-balance-section__icon" aria-hidden="true">Σ</span><div><strong id="branchBalanceTitle">Saldo por filial</strong><small>Valores individuais conforme os filtros ativos</small></div></div></header>
+                  <div id="modalBranchBalances" class="branch-balance-grid"></div>
+                </section>
+                <div class="summary-cards summary-cards--catalog-meta">
+                  <article><span>Valor filtrado</span><strong id="modalStockValue">—</strong></article>
+                  <article><span>Posições exibidas</span><strong id="modalPositionCount">—</strong></article>
+                  <article><span>Registros exibidos</span><strong id="modalHistoryCount">—</strong></article>
                 </div>
                 <div id="modalOperationalInsights" class="operational-insights"></div>
                 <section id="modalAddressBlock" class="storage-address-block" aria-label="Endereço de armazenagem"></section>

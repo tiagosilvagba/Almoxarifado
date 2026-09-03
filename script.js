@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark I";
+const APP_VERSION = "Mark II";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -84,6 +84,9 @@ const state = {
   minMaxReviewVisible: 0,
   minMaxReviewByKey: new Map(),
   activeMinMaxReview: null,
+  filterRevision: 0,
+  pageRenderRevision: new Map(),
+  pageRenderToken: 0,
 };
 
 const ui = {};
@@ -115,7 +118,7 @@ function cacheUi() {
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
     "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
-    "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBalance",
+    "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBranchBalances",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
@@ -191,7 +194,7 @@ function bindEvents() {
   ui.retryButton.addEventListener("click", loadCatalog);
   ui.historyLoadMore.addEventListener("click", () => {
     state.historyVisible += CONFIG.historyBatch;
-    renderHistory(state.activeItem);
+    renderHistory(state.activeItem, modalScopedHistory(state.activeItem));
   });
 
   ui.purchaseNeedTableWrap.addEventListener("click", (event) => {
@@ -484,6 +487,18 @@ const PT_EN = Object.freeze({
   "Posições de estoque": "Stock positions",
   "SC, OF e REC": "PR, PO and REC",
   "Saldo total": "Total stock",
+  "Saldo por filial": "Stock by branch",
+  "Valores individuais conforme os filtros ativos": "Individual values based on active filters",
+  "Valor filtrado": "Filtered inventory value",
+  "Posições exibidas": "Displayed positions",
+  "Registros exibidos": "Displayed records",
+  "Saldo na filial": "Branch stock",
+  "Nenhuma posição corresponde aos filtros ativos.": "No position matches the active filters.",
+  "Nenhum registro de compra corresponde aos filtros ativos.": "No purchasing record matches the active filters.",
+  "Ver saldos acima": "See balances above",
+  "filiais exibidas": "branches displayed",
+  "Selecione uma filial": "Select a branch",
+  "A projeção é calculada individualmente por filial": "The projection is calculated individually by branch",
   "Valor em estoque": "Inventory value",
   "Posições": "Positions",
   "Registros de compras": "Purchasing records",
@@ -672,14 +687,14 @@ const EN_PT = Object.freeze(Object.fromEntries(Object.entries(PT_EN).map(([pt, e
 function initializeLanguage() {
   let language = "pt-BR";
   try { language = localStorage.getItem("almoxarifado-language") || language; } catch { /* usa português */ }
-  applyLanguage(LANGUAGE_IDS.has(language) ? language : "pt-BR", false);
   languageObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) for (const node of mutation.addedNodes) translateSubtree(node, activeLanguage);
   });
-  languageObserver.observe(document.body, { childList: true, subtree: true });
+  applyLanguage(LANGUAGE_IDS.has(language) ? language : "pt-BR", false);
 }
 
 function applyLanguage(language, persist) {
+  languageObserver?.disconnect();
   activeLanguage = LANGUAGE_IDS.has(language) ? language : "pt-BR";
   document.documentElement.lang = activeLanguage;
   document.documentElement.dataset.language = activeLanguage;
@@ -689,6 +704,7 @@ function applyLanguage(language, persist) {
   ui.languageToggle.setAttribute("aria-label", ui.languageToggle.title);
   translateSubtree(document.body, activeLanguage);
   document.title = `${translateUiText(pageTitle(pageFromHash()), activeLanguage)} · ${translateUiText("Gestão de Almoxarifado", activeLanguage)}`;
+  if (activeLanguage === "en") languageObserver?.observe(document.body, { childList: true, subtree: true });
   if (persist) try { localStorage.setItem("almoxarifado-language", activeLanguage); } catch { /* preferência válida apenas nesta sessão */ }
 }
 
@@ -741,6 +757,7 @@ function translateUiPattern(text, language) {
     [/^(\d[\d.,]*) de (\d[\d.,]*) processos$/i, "$1 of $2 processes"],
     [/^(\d[\d.,]*) itens?$/i, "$1 items"], [/^(\d[\d.,]*) posições?$/i, "$1 positions"],
     [/^(\d[\d.,]*) registros?$/i, "$1 records"], [/^(\d[\d.,]*) processos?$/i, "$1 processes"],
+    [/^(\d[\d.,]*) filiais exibidas$/i, "$1 branches displayed"], [/^Saldo na filial · (.+)$/i, "Branch stock · $1"],
     [/^(\d[\d.,]*) meses?$/i, "$1 months"],
     [/^(.+) pendente$/i, "$1 outstanding"], [/^SC (.+) sem Ordem de Fornecimento$/i, "PR $1 without Purchase Order"],
     [/^SC (.+) · aguardando OF$/i, "PR $1 · awaiting PO"], [/^OF (.+) · entrega parcial$/i, "PO $1 · partial delivery"],
@@ -757,6 +774,7 @@ function translateUiPattern(text, language) {
     [/^(\d[\d.,]*) of (\d[\d.,]*) processes$/i, "$1 de $2 processos"],
     [/^(\d[\d.,]*) items?$/i, "$1 itens"], [/^(\d[\d.,]*) positions?$/i, "$1 posições"],
     [/^(\d[\d.,]*) records?$/i, "$1 registros"], [/^(\d[\d.,]*) processes?$/i, "$1 processos"],
+    [/^(\d[\d.,]*) branches displayed$/i, "$1 filiais exibidas"], [/^Branch stock · (.+)$/i, "Saldo na filial · $1"],
     [/^(\d[\d.,]*) months?$/i, "$1 meses"],
     [/^(.+) outstanding$/i, "$1 pendente"], [/^PR (.+) without Purchase Order$/i, "SC $1 sem Ordem de Fornecimento"],
     [/^PR (.+) · awaiting PO$/i, "SC $1 · aguardando OF"], [/^PO (.+) · partial delivery$/i, "OF $1 · entrega parcial"],
@@ -796,9 +814,11 @@ function initializeTheme() {
 
 function applyTheme(theme, persist) {
   const selectedTheme = THEME_IDS.has(theme) ? theme : "theme-t";
+  document.documentElement.classList.add("is-switching-theme");
   document.documentElement.dataset.theme = selectedTheme;
   const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--navy-800").trim();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor || "#123a63");
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.documentElement.classList.remove("is-switching-theme")));
   if (!persist) return;
   try {
     localStorage.setItem("almoxarifado-theme", selectedTheme);
@@ -836,6 +856,7 @@ function navigateToPage(page, updateHash) {
   }
 
   document.title = `${translateUiText(pageTitle(validPage))} · ${translateUiText("Gestão de Almoxarifado")}`;
+  if (state.items.length && !ui.catalogContent.classList.contains("is-hidden")) scheduleFilteredPage(validPage);
 }
 
 function handlePageTabKeydown(event) {
@@ -876,15 +897,47 @@ function closeFilters() {
 }
 
 function applyAllFilters(shouldClose = false) {
-  applyFilters();
-  renderPendingScList();
-  renderPurchaseNeeds();
-  buildProcurementRows();
-  updateDashboardMetrics();
-  renderDashboardCharts();
-  renderConsumptionReview();
+  applyFilters(false);
+  state.filterRevision += 1;
+  scheduleFilteredPage(pageFromHash(), true);
   updateFilterSummary();
   if (shouldClose) closeFilters();
+}
+
+function renderFilteredPage(page, force = false) {
+  if (!state.items.length) return;
+  if (!force && state.pageRenderRevision.get(page) === state.filterRevision) return;
+  if (page === "dashboard") {
+    updateDashboardMetrics();
+    renderDashboardCharts();
+  } else if (page === "catalogo") {
+    renderCatalogResults();
+  } else if (page === "necessidade-compra") {
+    renderPurchaseNeeds();
+  } else if (page === "sc-pendente-of") {
+    renderPendingScList();
+  } else if (page === "consulta-sc-of") {
+    buildProcurementRows();
+  } else if (page === "revisao-min-max") {
+    renderConsumptionReview();
+  }
+  state.pageRenderRevision.set(page, state.filterRevision);
+}
+
+function scheduleFilteredPage(page, force = false) {
+  if (!state.items.length) return;
+  if (!force && state.pageRenderRevision.get(page) === state.filterRevision) return;
+  const token = ++state.pageRenderToken;
+  const panel = ui.pagePanels.find((entry) => entry.dataset.pagePanel === page);
+  panel?.setAttribute("aria-busy", "true");
+  window.requestAnimationFrame(() => {
+    if (token !== state.pageRenderToken || pageFromHash() !== page) {
+      panel?.removeAttribute("aria-busy");
+      return;
+    }
+    renderFilteredPage(page, force);
+    panel?.removeAttribute("aria-busy");
+  });
 }
 
 function handleAutomaticFilter(changedId) {
@@ -1268,7 +1321,7 @@ function clearFilters() {
   applyAllFilters(true);
 }
 
-function applyFilters() {
+function applyFilters(renderCatalog = true) {
   const query = normalizeSearch(ui.searchInput.value);
   const branch = ui.branchFilter.value;
   const location = ui.locationFilter.value;
@@ -1308,10 +1361,15 @@ function applyFilters() {
   });
 
   ui.resultCount.textContent = pluralize(state.filteredItems.length, "item", "itens");
+  if (!renderCatalog) return;
+  renderCatalogResults();
+}
 
+function renderCatalogResults() {
   state.renderedCount = 0;
   ui.cardsGrid.replaceChildren();
   renderNextBatch();
+  state.pageRenderRevision.set("catalogo", state.filterRevision);
 }
 
 function itemCriticality(item) {
@@ -1605,7 +1663,11 @@ function buildPurchaseNeeds() {
 }
 
 function latestPurchasePrice(item) {
-  for (const record of item.history || []) {
+  return latestPurchasePriceFromRecords(item.history || []);
+}
+
+function latestPurchasePriceFromRecords(records) {
+  for (const record of records || []) {
     const value = firstDefined(record.rec?.unitValue, record.of?.unitValue);
     if (value > 0) return value;
   }
@@ -2622,17 +2684,23 @@ function withinRecommendationRange(current, recommended) {
   return Math.abs(current - recommended) <= Math.max(1, recommended * 0.2);
 }
 
-function getOperationalInsight(item, branchCode = "", positionHint = null) {
+function getOperationalInsight(item, branchCode = "", positionHint = null, positionsOverride = null) {
   let reviews = state.minMaxReviews.filter((review) => review.item.code === item.code);
   if (branchCode) reviews = reviews.filter((review) => review.position.branchCode === branchCode);
+  if (positionsOverride) {
+    const locationKeys = new Set(positionsOverride.map((position) => position.locationKey));
+    reviews = reviews.filter((review) => locationKeys.has(review.position.locationKey));
+  }
   if (positionHint) {
     const exact = reviews.find((review) => review.position.locationKey === positionHint.locationKey);
     if (exact) reviews = [exact];
   }
-  let positions = positionHint ? [positionHint] : (item.positions || []).filter((position) => !branchCode || position.branchCode === branchCode);
+  let positions = positionsOverride || (positionHint ? [positionHint] : (item.positions || []).filter((position) => !branchCode || position.branchCode === branchCode));
   if (reviews.length) positions = reviews.map((review) => review.position);
   const averageMonthlyConsumption = reviews.reduce((sum, review) => sum + review.averageMonthlyConsumption, 0);
   const balance = positions.reduce((sum, position) => sum + (position.quantity || 0), 0);
+  const branchCount = new Set(positions.map((position) => position.branchCode || position.branchName).filter(Boolean)).size;
+  const requiresBranchSelection = Boolean(positionsOverride && !branchCode && branchCount > 1);
   const recommendedMinimum = reviews.length
     ? reviews.reduce((sum, review) => sum + (review.recommendedMinimum || 0), 0)
     : positions.reduce((sum, position) => sum + (position.minimum || 0), 0);
@@ -2654,11 +2722,17 @@ function getOperationalInsight(item, branchCode = "", positionHint = null) {
       nextPurchaseDetail = `Em aproximadamente ${pluralize(daysUntilReorder, "dia", "dias")}`;
     }
   }
+  if (requiresBranchSelection) {
+    nextPurchase = "Selecione uma filial";
+    nextPurchaseDetail = "A projeção é calculada individualmente por filial";
+  }
   return {
     leadTimeDays,
     leadTimeSource: realLeadTimes.length ? "histórico real" : leadTimes.length ? "referência estimada" : "sem histórico",
     averageMonthlyConsumption,
     balance,
+    branchCount,
+    requiresBranchSelection,
     nextPurchase,
     nextPurchaseDetail,
   };
@@ -2668,7 +2742,7 @@ function renderOperationalInsights(container, insight) {
   container.innerHTML = `
     <article><span>Lead time</span><strong>${insight.leadTimeDays == null ? "Não disponível" : `${integerFormatter.format(insight.leadTimeDays)} dias`}</strong><small>${escapeHtml(insight.leadTimeSource)}</small></article>
     <article><span>Consumo médio mensal</span><strong>${numberFormatter.format(insight.averageMonthlyConsumption)}</strong><small>média dos meses disponíveis</small></article>
-    <article><span>Saldo atual</span><strong>${numberFormatter.format(insight.balance)}</strong><small>posição considerada</small></article>
+    <article><span>Saldo atual</span><strong>${insight.requiresBranchSelection ? "Ver saldos acima" : numberFormatter.format(insight.balance)}</strong><small>${insight.requiresBranchSelection ? `${integerFormatter.format(insight.branchCount)} filiais exibidas` : "posição considerada"}</small></article>
     <article class="operational-insights__projection"><span>Próxima compra</span><strong>${escapeHtml(insight.nextPurchase)}</strong><small>${escapeHtml(insight.nextPurchaseDetail)}</small></article>`;
 }
 
@@ -2793,22 +2867,70 @@ function renderCard(item) {
   return card;
 }
 
-function statusBadges(item) {
+function statusBadges(item, scopedPositions = null, scopedHistory = null) {
   const badges = [];
-  if (item.flags.purchaseOnly) badges.push(["Sem posição de estoque", "neutral"]);
-  if (item.flags.negative) badges.push(["Saldo negativo", "danger"]);
-  if (item.flags.outOfStock) badges.push(["Fora de estoque", "neutral"]);
-  if (item.flags.belowMin) badges.push(["Abaixo do mínimo", "warning"]);
-  if (item.flags.aboveMax) badges.push(["Acima do máximo", "danger"]);
-  if (item.flags.unconfigured) badges.push(["Com saldo sem mín. e máx.", "info"]);
-  if (item.flags.locationAdjustment) badges.push(["Ajustar local de estoque", "warning"]);
-  if ((item.pendingScCodes || []).length) badges.push(["SC sem OF", "violet"]);
-  if (!badges.length && item.balanceTotal > 0) badges.push(["Saldo disponível", "success"]);
+  const positions = scopedPositions || item.positions || [];
+  const scoped = Array.isArray(scopedPositions);
+  const hasPosition = positions.length > 0;
+  if (!hasPosition && item.flags.purchaseOnly) badges.push(["Sem posição de estoque", "neutral"]);
+  if (positions.some((position) => position.quantity < 0)) badges.push(["Saldo negativo", "danger"]);
+  if (positions.some((position) => position.quantity === 0 && position.minimum + position.maximum > 0)) badges.push(["Fora de estoque", "neutral"]);
+  if (positions.some((position) => position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum)) badges.push(["Abaixo do mínimo", "warning"]);
+  if (positions.some((position) => position.maximum > 0 && position.quantity > position.maximum)) badges.push(["Acima do máximo", "danger"]);
+  if (positions.some((position) => position.quantity > 0 && position.minimum + position.maximum === 0)) badges.push(["Com saldo sem mín. e máx.", "info"]);
+  if ((!scoped && item.flags.locationAdjustment) || (scoped && itemNeedsLocationAdjustment(item, ui.branchFilter.value, ui.locationFilter.value))) badges.push(["Ajustar local de estoque", "warning"]);
+  const history = scopedHistory || item.history || [];
+  if (history.some((record) => record.sc?.code && !record.of?.code && isActiveScForPurchaseCoverage(record.sc))) badges.push(["SC sem OF", "violet"]);
+  if (!badges.length && positions.reduce((sum, position) => sum + (position.quantity || 0), 0) > 0) badges.push(["Saldo disponível", "success"]);
   return badges;
 }
 
 function badgeHtml([label, type]) {
   return `<span class="badge badge--${type}">${escapeHtml(label)}</span>`;
+}
+
+function modalScopedPositions(item) {
+  let positions = currentScopedPositions(item);
+  if (ui.positiveBalanceFilter.checked) positions = positions.filter((position) => position.quantity > 0);
+  return positions;
+}
+
+function modalScopedHistory(item) {
+  const branch = effectiveBranchFilter();
+  const supplier = normalizeSearch(ui.supplierFilter.value);
+  const scStatus = ui.scStatusFilter.value;
+  const query = normalizeSearch(ui.searchInput.value);
+  return (item.history || []).filter((record) => {
+    if (branch && record.branchCode !== branch) return false;
+    if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === supplier)) return false;
+    if (scStatus && procurementRecordStatus(record) !== scStatus) return false;
+    if (query && !recordMatchesQuery(item, record, query)) return false;
+    return true;
+  });
+}
+
+function renderBranchBalances(positions) {
+  const branches = new Map();
+  for (const position of positions) {
+    const key = position.branchCode || position.branchName || "Sem filial";
+    const branch = branches.get(key) || {
+      label: [position.branchCode, position.branchName].filter(Boolean).join(" · ") || "Filial não informada",
+      quantity: 0,
+      positions: 0,
+    };
+    branch.quantity += position.quantity || 0;
+    branch.positions += 1;
+    branches.set(key, branch);
+  }
+  if (!branches.size) {
+    ui.modalBranchBalances.innerHTML = `<p class="branch-balance-empty">Nenhuma posição corresponde aos filtros ativos.</p>`;
+    return;
+  }
+  ui.modalBranchBalances.innerHTML = [...branches.values()].map((branch) => `<article>
+    <span>${escapeHtml(branch.label)}</span>
+    <strong>${numberFormatter.format(branch.quantity)}</strong>
+    <small>Saldo na filial · ${pluralize(branch.positions, "posição", "posições")}</small>
+  </article>`).join("");
 }
 
 function openItem(code) {
@@ -2825,39 +2947,43 @@ function openItem(code) {
   ui.modalCode.textContent = `Código ${item.code}`;
   ui.modalTitle.textContent = item.name;
   ui.modalSubtitle.textContent = [primaryCategory(item), (item.units || []).join(", ")].filter(Boolean).join(" · ");
-  ui.modalBadges.innerHTML = statusBadges(item).map(badgeHtml).join("");
-  ui.modalBalance.textContent = numberFormatter.format(item.balanceTotal);
-  ui.modalStockValue.textContent = currencyFormatter.format(item.stockValueTotal);
-  ui.modalPositionCount.textContent = integerFormatter.format(item.positions.length);
-  ui.modalHistoryCount.textContent = integerFormatter.format(item.history.length);
-  renderOperationalInsights(ui.modalOperationalInsights, getOperationalInsight(item));
+  const positions = modalScopedPositions(item);
+  const history = modalScopedHistory(item);
+  ui.modalBadges.innerHTML = statusBadges(item, positions, history).map(badgeHtml).join("");
+  renderBranchBalances(positions);
+  ui.modalStockValue.textContent = currencyFormatter.format(positions.reduce((sum, position) => sum + (position.stockValue || 0), 0));
+  ui.modalPositionCount.textContent = integerFormatter.format(positions.length);
+  ui.modalHistoryCount.textContent = integerFormatter.format(history.length);
+  renderOperationalInsights(ui.modalOperationalInsights, getOperationalInsight(item, "", null, positions));
 
-  const lastPurchase = item.history.find((record) => record.rec?.entryDate || record.of?.date || record.sc?.date);
+  const lastPurchase = history.find((record) => record.rec?.entryDate || record.of?.date || record.sc?.date);
+  const scopedSuppliers = unique(history.flatMap((record) => [record.rec?.supplier, record.of?.supplier]).filter(Boolean));
+  const scopedPrice = latestPurchasePriceFromRecords(history);
   const details = [
     ["Descrição detalhada", item.detailedName || item.name],
     ["Categoria / grupo", (item.categories || []).join(" · ") || "Não informado"],
     ["Unidade", (item.units || []).join(", ") || "Não informada"],
-    ["Filiais", unique(item.positions.map((position) => position.branchName || position.branchCode)).join(" · ") || "Sem posição"],
-    ["Fornecedores", (item.suppliers || []).join(" · ") || "Sem fornecedor no histórico"],
+    ["Filiais", unique(positions.map((position) => position.branchName || position.branchCode)).join(" · ") || "Sem posição nos filtros"],
+    ["Fornecedores", scopedSuppliers.join(" · ") || "Sem fornecedor nos filtros"],
     ["Última movimentação de compra", formatDate(lastPurchase?.rec?.entryDate || lastPurchase?.of?.date || lastPurchase?.sc?.date)],
-    ["Último preço conhecido", latestPurchasePrice(item) > 0 ? currencyFormatter.format(latestPurchasePrice(item)) : "Não informado"],
+    ["Último preço conhecido", scopedPrice > 0 ? currencyFormatter.format(scopedPrice) : "Não informado"],
   ];
   ui.modalDetails.innerHTML = details.map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
-  renderStorageAddresses(item);
+  renderStorageAddresses(item, positions);
 
   renderGallery(item);
-  renderStock(item);
-  renderHistory(item);
+  renderStock(item, positions);
+  renderHistory(item, history);
   activateTab("summary");
 
   if (!ui.itemModal.open) ui.itemModal.showModal();
 }
 
-function renderStorageAddresses(item) {
-  const positions = item.positions || [];
+function renderStorageAddresses(item, scopedPositions = null) {
+  const positions = scopedPositions || item.positions || [];
   const heading = `<header><span class="storage-address-block__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M9 5v14M15 5v14"></path></svg></span><div><strong>Endereço de armazenagem</strong><small>Localização física do item</small></div></header>`;
   if (!positions.length) {
-    ui.modalAddressBlock.innerHTML = `${heading}<p class="storage-address-empty">Este item não possui posição de estoque cadastrada.</p>`;
+    ui.modalAddressBlock.innerHTML = `${heading}<p class="storage-address-empty">${scopedPositions ? "Nenhuma posição corresponde aos filtros ativos." : "Este item não possui posição de estoque cadastrada."}</p>`;
     return;
   }
   ui.modalAddressBlock.innerHTML = `${heading}<div class="storage-address-list">${positions.map((position) => `
@@ -3055,13 +3181,14 @@ async function loadLocalPhotoCache() {
   }
 }
 
-function renderStock(item) {
-  if (!item.positions.length) {
-    ui.stockTableWrap.innerHTML = `<div class="table-empty">Este item aparece no histórico de compras, mas não possui posição no arquivo de saldo.</div>`;
+function renderStock(item, scopedPositions = null) {
+  const positions = scopedPositions || item.positions || [];
+  if (!positions.length) {
+    ui.stockTableWrap.innerHTML = `<div class="table-empty">${scopedPositions ? "Nenhuma posição corresponde aos filtros ativos." : "Este item aparece no histórico de compras, mas não possui posição no arquivo de saldo."}</div>`;
     return;
   }
 
-  const rows = item.positions.map((position) => {
+  const rows = positions.map((position) => {
     const badges = [];
     if (position.negative) badges.push(["Negativo", "danger"]);
     if (position.outOfStock) badges.push(["Fora", "neutral"]);
@@ -3092,17 +3219,18 @@ function renderStock(item) {
   </table>`;
 }
 
-function renderHistory(item) {
-  const total = item.history.length;
+function renderHistory(item, scopedHistory = null) {
+  const history = scopedHistory || item.history || [];
+  const total = history.length;
   ui.historySummary.textContent = pluralize(total, "registro", "registros");
 
   if (!total) {
-    ui.historyTableWrap.innerHTML = `<div class="table-empty">Nenhuma solicitação, ordem ou nota foi localizada para este código.</div>`;
+    ui.historyTableWrap.innerHTML = `<div class="table-empty">${scopedHistory ? "Nenhum registro de compra corresponde aos filtros ativos." : "Nenhuma solicitação, ordem ou nota foi localizada para este código."}</div>`;
     ui.historyLoadMore.classList.add("is-hidden");
     return;
   }
 
-  const visible = item.history.slice(0, state.historyVisible);
+  const visible = history.slice(0, state.historyVisible);
   const rows = visible.map((record) => {
     const date = record.rec?.entryDate || record.rec?.issueDate || record.of?.date || record.sc?.date || "—";
     const supplier = record.rec?.supplier || record.of?.supplier || "—";
