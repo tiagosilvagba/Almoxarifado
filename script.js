@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XI";
+const APP_VERSION = "Mark XII";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -627,6 +627,31 @@ const PT_EN = Object.freeze({
   ,"Mínimo sugerido": "Recommended minimum"
   ,"Máximo sugerido": "Recommended maximum"
   ,"Meses analisados": "Months analyzed"
+  ,"Meses considerados": "Months included"
+  ,"Meses anômalos excluídos": "Outlier months excluded"
+  ,"Anomalia excluída": "Outlier excluded"
+  ,"Considerado na média": "Included in average"
+  ,"média dos meses considerados": "average of included months"
+  ,"Anomalias excluídas": "Excluded outliers"
+  ,"Impacto estimado no máximo": "Estimated maximum impact"
+  ,"Impacto no estoque máximo": "Maximum stock impact"
+  ,"Impacto financeiro estimado": "Estimated financial impact"
+  ,"Impacto no mínimo": "Minimum impact"
+  ,"Impacto no máximo": "Maximum impact"
+  ,"Origem do preço": "Price source"
+  ,"Último preço de compra": "Latest purchase price"
+  ,"Sem preço disponível": "No price available"
+  ,"Preço indisponível": "Price unavailable"
+  ,"Sem impacto financeiro": "No financial impact"
+  ,"Valor do mínimo atual": "Current minimum value"
+  ,"Valor do mínimo sugerido": "Recommended minimum value"
+  ,"Impacto do ajuste do mínimo": "Minimum adjustment impact"
+  ,"Valor do máximo atual": "Current maximum value"
+  ,"Valor do máximo sugerido": "Recommended maximum value"
+  ,"Impacto do ajuste do máximo": "Maximum adjustment impact"
+  ,"Consumo médio/mês": "Average monthly consumption"
+  ,"Custo unitário atual": "Current unit cost"
+  ,"Mínimo = consumo diário sem anomalias × lead time. Máximo = mínimo + 30 dias de consumo. Validação com tolerância de ±20%. Meses muito fora do padrão são excluídos por análise robusta da mediana.": "Minimum = anomaly-adjusted daily consumption × lead time. Maximum = minimum + 30 days of consumption. Validation uses a ±20% tolerance. Months far outside the pattern are excluded using robust median analysis."
   ,"Lead time em dias": "Lead time in days"
   ,"Origem do lead time": "Lead time source"
   ,"Amostras de lead time": "Lead time samples"
@@ -774,7 +799,9 @@ function translateUiPattern(text, language) {
     [/^(\d[\d.,]*) itens?$/i, "$1 items"], [/^(\d[\d.,]*) posições?$/i, "$1 positions"],
     [/^(\d[\d.,]*) registros?$/i, "$1 records"], [/^(\d[\d.,]*) processos?$/i, "$1 processes"],
     [/^(\d[\d.,]*) filiais exibidas$/i, "$1 branches displayed"], [/^Saldo na filial · (.+)$/i, "Branch stock · $1"],
-    [/^(\d[\d.,]*) meses?$/i, "$1 months"],
+    [/^(\d[\d.,]*) meses?$/i, "$1 months"], [/^(\d+)\/(\d+) meses considerados$/i, "$1/$2 months included"],
+    [/^(\d+) de (\d+) meses considerados$/i, "$1 of $2 months included"], [/^(\d+) anomalias? excluídas?$/i, "$1 outliers excluded"],
+    [/^Aumento de (.+)$/i, "Increase of $1"], [/^Redução de (.+)$/i, "Reduction of $1"],
     [/^(.+) pendente$/i, "$1 outstanding"], [/^SC (.+) sem Ordem de Fornecimento$/i, "PR $1 without Purchase Order"],
     [/^SC (.+) · aguardando OF$/i, "PR $1 · awaiting PO"], [/^OF (.+) · entrega parcial$/i, "PO $1 · partial delivery"],
     [/^OF (.+) · aguardando entrega$/i, "PO $1 · awaiting delivery"], [/^SC (.+) · atrasada$/i, "PR $1 · overdue"],
@@ -791,7 +818,9 @@ function translateUiPattern(text, language) {
     [/^(\d[\d.,]*) items?$/i, "$1 itens"], [/^(\d[\d.,]*) positions?$/i, "$1 posições"],
     [/^(\d[\d.,]*) records?$/i, "$1 registros"], [/^(\d[\d.,]*) processes?$/i, "$1 processos"],
     [/^(\d[\d.,]*) branches displayed$/i, "$1 filiais exibidas"], [/^Branch stock · (.+)$/i, "Saldo na filial · $1"],
-    [/^(\d[\d.,]*) months?$/i, "$1 meses"],
+    [/^(\d[\d.,]*) months?$/i, "$1 meses"], [/^(\d+)\/(\d+) months included$/i, "$1/$2 meses considerados"],
+    [/^(\d+) of (\d+) months included$/i, "$1 de $2 meses considerados"], [/^(\d+) outliers excluded$/i, "$1 anomalias excluídas"],
+    [/^Increase of (.+)$/i, "Aumento de $1"], [/^Reduction of (.+)$/i, "Redução de $1"],
     [/^(.+) outstanding$/i, "$1 pendente"], [/^PR (.+) without Purchase Order$/i, "SC $1 sem Ordem de Fornecimento"],
     [/^PR (.+) · awaiting PO$/i, "SC $1 · aguardando OF"], [/^PO (.+) · partial delivery$/i, "OF $1 · entrega parcial"],
     [/^PO (.+) · awaiting delivery$/i, "OF $1 · aguardando entrega"], [/^PR (.+) · overdue$/i, "SC $1 · atrasada"],
@@ -2249,18 +2278,26 @@ function exportMinMaxReviews(format = "excel") {
     const { item, position } = review;
     const status = review.status === "ideal" ? "Parâmetros ideais"
       : review.status === "adjust" ? "Ajuste recomendado" : "Histórico insuficiente";
-    const monthlyHistory = Object.entries(review.consumption.monthlyTotals || {})
-      .map(([month, value]) => `${month}: ${numberFormatter.format(value)}`)
+    const monthlyHistory = review.monthlyAnalysis
+      .map(({ month, value, isOutlier }) => `${month}: ${numberFormatter.format(value)}${isOutlier ? " (anomalia excluída)" : " (considerado)"}`)
+      .join(" | ");
+    const excludedMonths = review.monthlyAnalysis
+      .filter(({ isOutlier }) => isOutlier)
+      .map(({ month, value }) => `${month}: ${numberFormatter.format(value)}`)
       .join(" | ");
     return [
       item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
       position.branchCode, position.branchName, position.localCode, position.localName,
       position.partition, position.shelf, position.division, position.quantity,
-      review.currentMinimum, review.currentMaximum, review.averageMonthlyConsumption, review.monthCount,
+      review.currentMinimum, review.currentMaximum, review.averageMonthlyConsumption, review.monthCount, review.consideredMonthCount, review.outlierMonthCount,
       review.leadTimeDays, review.leadTimeSource === "real" ? "Histórico real" : "Referência estimada",
       review.leadSamples.length, review.leadSamples.join(" | "), review.recommendedMinimum, review.recommendedMaximum,
-      status, review.direction === "increase" ? "Elevar parâmetros" : "Reduzir parâmetros", monthlyHistory,
-      "Mínimo = consumo diário × lead time; Máximo = mínimo + 30 dias de consumo; tolerância de ±20%",
+      status, review.direction === "increase" ? "Elevar parâmetros" : "Reduzir parâmetros", review.referencePrice,
+      review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível",
+      review.currentMinimumValue, review.recommendedMinimumValue, review.minimumValueImpact,
+      review.currentMaximumValue, review.recommendedMaximumValue, review.maximumValueImpact,
+      monthlyHistory, excludedMonths,
+      "Mínimo = consumo diário sem anomalias × lead time; Máximo = mínimo + 30 dias de consumo; tolerância de ±20%. Anomalias identificadas pelo desvio absoluto mediano (MAD).",
     ];
   });
   exportReport(format, {
@@ -2269,11 +2306,13 @@ function exportMinMaxReviews(format = "excel") {
     headers: [
       "Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Código local", "Local de estoque",
       "Repartição", "Prateleira", "Divisão", "Saldo atual", "Mínimo atual", "Máximo atual", "Consumo médio mensal", "Meses analisados",
-      "Lead time em dias", "Origem do lead time", "Amostras de lead time", "Tempos encontrados", "Mínimo sugerido", "Máximo sugerido",
-      "Validação", "Alteração proposta", "Consumo por mês", "Critério de cálculo",
+      "Meses considerados", "Meses anômalos excluídos", "Lead time em dias", "Origem do lead time", "Amostras de lead time", "Tempos encontrados", "Mínimo sugerido", "Máximo sugerido",
+      "Validação", "Alteração proposta", "Preço de referência", "Origem do preço", "Valor do mínimo atual", "Valor do mínimo sugerido", "Impacto do ajuste do mínimo",
+      "Valor do máximo atual", "Valor do máximo sugerido", "Impacto do ajuste do máximo", "Consumo por mês", "Anomalias excluídas", "Critério de cálculo",
     ],
     rows,
-    numericColumns: new Set([12, 13, 14, 15, 16, 17, 19, 21, 22]),
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 21, 23, 24, 27, 29, 30, 31, 32, 33, 34]),
+    currencyColumns: new Set([27, 29, 30, 31, 32, 33, 34]),
   });
 }
 
@@ -2786,7 +2825,7 @@ function renderNextMinMaxReviewBatch() {
       : review.status === "insufficient" ? ["Histórico insuficiente", "neutral"]
         : ["Ajuste recomendado", review.direction === "increase" ? "warning" : "info"];
     return `<button class="report-card review-card review-card--${review.status}" type="button" data-review-key="${escapeHtml(review.key)}">
-      <span class="report-card__top"><span class="status-pill status-pill--${status[1]}">${status[0]}</span><span>${escapeHtml(review.monthCount ? `${review.monthCount} meses` : "Sem consumo")}</span></span>
+      <span class="report-card__top"><span class="status-pill status-pill--${status[1]}">${status[0]}</span><span>${escapeHtml(review.monthCount ? `${review.consideredMonthCount}/${review.monthCount} meses considerados` : "Sem consumo")}</span></span>
       <strong class="report-card__title">${escapeHtml(review.item.name)}</strong>
       <span class="report-card__code">Código ${escapeHtml(review.item.code)}</span>
       <span class="item-card__address">${escapeHtml(`Repartição ${review.position.partition || "—"} · Prateleira ${review.position.shelf || "—"} · Divisão ${review.position.division || "—"}`)}</span>
@@ -2795,6 +2834,7 @@ function renderNextMinMaxReviewBatch() {
         <span><small>Máx. atual</small><strong>${formatOptionalNumber(review.currentMaximum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMaximum)}</i></span>
       </span>
       <span class="report-card__meta"><span><small>Consumo médio/mês</small><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></span><span><small>Lead time</small><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></span></span>
+      <span class="review-card__impact review-card__impact--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}"><small>Impacto estimado no máximo</small><strong>${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</strong>${review.outlierMonthCount ? `<i>${pluralize(review.outlierMonthCount, "anomalia excluída", "anomalias excluídas")}</i>` : ""}</span>
       <span class="report-card__footer"><span>${escapeHtml([review.position.branchCode, review.position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>Ver análise</strong></span>
     </button>`;
   }).join("");
@@ -2813,28 +2853,42 @@ function buildMinMaxReviews() {
   for (const item of state.items) {
     if (item.flags.inactiveOnly || !item.positions.length) continue;
     const leadByBranch = calculateItemLeadTimes(item);
+    const purchasePrice = latestPurchasePrice(item);
     for (const position of item.positions) {
       const consumption = consumptionByPosition.get(`${item.code}::${position.branchCode}::${position.localCode}`);
       if (!consumption) continue;
-      const monthlyValues = Object.values(consumption.monthlyTotals || {}).map((value) => Math.max(Number(value) || 0, 0));
-      const monthCount = monthlyValues.length;
-      const averageMonthlyConsumption = monthCount ? monthlyValues.reduce((sum, value) => sum + value, 0) / monthCount : 0;
       const leadSamples = leadByBranch.get(position.branchCode) || leadByBranch.get("") || [];
       const leadTimeDays = leadSamples.length ? median(leadSamples) : 30;
-      const recommendedMinimum = Math.ceil(averageMonthlyConsumption / 30 * leadTimeDays);
-      const recommendedMaximum = Math.ceil(averageMonthlyConsumption / 30 * (leadTimeDays + 30));
       const currentMinimum = position.minimum ?? 0;
       const currentMaximum = position.maximum ?? 0;
-      const enoughHistory = monthCount >= 2 && leadSamples.length > 0 && averageMonthlyConsumption > 0;
+      const stockPrice = Number(position.unitCost) || 0;
+      const referencePrice = stockPrice > 0 ? stockPrice : purchasePrice;
+      const referencePriceSource = stockPrice > 0 ? "stock" : purchasePrice > 0 ? "purchase" : "unavailable";
+      const metrics = calculateMinMaxMetrics({
+        monthlyTotals: consumption.monthlyTotals,
+        leadTimeDays,
+        currentMinimum,
+        currentMaximum,
+        referencePrice,
+      });
+      const {
+        monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount, averageMonthlyConsumption,
+        recommendedMinimum, recommendedMaximum, currentMinimumValue, recommendedMinimumValue,
+        minimumValueImpact, currentMaximumValue, recommendedMaximumValue, maximumValueImpact,
+      } = metrics;
+      const enoughHistory = consideredMonthCount >= 2 && leadSamples.length > 0 && averageMonthlyConsumption > 0;
       const minIdeal = withinRecommendationRange(currentMinimum, recommendedMinimum);
       const maxIdeal = withinRecommendationRange(currentMaximum, recommendedMaximum);
       const status = !enoughHistory ? "insufficient" : minIdeal && maxIdeal ? "ideal" : "adjust";
       const currentTotal = currentMinimum + currentMaximum;
       const recommendedTotal = recommendedMinimum + recommendedMaximum;
       reviews.push({
-        item, position, consumption, monthCount, averageMonthlyConsumption, leadTimeDays,
+        item, position, consumption, monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount,
+        averageMonthlyConsumption, leadTimeDays,
         leadTimeSource: leadSamples.length ? "real" : "estimated", leadSamples,
         currentMinimum, currentMaximum, recommendedMinimum, recommendedMaximum, status,
+        referencePrice, referencePriceSource, currentMinimumValue, recommendedMinimumValue,
+        minimumValueImpact, currentMaximumValue, recommendedMaximumValue, maximumValueImpact,
         direction: recommendedTotal >= currentTotal ? "increase" : "reduce",
       });
     }
@@ -2851,6 +2905,67 @@ function buildMinMaxReviews() {
     review.key = `review-${index}`;
     state.minMaxReviewByKey.set(review.key, review);
   });
+}
+
+function calculateMinMaxMetrics({ monthlyTotals = {}, leadTimeDays = 30, currentMinimum = 0, currentMaximum = 0, referencePrice = 0 } = {}) {
+  const monthlyAnalysis = analyzeMonthlyConsumption(monthlyTotals);
+  const consideredValues = monthlyAnalysis.filter(({ isOutlier }) => !isOutlier).map(({ value }) => value);
+  const monthCount = monthlyAnalysis.length;
+  const consideredMonthCount = consideredValues.length;
+  const outlierMonthCount = monthCount - consideredMonthCount;
+  const averageMonthlyConsumption = consideredMonthCount
+    ? consideredValues.reduce((sum, value) => sum + value, 0) / consideredMonthCount
+    : 0;
+  const recommendedMinimum = Math.ceil(averageMonthlyConsumption / 30 * leadTimeDays);
+  const recommendedMaximum = Math.ceil(averageMonthlyConsumption / 30 * (leadTimeDays + 30));
+  const hasReferencePrice = Number(referencePrice) > 0;
+  const currentMinimumValue = hasReferencePrice ? currentMinimum * referencePrice : null;
+  const recommendedMinimumValue = hasReferencePrice ? recommendedMinimum * referencePrice : null;
+  const currentMaximumValue = hasReferencePrice ? currentMaximum * referencePrice : null;
+  const recommendedMaximumValue = hasReferencePrice ? recommendedMaximum * referencePrice : null;
+  return {
+    monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount, averageMonthlyConsumption,
+    recommendedMinimum, recommendedMaximum, currentMinimumValue, recommendedMinimumValue,
+    minimumValueImpact: hasReferencePrice ? recommendedMinimumValue - currentMinimumValue : null,
+    currentMaximumValue, recommendedMaximumValue,
+    maximumValueImpact: hasReferencePrice ? recommendedMaximumValue - currentMaximumValue : null,
+  };
+}
+
+function analyzeMonthlyConsumption(monthlyTotals = {}) {
+  const months = Object.entries(monthlyTotals || {}).map(([month, rawValue]) => ({
+    month,
+    value: Math.max(Number(rawValue) || 0, 0),
+    isOutlier: false,
+  }));
+  if (months.length < 3) return months;
+
+  const values = months.map(({ value }) => value);
+  const center = numericMedian(values);
+  const deviations = values.map((value) => Math.abs(value - center));
+  const mad = numericMedian(deviations);
+
+  for (const entry of months) {
+    if (mad > 0) {
+      const robustScore = Math.abs(entry.value - center) / (1.4826 * mad);
+      entry.isOutlier = robustScore > 3.5;
+    } else if (center > 0) {
+      entry.isOutlier = entry.value > center * 3 || entry.value < center / 3;
+    } else {
+      entry.isOutlier = entry.value > 0;
+    }
+  }
+
+  if (months.filter(({ isOutlier }) => !isOutlier).length < 2) {
+    months.forEach((entry) => { entry.isOutlier = false; });
+  }
+  return months;
+}
+
+function numericMedian(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
 function calculateItemLeadTimes(item) {
@@ -2940,7 +3055,7 @@ function getOperationalInsight(item, branchCode = "", positionHint = null, posit
 function renderOperationalInsights(container, insight) {
   container.innerHTML = `
     <article><span>Lead time</span><strong>${insight.leadTimeDays == null ? "Não disponível" : `${integerFormatter.format(insight.leadTimeDays)} dias`}</strong><small>${escapeHtml(insight.leadTimeSource)}</small></article>
-    <article><span>Consumo médio mensal</span><strong>${numberFormatter.format(insight.averageMonthlyConsumption)}</strong><small>média dos meses disponíveis</small></article>
+    <article><span>Consumo médio mensal</span><strong>${numberFormatter.format(insight.averageMonthlyConsumption)}</strong><small>média dos meses considerados</small></article>
     <article><span>Saldo atual</span><strong>${insight.requiresBranchSelection ? "Ver saldos acima" : numberFormatter.format(insight.balance)}</strong><small>${insight.requiresBranchSelection ? `${integerFormatter.format(insight.branchCount)} filiais exibidas` : "posição considerada"}</small></article>
     <article class="operational-insights__projection"><span>Próxima compra</span><strong>${escapeHtml(insight.nextPurchase)}</strong><small>${escapeHtml(insight.nextPurchaseDetail)}</small></article>`;
 }
@@ -2955,26 +3070,29 @@ function openMinMaxReviewModal(key) {
   ui.reviewModalTitle.textContent = item.name;
   ui.reviewModalSubtitle.textContent = [position.branchCode, position.branchName, position.localCode, position.localName].filter(Boolean).join(" · ");
   ui.reviewModalSummary.innerHTML = `
-    <article><span>Consumo médio/mês</span><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></article>
+    <article><span>Consumo médio/mês</span><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong><small>${review.consideredMonthCount} de ${review.monthCount} meses considerados</small></article>
     <article><span>Lead time utilizado</span><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></article>
     <article><span>Saldo atual</span><strong>${numberFormatter.format(position.quantity)}</strong></article>
     <article><span>Mínimo atual</span><strong>${formatOptionalNumber(review.currentMinimum)}</strong></article>
     <article><span>Máximo atual</span><strong>${formatOptionalNumber(review.currentMaximum)}</strong></article>
     <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong></article>
     <article><span>Máximo sugerido</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong></article>
-    <article><span>Próxima compra</span><strong>${escapeHtml(getOperationalInsight(item, position.branchCode, position).nextPurchase)}</strong></article>`;
+    <article><span>Próxima compra</span><strong>${escapeHtml(getOperationalInsight(item, position.branchCode, position).nextPurchase)}</strong></article>
+    <article><span>Preço de referência</span><strong>${review.referencePrice > 0 ? currencyFormatter.format(review.referencePrice) : "Não disponível"}</strong><small>${review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível"}</small></article>
+    <article class="review-impact-summary review-impact-summary--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}"><span>Impacto no estoque máximo</span><strong>${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</strong><small>${formatReferenceValue(review.currentMaximumValue, review.referencePrice)} → ${formatReferenceValue(review.recommendedMaximumValue, review.referencePrice)}</small></article>`;
   const message = review.status === "ideal"
     ? "Os parâmetros atuais estão dentro da faixa aceitável de ±20% da recomendação calculada."
     : review.status === "insufficient"
       ? "Não há histórico suficiente para uma validação conclusiva. A sugestão é indicativa e usa 30 dias quando não existe lead time real."
       : `${review.direction === "increase" ? "Elevar" : "Reduzir"} os parâmetros para aproximar a cobertura do consumo e do prazo real de reposição.`;
   ui.reviewModalRecommendation.className = `review-recommendation review-recommendation--${review.status}`;
-  ui.reviewModalRecommendation.innerHTML = `<span>${review.status === "ideal" ? "Parâmetro validado" : review.status === "adjust" ? "Alteração proposta" : "Análise indicativa"}</span><strong>${escapeHtml(message)}</strong><small>Mínimo = consumo diário × lead time. Máximo = mínimo + 30 dias de consumo. Validação com tolerância de ±20%.</small>`;
-  const months = Object.entries(review.consumption.monthlyTotals || {});
+  ui.reviewModalRecommendation.innerHTML = `<span>${review.status === "ideal" ? "Parâmetro validado" : review.status === "adjust" ? "Alteração proposta" : "Análise indicativa"}</span><strong>${escapeHtml(message)}</strong><small>Mínimo = consumo diário sem anomalias × lead time. Máximo = mínimo + 30 dias de consumo. Validação com tolerância de ±20%. Meses muito fora do padrão são excluídos por análise robusta da mediana.</small>`;
+  const months = review.monthlyAnalysis;
   ui.reviewModalDetails.innerHTML = `
-    <section><h3>Consumo mensal</h3><div class="monthly-consumption-list">${months.map(([month, value]) => `<span><small>${escapeHtml(month)}</small><strong>${numberFormatter.format(value)}</strong></span>`).join("")}</div></section>
+    <section><h3>Consumo mensal</h3><div class="monthly-consumption-list">${months.map(({ month, value, isOutlier }) => `<span class="${isOutlier ? "is-outlier" : "is-considered"}"><small>${escapeHtml(month)}</small><strong>${numberFormatter.format(value)}</strong><i>${isOutlier ? "Anomalia excluída" : "Considerado na média"}</i></span>`).join("")}</div></section>
     <section><h3>Base do lead time</h3><dl><div><dt>Origem</dt><dd>${review.leadTimeSource === "real" ? "Mediana entre criação da SC e entrada do recebimento" : "Padrão estimado de 30 dias"}</dd></div><div><dt>Amostras válidas</dt><dd>${integerFormatter.format(review.leadSamples.length)}</dd></div><div><dt>Tempos encontrados</dt><dd>${review.leadSamples.length ? review.leadSamples.map((value) => `${value} dias`).join(", ") : "Nenhum recebimento relacionado"}</dd></div></dl></section>
-    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "Não informada")}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div><div><dt>Divisão</dt><dd>${escapeHtml(position.division || "Não informada")}</dd></div><div><dt>Custo unitário</dt><dd>${currencyFormatter.format(position.unitCost || 0)}</dd></div></dl></section>`;
+    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "Não informada")}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div><div><dt>Divisão</dt><dd>${escapeHtml(position.division || "Não informada")}</dd></div><div><dt>Custo unitário</dt><dd>${currencyFormatter.format(position.unitCost || 0)}</dd></div></dl></section>
+    <section class="review-financial-impact"><h3>Impacto financeiro estimado</h3><dl><div><dt>Mínimo atual</dt><dd>${formatReferenceValue(review.currentMinimumValue, review.referencePrice)}</dd></div><div><dt>Mínimo sugerido</dt><dd>${formatReferenceValue(review.recommendedMinimumValue, review.referencePrice)}</dd></div><div><dt>Impacto no mínimo</dt><dd class="impact-value impact-value--${review.minimumValueImpact > 0 ? "increase" : review.minimumValueImpact < 0 ? "reduce" : "neutral"}">${escapeHtml(formatValueImpact(review.minimumValueImpact, review.referencePrice))}</dd></div><div><dt>Máximo atual</dt><dd>${formatReferenceValue(review.currentMaximumValue, review.referencePrice)}</dd></div><div><dt>Máximo sugerido</dt><dd>${formatReferenceValue(review.recommendedMaximumValue, review.referencePrice)}</dd></div><div><dt>Impacto no máximo</dt><dd class="impact-value impact-value--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}">${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</dd></div></dl></section>`;
   if (typeof ui.reviewModal.showModal === "function") ui.reviewModal.showModal(); else ui.reviewModal.setAttribute("open", "");
   ui.reviewModalClose.focus();
 }
@@ -3513,6 +3631,17 @@ function firstDefined(...values) {
 
 function formatOptionalNumber(value) {
   return value == null ? "—" : numberFormatter.format(value);
+}
+
+function formatValueImpact(value, referencePrice) {
+  if (!(Number(referencePrice) > 0)) return "Preço indisponível";
+  const impact = Number(value) || 0;
+  if (Math.abs(impact) < 0.005) return "Sem impacto financeiro";
+  return `${impact > 0 ? "Aumento" : "Redução"} de ${currencyFormatter.format(Math.abs(impact))}`;
+}
+
+function formatReferenceValue(value, referencePrice) {
+  return Number(referencePrice) > 0 ? currencyFormatter.format(Number(value) || 0) : "Não disponível";
 }
 
 function formatDate(value, fallback = "—") {
@@ -4202,5 +4331,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics };
 }
