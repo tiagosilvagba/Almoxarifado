@@ -2,7 +2,8 @@
 
 const CONFIG = Object.freeze({
   saldoFile: "00 - Saldo_Online.csv",
-  comprasFile: "01 - Compras_Almox.csv",
+  comprasFallbackFile: "01 - Compras_Almox.csv",
+  comprasApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents?ref=main",
   consumoFile: "03 - Consumo.csv",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
@@ -12,7 +13,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark IV";
+const APP_VERSION = "Mark V";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -987,7 +988,8 @@ async function loadCatalog() {
 
     worker.postMessage({
       saldoUrl: new URL(CONFIG.saldoFile, document.baseURI).href,
-      comprasUrl: new URL(CONFIG.comprasFile, document.baseURI).href,
+      comprasApiUrl: CONFIG.comprasApi,
+      comprasFallbackUrl: new URL(CONFIG.comprasFallbackFile, document.baseURI).href,
       consumoUrl: new URL(CONFIG.consumoFile, document.baseURI).href,
     });
   } catch (error) {
@@ -3469,11 +3471,11 @@ function inventoryWorker() {
 
   self.onmessage = async (event) => {
     try {
-      const { saldoUrl, comprasUrl, consumoUrl } = event.data;
+      const { saldoUrl, comprasApiUrl, comprasFallbackUrl, consumoUrl } = event.data;
       progress("Baixando os arquivos de saldo e compras…");
-      const [saldoText, comprasText, consumoText] = await Promise.all([
+      const [saldoText, comprasSources, consumoText] = await Promise.all([
         fetchText(saldoUrl, "Saldo_Online"),
-        fetchText(comprasUrl, "Compras_Almox"),
+        fetchMonthlyPurchases(comprasApiUrl, comprasFallbackUrl),
         fetchOptionalText(consumoUrl),
       ]);
 
@@ -3555,8 +3557,8 @@ function inventoryWorker() {
         if (saldoRows % 8000 === 0) progress(`Consolidando saldo: ${saldoRows.toLocaleString("pt-BR")} registros…`);
       });
 
-      progress("Relacionando solicitações, ordens e recebimentos…");
-      parseCsv(comprasText, (headers, row) => {
+      progress(`Relacionando solicitações, ordens e recebimentos de ${comprasSources.length.toLocaleString("pt-BR")} arquivo(s)…`);
+      for (const comprasSource of comprasSources) parseCsv(comprasSource.text, (headers, row) => {
         comprasRows += 1;
         const get = rowGetter(headers, row);
         const scProduct = normalizeItemCode(get("SC - Cód. Produto"));
@@ -3740,7 +3742,7 @@ function inventoryWorker() {
 
       self.postMessage({
         type: "complete",
-        payload: { items: output, saldoRows, comprasRows, consumption },
+        payload: { items: output, saldoRows, comprasRows, comprasFiles: comprasSources.map((source) => source.name), consumption },
       });
     } catch (error) {
       self.postMessage({ type: "error", message: error?.message || String(error) });
@@ -3769,6 +3771,34 @@ function inventoryWorker() {
     } catch {
       return null;
     }
+  }
+
+  async function fetchMonthlyPurchases(apiUrl, fallbackUrl) {
+    let monthlyFiles = [];
+    if (apiUrl) {
+      try {
+        const response = await fetch(apiUrl, { cache: "no-store", headers: { Accept: "application/vnd.github+json" } });
+        if (response.ok) {
+          const entries = await response.json();
+          monthlyFiles = (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry?.type === "file" && /^01 - Compras_Almox_[A-Za-zÀ-ÿ]{3,9}_\d{4}\.csv$/i.test(entry.name || "") && entry.download_url)
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" }));
+        }
+      } catch {
+        monthlyFiles = [];
+      }
+    }
+
+    if (monthlyFiles.length) {
+      const loaded = await Promise.allSettled(monthlyFiles.map(async (file) => ({
+        name: file.name,
+        text: await fetchText(file.download_url, file.name),
+      })));
+      return loaded.filter((result) => result.status === "fulfilled").map((result) => result.value);
+    }
+
+    const fallbackText = await fetchOptionalText(fallbackUrl);
+    return fallbackText === null ? [] : [{ name: "01 - Compras_Almox.csv", text: fallbackText }];
   }
 
   function parseConsumptionCsv(text) {
