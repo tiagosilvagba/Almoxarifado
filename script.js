@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark X";
+const APP_VERSION = "Mark XI";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -89,6 +89,9 @@ const state = {
   filterRevision: 0,
   pageRenderRevision: new Map(),
   pageRenderToken: 0,
+  loadingProgressValue: 0,
+  loadingProgressCeiling: 0,
+  loadingProgressTimer: null,
 };
 
 const ui = {};
@@ -1065,14 +1068,64 @@ function showLoading(title, message) {
   ui.retryButton.classList.add("is-hidden");
   ui.statusLine.textContent = message;
   ui.baseUpdateBadge.classList.add("is-hidden");
+  stopLoadingProgressPulse();
+  state.loadingProgressValue = 0;
+  state.loadingProgressCeiling = loadingProgressCeilingFor(0);
   updateLoadingProgress(0);
 }
 
 function updateLoadingProgress(percent = 0) {
-  const value = Math.max(0, Math.min(100, Number(percent) || 0));
-  ui.loadingProgress.style.width = `${value}%`;
-  ui.loadingProgressText.textContent = `${Math.round(value)}%`;
-  ui.loadingProgress.parentElement?.setAttribute("aria-valuenow", String(Math.round(value)));
+  const checkpoint = Math.max(0, Math.min(100, Number(percent) || 0));
+
+  if (checkpoint >= 100) {
+    stopLoadingProgressPulse();
+    state.loadingProgressValue = 100;
+    state.loadingProgressCeiling = 100;
+    renderLoadingProgress(true);
+    return;
+  }
+
+  state.loadingProgressValue = Math.max(state.loadingProgressValue, checkpoint);
+  state.loadingProgressCeiling = Math.max(state.loadingProgressCeiling, loadingProgressCeilingFor(checkpoint));
+  renderLoadingProgress();
+  startLoadingProgressPulse();
+}
+
+function loadingProgressCeilingFor(checkpoint = 0) {
+  const value = Math.max(0, Math.min(100, Number(checkpoint) || 0));
+  if (value >= 100) return 100;
+  if (value >= 90) return 97;
+  if (value >= 85) return 89;
+  if (value >= 55) return Math.min(89, value + 8);
+  if (value >= 36) return 53;
+  if (value >= 28) return 34;
+  if (value >= 8) return 26;
+  return 7;
+}
+
+function startLoadingProgressPulse() {
+  if (state.loadingProgressTimer || state.loadingProgressValue >= 100) return;
+  state.loadingProgressTimer = setInterval(() => {
+    const remaining = state.loadingProgressCeiling - state.loadingProgressValue;
+    if (remaining <= 0.08) return;
+    const increment = Math.max(0.12, Math.min(0.72, remaining * 0.045));
+    state.loadingProgressValue = Math.min(state.loadingProgressCeiling, state.loadingProgressValue + increment);
+    renderLoadingProgress();
+  }, 420);
+}
+
+function stopLoadingProgressPulse() {
+  if (!state.loadingProgressTimer) return;
+  clearInterval(state.loadingProgressTimer);
+  state.loadingProgressTimer = null;
+}
+
+function renderLoadingProgress(complete = false) {
+  const value = Math.max(0, Math.min(100, state.loadingProgressValue));
+  const displayed = complete ? 100 : Math.floor(value);
+  ui.loadingProgress.style.width = `${value.toFixed(2)}%`;
+  ui.loadingProgressText.textContent = complete ? "100% · concluído" : `${displayed}% · processando…`;
+  ui.loadingProgress.parentElement?.setAttribute("aria-valuenow", String(displayed));
 }
 
 function updateBaseTimestamp(value) {
@@ -1091,6 +1144,7 @@ function updateBaseTimestamp(value) {
 }
 
 function showError(title, message) {
+  stopLoadingProgressPulse();
   state.worker?.terminate();
   state.worker = null;
   ui.loadingPanel.classList.remove("is-hidden");
@@ -1098,6 +1152,7 @@ function showError(title, message) {
   ui.loadingPanel.setAttribute("aria-busy", "false");
   ui.loadingTitle.textContent = title;
   ui.loadingMessage.textContent = `${message || "Erro desconhecido"} Abra o catálogo pelo GitHub Pages ou por um servidor web.`;
+  ui.loadingProgressText.textContent = `${Math.floor(state.loadingProgressValue)}% · carregamento interrompido`;
   ui.retryButton.classList.remove("is-hidden");
   ui.refreshButton.disabled = false;
   ui.statusLine.textContent = "Falha ao carregar os dados";
@@ -4147,5 +4202,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor };
 }
