@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XII";
+const APP_VERSION = "Mark XIII";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -670,6 +670,8 @@ const PT_EN = Object.freeze({
   ,"Data de emissão": "Issue date"
   ,"Data de entrada": "Entry date"
   ,"Dias aguardando": "Days waiting"
+  ,"Dias aguardando OF": "Days awaiting PO"
+  ,"SC pendente de OF há mais de 7 dias": "PR awaiting PO for more than 7 days"
   ,"Entrega vencida": "Overdue delivery"
   ,"Tempo desde a criação": "Time since creation"
   ,"Tempo entre SC e OF": "Time from PR to PO"
@@ -2231,19 +2233,29 @@ function exportPurchaseNeeds(format = "excel") {
 }
 
 function exportPendingSc(format = "excel") {
-  const rows = state.pendingScRows.map(({ item, record, sc }) => [
-    sc.code, sc.status, sc.requesterName, sc.cancelled, sc.date, sc.deliveryDate, ageDays(sc.date), isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
-    sc.category, sc.reason, item.code, item.name, item.detailedName, (item.categories || []).join(" | "),
+  const sourceRows = pendingScRowsForExport(state.pendingScRows, format);
+  const rows = sourceRows.map(({ item, record, sc }) => [
+    sc.code, item.code, ageDays(sc.date), sc.status, sc.requesterName, sc.cancelled, sc.date, sc.deliveryDate, isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
+    sc.category, sc.reason, item.name, item.detailedName, (item.categories || []).join(" | "),
     (item.units || []).join(" | "), record.branch, sc.allocationCostCenter, purchaseClassificationLabel(sc), (item.suppliers || []).join(" | "), "", "Não gerada",
   ]);
   exportReport(format, {
-    title: "SC pendente de OF",
-    filename: "sc-pendente-de-of.xls",
-    headers: ["SC", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "SC - CCU Etq", "Classificação da compra", "Fornecedores relacionados", "Código OF", "Situação OF"],
+    title: format === "pdf" ? "SC pendente de OF há mais de 7 dias" : "SC pendente de OF",
+    filename: format === "pdf" ? "sc-pendente-of-superior-7-dias.xls" : "sc-pendente-de-of.xls",
+    headers: ["SC", "Código do item", "Dias aguardando OF", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "SC - CCU Etq", "Classificação da compra", "Fornecedores relacionados", "Código OF", "Situação OF"],
     rows,
-    numericColumns: new Set([6, 8, 9]),
-    currencyColumns: new Set([9]),
-    dateColumns: new Set([4, 5]),
+    numericColumns: new Set([2, 9, 10]),
+    currencyColumns: new Set([10]),
+    dateColumns: new Set([6, 7]),
+    pdfIdentityColumns: [0, 1, 2],
+  });
+}
+
+function pendingScRowsForExport(rows, format) {
+  if (format !== "pdf") return [...rows];
+  return rows.filter(({ sc }) => {
+    const pendingDays = ageDays(sc?.date);
+    return pendingDays !== null && pendingDays > 7;
   });
 }
 
@@ -2375,10 +2387,10 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns = ne
   downloadBlob(blob, filename);
 }
 
-function exportPdfReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+function exportPdfReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), pdfIdentityColumns = [0, 1] }) {
   ({ title, headers, rows } = localizeReport({ title, headers, rows }));
   const filterText = ui.filterSummary.textContent || (activeLanguage === "en" ? "All records" : "Todos os registros");
-  const blob = createPdfBlob({ title, headers, rows, filterText, numericColumns, currencyColumns, dateColumns });
+  const blob = createPdfBlob({ title, headers, rows, filterText, numericColumns, currencyColumns, dateColumns, pdfIdentityColumns });
   downloadBlob(blob, filename);
 }
 
@@ -2392,7 +2404,7 @@ function downloadBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
-function createPdfBlob({ title, headers, rows, filterText = "", numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+function createPdfBlob({ title, headers, rows, filterText = "", numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), pdfIdentityColumns = [0, 1] }) {
   const PAGE_WIDTH = 842;
   const PAGE_HEIGHT = 595;
   const MARGIN = 28;
@@ -2400,7 +2412,7 @@ function createPdfBlob({ title, headers, rows, filterText = "", numericColumns =
   const LINE_HEIGHT = 8;
   const FOOTER_TOP = 25;
   const pages = [];
-  const groups = buildPdfColumnGroups(headers);
+  const groups = buildPdfColumnGroups(headers, pdfIdentityColumns);
   const locale = activeLanguage === "en" ? "en-US" : "pt-BR";
   const recordsLabel = activeLanguage === "en" ? "records" : "registros";
   const exportedLabel = activeLanguage === "en" ? "Exported on" : "Exportado em";
@@ -2489,9 +2501,9 @@ function createPdfBlob({ title, headers, rows, filterText = "", numericColumns =
   return assemblePdf(pages.map((page) => page.commands.join("\n")), PAGE_WIDTH, PAGE_HEIGHT);
 }
 
-function buildPdfColumnGroups(headers) {
+function buildPdfColumnGroups(headers, identityColumns = [0, 1]) {
   if (headers.length <= 7) return [headers.map((_, index) => index)];
-  const identity = [0, 1].filter((index) => index < headers.length);
+  const identity = [...new Set(identityColumns)].filter((index) => Number.isInteger(index) && index >= 0 && index < headers.length);
   const remaining = headers.map((_, index) => index).filter((index) => !identity.includes(index));
   const groups = [];
   for (let index = 0; index < remaining.length; index += 4) groups.push([...identity, ...remaining.slice(index, index + 4)]);
@@ -4331,5 +4343,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport };
 }
