@@ -3968,3 +3968,4 @@ function inventoryWorker() {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments };
+}
