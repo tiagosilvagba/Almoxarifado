@@ -17,6 +17,10 @@ const THEME_IDS = new Set([
   "logistics", "corporate", "ocean", "neutral", "contrast",
 ]);
 
+const LANGUAGE_IDS = new Set(["pt-BR", "en"]);
+let activeLanguage = "pt-BR";
+let languageObserver = null;
+
 if (typeof document !== "undefined") {
   try {
     const savedTheme = localStorage.getItem("almoxarifado-theme");
@@ -88,6 +92,7 @@ if (typeof document !== "undefined") {
 
 async function init() {
   cacheUi();
+  initializeLanguage();
   initializeTheme();
   initializeDensity();
   bindEvents();
@@ -98,12 +103,12 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "refreshButton", "themeSelect", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage",
+    "statusLine", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
     "dashboardPriorityList", "dashboardExcessList", "procurementFunnel", "searchInput",
-    "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter",
+    "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter", "scStatusFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
     "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
@@ -141,6 +146,7 @@ function cacheUi() {
 
 function bindEvents() {
   ui.themeSelect.addEventListener("change", () => applyTheme(ui.themeSelect.value, true));
+  ui.languageToggle.addEventListener("click", () => applyLanguage(activeLanguage === "pt-BR" ? "en" : "pt-BR", true));
   ui.densityToggle.addEventListener("click", toggleDensity);
   for (const select of [
     ui.branchFilter,
@@ -149,6 +155,7 @@ function bindEvents() {
     ui.unitFilter,
     ui.supplierFilter,
     ui.stockStatusFilter,
+    ui.scStatusFilter,
   ]) {
     select.addEventListener("change", () => handleAutomaticFilter(select.id));
   }
@@ -318,6 +325,447 @@ function bindEvents() {
   }
 }
 
+const PT_EN = Object.freeze({
+  "Gestão de Almoxarifado": "Warehouse Management",
+  "Preparando catálogo…": "Preparing catalog…",
+  "Tema": "Theme",
+  "Idioma": "Language",
+  "Modo compacto": "Compact mode",
+  "Modo confortável": "Comfortable mode",
+  "Dashboard": "Dashboard",
+  "Catálogo": "Catalog",
+  "Necessidade de Compra": "Purchase requirements",
+  "Necessidade de compra": "Purchase requirements",
+  "SC Pendente de OF": "PR awaiting PO",
+  "SC pendente de OF": "PR awaiting PO",
+  "Consulta SC e OF": "PR and PO tracking",
+  "Consulta de SC e OF": "PR and PO tracking",
+  "Revisão de Min e Máx": "Min. and max. review",
+  "Revisão de mín. e máx.": "Min. and max. review",
+  "Carregando dados do almoxarifado": "Loading warehouse data",
+  "Lendo os arquivos de saldo e compras…": "Reading inventory and purchasing files…",
+  "Tentar novamente": "Try again",
+  "Filtros": "Filters",
+  "Todas as filiais · todos os itens": "All branches · all items",
+  "Consulta global": "Global search",
+  "Filtrar itens": "Filter items",
+  "Código, descrição, SC, OF ou NF": "Code, description, PR, PO or invoice",
+  "Busque item, SC, OF, NF ou fornecedor": "Search item, PR, PO, invoice or supplier",
+  "Filial": "Branch",
+  "Todas as filiais": "All branches",
+  "Local de estoque": "Stock location",
+  "Todos os locais": "All locations",
+  "Categoria ou grupo": "Category or group",
+  "Todas as categorias": "All categories",
+  "Unidade": "Unit",
+  "Todas as unidades": "All units",
+  "Fornecedor": "Supplier",
+  "Todos os fornecedores": "All suppliers",
+  "Situação do estoque": "Inventory status",
+  "Todas as situações": "All statuses",
+  "Itens zerados (Min + Máx > 0)": "Out-of-stock items (Min. + Max. > 0)",
+  "Itens zerados (mín. + máx. > 0)": "Out-of-stock items (Min. + Max. > 0)",
+  "Itens abaixo do mínimo": "Items below minimum",
+  "Itens acima do máximo": "Items above maximum",
+  "Itens dentro do range": "Items within range",
+  "Itens dentro da faixa": "Items within range",
+  "Com saldo sem Min&Máx": "Positive stock without min./max.",
+  "Com saldo sem mín. e máx.": "Positive stock without min./max.",
+  "Saldo negativo": "Negative stock",
+  "Ajustar local de estoque": "Adjust stock location",
+  "Situação da SC e entrega": "PR and delivery status",
+  "Aguardando OF": "Awaiting PO",
+  "Entrega parcial": "Partial delivery",
+  "Aguardando entrega": "Awaiting delivery",
+  "Atrasada": "Overdue",
+  "Somente itens com saldo positivo": "Only items with positive stock",
+  "Limpar filtros": "Clear filters",
+  "Concluir e fechar": "Apply and close",
+  "Visão geral": "Overview",
+  "Indicadores do estoque": "Inventory indicators",
+  "Base completa": "Full dataset",
+  "Códigos ativos de estoque": "Active inventory codes",
+  "com saldo ou limites parametrizados": "with stock or configured limits",
+  "Valor do estoque": "Inventory value",
+  "valor atual consolidado": "current consolidated value",
+  "Valor estimado para reposição": "Estimated replenishment value",
+  "necessidade líquida após OFs abertas": "net requirement after open POs",
+  "Valor acima do máximo": "Value above maximum",
+  "capital estimado em excesso": "estimated excess capital",
+  "Pendências documentais": "Document pending items",
+  "SC sem OF ou OF com saldo pendente": "PR without PO or PO with open balance",
+  "Itens com saldo": "Items with stock",
+  "saldo consolidado diferente de zero": "non-zero consolidated stock",
+  "Zerados parametrizados": "Configured out-of-stock items",
+  "saldo zero com Min + Máx positivo": "zero stock with positive min. + max.",
+  "saldo zero com mín. + máx. positivos": "zero stock with positive min. + max.",
+  "Abaixo do mínimo": "Below minimum",
+  "saldo positivo abaixo do mínimo": "positive stock below minimum",
+  "Acima do máximo": "Above maximum",
+  "com máximo parametrizado": "with configured maximum",
+  "Saldo sem Min&Máx": "Stock without min./max.",
+  "Saldo sem mín. e máx.": "Stock without min./max.",
+  "Sem mín. e máx.": "Without min./max.",
+  "saldo positivo sem limites": "positive stock without limits",
+  "SC sem OF": "PR without PO",
+  "confirmadas ou em negociação": "confirmed or under negotiation",
+  "em ao menos uma posição": "in at least one position",
+  "OF com saldo pendente": "PO with open balance",
+  "ordens ainda não totalmente atendidas": "orders not yet fully fulfilled",
+  "Distribuição": "Distribution",
+  "Códigos por filial": "Codes by branch",
+  "Clique para filtrar": "Click to filter",
+  "Alertas independentes": "Independent alerts",
+  "Códigos por situação": "Codes by status",
+  "Um código pode ter posições distintas": "One code may have different positions",
+  "Financeiro": "Financial",
+  "Valor do estoque por filial": "Inventory value by branch",
+  "Valores consolidados": "Consolidated values",
+  "Fluxo de compras": "Purchasing flow",
+  "SC → OF → Recebimento": "PR → PO → Receipt",
+  "Abrir processos": "Open processes",
+  "Reposição": "Replenishment",
+  "Maiores necessidades estimadas": "Largest estimated requirements",
+  "Ver todas": "View all",
+  "Capital imobilizado": "Tied-up capital",
+  "Maiores excessos estimados": "Largest estimated excesses",
+  "Ver todos": "View all",
+  "Itens encontrados": "Items found",
+  "Visual": "View",
+  "Cards": "Cards",
+  "Lista compacta": "Compact list",
+  "Ordenar": "Sort",
+  "Código": "Code",
+  "Descrição": "Description",
+  "Maior saldo": "Highest stock",
+  "Maior valor": "Highest value",
+  "Maior criticidade": "Highest criticality",
+  "Nenhum item encontrado": "No items found",
+  "Altere os filtros ou limpe a busca para consultar outros itens.": "Change the filters or clear the search to view other items.",
+  "Carregar mais": "Load more",
+  "Baseado no Saldo_Online": "Based on Saldo_Online",
+  "Posições com saldo abaixo do mínimo. A sugestão repõe até o máximo; quando não há máximo positivo, repõe até o mínimo.": "Positions below minimum stock. The recommendation replenishes up to the maximum or, when unavailable, up to the minimum.",
+  "Itens para comprar": "Items to purchase",
+  "Posições abaixo do mínimo": "Positions below minimum",
+  "Rupturas": "Stockouts",
+  "Valor líquido estimado": "Estimated net value",
+  "Sem máximo informado": "Without maximum",
+  "Posições que precisam de reposição": "Positions requiring replenishment",
+  "Exportar Excel": "Export to Excel",
+  "Carregar mais necessidades": "Load more requirements",
+  "Compras pendentes": "Pending purchases",
+  "Solicitações com compra confirmada ou comprador negociando, não canceladas e sem código de OF gerado.": "Confirmed or under-negotiation requests that are not cancelled and do not yet have a PO.",
+  "Solicitações encontradas": "Requests found",
+  "Selecione um cartão para consultar todos os detalhes da solicitação.": "Select a card to view all request details.",
+  "Carregar mais solicitações": "Load more requests",
+  "Processos de compra": "Purchasing processes",
+  "Consulte solicitações, ordens de fornecimento e recebimentos vinculados aos itens filtrados.": "View purchase requests, purchase orders and receipts linked to the filtered items.",
+  "SC aguardando OF": "PR awaiting PO",
+  "OF com entrega parcial": "PO with partial delivery",
+  "Recebimentos localizados": "Receipts found",
+  "Carregar mais processos": "Load more processes",
+  "Parametrização": "Parameter settings",
+  "Área preparada para analisar consumo e apoiar a revisão dos limites de estoque.": "Workspace for consumption analysis and inventory limit review.",
+  "Em construção — aguardando CSV": "Under construction — awaiting CSV",
+  "Itens analisados": "Items analyzed",
+  "Parâmetros ideais": "Ideal parameters",
+  "Recomendação de ajuste": "Adjustment recommended",
+  "Sem histórico suficiente": "Insufficient history",
+  "Lead time médio": "Average lead time",
+  "Análise por item e posição": "Analysis by item and position",
+  "Consumo mensal, lead time real, parâmetros atuais e sugestão calculada para reposição.": "Monthly consumption, actual lead time, current parameters and calculated replenishment recommendation.",
+  "Carregar mais análises": "Load more analyses",
+  "Detalhes do item": "Item details",
+  "Resumo e fotos": "Summary and photos",
+  "Posições de estoque": "Stock positions",
+  "SC, OF e REC": "PR, PO and REC",
+  "Saldo total": "Total stock",
+  "Valor em estoque": "Inventory value",
+  "Posições": "Positions",
+  "Registros de compras": "Purchasing records",
+  "Adicionar foto": "Add photo",
+  "Até 6 fotos salvas neste aparelho": "Up to 6 photos saved on this device",
+  "Distribuição por filial e local": "Distribution by branch and location",
+  "Limites e saldos são avaliados individualmente em cada posição.": "Limits and balances are evaluated individually for each position.",
+  "Processo completo de compras": "Complete purchasing process",
+  "Solicitação de compra, ordem de fornecimento e recebimento/nota fiscal.": "Purchase request, purchase order and receipt/invoice.",
+  "Saldo atual": "Current stock",
+  "Mínimo": "Minimum",
+  "Máximo": "Maximum",
+  "Consumo médio mensal": "Average monthly consumption",
+  "Próxima compra": "Next purchase",
+  "Solicitante": "Requester",
+  "Quantidade": "Quantity",
+  "E-mail": "Email",
+  "Não informado": "Not provided",
+  "Não informada": "Not provided",
+  "Filial não informada": "Branch not provided",
+  "Entrega não informada": "Delivery date not provided",
+  "Situação não informada": "Status not provided",
+  "Não gerada": "Not created",
+  "Não recebido": "Not received",
+  "Sim": "Yes",
+  "Não": "No",
+  "Ruptura": "Stockout",
+  "Compra já coberta": "Purchase already covered",
+  "Processo pendente": "Pending process",
+  "Entrega prevista vencida": "Expected delivery overdue",
+  "Situação": "Status",
+  "Data de criação": "Creation date",
+  "Data de entrega": "Delivery date",
+  "Observação": "Notes",
+  "Endereço de armazenagem": "Storage address",
+  "Repartição": "Section",
+  "Prateleira": "Shelf",
+  "Divisão": "Division",
+  "Fechar detalhes": "Close details",
+  "Item anterior": "Previous item",
+  "Próximo item": "Next item",
+  "Alterar idioma para inglês": "Switch language to English",
+  "Alterar idioma para português": "Switch language to Portuguese"
+  ,"Adicione o arquivo": "Add the file"
+  ,"na raiz do repositório.": "to the repository root."
+  ,"Estrutura recomendada: código do item, filial, local, data ou competência, quantidade consumida e tipo de movimento. Com esses campos, o sistema poderá calcular cobertura, giro, estoque de segurança e sugestões de mín. e máx.": "Recommended structure: item code, branch, location, date or period, consumed quantity and movement type. With these fields, the system can calculate coverage, turnover, safety stock and min./max. recommendations."
+  ,"Abrir cadastro completo do item": "Open full item record"
+  ,"Detalhes da solicitação": "Request details"
+  ,"Processo de compra": "Purchasing process"
+  ,"Carregar mais 20 registros": "Load 20 more records"
+  ,"Ative o JavaScript para consultar o catálogo do almoxarifado.": "Enable JavaScript to view the warehouse catalog."
+  ,"Aurora UI · Mais moderno": "Aurora UI · Most modern"
+  ,"Azul Polar · Fluido": "Polar Blue · Fluid"
+  ,"Rubi Dourado · Executivo": "Golden Ruby · Executive"
+  ,"Industrial Azul · Técnico": "Industrial Blue · Technical"
+  ,"Grafite · Minimalista": "Graphite · Minimalist"
+  ,"Verde Operação · Comando": "Operations Green · Command"
+  ,"Âmbar Logística · Dinâmico": "Logistics Amber · Dynamic"
+  ,"Roxo Corporativo · Premium": "Corporate Purple · Premium"
+  ,"Oceano · Glass": "Ocean · Glass"
+  ,"Claro Neutro · Clean": "Neutral Light · Clean"
+  ,"Alto Contraste · Acessível": "High Contrast · Accessible"
+  ,"Aguardando geração de OF": "Awaiting PO creation"
+  ,"Alteração proposta": "Proposed change"
+  ,"Abaixo do mínimo com saldo": "Below minimum with stock"
+  ,"Atenção — saldo positivo abaixo do mínimo": "Attention — positive stock below minimum"
+  ,"Crítica — posição em ruptura": "Critical — stockout position"
+  ,"Fora de estoque": "Out of stock"
+  ,"Histórico insuficiente": "Insufficient history"
+  ,"Histórico real": "Actual history"
+  ,"Padrão estimado de 30 dias": "Estimated 30-day standard"
+  ,"Referência estimada": "Estimated reference"
+  ,"Não disponível": "Unavailable"
+  ,"Não foi possível projetar uma data": "Unable to project a date"
+  ,"Data não informada": "Date not provided"
+  ,"Endereço não informado": "Address not provided"
+  ,"Posição não identificada": "Position not identified"
+  ,"Sem categoria informada": "Category not provided"
+  ,"Sem fornecedor no histórico": "No supplier in history"
+  ,"Sem histórico": "No history"
+  ,"Sem posição": "No position"
+  ,"Sem posição de estoque": "No stock position"
+  ,"Última movimentação de compra": "Latest purchasing transaction"
+  ,"Último preço conhecido": "Latest known price"
+  ,"Preço de referência": "Reference price"
+  ,"Compra líquida": "Net purchase"
+  ,"Saldo disponível": "Available stock"
+  ,"Saldo no ponto de reposição": "Stock at reorder point"
+  ,"Custo unitário": "Unit cost"
+  ,"Valor estimado": "Estimated value"
+  ,"Valor estimado da compra": "Estimated purchase value"
+  ,"Valor unitário": "Unit value"
+  ,"Valor unitário fiscal": "Invoice unit value"
+  ,"Valor do documento": "Document value"
+  ,"Quantidade solicitada": "Requested quantity"
+  ,"Quantidade entregue": "Delivered quantity"
+  ,"Quantidade coberta por SC sem OF": "Quantity covered by PR without PO"
+  ,"Saldo coberto por OF aberta": "Stock covered by open PO"
+  ,"Origem da cobertura": "Coverage source"
+  ,"Números das OFs": "PO numbers"
+  ,"Números das SCs sem OF": "PR numbers without PO"
+  ,"Critério": "Criterion"
+  ,"Critério de cálculo": "Calculation criterion"
+  ,"Reposição até o máximo": "Replenish to maximum"
+  ,"Reposição até o máximo parametrizado": "Replenish to configured maximum"
+  ,"Reposição até o mínimo": "Replenish to minimum"
+  ,"Máximo não informado; reposição até o mínimo": "Maximum not provided; replenish to minimum"
+  ,"Mínimo atual": "Current minimum"
+  ,"Máximo atual": "Current maximum"
+  ,"Mínimo sugerido": "Recommended minimum"
+  ,"Máximo sugerido": "Recommended maximum"
+  ,"Meses analisados": "Months analyzed"
+  ,"Lead time em dias": "Lead time in days"
+  ,"Origem do lead time": "Lead time source"
+  ,"Amostras de lead time": "Lead time samples"
+  ,"Tempos encontrados": "Lead times found"
+  ,"Validação": "Validation"
+  ,"Consumo por mês": "Monthly consumption"
+  ,"Categoria / grupo": "Category / group"
+  ,"Categorias do item": "Item categories"
+  ,"Descrição detalhada": "Detailed description"
+  ,"Descrição do material": "Material description"
+  ,"Código do item": "Item code"
+  ,"Código do produto": "Product code"
+  ,"Código do fornecedor": "Supplier code"
+  ,"Código filial": "Branch code"
+  ,"Código local": "Location code"
+  ,"Data de emissão": "Issue date"
+  ,"Data de entrada": "Entry date"
+  ,"Dias aguardando": "Days waiting"
+  ,"Entrega vencida": "Overdue delivery"
+  ,"Tempo desde a criação": "Time since creation"
+  ,"Tempo entre SC e OF": "Time from PR to PO"
+  ,"Tempo entre OF e recebimento": "Time from PO to receipt"
+  ,"Empresa": "Company"
+  ,"Empresa de entrega": "Delivery company"
+  ,"Empresa de pagamento": "Payment company"
+  ,"Empresa destino": "Destination company"
+  ,"Filial de entrega": "Delivery branch"
+  ,"Filial de pagamento": "Payment branch"
+  ,"Filial destino": "Destination branch"
+  ,"Usuário solicitante": "Requesting user"
+  ,"Centro de custo aprovador": "Approver cost center"
+  ,"Sequência": "Sequence"
+  ,"Regularização": "Regularization"
+  ,"Percentual de rateio": "Allocation percentage"
+  ,"Conta": "Account"
+  ,"Alíquota ICMS": "ICMS tax rate"
+  ,"Alíquota IPI": "IPI tax rate"
+  ,"Condição de pagamento": "Payment terms"
+  ,"Forma de pagamento": "Payment method"
+  ,"Motivo": "Reason"
+  ,"Motivo do fechamento": "Closing reason"
+  ,"Número da nota fiscal": "Invoice number"
+  ,"Série": "Series"
+  ,"Solicitação de Compra": "Purchase Request"
+  ,"Ordem de Fornecimento": "Purchase Order"
+  ,"Recebimento": "Receipt"
+  ,"SC": "PR"
+  ,"OF": "PO"
+  ,"Solicitação (SC)": "Request (PR)"
+  ,"Ordem (OF)": "Order (PO)"
+  ,"Recebimento / NF": "Receipt / Invoice"
+  ,"Valor unit.": "Unit value"
+  ,"Valor doc./estimado": "Document/estimated value"
+  ,"Compra confirmada": "Purchase confirmed"
+  ,"Comprador negociando": "Buyer negotiating"
+  ,"Aberta": "Open"
+  ,"Fechada": "Closed"
+  ,"Parcial": "Partial"
+  ,"Emitida": "Issued"
+  ,"Recebido": "Received"
+  ,"Solicitações": "Requests"
+  ,"Falha ao carregar os dados": "Failed to load data"
+  ,"Baixando os arquivos de saldo e compras…": "Downloading inventory and purchasing files…"
+  ,"Consolidando saldos por código, filial e local…": "Consolidating balances by code, branch and location…"
+  ,"Relacionando solicitações, ordens e recebimentos…": "Linking requests, orders and receipts…"
+  ,"Não foi possível carregar os CSVs.": "Unable to load the CSV files."
+  ,"Não foi possível iniciar o catálogo.": "Unable to start the catalog."
+  ,"Não foi possível processar os dados.": "Unable to process the data."
+  ,"Os dados foram lidos, mas não puderam ser exibidos.": "The data was read but could not be displayed."
+});
+
+const EN_PT = Object.freeze(Object.fromEntries(Object.entries(PT_EN).map(([pt, en]) => [en, pt])));
+
+function initializeLanguage() {
+  let language = "pt-BR";
+  try { language = localStorage.getItem("almoxarifado-language") || language; } catch { /* usa português */ }
+  applyLanguage(LANGUAGE_IDS.has(language) ? language : "pt-BR", false);
+  languageObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) for (const node of mutation.addedNodes) translateSubtree(node, activeLanguage);
+  });
+  languageObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+function applyLanguage(language, persist) {
+  activeLanguage = LANGUAGE_IDS.has(language) ? language : "pt-BR";
+  document.documentElement.lang = activeLanguage;
+  document.documentElement.dataset.language = activeLanguage;
+  ui.languageToggle.innerHTML = activeLanguage === "pt-BR" ? "<small>Idioma</small><strong>EN</strong>" : "<small>Language</small><strong>PT</strong>";
+  const nextLanguage = activeLanguage === "pt-BR" ? "inglês" : "português";
+  ui.languageToggle.title = `Alterar idioma para ${nextLanguage}`;
+  ui.languageToggle.setAttribute("aria-label", ui.languageToggle.title);
+  translateSubtree(document.body, activeLanguage);
+  document.title = `${translateUiText(pageTitle(pageFromHash()), activeLanguage)} · ${translateUiText("Gestão de Almoxarifado", activeLanguage)}`;
+  if (persist) try { localStorage.setItem("almoxarifado-language", activeLanguage); } catch { /* preferência válida apenas nesta sessão */ }
+}
+
+function translateSubtree(root, language) {
+  if (!root) return;
+  if (root.nodeType === Node.TEXT_NODE) translateTextNode(root, language);
+  const element = root.nodeType === Node.ELEMENT_NODE ? root : null;
+  if (element?.matches("script, style")) return;
+  if (element) translateElementAttributes(element, language);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.nodeType === Node.TEXT_NODE) translateTextNode(node, language);
+    else if (!node.matches("script, style")) translateElementAttributes(node, language);
+  }
+}
+
+function translateTextNode(node, language) {
+  if (node.parentElement?.closest("script, style")) return;
+  const translated = translateUiText(node.nodeValue, language);
+  if (translated !== node.nodeValue) node.nodeValue = translated;
+}
+
+function translateElementAttributes(element, language) {
+  for (const attribute of ["title", "aria-label", "placeholder"]) {
+    if (!element.hasAttribute(attribute)) continue;
+    const value = element.getAttribute(attribute);
+    const translated = translateUiText(value, language);
+    if (translated !== value) element.setAttribute(attribute, translated);
+  }
+}
+
+function translateUiText(value, language = activeLanguage) {
+  const source = String(value ?? "");
+  const trimmed = source.trim();
+  if (!trimmed) return source;
+  const dictionary = language === "en" ? PT_EN : EN_PT;
+  let translated = dictionary[trimmed];
+  if (!translated) translated = translateUiPattern(trimmed, language);
+  if (!translated || translated === trimmed) return source;
+  return source.replace(trimmed, translated);
+}
+
+function translateUiPattern(text, language) {
+  const rules = language === "en" ? [
+    [/^Busca: (.+)$/i, "Search: $1"], [/^Código (.+)$/i, "Code $1"], [/^Filial (.+)$/i, "Branch $1"],
+    [/^Comprar (.+)$/i, "Purchase $1"], [/^(\d[\d.,]*) dias?$/i, "$1 days"],
+    [/^Exibindo (.+) de (.+) necessidades$/i, "Showing $1 of $2 requirements"],
+    [/^Exibindo (.+) de (.+) solicitações$/i, "Showing $1 of $2 requests"],
+    [/^(\d[\d.,]*) de (\d[\d.,]*) processos$/i, "$1 of $2 processes"],
+    [/^(\d[\d.,]*) itens?$/i, "$1 items"], [/^(\d[\d.,]*) posições?$/i, "$1 positions"],
+    [/^(\d[\d.,]*) registros?$/i, "$1 records"], [/^(\d[\d.,]*) processos?$/i, "$1 processes"],
+    [/^(\d[\d.,]*) meses?$/i, "$1 months"],
+    [/^(.+) pendente$/i, "$1 outstanding"], [/^SC (.+) sem Ordem de Fornecimento$/i, "PR $1 without Purchase Order"],
+    [/^SC (.+) · aguardando OF$/i, "PR $1 · awaiting PO"], [/^OF (.+) · entrega parcial$/i, "PO $1 · partial delivery"],
+    [/^OF (.+) · aguardando entrega$/i, "PO $1 · awaiting delivery"], [/^SC (.+) · atrasada$/i, "PR $1 · overdue"],
+    [/^OF (.+) · atrasada$/i, "PO $1 · overdue"], [/^OF (.+) · recebida$/i, "PO $1 · received"],
+    [/^Repartição (.+) · Prateleira (.+) · Divisão (.+)$/i, "Section $1 · Shelf $2 · Division $3"],
+    [/^Solicitada por (.+) em (.+)$/i, "Requested by $1 on $2"],
+    [/^Em aproximadamente (.+)$/i, "In approximately $1"]
+  ] : [
+    [/^Search: (.+)$/i, "Busca: $1"], [/^Code (.+)$/i, "Código $1"], [/^Branch (.+)$/i, "Filial $1"],
+    [/^Purchase (.+)$/i, "Comprar $1"], [/^(\d[\d.,]*) days?$/i, "$1 dias"],
+    [/^Showing (.+) of (.+) requirements$/i, "Exibindo $1 de $2 necessidades"],
+    [/^Showing (.+) of (.+) requests$/i, "Exibindo $1 de $2 solicitações"],
+    [/^(\d[\d.,]*) of (\d[\d.,]*) processes$/i, "$1 de $2 processos"],
+    [/^(\d[\d.,]*) items?$/i, "$1 itens"], [/^(\d[\d.,]*) positions?$/i, "$1 posições"],
+    [/^(\d[\d.,]*) records?$/i, "$1 registros"], [/^(\d[\d.,]*) processes?$/i, "$1 processos"],
+    [/^(\d[\d.,]*) months?$/i, "$1 meses"],
+    [/^(.+) outstanding$/i, "$1 pendente"], [/^PR (.+) without Purchase Order$/i, "SC $1 sem Ordem de Fornecimento"],
+    [/^PR (.+) · awaiting PO$/i, "SC $1 · aguardando OF"], [/^PO (.+) · partial delivery$/i, "OF $1 · entrega parcial"],
+    [/^PO (.+) · awaiting delivery$/i, "OF $1 · aguardando entrega"], [/^PR (.+) · overdue$/i, "SC $1 · atrasada"],
+    [/^PO (.+) · overdue$/i, "OF $1 · atrasada"], [/^PO (.+) · received$/i, "OF $1 · recebida"],
+    [/^Section (.+) · Shelf (.+) · Division (.+)$/i, "Repartição $1 · Prateleira $2 · Divisão $3"],
+    [/^Requested by (.+) on (.+)$/i, "Solicitada por $1 em $2"],
+    [/^In approximately (.+)$/i, "Em aproximadamente $1"]
+  ];
+  for (const [pattern, replacement] of rules) if (pattern.test(text)) return text.replace(pattern, replacement);
+  return text;
+}
+
 function initializeDensity() {
   let compact = false;
   try { compact = localStorage.getItem("almoxarifado-density") === "compact"; } catch { compact = false; }
@@ -337,7 +785,7 @@ function toggleDensity() {
 function initializeTheme() {
   const theme = THEME_IDS.has(document.documentElement.dataset.theme)
     ? document.documentElement.dataset.theme
-    : "industrial";
+    : "aurora";
   ui.themeSelect.value = theme;
   applyTheme(theme, false);
 }
@@ -383,7 +831,7 @@ function navigateToPage(page, updateHash) {
     history.pushState(null, "", `#${validPage}`);
   }
 
-  document.title = `${pageTitle(validPage)} · Gestão de Almoxarifado`;
+  document.title = `${translateUiText(pageTitle(validPage))} · ${translateUiText("Gestão de Almoxarifado")}`;
 }
 
 function handlePageTabKeydown(event) {
@@ -403,10 +851,10 @@ function pageTitle(page) {
   return ({
     dashboard: "Dashboard",
     catalogo: "Catálogo",
-    "necessidade-compra": "Necessidade de Compra",
-    "sc-pendente-of": "SC Pendente de OF",
+    "necessidade-compra": "Necessidade de compra",
+    "sc-pendente-of": "SC pendente de OF",
     "consulta-sc-of": "Consulta SC e OF",
-    "revisao-min-max": "Revisão de Min e Máx",
+    "revisao-min-max": "Revisão de mín. e máx.",
   })[page];
 }
 
@@ -446,7 +894,7 @@ function updateFilterSummary() {
   if (query) labels.push(["searchInput", `Busca: ${query}`]);
   if (ui.branchFilter.value) labels.push(["branchFilter", ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`]);
   if (ui.locationFilter.value) labels.push(["locationFilter", ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"]);
-  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.stockStatusFilter]) {
+  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
     if (select.value) labels.push([select.id, select.selectedOptions[0]?.textContent || select.value]);
   }
   if (ui.positiveBalanceFilter.checked) labels.push(["positiveBalanceFilter", "Somente saldo positivo"]);
@@ -746,6 +1194,7 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   const unit = excludedFilterId === "unitFilter" ? "" : ui.unitFilter.value;
   const supplier = excludedFilterId === "supplierFilter" ? "" : ui.supplierFilter.value;
   const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
+  const scStatus = excludedFilterId === "scStatusFilter" ? "" : ui.scStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
   if (item.flags.inactiveOnly) return false;
@@ -754,6 +1203,7 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   if (category && !(item.categories || []).includes(category)) return false;
   if (unit && !(item.units || []).includes(unit)) return false;
   if (supplier && !(item.suppliers || []).includes(supplier)) return false;
+  if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branch)) return false;
 
   const positions = (item.positions || []).filter((position) => {
     if (branch && position.branchCode !== branch) return false;
@@ -807,6 +1257,7 @@ function clearFilters() {
   ui.unitFilter.value = "";
   ui.supplierFilter.value = "";
   ui.stockStatusFilter.value = "";
+  ui.scStatusFilter.value = "";
   ui.positiveBalanceFilter.checked = false;
   populateFilters();
   for (const option of ui.stockStatusFilter.options) option.disabled = false;
@@ -821,6 +1272,7 @@ function applyFilters() {
   const unit = ui.unitFilter.value;
   const supplier = ui.supplierFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
+  const scStatus = ui.scStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
   state.filteredItems = state.items.filter((item) => {
@@ -837,6 +1289,7 @@ function applyFilters() {
     if (category && !(item.categories || []).includes(category)) return false;
     if (unit && !(item.units || []).includes(unit)) return false;
     if (supplier && !(item.suppliers || []).includes(supplier)) return false;
+    if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branch)) return false;
     if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
   });
@@ -883,6 +1336,27 @@ function positionMatchesStatus(position, status) {
   return true;
 }
 
+function procurementRecordStatus(record) {
+  const sc = record?.sc;
+  const of = record?.of;
+  if (!sc?.code || !isActiveScForPurchaseCoverage(sc)) return "";
+  const outstanding = Boolean(of?.code && (of.balance > 0 || (of.requestedQuantity > 0 && of.deliveredQuantity < of.requestedQuantity)));
+  const dueDate = of?.code ? of.deliveryDate : sc.deliveryDate;
+  if ((!of?.code || outstanding) && isOverdue(dueDate)) return "overdue";
+  if (!of?.code) return "awaiting-of";
+  if (!outstanding) return "";
+  if (of.deliveredQuantity > 0) return "partial";
+  return "awaiting-delivery";
+}
+
+function itemMatchesProcurementStatus(item, status, branch = "") {
+  if (!status) return true;
+  return (item.history || []).some((record) => {
+    if (branch && record.branchCode !== branch) return false;
+    return procurementRecordStatus(record) === status;
+  });
+}
+
 function itemNeedsLocationAdjustment(item, branch = "", location = "") {
   const positions = (item.positions || []).filter((position) => !branch || position.branchCode === branch);
   for (const balancePosition of positions) {
@@ -913,12 +1387,14 @@ function strictOpenOfRecords() {
   const branch = effectiveBranchFilter();
   const supplier = ui.supplierFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
+  const scStatus = ui.scStatusFilter.value;
   const rows = new Map();
   for (const item of state.filteredItems) {
     for (const record of item.history || []) {
       const of = record.of;
       if (!of?.code || !(of.balance > 0)) continue;
       if (branch && record.branchCode !== branch) continue;
+      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && normalizeSearch(of.supplier) !== normalizeSearch(supplier)) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
       if (!rows.has(of.code)) rows.set(of.code, { item, record, of });
@@ -1259,6 +1735,7 @@ function collectPendingScRows() {
   const unit = ui.unitFilter.value;
   const supplier = ui.supplierFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
+  const scStatus = ui.scStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
   for (const item of state.items) {
     if (query && !item.searchText.includes(query)) continue;
@@ -1281,6 +1758,7 @@ function collectPendingScRows() {
       const sc = record.sc;
       if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
       if (branch && record.branchCode !== branch) continue;
+      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
       const key = `${sc.code}::${item.code}`;
       if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
@@ -1480,7 +1958,7 @@ function exportPendingSc() {
     (item.units || []).join(" | "), record.branch, (item.suppliers || []).join(" | "), "", "Não gerada",
   ]);
   exportExcelReport({
-    title: "SC Pendente de OF",
+    title: "SC pendente de OF",
     filename: "sc-pendente-de-of.xls",
     headers: ["SC", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Dias aguardando", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Código do item", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "Fornecedores relacionados", "Código OF", "Situação OF"],
     rows,
@@ -1536,7 +2014,7 @@ function exportMinMaxReviews() {
     ];
   });
   exportExcelReport({
-    title: "Revisão de Min e Máx",
+    title: "Revisão de mín. e máx.",
     filename: "revisao-minimo-maximo.xls",
     headers: [
       "Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Código local", "Local de estoque",
@@ -1550,6 +2028,9 @@ function exportMinMaxReviews() {
 }
 
 function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+  title = translateUiText(title);
+  headers = headers.map((header) => translateUiText(header));
+  rows = rows.map((row) => row.map((value) => typeof value === "string" ? translateUiText(value) : value));
   const styles = getComputedStyle(document.documentElement);
   const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
   const accentColor = cssColorToHex(styles.getPropertyValue("--blue-500"), "2086D2");
@@ -1577,8 +2058,8 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns = ne
       <Style ss:ID="Date"><Alignment ss:Horizontal="Center" ss:Vertical="Top"/><NumberFormat ss:Format="dd/mm/yyyy"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/></Borders></Style>
     </Styles>
     <Worksheet ss:Name="${escapeXml(title.slice(0, 31))}"><Table>${columns}
-      <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · Gestão de Almoxarifado</Data></Cell></Row>
-      <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} registros · Exportado em ${escapeXml(new Date().toLocaleString("pt-BR"))}</Data></Cell></Row>
+      <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · ${escapeXml(translateUiText("Gestão de Almoxarifado"))}</Data></Cell></Row>
+      <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} ${activeLanguage === "en" ? "records" : "registros"} · ${activeLanguage === "en" ? "Exported on" : "Exportado em"} ${escapeXml(new Date().toLocaleString(activeLanguage === "en" ? "en-US" : "pt-BR"))}</Data></Cell></Row>
       <Row ss:Height="8"></Row><Row ss:Height="30">${headers.map((header, index) => cell(header, index, true)).join("")}</Row>${dataRows}
     </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>4</SplitHorizontal><TopRowBottomPane>4</TopRowBottomPane><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet>
   </Workbook>`;
@@ -1606,11 +2087,13 @@ function buildProcurementRows() {
   const branch = effectiveBranchFilter();
   const supplier = ui.supplierFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
+  const scStatus = ui.scStatusFilter.value;
   const rows = [];
   for (const item of state.items.filter(itemMatchesTransactionFilters)) {
     for (const record of item.history || []) {
       if (!record.sc?.code && !record.of?.code) continue;
       if (branch && record.branchCode !== branch) continue;
+      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
       rows.push({ item, record });
@@ -1659,6 +2142,7 @@ function itemMatchesTransactionFilters(item) {
   if (ui.categoryFilter.value && !(item.categories || []).includes(ui.categoryFilter.value)) return false;
   if (ui.unitFilter.value && !(item.units || []).includes(ui.unitFilter.value)) return false;
   if (ui.supplierFilter.value && !(item.suppliers || []).includes(ui.supplierFilter.value)) return false;
+  if (ui.scStatusFilter.value && !itemMatchesProcurementStatus(item, ui.scStatusFilter.value, effectiveBranchFilter())) return false;
   const status = ui.stockStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
   const location = ui.locationFilter.value;
@@ -1705,8 +2189,11 @@ function renderNextProcurementBatch() {
 
 function processStatus(record) {
   const { sc, of, rec } = record;
-  if (!of?.code) return { label: `SC ${sc?.code || "—"} · aguardando OF`, detail: ageLabel(sc?.date), type: isOverdue(sc?.deliveryDate) ? "status-pill--critical" : "status-pill--pending" };
-  if (of.balance > 0) return { label: `OF ${of.code} · saldo pendente`, detail: `${numberFormatter.format(of.balance)} pendente`, type: isOverdue(of.deliveryDate) ? "status-pill--critical" : "status-pill--need" };
+  const status = procurementRecordStatus(record);
+  if (status === "overdue") return { label: `${of?.code ? `OF ${of.code}` : `SC ${sc?.code || "—"}`} · atrasada`, detail: formatDate(of?.deliveryDate || sc?.deliveryDate), type: "status-pill--critical" };
+  if (status === "awaiting-of") return { label: `SC ${sc?.code || "—"} · aguardando OF`, detail: ageLabel(sc?.date), type: "status-pill--pending" };
+  if (status === "partial") return { label: `OF ${of.code} · entrega parcial`, detail: `${numberFormatter.format(of.balance)} pendente`, type: "status-pill--need" };
+  if (status === "awaiting-delivery") return { label: `OF ${of.code} · aguardando entrega`, detail: `${numberFormatter.format(of.balance)} pendente`, type: "status-pill--process" };
   if (rec?.invoice) return { label: `OF ${of.code} · recebida`, detail: formatDate(rec.entryDate || rec.issueDate), type: "status-pill--success" };
   return { label: `OF ${of.code}`, detail: formatDate(of.date), type: "status-pill--process" };
 }
@@ -2089,7 +2576,7 @@ function statusBadges(item) {
   if (item.flags.outOfStock) badges.push(["Fora de estoque", "neutral"]);
   if (item.flags.belowMin) badges.push(["Abaixo do mínimo", "warning"]);
   if (item.flags.aboveMax) badges.push(["Acima do máximo", "danger"]);
-  if (item.flags.unconfigured) badges.push(["Com saldo sem Min&Máx", "info"]);
+  if (item.flags.unconfigured) badges.push(["Com saldo sem mín. e máx.", "info"]);
   if (item.flags.locationAdjustment) badges.push(["Ajustar local de estoque", "warning"]);
   if ((item.pendingScCodes || []).length) badges.push(["SC sem OF", "violet"]);
   if (!badges.length && item.balanceTotal > 0) badges.push(["Saldo disponível", "success"]);
@@ -2356,7 +2843,7 @@ function renderStock(item) {
     if (position.outOfStock) badges.push(["Fora", "neutral"]);
     if (position.belowMin) badges.push(["Abaixo mín.", "warning"]);
     if (position.aboveMax) badges.push(["Acima máx.", "danger"]);
-    if (position.unconfigured) badges.push(["Sem Min&Máx", "info"]);
+    if (position.unconfigured) badges.push(["Sem mín. e máx.", "info"]);
 
     return `<tr>
       <td>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · "))}</td>
