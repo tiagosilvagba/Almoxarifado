@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=mark-x">
-    <script src="script.js?v=mark-x" defer></script>
+    <link rel="stylesheet" href="style.css?v=mark-xi">
+    <script src="script.js?v=mark-xi" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark X</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XI</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -73,7 +73,7 @@
           <strong id="loadingTitle">Carregando dados do almoxarifado</strong>
           <p id="loadingMessage">Lendo os arquivos de saldo e compras…</p>
           <div class="loading-progress" role="progressbar" aria-label="Progresso do carregamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="loadingProgress"></span></div>
-          <small id="loadingProgressText" class="loading-progress__text">0%</small>
+          <small id="loadingProgressText" class="loading-progress__text">0% · processando…</small>
         </div>
         <button id="retryButton" class="button button--primary is-hidden" type="button">Tentar novamente</button>
       </section>
