@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark II";
+const APP_VERSION = "Mark III";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -3494,11 +3494,14 @@ function inventoryWorker() {
         }
         item._hasActivePosition = true;
 
+        const branchCode = clean(get("Cd Filial"));
+        const localCode = clean(get("Cd Local"));
+        const partition = clean(get("Cd Reparticao"));
         const position = {
-          branchCode: clean(get("Cd Filial")),
-          branchName: clean(get("Nm Filial")),
+          branchCode,
+          branchName: resolveStockBranchName(branchCode, localCode, partition, clean(get("Nm Filial"))),
           localType: clean(get("Tipo Local")),
-          localCode: clean(get("Cd Local")),
+          localCode,
           localName: clean(get("Ds Local Estoque")),
           quantity,
           minimum: minimumRaw,
@@ -3507,7 +3510,7 @@ function inventoryWorker() {
           stockValue,
           forecast: parseNumber(get("Qt Previsao Consumo")),
           shelf: clean(get("Cd Prateleira")),
-          partition: clean(get("Cd Reparticao")),
+          partition,
           division: clean(get("Cd Divisao")),
           belowMin: minimum > 0 && quantity < minimum,
           aboveMax: maximum > 0 && quantity > maximum,
@@ -3777,6 +3780,16 @@ function inventoryWorker() {
 
   function progress(message) {
     self.postMessage({ type: "progress", message });
+  }
+
+  function resolveStockBranchName(branchCode, localCode, partition, originalName) {
+    const normalizedPartition = clean(partition).toUpperCase();
+    const preparedPartitions = new Set(["AP", "99", "SS"]);
+    const isSingleLetter = /^[A-Z]$/.test(normalizedPartition);
+    if (clean(branchCode) === "704" && clean(localCode) === "299" && (preparedPartitions.has(normalizedPartition) || isSingleLetter)) {
+      return "ROLANDIA - ALM. PREPARADOS";
+    }
+    return originalName;
   }
 
   function parseCsv(text, onRow) {
