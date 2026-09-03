@@ -13,7 +13,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark VII";
+const APP_VERSION = "Mark VIII";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -373,7 +373,7 @@ const PT_EN = Object.freeze({
   "Todas as classificações": "All classifications",
   "Entrada no almoxarifado · CCU 1500": "Warehouse receipt · CCU 1500",
   "Direto para a área · CCU diferente de 1500": "Direct to department · CCU other than 1500",
-  "Compra direta de item com saldo no almoxarifado": "Direct purchase of an item already in warehouse stock",
+  "Compra direta de item de estoque do almoxarifado": "Direct purchase of a warehouse stock item",
   "Código do item em compra direta": "Item code in direct purchase",
   "Todos os códigos": "All item codes",
   "Saldo em OF aberta · CCU 1500": "Open PO balance · CCU 1500",
@@ -1148,7 +1148,7 @@ function populateFilters() {
     for (const category of item.categories || []) if (category) categories.add(category);
     for (const unit of item.units || []) if (unit) units.add(unit);
     for (const supplier of item.suppliers || []) if (supplier) suppliers.add(supplier);
-    if (itemHasWarehouseStock(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
+    if (itemIsWarehouseStockItem(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
       directPurchaseItems.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
     }
 
@@ -1204,6 +1204,7 @@ function refreshDependentFilters(changedId) {
     ["categoryFilter", ui.categoryFilter, "Todas as categorias"],
     ["unitFilter", ui.unitFilter, "Todas as unidades"],
     ["supplierFilter", ui.supplierFilter, "Todos os fornecedores"],
+    ["itemCodeFilter", ui.itemCodeFilter, "Todos os códigos"],
   ];
 
   for (let pass = 0; pass < 2; pass += 1) {
@@ -1245,6 +1246,12 @@ function collectDependentOptions(targetFilterId) {
       for (const value of item.suppliers || []) if (value) options.set(value, value);
       continue;
     }
+    if (targetFilterId === "itemCodeFilter") {
+      if (itemIsWarehouseStockItem(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
+        options.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
+      }
+      continue;
+    }
 
     const status = ui.stockStatusFilter.value;
     const positions = draftPositions(item, targetFilterId)
@@ -1268,8 +1275,8 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   const category = excludedFilterId === "categoryFilter" ? "" : ui.categoryFilter.value;
   const unit = excludedFilterId === "unitFilter" ? "" : ui.unitFilter.value;
   const supplier = excludedFilterId === "supplierFilter" ? "" : ui.supplierFilter.value;
-  const ccuClassification = ui.ccuClassificationFilter.value;
-  const itemCode = ui.itemCodeFilter.value;
+  const ccuClassification = excludedFilterId === "ccuClassificationFilter" ? "" : ui.ccuClassificationFilter.value;
+  const itemCode = excludedFilterId === "itemCodeFilter" ? "" : ui.itemCodeFilter.value;
   const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
   const scStatus = excludedFilterId === "scStatusFilter" ? "" : ui.scStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
@@ -1515,10 +1522,10 @@ function updateDashboardMetrics() {
     scopedItems.add(item.code);
 
     const itemBalance = positions.reduce((sum, position) => sum + (position.quantity || 0), 0);
-    const itemLimits = positions.reduce((sum, position) => sum + (position.minimum || 0) + (position.maximum || 0), 0);
     if (itemBalance !== 0) {
       codesWithStock.add(item.code);
-    } else if (itemLimits > 0) {
+    }
+    if (positions.some((position) => positionMatchesStatus(position, "zero"))) {
       zeroCodes.add(item.code);
     }
 
@@ -1554,7 +1561,7 @@ function updateDashboardMetrics() {
   ui.metricOpenOf.textContent = integerFormatter.format(openOf.length);
   ui.metricActionProcesses.textContent = integerFormatter.format(pendingSc.size + openOf.length);
   const dateAnomalies = countFutureDateAnomalies();
-  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos ativos = ${integerFormatter.format(codesWithStock.size)} com saldo + ${integerFormatter.format(zeroCodes.size)} zerados parametrizados${dateAnomalies ? ` · Atenção: ${pluralize(dateAnomalies, "data futura atípica", "datas futuras atípicas")}` : ""}`;
+  ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos ativos · ${integerFormatter.format(codesWithStock.size)} com saldo consolidado diferente de zero · ${integerFormatter.format(zeroCodes.size)} com posição zerada parametrizada${dateAnomalies ? ` · Atenção: ${pluralize(dateAnomalies, "data futura atípica", "datas futuras atípicas")}` : ""}`;
   ui.metricsContext.textContent = ui.locationFilter.value
     ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
     : ui.branchFilter.value
@@ -1758,8 +1765,16 @@ function isWarehouseSc(sc) {
   return /^0*1500(?:[.,]0+)?$/.test(String(sc?.allocationCostCenter || "").trim());
 }
 
+function itemIsWarehouseStockItem(item) {
+  return (item.positions || []).some((position) => (
+    position.quantity > 0
+    || (position.minimum ?? 0) > 0
+    || (position.maximum ?? 0) > 0
+  ));
+}
+
 function itemHasWarehouseStock(item) {
-  return (item.positions || []).some((position) => position.quantity > 0);
+  return itemIsWarehouseStockItem(item);
 }
 
 function recordMatchesCcuClassification(record, item, classification) {
@@ -1768,7 +1783,7 @@ function recordMatchesCcuClassification(record, item, classification) {
   if (classification === "warehouse") return isWarehouseSc(record.sc);
   const direct = !isWarehouseSc(record.sc);
   if (classification === "direct") return direct;
-  if (classification === "direct-with-stock") return direct && itemHasWarehouseStock(item);
+  if (classification === "direct-with-stock") return direct && itemIsWarehouseStockItem(item);
   return true;
 }
 
@@ -4064,5 +4079,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, recordMatchesCcuClassification };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification };
 }
