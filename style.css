@@ -1498,3 +1498,24 @@ html[data-theme="theme-t"] .branch-balance-grid article { background:linear-grad
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; }
 }
+
+/* Mark X — progresso da base e rolagem acessível nos modais. */
+.loading-panel > div:nth-child(2) { min-width:min(520px,60vw); }
+.loading-progress { width:100%; height:7px; margin-top:9px; overflow:hidden; border-radius:999px; background:rgba(100,116,139,.2); box-shadow:inset 0 1px 2px rgba(15,23,42,.14); }
+.loading-progress > span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--blue-600),var(--cyan)); box-shadow:0 0 14px rgba(6,182,212,.38); transition:width 260ms ease; }
+.loading-progress__text { display:block; margin-top:4px; color:var(--muted); font-size:.69rem; font-variant-numeric:tabular-nums; text-align:right; }
+.base-update-badge { display:inline-flex; align-items:center; margin-left:8px; padding:2px 7px; border:1px solid rgba(186,230,253,.24); border-radius:999px; color:#c8e8f2; background:rgba(255,255,255,.06); font-size:.66rem; font-weight:650; white-space:nowrap; }
+
+.item-modal .modal-content,
+.item-modal .table-wrap { scrollbar-width:thin; scrollbar-color:var(--steel-400) transparent; }
+.item-modal .modal-content::-webkit-scrollbar,
+.item-modal .table-wrap::-webkit-scrollbar { display:block; width:9px; height:9px; }
+.item-modal .modal-content::-webkit-scrollbar-thumb,
+.item-modal .table-wrap::-webkit-scrollbar-thumb { border:2px solid transparent; border-radius:999px; background:var(--steel-400); background-clip:padding-box; }
+.item-modal .modal-content::-webkit-scrollbar-track,
+.item-modal .table-wrap::-webkit-scrollbar-track { background:transparent; }
+
+@media (max-width:700px) {
+  .loading-panel > div:nth-child(2) { min-width:0; width:100%; }
+  .base-update-badge { display:flex; width:max-content; margin:4px 0 0; }
+}
