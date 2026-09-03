@@ -13,7 +13,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark VIII";
+const APP_VERSION = "Mark IX";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -2585,8 +2585,18 @@ function processStatus(record) {
   if (status === "awaiting-of") return { label: `SC ${sc?.code || "—"} · aguardando OF`, detail: ageLabel(sc?.date), type: "status-pill--pending" };
   if (status === "partial") return { label: `OF ${of.code} · entrega parcial`, detail: `${numberFormatter.format(of.balance)} pendente`, type: "status-pill--need" };
   if (status === "awaiting-delivery") return { label: `OF ${of.code} · aguardando entrega`, detail: `${numberFormatter.format(of.balance)} pendente`, type: "status-pill--process" };
-  if (rec?.invoice) return { label: `OF ${of.code} · recebida`, detail: formatDate(rec.entryDate || rec.issueDate), type: "status-pill--success" };
-  return { label: `OF ${of.code}`, detail: formatDate(of.date), type: "status-pill--process" };
+  if (rec?.invoice) return {
+    label: of?.code ? `OF ${of.code} · recebida` : `NF ${rec.invoice} · recebida`,
+    detail: formatDate(rec.entryDate || rec.issueDate),
+    type: "status-pill--success",
+  };
+  if (of?.code) return { label: `OF ${of.code}`, detail: formatDate(of.date), type: "status-pill--process" };
+  if (sc?.code) return {
+    label: `SC ${sc.code} · ${sc.status || "sem OF"}`,
+    detail: formatDate(sc.date),
+    type: "status-pill--pending",
+  };
+  return { label: "Processo incompleto", detail: "Sem SC ou OF vinculada", type: "status-pill--pending" };
 }
 
 function openProcurementModal(key) {
