@@ -13,16 +13,16 @@ const CONFIG = Object.freeze({
 });
 
 const THEME_IDS = new Set([
-  "polar", "rubi", "industrial", "graphite", "operations",
+  "aurora", "polar", "rubi", "industrial", "graphite", "operations",
   "logistics", "corporate", "ocean", "neutral", "contrast",
 ]);
 
 if (typeof document !== "undefined") {
   try {
     const savedTheme = localStorage.getItem("almoxarifado-theme");
-    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "industrial";
+    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "aurora";
   } catch {
-    document.documentElement.dataset.theme = "industrial";
+    document.documentElement.dataset.theme = "aurora";
   }
 }
 
@@ -343,7 +343,7 @@ function initializeTheme() {
 }
 
 function applyTheme(theme, persist) {
-  const selectedTheme = THEME_IDS.has(theme) ? theme : "industrial";
+  const selectedTheme = THEME_IDS.has(theme) ? theme : "aurora";
   document.documentElement.dataset.theme = selectedTheme;
   const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--navy-800").trim();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor || "#123a63");
