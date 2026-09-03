@@ -4,6 +4,7 @@ const CONFIG = Object.freeze({
   saldoFile: "00 - Saldo_Online.csv",
   comprasFallbackFile: "01 - Compras_Almox.csv",
   comprasApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents?ref=main",
+  commitsApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/commits?per_page=20",
   consumoFile: "03 - Consumo.csv",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
@@ -13,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark IX";
+const APP_VERSION = "Mark X";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -109,7 +110,7 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage",
+    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
@@ -1000,6 +1001,7 @@ async function loadCatalog() {
     worker.postMessage({
       saldoUrl: new URL(CONFIG.saldoFile, document.baseURI).href,
       comprasApiUrl: CONFIG.comprasApi,
+      commitsApiUrl: CONFIG.commitsApi,
       comprasFallbackUrl: new URL(CONFIG.comprasFallbackFile, document.baseURI).href,
       consumoUrl: new URL(CONFIG.consumoFile, document.baseURI).href,
     });
@@ -1014,6 +1016,7 @@ async function handleWorkerMessage(event) {
   if (message.type === "progress") {
     ui.loadingMessage.textContent = message.message;
     ui.statusLine.textContent = message.message;
+    if (Number.isFinite(Number(message.percent))) updateLoadingProgress(message.percent);
     return;
   }
 
@@ -1042,6 +1045,8 @@ async function handleWorkerMessage(event) {
     const activeStockItems = state.items.filter((item) => !item.flags.inactiveOnly && item.positions.length).length;
     const purchaseOnlyItems = state.items.filter((item) => item.flags.purchaseOnly).length;
     ui.statusLine.textContent = `${integerFormatter.format(activeStockItems)} no estoque ativo · ${integerFormatter.format(purchaseOnlyItems)} somente em compras · ${time}`;
+    updateBaseTimestamp(message.payload.baseUpdatedAt);
+    updateLoadingProgress(100);
     ui.loadingPanel.classList.add("is-hidden");
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
@@ -1059,6 +1064,30 @@ function showLoading(title, message) {
   ui.loadingMessage.textContent = message;
   ui.retryButton.classList.add("is-hidden");
   ui.statusLine.textContent = message;
+  ui.baseUpdateBadge.classList.add("is-hidden");
+  updateLoadingProgress(0);
+}
+
+function updateLoadingProgress(percent = 0) {
+  const value = Math.max(0, Math.min(100, Number(percent) || 0));
+  ui.loadingProgress.style.width = `${value}%`;
+  ui.loadingProgressText.textContent = `${Math.round(value)}%`;
+  ui.loadingProgress.parentElement?.setAttribute("aria-valuenow", String(Math.round(value)));
+}
+
+function updateBaseTimestamp(value) {
+  const timestamp = Date.parse(value || "");
+  if (!Number.isFinite(timestamp)) {
+    ui.baseUpdateBadge.classList.add("is-hidden");
+    return;
+  }
+  const formatted = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(timestamp));
+  ui.baseUpdateBadge.textContent = `Base atualizada em ${formatted}`;
+  ui.baseUpdateBadge.classList.remove("is-hidden");
 }
 
 function showError(title, message) {
@@ -3563,19 +3592,21 @@ function inventoryWorker() {
 
   self.onmessage = async (event) => {
     try {
-      const { saldoUrl, comprasApiUrl, comprasFallbackUrl, consumoUrl } = event.data;
-      progress("Baixando os arquivos de saldo e compras…");
-      const [saldoText, comprasSources, consumoText] = await Promise.all([
+      const { saldoUrl, comprasApiUrl, commitsApiUrl, comprasFallbackUrl, consumoUrl } = event.data;
+      progress("Baixando os arquivos de saldo e compras…", 8);
+      const [saldoText, comprasSources, consumoText, baseUpdatedAt] = await Promise.all([
         fetchText(saldoUrl, "Saldo_Online"),
         fetchPurchaseParts(comprasApiUrl, comprasFallbackUrl),
         fetchOptionalText(consumoUrl),
+        fetchLatestCsvUpdate(commitsApiUrl),
       ]);
+      progress("Arquivos baixados. Iniciando a consolidação…", 28);
 
       const items = new Map();
       let saldoRows = 0;
       let comprasRows = 0;
 
-      progress("Consolidando saldos por código, filial e local…");
+      progress("Consolidando saldos por código, filial e local…", 36);
       parseCsv(saldoText, (headers, row) => {
         saldoRows += 1;
         const get = rowGetter(headers, row);
@@ -3649,8 +3680,10 @@ function inventoryWorker() {
         if (saldoRows % 8000 === 0) progress(`Consolidando saldo: ${saldoRows.toLocaleString("pt-BR")} registros…`);
       });
 
-      progress(`Relacionando solicitações, ordens e recebimentos de ${comprasSources.length.toLocaleString("pt-BR")} arquivo(s)…`);
-      for (const comprasSource of comprasSources) parseCsv(comprasSource.text, (headers, row) => {
+      progress(`Relacionando solicitações, ordens e recebimentos de ${comprasSources.length.toLocaleString("pt-BR")} arquivo(s)…`, 55);
+      for (let sourceIndex = 0; sourceIndex < comprasSources.length; sourceIndex += 1) {
+        const comprasSource = comprasSources[sourceIndex];
+        parseCsv(comprasSource.text, (headers, row) => {
         comprasRows += 1;
         const get = rowGetter(headers, row);
         const scProduct = normalizeItemCode(get("SC - Cód. Produto"));
@@ -3804,9 +3837,11 @@ function inventoryWorker() {
         }
 
         if (comprasRows % 6000 === 0) progress(`Relacionando compras: ${comprasRows.toLocaleString("pt-BR")} registros…`);
-      });
+        });
+        progress(`Parte ${sourceIndex + 1} de ${comprasSources.length} consolidada…`, 55 + ((sourceIndex + 1) / Math.max(1, comprasSources.length)) * 30);
+      }
 
-      progress("Preparando os cards e os indicadores…");
+      progress("Preparando os cards e os indicadores…", 90);
       const output = [];
       for (const item of items.values()) {
         item.flags.inactiveOnly = item._hasStockSource && !item._hasActivePosition;
@@ -3834,7 +3869,7 @@ function inventoryWorker() {
 
       self.postMessage({
         type: "complete",
-        payload: { items: output, saldoRows, comprasRows, comprasFiles: comprasSources.map((source) => source.name), consumption },
+        payload: { items: output, saldoRows, comprasRows, comprasFiles: comprasSources.map((source) => source.name), baseUpdatedAt, consumption },
       });
     } catch (error) {
       self.postMessage({ type: "error", message: error?.message || String(error) });
@@ -3893,6 +3928,29 @@ function inventoryWorker() {
     return fallbackText === null ? [] : [{ name: "01 - Compras_Almox.csv", text: fallbackText }];
   }
 
+  async function fetchLatestCsvUpdate(apiUrl) {
+    if (!apiUrl) return "";
+    try {
+      const response = await fetch(apiUrl, { cache: "no-store", headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) return "";
+      const commits = await response.json();
+      const candidates = (Array.isArray(commits) ? commits : [])
+        .filter((entry) => /add files via upload|csv|saldo|compras|consumo|base/i.test(entry?.commit?.message || ""))
+        .slice(0, 6);
+      for (const entry of candidates) {
+        if (!entry?.url) continue;
+        const detailResponse = await fetch(entry.url, { cache: "no-store", headers: { Accept: "application/vnd.github+json" } });
+        if (!detailResponse.ok) continue;
+        const detail = await detailResponse.json();
+        if (!(detail.files || []).some((file) => /\.csv$/i.test(file.filename || ""))) continue;
+        return entry.commit?.author?.date || entry.commit?.committer?.date || "";
+      }
+    } catch {
+      return "";
+    }
+    return "";
+  }
+
   function parseConsumptionCsv(text) {
     if (text === null) return { available: false, headers: [], records: [], rowCount: 0 };
     let headers = [];
@@ -3923,8 +3981,8 @@ function inventoryWorker() {
     return { available: true, headers, records: [...records.values()], rowCount };
   }
 
-  function progress(message) {
-    self.postMessage({ type: "progress", message });
+  function progress(message, percent) {
+    self.postMessage({ type: "progress", message, percent });
   }
 
   function resolveStockBranchName(branchCode, localCode, partition, originalName) {
