@@ -1087,6 +1087,7 @@ function buildPurchaseNeeds() {
       const grossSuggested = Math.max(target - position.quantity, 0);
       const coverage = allocatePurchaseCoverage(commitmentsByBranch.get(position.branchCode), grossSuggested);
       const netSuggested = Math.max(grossSuggested - coverage.total, 0);
+      if (netSuggested <= 0) continue;
       const referencePrice = position.unitCost || latestPurchasePrice(item) || 0;
       needs.push({
         item,
