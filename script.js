@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXII";
+const APP_VERSION = "Mark XXIII";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -106,6 +106,8 @@ const state = {
   pageRenderRevision: new Map(),
   pageRenderToken: 0,
   filterDraftSnapshot: null,
+  draftFilterRefreshTimer: null,
+  filterOptionSignatures: new WeakMap(),
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
@@ -177,6 +179,22 @@ function bindEvents() {
   ui.themeSelect.addEventListener("change", () => applyTheme(ui.themeSelect.value, true));
   ui.languageToggle.addEventListener("click", () => applyLanguage(activeLanguage === "pt-BR" ? "en" : "pt-BR", true));
   ui.densityToggle.addEventListener("click", toggleDensity);
+  for (const select of [
+    ui.branchFilter,
+    ui.locationFilter,
+    ui.categoryFilter,
+    ui.unitFilter,
+    ui.supplierFilter,
+    ui.requesterFilter,
+    ui.ccuClassificationFilter,
+    ui.itemCodeFilter,
+    ui.stockStatusFilter,
+    ui.scStatusFilter,
+  ]) {
+    select.addEventListener("change", () => scheduleDraftFilterRefresh(select.id));
+  }
+  ui.positiveBalanceFilter.addEventListener("change", () => scheduleDraftFilterRefresh("positiveBalanceFilter"));
+  ui.searchInput.addEventListener("input", debounce(() => scheduleDraftFilterRefresh("searchInput"), 180));
   ui.catalogSort.addEventListener("change", applyFilters);
   ui.catalogView.addEventListener("change", () => ui.cardsGrid.classList.toggle("is-list-view", ui.catalogView.value === "list"));
 
@@ -1011,7 +1029,13 @@ function toggleFilters() {
 }
 
 function closeFilters(restoreDraft = true) {
-  if (restoreDraft && state.filterDraftSnapshot) restoreFilterValues(state.filterDraftSnapshot);
+  cancelDraftFilterRefresh();
+  if (restoreDraft && state.filterDraftSnapshot) {
+    ui.branchFilter.value = state.filterDraftSnapshot.branchFilter;
+    populateFilters();
+    restoreFilterValues(state.filterDraftSnapshot);
+    for (const option of ui.stockStatusFilter.options) option.disabled = false;
+  }
   state.filterDraftSnapshot = null;
   ui.globalFiltersPanel.classList.add("is-hidden");
   ui.filterToggleButton.setAttribute("aria-expanded", "false");
@@ -1041,6 +1065,23 @@ function restoreFilterValues(values) {
     if (id === "positiveBalanceFilter") ui[id].checked = Boolean(value);
     else ui[id].value = value;
   }
+}
+
+function scheduleDraftFilterRefresh(changedId) {
+  if (!state.items.length) return;
+  window.clearTimeout(state.draftFilterRefreshTimer);
+  ui.globalFiltersPanel.setAttribute("aria-busy", "true");
+  state.draftFilterRefreshTimer = window.setTimeout(() => {
+    state.draftFilterRefreshTimer = null;
+    refreshDependentFilters(changedId);
+    ui.globalFiltersPanel.removeAttribute("aria-busy");
+  }, 32);
+}
+
+function cancelDraftFilterRefresh() {
+  window.clearTimeout(state.draftFilterRefreshTimer);
+  state.draftFilterRefreshTimer = null;
+  ui.globalFiltersPanel.removeAttribute("aria-busy");
 }
 
 function applyAllFilters(shouldClose = false) {
@@ -1431,24 +1472,35 @@ function refreshDependentFilters(changedId) {
   ];
 
   for (let pass = 0; pass < 2; pass += 1) {
+    let invalidatedSelection = false;
     for (const [filterId, select, firstLabel] of definitions) {
       if (filterId === changedId) continue;
       const currentValue = select.value;
       const entries = collectDependentOptions(filterId);
-      fillSelect(select, entries, firstLabel);
-      if (entries.some(([value]) => value === currentValue)) select.value = currentValue;
+      invalidatedSelection = updateDependentSelect(select, entries, firstLabel, currentValue) || invalidatedSelection;
     }
+    const statusInvalidated = refreshStatusAvailability(changedId);
+    if (!invalidatedSelection && !statusInvalidated) break;
+  }
+}
+
+function updateDependentSelect(select, entries, firstLabel, currentValue) {
+  const sorted = entries
+    .filter(([value]) => value)
+    .sort((a, b) => a[1].localeCompare(b[1], "pt-BR", { numeric: true, sensitivity: "base" }));
+  const signature = JSON.stringify(sorted);
+  const remainsValid = !currentValue || sorted.some(([value]) => value === currentValue);
+
+  if (state.filterOptionSignatures.get(select) !== signature) {
+    select.replaceChildren(new Option(firstLabel, ""));
+    const fragment = document.createDocumentFragment();
+    for (const [value, label] of sorted) fragment.append(new Option(label, value));
+    select.append(fragment);
+    state.filterOptionSignatures.set(select, signature);
   }
 
-  if (refreshStatusAvailability(changedId)) {
-    for (const [filterId, select, firstLabel] of definitions) {
-      if (filterId === changedId) continue;
-      const currentValue = select.value;
-      const entries = collectDependentOptions(filterId);
-      fillSelect(select, entries, firstLabel);
-      if (entries.some(([value]) => value === currentValue)) select.value = currentValue;
-    }
-  }
+  select.value = remainsValid ? currentValue : "";
+  return Boolean(currentValue) && !remainsValid;
 }
 
 function collectDependentOptions(targetFilterId) {
@@ -1562,6 +1614,7 @@ function fillSelect(select, entries, firstLabel) {
   const fragment = document.createDocumentFragment();
   for (const [value, label] of sorted) fragment.append(new Option(label, value));
   select.append(fragment);
+  state.filterOptionSignatures.delete(select);
 }
 
 function clearFilters() {
