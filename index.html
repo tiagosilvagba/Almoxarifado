@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXX</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXXI</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -63,6 +63,7 @@
           <a class="app-nav__tab" href="#consulta-sc-of" data-page="consulta-sc-of" role="tab" aria-selected="false" aria-controls="page-consulta-sc-of">Consulta SC e OF</a>
           <a class="app-nav__tab" href="#tempo-geracao-of" data-page="tempo-geracao-of" role="tab" aria-selected="false" aria-controls="page-tempo-geracao-of">Tempo de geração de OF</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
+          <a class="app-nav__tab" href="#instrucoes" data-page="instrucoes" role="tab" aria-selected="false" aria-controls="page-instrucoes">Instruções</a>
         </nav>
       </div>
     </header>
@@ -434,6 +435,124 @@
             <div class="load-more-wrap">
               <button id="reviewLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais análises</button>
               <span id="reviewVisibleCount" class="visible-count"></span>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">
+          <header class="instructions-hero">
+            <div>
+              <span class="eyebrow">Manual operacional</span>
+              <h2 id="instructionsTitle">Como utilizar o Painel de Gestão de Almoxarifado</h2>
+              <p>Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.</p>
+            </div>
+            <span class="instructions-version">Regras vigentes · Mark XXXI</span>
+          </header>
+
+          <div class="instructions-layout">
+            <nav class="instructions-index" aria-label="Índice das instruções">
+              <strong>Índice rápido</strong>
+              <a href="#instr-primeiros-passos">1. Primeiros passos</a>
+              <a href="#instr-bases">2. Bases de dados</a>
+              <a href="#instr-filtros">3. Filtros globais</a>
+              <a href="#instr-dashboard">4. Dashboard</a>
+              <a href="#instr-catalogo">5. Catálogo e modais</a>
+              <a href="#instr-necessidade">6. Necessidade de compra</a>
+              <a href="#instr-sc">7. SC pendente de OF</a>
+              <a href="#instr-compras">8. Consulta de compras</a>
+              <a href="#instr-tempo-of">9. Tempo de geração de OF</a>
+              <a href="#instr-min-max">10. Revisão de mín. e máx.</a>
+              <a href="#instr-exportacoes">11. Exportações</a>
+              <a href="#instr-regras">12. Regras especiais</a>
+            </nav>
+
+            <div class="instructions-content">
+              <article id="instr-primeiros-passos" class="instruction-section">
+                <span class="instruction-section__number">01</span>
+                <div><h3>Primeiros passos e navegação</h3><p>Ao abrir o painel, aguarde a barra de progresso terminar. O sistema localiza os CSVs, processa os registros, cruza saldo, compras, consumo e responsáveis e somente depois libera as abas.</p>
+                <ul><li><strong>Atualizar:</strong> o botão circular no cabeçalho recarrega todos os arquivos sem alterar o código.</li><li><strong>Última atualização da base:</strong> o horário exibido ao lado da versão corresponde à atualização mais recente dos CSVs no GitHub.</li><li><strong>Tema:</strong> altera cores, superfícies e identidade visual; o tema Clean é o padrão.</li><li><strong>Idioma:</strong> alterna a interface entre português e inglês.</li><li><strong>Modo compacto:</strong> reduz espaçamentos para exibir mais informações na tela.</li><li><strong>Abas:</strong> Dashboard, Catálogo, Necessidade de Compra, SC Pendente de OF, Consulta SC e OF, Tempo de Geração de OF, Revisão de Mín. e Máx. e Instruções.</li></ul></div>
+              </article>
+
+              <article id="instr-bases" class="instruction-section">
+                <span class="instruction-section__number">02</span>
+                <div><h3>Bases de dados utilizadas</h3><div class="instruction-table-wrap"><table class="instruction-table"><thead><tr><th>Fonte</th><th>Finalidade</th><th>Regra de leitura</th></tr></thead><tbody>
+                  <tr><td><strong>00 - Saldo_Online.csv</strong></td><td>Saldo, custo, valor, mínimo, máximo, filial, local e endereço.</td><td>Itens sem saldo e sem mínimo/máximo são tratados como inativos; as demais posições permanecem disponíveis.</td></tr>
+                  <tr><td><strong>01 - Compras_Almox_Parte_XX.CSV</strong></td><td>SC, OF, fornecedores, solicitantes e recebimentos.</td><td>Todas as partes encontradas são combinadas. Se uma parte estiver ausente, as outras continuam sendo processadas.</td></tr>
+                  <tr><td><strong>01 - Compras_Almox.csv</strong></td><td>Arquivo alternativo de compras.</td><td>Utilizado como fonte de contingência quando necessário.</td></tr>
+                  <tr><td><strong>02 - Responsaveis_Reposição.CSV</strong></td><td>Responsável por executar a reposição.</td><td>Relacionamento por filial + código do local; zeros à esquerda não alteram o vínculo.</td></tr>
+                  <tr><td><strong>03 - Consumo.csv</strong></td><td>Consumo mensal por item, filial e local.</td><td>Alimenta consumo médio, anomalias e revisão de mínimo e máximo.</td></tr>
+                  <tr><td><strong>imagens/</strong></td><td>Fotos dos itens.</td><td>As imagens são relacionadas pelo código do item e exibidas na galeria.</td></tr>
+                </tbody></table></div><p class="instruction-note"><strong>Importante:</strong> compras, responsáveis, consumo e imagens são fontes complementares. A indisponibilidade de uma fonte opcional não deve impedir a leitura das demais.</p></div>
+              </article>
+
+              <article id="instr-filtros" class="instruction-section">
+                <span class="instruction-section__number">03</span>
+                <div><h3>Filtros globais</h3><p>Os filtros afetam todas as análises relacionadas. Dentro do painel de filtros, as opções são dependentes e se ajustam dinamicamente às seleções realizadas. Os resultados da página só são recalculados ao clicar em <strong>Concluir e fechar</strong>, evitando lentidão.</p>
+                <div class="instruction-grid"><section><h4>Pesquisa</h4><p>Localiza código, descrição, SC, OF, nota fiscal, fornecedor, solicitante e informações relacionadas.</p></section><section><h4>Estrutura</h4><p>Filial, local de estoque, responsável pela reposição, categoria e unidade.</p></section><section><h4>Compras</h4><p>Fornecedor, solicitante da SC, situação da SC/entrega e classificação pelo CCU da etiqueta.</p></section><section><h4>Estoque</h4><p>Código do item em compra direta, situação do estoque e opção de saldo positivo.</p></section></div>
+                <ul><li><strong>CCU 1500:</strong> compra destinada à entrada no almoxarifado.</li><li><strong>CCU diferente de 1500:</strong> compra direta para o centro de custo da área.</li><li><strong>Compra direta de item de estoque:</strong> compra fora do CCU 1500 de item que possui saldo positivo ou mínimo/máximo cadastrado.</li><li><strong>Situações do estoque:</strong> zerado parametrizado, abaixo do mínimo, acima do máximo, dentro da faixa, saldo sem parâmetros, negativo ou local a ajustar.</li><li><strong>Fechar sem concluir:</strong> restaura o recorte anteriormente aplicado.</li></ul></div>
+              </article>
+
+              <article id="instr-dashboard" class="instruction-section">
+                <span class="instruction-section__number">04</span>
+                <div><h3>Dashboard e indicadores</h3><p>O Dashboard resume apenas o recorte dos filtros aplicados. Os cartões e gráficos são clicáveis e levam ao detalhamento correspondente.</p>
+                <div class="instruction-formulas"><div><span>Valor do estoque</span><code>Σ valor atual de cada posição filtrada</code></div><div><span>Valor acima do máximo</span><code>Σ (saldo − máximo) × custo unitário, quando saldo &gt; máximo</code></div><div><span>Pendências documentais</span><code>SCs sem OF + OFs abertas com saldo pendente</code></div></div>
+                <ul><li><strong>Códigos ativos:</strong> códigos com saldo ou limites parametrizados em pelo menos uma posição.</li><li><strong>Itens com saldo:</strong> códigos cujo saldo consolidado no recorte é diferente de zero.</li><li><strong>Zerados parametrizados:</strong> códigos com posição igual a zero e mínimo + máximo positivo.</li><li><strong>Alertas independentes:</strong> o mesmo código pode aparecer em mais de uma situação quando possui posições distintas.</li><li><strong>Fluxo de compras:</strong> conta SCs únicas, OFs únicas e recebimentos únicos por nota + série.</li><li><strong>Prioridades:</strong> exibe as maiores necessidades líquidas e os maiores excessos estimados.</li></ul></div>
+              </article>
+
+              <article id="instr-catalogo" class="instruction-section">
+                <span class="instruction-section__number">05</span>
+                <div><h3>Catálogo, cards e modais</h3><p>O Catálogo pode ser exibido em cards ou lista compacta e ordenado por código, descrição, saldo, valor ou criticidade.</p>
+                <ul><li>Os cards apresentam identificação, saldo, mínimo/máximo, endereço na ordem <strong>repartição, prateleira e divisão</strong> e responsável pela reposição.</li><li>Ao abrir um item, o modal mostra saldo separado por filial e respeita os filtros aplicados.</li><li>A galeria localiza as fotos existentes na pasta de imagens. O envio manual de foto fica salvo no navegador do dispositivo utilizado.</li><li>Os modais reúnem lead time, consumo médio, saldo atual e projeção da próxima compra, além dos históricos de SC, OF e recebimento.</li><li>A projeção é calculada individualmente por filial. Quando há mais de uma filial no recorte, o sistema solicita a escolha de uma filial.</li></ul>
+                <div class="instruction-formulas"><div><span>Dias até o ponto de reposição</span><code>máx(0; inteiro((saldo − mínimo sugerido) ÷ consumo diário))</code></div><div><span>Data projetada</span><code>data atual + dias até o ponto de reposição</code></div></div></div>
+              </article>
+
+              <article id="instr-necessidade" class="instruction-section instruction-section--accent">
+                <span class="instruction-section__number">06</span>
+                <div><h3>Necessidade de compra</h3><p>Uma posição entra como pendência quando possui mínimo positivo, o saldo está abaixo do mínimo e a necessidade líquida final é maior que zero.</p>
+                <div class="instruction-formulas"><div><span>Meta de reposição</span><code>máximo cadastrado; se não existir, mínimo cadastrado</code></div><div><span>Necessidade bruta</span><code>máx(meta − saldo atual; 0)</code></div><div><span>Cobertura existente</span><code>saldo de OF aberta no CCU 1500 + SC ativa sem OF no CCU 1500</code></div><div><span>Compra líquida</span><code>máx(necessidade bruta − cobertura existente; 0)</code></div><div><span>Valor estimado</span><code>compra líquida × preço de referência</code></div></div>
+                <ul><li>Se a compra líquida for zero, o item não é exibido como pendência.</li><li>OF fechada não cobre a necessidade; ela permanece disponível somente para históricos e cálculo de lead time.</li><li>SC ou OF fora do CCU 1500 não reduz a compra do almoxarifado.</li><li>Quando há OF + SC, os documentos precisam ser processos distintos; os números de ambos são mantidos.</li><li>Dentro da mesma SC e do mesmo item, sequências diferentes são somadas. Se a <strong>SC - Seq.</strong> se repetir, a linha é considerada apenas uma vez.</li><li>O preço de referência usa primeiro o custo do estoque e, se indisponível, o preço de compra mais recente.</li><li>Os cards mostram saldo, mínimo e máximo cadastrados, cobertura, compra líquida, endereço e responsável.</li></ul>
+                <aside class="instruction-alert"><strong>Alerta especial de Cavaco</strong><span>Uma OF de Cavaco aberta com saldo inferior a 200 gera um card especial. Necessidade = 200 − saldo da OF. O fornecedor também é exibido.</span></aside></div>
+              </article>
+
+              <article id="instr-sc" class="instruction-section">
+                <span class="instruction-section__number">07</span>
+                <div><h3>SC pendente de OF</h3><p>Exibe solicitações com situação <strong>Compra confirmada</strong> ou <strong>Comprador negociando</strong>, não canceladas e ainda sem código de OF.</p>
+                <ul><li>O tempo pendente é contado em dias entre a criação da SC e a data atual.</li><li>Os cards informam solicitante, item, quantidade, entrega prevista, idade da SC, endereço e responsável pela reposição.</li><li>O modal organiza todos os campos da solicitação e apresenta o contexto operacional do item.</li><li>No PDF, somente SCs pendentes há mais de 7 dias são incluídas. O Excel mantém todo o conjunto filtrado.</li></ul></div>
+              </article>
+
+              <article id="instr-compras" class="instruction-section">
+                <span class="instruction-section__number">08</span>
+                <div><h3>Consulta de SC, OF e recebimentos</h3><p>Apresenta o fluxo completo de cada processo e relaciona solicitação, ordem e recebimento ao item.</p>
+                <div class="instruction-grid"><section><h4>SC aguardando OF</h4><p>SC encontrada sem código de OF.</p></section><section><h4>OF com saldo pendente</h4><p>OF não fechada com saldo maior que zero.</p></section><section><h4>Entrega parcial</h4><p>Quantidade entregue maior que zero e menor que a quantidade solicitada.</p></section><section><h4>Recebimentos</h4><p>Notas localizadas, identificadas de forma única pelo número da nota e série.</p></section></div>
+                <ul><li>O modal separa visualmente os blocos SC, OF e REC.</li><li>São mostrados solicitante, fornecedor, e-mail, quantidades, valores, datas, status e condições comerciais disponíveis.</li><li>Uma OF fechada continua no histórico e participa do lead time, mas não é tratada como compra aberta para cobrir necessidade.</li></ul></div>
+              </article>
+
+              <article id="instr-tempo-of" class="instruction-section">
+                <span class="instruction-section__number">09</span>
+                <div><h3>Tempo de geração de OF</h3><p>Mede a eficiência entre a criação da solicitação e a emissão da ordem. Cada combinação SC + OF é contabilizada uma única vez.</p>
+                <div class="instruction-formulas"><div><span>Tempo de geração</span><code>data de emissão da OF − SC - Data Criação</code></div><div><span>Média geral</span><code>Σ dias para geração ÷ quantidade de processos válidos</code></div></div>
+                <ul><li>Faixas: até 7; 8–15; 16–20; 21–25; 26–30; e acima de 30 dias.</li><li>Os segmentadores de ano, mês, semana e data usam sempre a coluna <strong>SC - Data Criação</strong>.</li><li>O gráfico pode ser agrupado em visão anual, mensal, semanal ou diária.</li><li>O valor apresentado em cada ponto é a quantidade de itens dos processos naquele período.</li><li>A seleção da faixa de dias do gráfico é independente da faixa aplicada à lista de cards.</li><li>Datas ausentes, inválidas ou em que a OF seja anterior à SC não entram no indicador.</li></ul></div>
+              </article>
+
+              <article id="instr-min-max" class="instruction-section instruction-section--accent">
+                <span class="instruction-section__number">10</span>
+                <div><h3>Revisão de mínimo e máximo</h3><p>A análise cruza consumo mensal sem anomalias, lead time real, saldo, parâmetros atuais e preço de referência por item, filial e local.</p>
+                <div class="instruction-formulas"><div><span>Consumo diário</span><code>consumo médio mensal sem anomalias ÷ 30</code></div><div><span>Mínimo-base</span><code>consumo diário × lead time</code></div><div><span>Mínimo sugerido</span><code>arredondar para cima(mínimo-base × 1,20)</code></div><div><span>Máximo sugerido</span><code>arredondar para cima(mínimo sugerido + 30 dias de consumo)</code></div><div><span>Impacto financeiro dos cards</span><code>(máximo sugerido − máximo atual) × preço de referência</code></div></div>
+                <ul><li><strong>Lead time real:</strong> mediana dos dias entre criação da SC e entrada do recebimento, por filial. Amostras negativas ou superiores a 730 dias são descartadas.</li><li><strong>Sem histórico:</strong> utiliza referência estimada de 30 dias, mas o resultado é classificado como histórico insuficiente.</li><li><strong>Anomalias:</strong> com três ou mais meses, aplica mediana e desvio absoluto mediano. Um mês é excluído quando o escore robusto ultrapassa 3,5. Se o desvio for zero, valores acima de 3 vezes ou abaixo de 1/3 da mediana são anômalos.</li><li><strong>Proteção:</strong> o mínimo sugerido recebe margem preventiva de 20% para reduzir risco de ruptura.</li><li><strong>Validação:</strong> mínimo e máximo atuais são considerados ideais quando ficam dentro de ±20% da recomendação, com tolerância mínima de uma unidade.</li><li><strong>Histórico suficiente:</strong> exige pelo menos dois meses considerados, consumo positivo e amostra real de lead time.</li><li><strong>Impacto total:</strong> os cards consolidam aumentos, reduções e o líquido, calculado como aumentos menos reduções.</li></ul></div>
+              </article>
+
+              <article id="instr-exportacoes" class="instruction-section">
+                <span class="instruction-section__number">11</span>
+                <div><h3>Exportações para Excel e PDF</h3><p>Escolha o formato na própria aba e clique em Exportar. A exportação respeita os filtros aplicados, mas não depende da quantidade de cards carregados na tela.</p>
+                <ul><li><strong>Conteúdo completo:</strong> todas as linhas do recorte filtrado são exportadas, inclusive as ainda não exibidas pela paginação.</li><li><strong>Excel:</strong> linhas padronizadas, cabeçalhos consistentes e nenhuma linha ou coluna congelada.</li><li><strong>PDF:</strong> organiza as informações para leitura e impressão; na SC pendente de OF aplica a regra superior a 7 dias.</li><li><strong>Em lote:</strong> quando a funcionalidade estiver disponível no ponto consultado, o formato escolhido é aplicado ao conjunto completo.</li><li>As exportações incluem códigos de documentos, responsáveis pela reposição, fornecedores e campos operacionais disponíveis em cada relatório.</li></ul></div>
+              </article>
+
+              <article id="instr-regras" class="instruction-section">
+                <span class="instruction-section__number">12</span>
+                <div><h3>Regras especiais e interpretação</h3>
+                <ul><li><strong>Filial 704:</strong> local 101 ou código de local superior a 599 é identificado como ROLANDIA - ALM. PREPARADOS.</li><li><strong>Filial 704 + local 299:</strong> repartições AP, 99, SS ou com apenas uma letra também são identificadas como ROLANDIA - ALM. PREPARADOS.</li><li><strong>Endereço:</strong> sempre apresentado na ordem repartição, prateleira e divisão.</li><li><strong>Saldos por filial:</strong> o modal do catálogo não soma filiais diferentes; apresenta cada filial separadamente e respeita o filtro ativo.</li><li><strong>Valores nulos:</strong> “Não informado”, “Não disponível” ou travessão significam que a fonte não forneceu dado válido; não representam necessariamente zero.</li><li><strong>Carregar mais:</strong> altera apenas o volume renderizado na tela, nunca o universo usado nos cards, cálculos ou exportações.</li><li><strong>Precisão:</strong> valores monetários usam preço de referência disponível; quando não há preço, o impacto financeiro não é estimado.</li></ul>
+                <aside class="instruction-alert instruction-alert--info"><strong>Boa prática</strong><span>Antes de tomar uma decisão, confirme filial, local, unidade, status da compra e data de atualização da base. Abra o modal para validar os documentos que compõem o cálculo.</span></aside></div>
+              </article>
             </div>
           </div>
         </section>

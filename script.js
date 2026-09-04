@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXX";
+const APP_VERSION = "Mark XXXI";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -423,6 +423,24 @@ const PT_EN = Object.freeze({
   "Modo confortável": "Comfortable mode",
   "Dashboard": "Dashboard",
   "Catálogo": "Catalog",
+  "Instruções": "Instructions",
+  "Manual operacional": "Operating manual",
+  "Como utilizar o Painel de Gestão de Almoxarifado": "How to use the Warehouse Management Dashboard",
+  "Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.": "Complete guide to data sources, filters, indicators, calculations, modals and exports. Use the index to go directly to the required feature.",
+  "Regras vigentes · Mark XXXI": "Current rules · Mark XXXI",
+  "Índice rápido": "Quick index",
+  "1. Primeiros passos": "1. Getting started",
+  "2. Bases de dados": "2. Data sources",
+  "3. Filtros globais": "3. Global filters",
+  "4. Dashboard": "4. Dashboard",
+  "5. Catálogo e modais": "5. Catalog and modals",
+  "6. Necessidade de compra": "6. Purchase requirements",
+  "7. SC pendente de OF": "7. PR awaiting PO",
+  "8. Consulta de compras": "8. Purchase tracking",
+  "9. Tempo de geração de OF": "9. PO generation time",
+  "10. Revisão de mín. e máx.": "10. Min. and max. review",
+  "11. Exportações": "11. Exports",
+  "12. Regras especiais": "12. Special rules",
   "Necessidade de Compra": "Purchase requirements",
   "Necessidade de compra": "Purchase requirements",
   "SC Pendente de OF": "PR awaiting PO",
@@ -1022,13 +1040,13 @@ function applyTheme(theme, persist) {
 
 function pageFromHash() {
   const page = window.location.hash.replace(/^#/, "");
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max", "instrucoes"].includes(page)
     ? page
     : "dashboard";
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max"].includes(page)
+  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max", "instrucoes"].includes(page)
     ? page
     : "dashboard";
 
@@ -1074,6 +1092,7 @@ function pageTitle(page) {
     "consulta-sc-of": "Consulta SC e OF",
     "tempo-geracao-of": "Tempo de geração de OF",
     "revisao-min-max": "Revisão de mín. e máx.",
+    instrucoes: "Instruções",
   })[page];
 }
 
