@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=mark-xix">
-    <script src="script.js?v=mark-xix" defer></script>
+    <link rel="stylesheet" href="style.css?v=mark-xx">
+    <script src="script.js?v=mark-xx" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XIX</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XX</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -61,6 +61,7 @@
           <a class="app-nav__tab" href="#necessidade-compra" data-page="necessidade-compra" role="tab" aria-selected="false" aria-controls="page-necessidade-compra">Necessidade de Compra</a>
           <a class="app-nav__tab" href="#sc-pendente-of" data-page="sc-pendente-of" role="tab" aria-selected="false" aria-controls="page-sc-pendente-of">SC pendente de OF</a>
           <a class="app-nav__tab" href="#consulta-sc-of" data-page="consulta-sc-of" role="tab" aria-selected="false" aria-controls="page-consulta-sc-of">Consulta SC e OF</a>
+          <a class="app-nav__tab" href="#tempo-geracao-of" data-page="tempo-geracao-of" role="tab" aria-selected="false" aria-controls="page-tempo-geracao-of">Tempo de geração de OF</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
         </nav>
       </div>
@@ -346,6 +347,27 @@
           </div>
         </section>
 
+        <section id="page-tempo-geracao-of" class="page-panel is-hidden" data-page-panel="tempo-geracao-of" aria-labelledby="ofGenerationTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Eficiência de compras</span>
+              <h2 id="ofGenerationTitle">Tempo de geração de OF</h2>
+              <p class="section-description">Intervalo entre a data de criação da SC e a data de emissão da OF, considerando cada processo uma única vez.</p>
+            </div>
+            <div class="heading-actions"><span id="ofGenerationCount" class="context-label">0 processos</span><div class="export-control"><label><span>Formato</span><select id="ofGenerationExportFormat" aria-label="Formato da exportação do tempo de geração de OF"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="exportOfGenerationButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div>
+          </div>
+          <div id="ofGenerationSummary" class="need-summary of-generation-summary" aria-label="Distribuição do tempo de geração de OF"></div>
+          <div class="table-heading report-heading">
+            <div><h3>Processos medidos</h3><p>Selecione uma faixa acima para detalhar somente os processos daquele intervalo.</p></div>
+            <button id="clearOfGenerationRange" class="button button--secondary is-hidden" type="button">Exibir todas as faixas</button>
+          </div>
+          <div id="ofGenerationGrid" class="report-card-grid of-generation-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="ofGenerationLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais processos</button>
+            <span id="ofGenerationVisibleCount" class="visible-count"></span>
+          </div>
+        </section>
+
         <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="reviewTitle">
           <div class="section-heading">
             <div>
@@ -462,6 +484,27 @@
           <div id="procurementModalOperational" class="operational-insights"></div>
           <div id="procurementModalDetails" class="process-detail-groups"></div>
           <div class="purchase-modal-actions"><button id="procurementModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="ofGenerationModal" class="item-modal purchase-need-modal of-generation-modal" aria-labelledby="ofGenerationModalTitle">
+      <div class="modal-shell modal-shell--purchase modal-shell--of-generation">
+        <header class="modal-header modal-header--procurement">
+          <div>
+            <span id="ofGenerationModalCode" class="modal-code"></span>
+            <h2 id="ofGenerationModalTitle">Tempo de geração da OF</h2>
+            <p id="ofGenerationModalSubtitle"></p>
+          </div>
+          <button id="ofGenerationModalClose" class="modal-close" type="button" aria-label="Fechar análise do tempo de geração">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content of-generation-modal-content">
+          <div id="ofGenerationModalTimeline" class="of-generation-timeline"></div>
+          <div id="ofGenerationModalSummary" class="summary-cards purchase-summary-cards"></div>
+          <dl id="ofGenerationModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions"><button id="ofGenerationModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
         </div>
       </div>
     </dialog>
