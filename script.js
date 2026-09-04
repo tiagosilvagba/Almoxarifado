@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXIV";
+const APP_VERSION = "Mark XXV";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -705,6 +705,8 @@ const PT_EN = Object.freeze({
   ,"Máximo não informado; reposição até o mínimo": "Maximum not provided; replenish to minimum"
   ,"Mínimo atual": "Current minimum"
   ,"Máximo atual": "Current maximum"
+  ,"Mín. cadastrado": "Configured min."
+  ,"Máx. cadastrado": "Configured max."
   ,"Mínimo sugerido": "Recommended minimum"
   ,"Mín. atual · margem +20%": "Current min. · +20% margin"
   ,"inclui margem preventiva de 20%": "includes a 20% preventive margin"
@@ -2410,6 +2412,7 @@ function renderNextPurchaseNeedBatch() {
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
     <span class="item-card__address">Reposição: ${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informada")}</span>
+    <span class="purchase-min-max"><span>Mín. cadastrado <strong>${formatOptionalNumber(position.minimum)}</strong></span><span>Máx. cadastrado <strong>${formatOptionalNumber(position.maximum)}</strong></span></span>
     ${cavacoAlert
       ? `<span class="report-card__meta"><span><small>OF</small><strong>${escapeHtml(ofCodes[0] || "—")}</strong></span><span><small>Saldo da OF</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-supplier-note"><strong>Fornecedor:</strong> ${escapeHtml(cavacoSupplier || "Não informado")}</span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo da OF de Cavaco ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
       : `<span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}`}

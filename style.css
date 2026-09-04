@@ -1448,6 +1448,25 @@ html.is-switching-theme *::after { transition:none !important; animation:none !i
 .item-card,
 .report-card { transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease; }
 
+.purchase-min-max {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px 14px;
+  padding:7px 9px;
+  border:1px solid var(--steel-200);
+  border-radius:9px;
+  color:var(--muted);
+  background:color-mix(in srgb,var(--surface) 88%,var(--steel-100));
+  font-size:.68rem;
+  line-height:1.25;
+}
+
+.purchase-min-max strong {
+  margin-left:3px;
+  color:var(--navy-900);
+  font-size:.76rem;
+}
+
 /* O vidro permanece no cabeçalho e nos modais; listas usam superfícies equivalentes mais leves. */
 html[data-theme="aurora"] .metric,
 html[data-theme="aurora"] .analytics-card,
