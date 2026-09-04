@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XVII";
+const APP_VERSION = "Mark XVIII";
 const CAVACO_OF_THRESHOLD = 200;
 
 const THEME_IDS = new Set([
@@ -29,9 +29,9 @@ let languageObserver = null;
 if (typeof document !== "undefined") {
   try {
     const savedTheme = localStorage.getItem("almoxarifado-theme");
-    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "theme-t";
+    document.documentElement.dataset.theme = THEME_IDS.has(savedTheme) ? savedTheme : "neutral";
   } catch {
-    document.documentElement.dataset.theme = "theme-t";
+    document.documentElement.dataset.theme = "neutral";
   }
 }
 
@@ -872,13 +872,13 @@ function toggleDensity() {
 function initializeTheme() {
   const theme = THEME_IDS.has(document.documentElement.dataset.theme)
     ? document.documentElement.dataset.theme
-    : "theme-t";
+    : "neutral";
   ui.themeSelect.value = theme;
   applyTheme(theme, false);
 }
 
 function applyTheme(theme, persist) {
-  const selectedTheme = THEME_IDS.has(theme) ? theme : "theme-t";
+  const selectedTheme = THEME_IDS.has(theme) ? theme : "neutral";
   document.documentElement.classList.add("is-switching-theme");
   document.documentElement.dataset.theme = selectedTheme;
   const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--navy-800").trim();
