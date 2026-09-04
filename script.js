@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXV";
+const APP_VERSION = "Mark XXVI";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -2121,10 +2121,16 @@ function getItemPurchaseCommitments(item) {
     if (!isWarehouseSc(record.sc)) continue;
     const branchCode = record.branchCode || "";
     if (isOpenOfForPurchase(record.of)) {
-      const existing = orders.get(record.of.code);
-      if (!existing || record.of.balance > existing.quantity) {
-        orders.set(record.of.code, { code: record.of.code, branchCode, quantity: record.of.balance });
-      }
+      const orderKey = `${record.of.code}::${branchCode}`;
+      const existing = orders.get(orderKey) || {
+        code: record.of.code,
+        branchCode,
+        deliveryLineBalances: new Map(),
+      };
+      const deliveryLineKey = normalizeSearch(record.of.deliveryDate) || "sem-data";
+      const previousBalance = existing.deliveryLineBalances.get(deliveryLineKey) || 0;
+      existing.deliveryLineBalances.set(deliveryLineKey, Math.max(previousBalance, record.of.balance));
+      orders.set(orderKey, existing);
     }
     if (record.sc?.code) {
       const existing = requests.get(record.sc.code) || {
@@ -2149,7 +2155,13 @@ function getItemPurchaseCommitments(item) {
     return byBranch.get(branchCode);
   };
   for (const order of orders.values()) {
-    ensureBranch(order.branchCode).ofs.push({ ...order, remaining: order.quantity });
+    const quantity = [...order.deliveryLineBalances.values()].reduce((sum, balance) => sum + balance, 0);
+    ensureBranch(order.branchCode).ofs.push({
+      code: order.code,
+      branchCode: order.branchCode,
+      quantity,
+      remaining: quantity,
+    });
   }
   for (const request of requests.values()) {
     if (request.hasOf || !(request.quantity > 0) || !isActiveScForPurchaseCoverage(request)) continue;
