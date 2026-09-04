@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=mark-xvi">
-    <script src="script.js?v=mark-xvi" defer></script>
+    <link rel="stylesheet" href="style.css?v=mark-xvii">
+    <script src="script.js?v=mark-xvii" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XVI</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XVII</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -268,14 +268,14 @@
             <div>
               <span class="eyebrow">Reposição</span>
               <h2 id="purchaseNeedTitle">Necessidade de compra</h2>
-              <p class="section-description">Posições com saldo abaixo do mínimo. A sugestão repõe até o máximo; quando não há máximo positivo, repõe até o mínimo.</p>
+              <p class="section-description">Posições com saldo abaixo do mínimo e alertas especiais de OF de Cavaco abaixo de 200.</p>
             </div>
             <span class="context-label">Baseado no Saldo_Online</span>
           </div>
 
           <div class="need-summary" aria-label="Resumo da necessidade de compra">
             <article><span>Itens para comprar</span><strong id="purchaseNeedItems">—</strong></article>
-            <article><span>Posições abaixo do mínimo</span><strong id="purchaseNeedPositions">—</strong></article>
+            <article><span>Pendências de reposição</span><strong id="purchaseNeedPositions">—</strong></article>
             <article><span>Rupturas</span><strong id="purchaseNeedRuptures">—</strong></article>
             <article><span>Valor líquido estimado</span><strong id="purchaseNeedEstimated">—</strong></article>
             <article><span>Sem máximo informado</span><strong id="purchaseNeedWithoutMax">—</strong></article>
@@ -283,8 +283,8 @@
 
           <div class="table-heading purchase-table-heading report-heading">
             <div>
-              <h3>Posições que precisam de reposição</h3>
-              <p id="purchaseNeedResultCount">0 posições</p>
+              <h3>Itens e OFs que precisam de reposição</h3>
+              <p id="purchaseNeedResultCount">0 pendências</p>
             </div>
             <div class="export-control">
               <label><span>Formato</span><select id="purchaseNeedExportFormat" aria-label="Formato da exportação de necessidades"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>

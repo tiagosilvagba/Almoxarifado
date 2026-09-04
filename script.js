@@ -14,7 +14,8 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XVI";
+const APP_VERSION = "Mark XVII";
+const CAVACO_OF_THRESHOLD = 200;
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -471,6 +472,14 @@ const PT_EN = Object.freeze({
   "Posições com saldo abaixo do mínimo. A sugestão repõe até o máximo; quando não há máximo positivo, repõe até o mínimo.": "Positions below minimum stock. The recommendation replenishes up to the maximum or, when unavailable, up to the minimum.",
   "Itens para comprar": "Items to purchase",
   "Posições abaixo do mínimo": "Positions below minimum",
+  "Pendências de reposição": "Replenishment alerts",
+  "Itens e OFs que precisam de reposição": "Items and POs requiring replenishment",
+  "Posições com saldo abaixo do mínimo e alertas especiais de OF de Cavaco abaixo de 200.": "Positions below minimum and special wood-chip PO alerts below 200.",
+  "Cavaco · OF abaixo de 200": "Wood chips · PO below 200",
+  "Saldo da OF": "PO balance",
+  "Saldo atual da OF": "Current PO balance",
+  "Limite do alerta": "Alert threshold",
+  "Déficit até 200": "Gap to 200",
   "Rupturas": "Stockouts",
   "Valor líquido estimado": "Estimated net value",
   "Sem máximo informado": "Without maximum",
@@ -1831,9 +1840,50 @@ function buildPurchaseNeeds() {
         rupture: position.quantity <= 0,
       });
     }
+
+    const cavacoOrders = new Map();
+    if (isCavacoItem(item)) {
+      for (const record of item.history || []) {
+        const of = record.of;
+        if (!isCavacoOfAlert(item, of)) continue;
+        const key = `${item.code}::${of.code}`;
+        const previous = cavacoOrders.get(key);
+        if (!previous || (record.sortKey || 0) > (previous.sortKey || 0)) cavacoOrders.set(key, record);
+      }
+    }
+
+    for (const record of cavacoOrders.values()) {
+      const of = record.of;
+      const position = (item.positions || []).find((entry) => entry.branchCode === record.branchCode)
+        || createCavacoAlertPosition(record);
+      const netSuggested = Math.max(CAVACO_OF_THRESHOLD - of.balance, 0);
+      const referencePrice = [of.unitValue, latestPurchasePrice(item), position.unitCost].find((value) => value > 0) || 0;
+      needs.push({
+        item,
+        position,
+        target: CAVACO_OF_THRESHOLD,
+        suggested: netSuggested,
+        openOfBalance: of.balance,
+        pendingScQuantity: 0,
+        coveredQuantity: 0,
+        ofCodes: [of.code],
+        scCodes: record.sc?.code ? [record.sc.code] : [],
+        coverageSource: "Alerta especial de Cavaco",
+        netSuggested,
+        referencePrice,
+        estimatedValue: netSuggested * referencePrice,
+        rupture: false,
+        cavacoAlert: true,
+        cavacoThreshold: CAVACO_OF_THRESHOLD,
+        cavacoOfBalance: of.balance,
+        record,
+      });
+    }
   }
 
   state.purchaseNeeds = needs.sort((a, b) => {
+    if (a.cavacoAlert !== b.cavacoAlert) return a.cavacoAlert ? -1 : 1;
+    if (a.cavacoAlert && b.cavacoAlert && a.cavacoOfBalance !== b.cavacoOfBalance) return a.cavacoOfBalance - b.cavacoOfBalance;
     if (a.rupture !== b.rupture) return a.rupture ? -1 : 1;
     if (a.estimatedValue !== b.estimatedValue) return b.estimatedValue - a.estimatedValue;
     const codeOrder = a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true, sensitivity: "base" });
@@ -1845,6 +1895,41 @@ function buildPurchaseNeeds() {
     need.key = `need-${index}`;
     state.purchaseNeedByKey.set(need.key, need);
   });
+}
+
+function isCavacoItem(item) {
+  return normalizeSearch([item?.name, item?.detailedName].join(" ")).includes("cavaco");
+}
+
+function isCavacoOfAlert(item, of) {
+  return isCavacoItem(item)
+    && Boolean(of?.code)
+    && isOpenOfForPurchase(of)
+    && Number.isFinite(of.balance)
+    && of.balance < CAVACO_OF_THRESHOLD;
+}
+
+function createCavacoAlertPosition(record) {
+  const branchCode = record.branchCode || "";
+  const branchName = record.branch || "Filial não informada";
+  return {
+    branchCode,
+    branchName,
+    branchKey: `${branchCode}::branch::${branchName}`,
+    localCode: "",
+    localName: "",
+    locationKey: "",
+    localType: "",
+    quantity: 0,
+    minimum: null,
+    maximum: null,
+    unitCost: 0,
+    stockValue: 0,
+    forecast: null,
+    shelf: "",
+    partition: "",
+    division: "",
+  };
 }
 
 function latestPurchasePrice(item) {
@@ -2087,8 +2172,10 @@ function renderPurchaseNeeds() {
   const location = ui.locationFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
   const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
-  const visible = state.purchaseNeeds.filter(({ item, position }) => {
+  const visible = state.purchaseNeeds.filter((need) => {
+    const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
+    if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
@@ -2096,7 +2183,7 @@ function renderPurchaseNeeds() {
   });
 
   const itemCodes = new Set(visible.map(({ item }) => item.code));
-  const withoutMaximum = visible.filter(({ position }) => !(position.maximum > 0)).length;
+  const withoutMaximum = visible.filter(({ position, cavacoAlert }) => !cavacoAlert && !(position.maximum > 0)).length;
   const ruptures = visible.filter(({ rupture }) => rupture).length;
   const estimatedValue = visible.reduce((sum, need) => sum + need.estimatedValue, 0);
   ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
@@ -2105,7 +2192,7 @@ function renderPurchaseNeeds() {
   ui.purchaseNeedEstimated.textContent = compactCurrencyFormatter.format(estimatedValue);
   ui.purchaseNeedEstimated.title = currencyFormatter.format(estimatedValue);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
-  ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "posição", "posições")} exibida${visible.length === 1 ? "" : "s"}`;
+  ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "pendência", "pendências")} exibida${visible.length === 1 ? "" : "s"}`;
   state.visiblePurchaseNeeds = visible;
   state.purchaseNeedVisible = 0;
 
@@ -2123,13 +2210,14 @@ function renderNextPurchaseNeedBatch() {
   const start = state.purchaseNeedVisible;
   const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
   if (start >= end) return;
-  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, rupture, key }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill ${netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, rupture, key, cavacoAlert, cavacoThreshold, cavacoOfBalance }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
-    <span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>
-    ${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}
+    ${cavacoAlert
+      ? `<span class="report-card__meta"><span><small>OF</small><strong>${escapeHtml(ofCodes[0] || "—")}</strong></span><span><small>Saldo da OF</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo da OF de Cavaco ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
+      : `<span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}`}
     <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
   </button>`).join(""));
   state.purchaseNeedVisible = end;
@@ -2140,7 +2228,7 @@ function renderNextPurchaseNeedBatch() {
 function openPurchaseNeedModal(key) {
   const need = state.purchaseNeedByKey.get(key);
   if (!need) return;
-  const { item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture } = need;
+  const { item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance } = need;
   state.activePurchaseNeed = need;
   state.lastFocusedElement = document.activeElement;
 
@@ -2153,11 +2241,11 @@ function openPurchaseNeedModal(key) {
     position.localName,
   ].filter(Boolean).join(" · ");
   ui.purchaseModalSummary.innerHTML = `
-    <article><span>Saldo atual</span><strong>${numberFormatter.format(position.quantity)}</strong></article>
+    <article><span>${cavacoAlert ? "Saldo atual da OF" : "Saldo atual"}</span><strong>${numberFormatter.format(cavacoAlert ? cavacoOfBalance : position.quantity)}</strong></article>
     <article><span>Mínimo</span><strong>${formatOptionalNumber(position.minimum)}</strong></article>
     <article><span>Máximo</span><strong>${formatOptionalNumber(position.maximum)}</strong></article>
-    <article><span>Meta</span><strong>${numberFormatter.format(target)}</strong></article>
-    <article><span>Necessidade bruta</span><strong>${numberFormatter.format(suggested)}</strong></article>
+    <article><span>${cavacoAlert ? "Limite do alerta" : "Meta"}</span><strong>${numberFormatter.format(target)}</strong></article>
+    <article><span>${cavacoAlert ? "Déficit até 200" : "Necessidade bruta"}</span><strong>${numberFormatter.format(suggested)}</strong></article>
     <article><span>Saldo em OF aberta · CCU 1500</span><strong>${numberFormatter.format(openOfBalance)}</strong></article>
     <article><span>SC sem OF · CCU 1500</span><strong>${numberFormatter.format(pendingScQuantity)}</strong></article>
     <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
@@ -2172,13 +2260,13 @@ function openPurchaseNeedModal(key) {
     <div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "—")}</dd></div>
     <div><dt>Divisão</dt><dd>${escapeHtml(position.division || "—")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
-    <div><dt>Prioridade</dt><dd>${rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
+    <div><dt>Prioridade</dt><dd>${cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
     <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
     <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
     <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
     <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
-    <div><dt>Observação</dt><dd>${coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
-    <div><dt>Critério da sugestão</dt><dd>${position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
+    <div><dt>Observação</dt><dd>${cavacoAlert ? `A OF ${escapeHtml(ofCodes[0] || "—")} possui saldo de ${numberFormatter.format(cavacoOfBalance)}, abaixo do gatilho operacional de ${numberFormatter.format(cavacoThreshold)}.` : coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
+    <div><dt>Critério da sugestão</dt><dd>${cavacoAlert ? "Reposição especial pela diferença entre 200 e o saldo atual da OF" : position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
 
   if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
   else ui.purchaseNeedModal.setAttribute("open", "");
@@ -2239,8 +2327,10 @@ function getVisiblePurchaseNeeds() {
   const location = ui.locationFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
   const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
-  return state.purchaseNeeds.filter(({ item, position }) => {
+  return state.purchaseNeeds.filter((need) => {
+    const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
+    if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location && position.locationKey !== location) return false;
     if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
@@ -2248,22 +2338,34 @@ function getVisiblePurchaseNeeds() {
   });
 }
 
+function cavacoNeedMatchesProcessFilters(need) {
+  if (!need.cavacoAlert) return true;
+  const record = need.record;
+  if (!recordMatchesRequester(record, ui.requesterFilter.value)) return false;
+  if (ui.supplierFilter.value && normalizeSearch(record.of?.supplier) !== normalizeSearch(ui.supplierFilter.value)) return false;
+  if (ui.scStatusFilter.value && procurementRecordStatus(record) !== ui.scStatusFilter.value) return false;
+  if (ui.ccuClassificationFilter.value && !recordMatchesCcuClassification(record, need.item, ui.ccuClassificationFilter.value)) return false;
+  const query = normalizeSearch(ui.searchInput.value);
+  return !query || recordMatchesQuery(need.item, record, query);
+}
+
 function exportPurchaseNeeds(format = "excel") {
-  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture }) => [
+  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance }) => [
     item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
     position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
     position.shelf, position.division, position.quantity, position.minimum, position.maximum, target, suggested, openOfBalance,
     pendingScQuantity, coveredQuantity, coverageSource, ofCodes.join(" | "), scCodes.join(" | "), netSuggested,
-    referencePrice, estimatedValue, rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
+    referencePrice, estimatedValue, cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
     position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
-    position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
+    cavacoAlert ? "Reposição especial por saldo de OF de Cavaco abaixo de 200" : position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
+    cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo", cavacoAlert ? ofCodes[0] : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
   ]);
   exportReport(format, {
     title: "Necessidade de Compra",
     filename: "necessidade-de-compra.xls",
-    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta · CCU 1500", "Quantidade coberta por SC sem OF · CCU 1500", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério"],
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta · CCU 1500", "Quantidade coberta por SC sem OF · CCU 1500", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério", "Tipo de pendência", "OF Cavaco", "Limite Cavaco", "Saldo OF Cavaco"],
     rows,
-    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 27, 28, 29]),
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 27, 28, 29, 34, 35]),
     currencyColumns: new Set([24, 25, 28, 29]),
   });
 }
@@ -4417,5 +4519,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert };
 }
