@@ -14,9 +14,17 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XIX";
+const APP_VERSION = "Mark XX";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
+const OF_GENERATION_BUCKETS = Object.freeze([
+  { id: "up-to-7", label: "Até 7 dias", min: 0, max: 7 },
+  { id: "8-to-15", label: "De 8 a 15 dias", min: 8, max: 15 },
+  { id: "16-to-20", label: "De 16 a 20 dias", min: 16, max: 20 },
+  { id: "21-to-25", label: "De 21 a 25 dias", min: 21, max: 25 },
+  { id: "26-to-30", label: "De 26 a 30 dias", min: 26, max: 30 },
+  { id: "above-30", label: "Superior a 30 dias", min: 31, max: Infinity },
+]);
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -81,6 +89,12 @@ const state = {
   procurementByKey: new Map(),
   procurementVisible: 0,
   activeProcurement: null,
+  ofGenerationRows: [],
+  visibleOfGenerationRows: [],
+  ofGenerationVisible: 0,
+  ofGenerationByKey: new Map(),
+  activeOfGeneration: null,
+  ofGenerationBucket: "all",
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
   minMaxReviews: [],
@@ -140,6 +154,8 @@ function cacheUi() {
     "procurementLoadMore", "procurementVisibleCount", "procurementModal", "procurementModalClose",
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "procurementModalOperational", "photoInput", "photoUploadButton", "photoUploadStatus",
+    "ofGenerationCount", "ofGenerationSummary", "ofGenerationGrid", "ofGenerationLoadMore", "ofGenerationVisibleCount", "clearOfGenerationRange", "exportOfGenerationButton", "ofGenerationExportFormat",
+    "ofGenerationModal", "ofGenerationModalClose", "ofGenerationModalCode", "ofGenerationModalTitle", "ofGenerationModalSubtitle", "ofGenerationModalTimeline", "ofGenerationModalSummary", "ofGenerationModalDetails", "ofGenerationModalOpenItem",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
     "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewIncreaseValue", "reviewReductionValue", "reviewNetImpactValue", "reviewNetImpactCard", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
@@ -220,6 +236,7 @@ function bindEvents() {
   ui.exportPurchaseNeedButton.addEventListener("click", () => exportPurchaseNeeds(ui.purchaseNeedExportFormat.value));
   ui.exportPendingScButton.addEventListener("click", () => exportPendingSc(ui.pendingScExportFormat.value));
   ui.exportProcurementButton.addEventListener("click", () => exportProcurement(ui.procurementExportFormat.value));
+  ui.exportOfGenerationButton.addEventListener("click", () => exportOfGeneration(ui.ofGenerationExportFormat.value));
   ui.exportMinMaxReviewButton.addEventListener("click", () => exportMinMaxReviews(ui.minMaxExportFormat.value));
 
   ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
@@ -261,6 +278,35 @@ function bindEvents() {
   ui.procurementModalOpenItem.addEventListener("click", () => {
     const code = state.activeProcurement?.item.code;
     closeProcurementModal();
+    if (code) window.setTimeout(() => openItem(code), 0);
+  });
+  ui.ofGenerationSummary.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-of-generation-bucket]");
+    if (!trigger) return;
+    const bucket = trigger.dataset.ofGenerationBucket;
+    state.ofGenerationBucket = state.ofGenerationBucket === bucket ? "all" : bucket;
+    renderOfGenerationAnalysis();
+  });
+  ui.clearOfGenerationRange.addEventListener("click", () => {
+    state.ofGenerationBucket = "all";
+    renderOfGenerationAnalysis();
+  });
+  ui.ofGenerationLoadMore.addEventListener("click", renderNextOfGenerationBatch);
+  ui.ofGenerationGrid.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-of-generation-key]");
+    if (trigger) openOfGenerationModal(trigger.dataset.ofGenerationKey);
+  });
+  ui.ofGenerationModalClose.addEventListener("click", closeOfGenerationModal);
+  ui.ofGenerationModal.addEventListener("click", (event) => {
+    if (event.target === ui.ofGenerationModal) closeOfGenerationModal();
+  });
+  ui.ofGenerationModal.addEventListener("close", () => {
+    state.activeOfGeneration = null;
+    state.lastFocusedElement?.focus?.();
+  });
+  ui.ofGenerationModalOpenItem.addEventListener("click", () => {
+    const code = state.activeOfGeneration?.item.code;
+    closeOfGenerationModal();
     if (code) window.setTimeout(() => openItem(code), 0);
   });
   ui.reviewCardsGrid.addEventListener("click", (event) => {
@@ -355,6 +401,24 @@ const PT_EN = Object.freeze({
   "SC pendente de OF": "PR awaiting PO",
   "Consulta SC e OF": "PR and PO tracking",
   "Consulta de SC e OF": "PR and PO tracking",
+  "Tempo de geração de OF": "PO generation time",
+  "Tempo de geração da OF": "PO generation time",
+  "Eficiência de compras": "Purchasing efficiency",
+  "Intervalo entre a data de criação da SC e a data de emissão da OF, considerando cada processo uma única vez.": "Interval between PR creation and PO issuance, counting each process once.",
+  "Distribuição do tempo de geração de OF": "PO generation time distribution",
+  "Média geral": "Overall average",
+  "Processos medidos": "Measured processes",
+  "SC criada → OF emitida": "PR created → PO issued",
+  "SC + OF únicas": "Unique PR + PO pairs",
+  "Até 7 dias": "Up to 7 days",
+  "De 8 a 15 dias": "From 8 to 15 days",
+  "De 16 a 20 dias": "From 16 to 20 days",
+  "De 21 a 25 dias": "From 21 to 25 days",
+  "De 26 a 30 dias": "From 26 to 30 days",
+  "Superior a 30 dias": "Over 30 days",
+  "Selecione uma faixa acima para detalhar somente os processos daquele intervalo.": "Select a range above to show only processes in that interval.",
+  "Exibir todas as faixas": "Show all ranges",
+  "Carregar mais processos": "Load more processes",
   "Revisão de Min e Máx": "Min. and max. review",
   "Revisão de mín. e máx.": "Min. and max. review",
   "Carregando dados do almoxarifado": "Loading warehouse data",
@@ -899,13 +963,13 @@ function applyTheme(theme, persist) {
 
 function pageFromHash() {
   const page = window.location.hash.replace(/^#/, "");
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "revisao-min-max"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max"].includes(page)
     ? page
     : "dashboard";
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "revisao-min-max"].includes(page)
+  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max"].includes(page)
     ? page
     : "dashboard";
 
@@ -949,6 +1013,7 @@ function pageTitle(page) {
     "necessidade-compra": "Necessidade de compra",
     "sc-pendente-of": "SC pendente de OF",
     "consulta-sc-of": "Consulta SC e OF",
+    "tempo-geracao-of": "Tempo de geração de OF",
     "revisao-min-max": "Revisão de mín. e máx.",
   })[page];
 }
@@ -988,6 +1053,8 @@ function renderFilteredPage(page, force = false) {
     renderPendingScList();
   } else if (page === "consulta-sc-of") {
     buildProcurementRows();
+  } else if (page === "tempo-geracao-of") {
+    renderOfGenerationAnalysis();
   } else if (page === "revisao-min-max") {
     renderConsumptionReview();
   }
@@ -2952,6 +3019,194 @@ function closeProcurementModal() {
   else ui.procurementModal.removeAttribute("open");
 }
 
+function generationDaysBetween(scDate, ofDate) {
+  const start = dateTimestamp(scDate);
+  const end = dateTimestamp(ofDate);
+  if (!start || !end || end < start) return null;
+  return Math.round((end - start) / 86400000);
+}
+
+function ofGenerationBucketFor(days) {
+  if (!Number.isFinite(days) || days < 0) return null;
+  return OF_GENERATION_BUCKETS.find(({ min, max }) => days >= min && days <= max) || null;
+}
+
+function calculateOfGenerationMetrics(rows = []) {
+  const validRows = rows.filter(({ days }) => Number.isFinite(days) && days >= 0);
+  const counts = Object.fromEntries(OF_GENERATION_BUCKETS.map(({ id }) => [id, 0]));
+  let totalDays = 0;
+  for (const row of validRows) {
+    totalDays += row.days;
+    const bucket = ofGenerationBucketFor(row.days);
+    if (bucket) counts[bucket.id] += 1;
+  }
+  return {
+    total: validRows.length,
+    average: validRows.length ? totalDays / validRows.length : 0,
+    counts,
+  };
+}
+
+function collectOfGenerationRows() {
+  const processes = new Map();
+  for (const { item, record } of collectProcurementRows(false)) {
+    const sc = record.sc;
+    const of = record.of;
+    if (!sc?.code || !of?.code) continue;
+    const days = generationDaysBetween(sc.date, of.date);
+    if (days == null) continue;
+    const processKey = `${sc.code}::${of.code}`;
+    let process = processes.get(processKey);
+    if (!process) {
+      process = {
+        item,
+        record,
+        sc,
+        of,
+        days,
+        bucket: ofGenerationBucketFor(days),
+        itemCodes: new Set(),
+        itemNames: new Set(),
+      };
+      processes.set(processKey, process);
+    }
+    process.itemCodes.add(item.code);
+    process.itemNames.add(item.name);
+  }
+  return [...processes.values()]
+    .sort((a, b) => b.days - a.days || (b.record.sortKey || 0) - (a.record.sortKey || 0))
+    .map((row, index) => ({
+      ...row,
+      key: `of-generation-${index}`,
+      itemCodes: [...row.itemCodes],
+      itemNames: [...row.itemNames],
+    }));
+}
+
+function ofGenerationTone(bucketId) {
+  if (bucketId === "up-to-7") return "success";
+  if (["8-to-15", "16-to-20"].includes(bucketId)) return "process";
+  if (["21-to-25", "26-to-30"].includes(bucketId)) return "need";
+  return "critical";
+}
+
+function renderOfGenerationAnalysis() {
+  const rows = collectOfGenerationRows();
+  const metrics = calculateOfGenerationMetrics(rows);
+  state.ofGenerationRows = rows;
+  const selectedBucket = state.ofGenerationBucket;
+  const visible = selectedBucket === "all" ? rows : rows.filter((row) => row.bucket?.id === selectedBucket);
+  state.visibleOfGenerationRows = visible;
+  state.ofGenerationVisible = 0;
+  state.ofGenerationByKey.clear();
+  rows.forEach((row) => state.ofGenerationByKey.set(row.key, row));
+
+  ui.ofGenerationSummary.innerHTML = `
+    <article class="of-generation-summary__headline"><span>Média geral</span><strong>${numberFormatter.format(metrics.average)} dias</strong><small>SC criada → OF emitida</small></article>
+    <article><span>Processos medidos</span><strong>${integerFormatter.format(metrics.total)}</strong><small>SC + OF únicas</small></article>
+    ${OF_GENERATION_BUCKETS.map((bucket) => {
+      const count = metrics.counts[bucket.id] || 0;
+      const percentage = metrics.total ? count / metrics.total * 100 : 0;
+      const active = selectedBucket === bucket.id;
+      return `<button type="button" class="of-generation-summary__bucket of-generation-summary__bucket--${ofGenerationTone(bucket.id)}${active ? " is-active" : ""}" data-of-generation-bucket="${bucket.id}" aria-pressed="${String(active)}"><span>${escapeHtml(bucket.label)}</span><strong>${integerFormatter.format(count)}</strong><small>${numberFormatter.format(percentage)}% dos processos</small></button>`;
+    }).join("")}`;
+
+  ui.ofGenerationCount.textContent = selectedBucket === "all"
+    ? pluralize(metrics.total, "processo", "processos")
+    : `${integerFormatter.format(visible.length)} de ${integerFormatter.format(metrics.total)} processos`;
+  ui.clearOfGenerationRange.classList.toggle("is-hidden", selectedBucket === "all");
+  ui.ofGenerationGrid.replaceChildren();
+
+  if (!visible.length) {
+    ui.ofGenerationGrid.innerHTML = `<div class="table-empty">Nenhum processo com datas válidas de SC e OF corresponde aos filtros aplicados.</div>`;
+    ui.ofGenerationLoadMore.classList.add("is-hidden");
+    ui.ofGenerationVisibleCount.textContent = "";
+    return;
+  }
+  renderNextOfGenerationBatch();
+}
+
+function renderNextOfGenerationBatch() {
+  const start = state.ofGenerationVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.visibleOfGenerationRows.length);
+  if (start >= end) return;
+  const html = state.visibleOfGenerationRows.slice(start, end).map((row) => {
+    const { sc, of, record, bucket, days } = row;
+    return `<button class="report-card report-card--of-generation of-generation-card--${ofGenerationTone(bucket?.id)}" type="button" data-of-generation-key="${escapeHtml(row.key)}">
+      <span class="report-card__top"><span class="status-pill status-pill--${ofGenerationTone(bucket?.id)}">${escapeHtml(bucket?.label || "Faixa não informada")}</span><strong class="of-generation-days">${integerFormatter.format(days)} ${days === 1 ? "dia" : "dias"}</strong></span>
+      <strong class="report-card__title">SC ${escapeHtml(sc.code)} → OF ${escapeHtml(of.code)}</strong>
+      <span class="report-card__code">${escapeHtml(row.itemCodes.join(", "))} · ${escapeHtml(row.itemNames[0] || "Item não informado")}${row.itemNames.length > 1 ? ` +${integerFormatter.format(row.itemNames.length - 1)} item(ns)` : ""}</span>
+      <span class="of-generation-path"><span><small>Criação da SC</small><strong>${escapeHtml(formatDate(sc.date))}</strong></span><i aria-hidden="true">→</i><span><small>Emissão da OF</small><strong>${escapeHtml(formatDate(of.date))}</strong></span></span>
+      <span class="report-card__meta"><span><small>Solicitante</small><strong>${escapeHtml(sc.requesterName || "Não informado")}</strong></span><span><small>Fornecedor</small><strong>${escapeHtml(of.supplier || "Não informado")}</strong></span></span>
+      <span class="report-card__footer"><span>${escapeHtml([record.branchCode, record.branch].filter(Boolean).join(" · ") || "Filial não informada")}</span><strong>Ver indicador</strong></span>
+    </button>`;
+  }).join("");
+  ui.ofGenerationGrid.insertAdjacentHTML("beforeend", html);
+  state.ofGenerationVisible = end;
+  ui.ofGenerationVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visibleOfGenerationRows.length)} processos`;
+  ui.ofGenerationLoadMore.classList.toggle("is-hidden", end >= state.visibleOfGenerationRows.length);
+}
+
+function openOfGenerationModal(key) {
+  const row = state.ofGenerationByKey.get(key);
+  if (!row) return;
+  const { item, record, sc, of, days, bucket, itemCodes, itemNames } = row;
+  state.activeOfGeneration = row;
+  state.lastFocusedElement = document.activeElement;
+  ui.ofGenerationModalCode.textContent = `SC ${sc.code} · OF ${of.code}`;
+  ui.ofGenerationModalTitle.textContent = "Tempo de geração da OF";
+  ui.ofGenerationModalSubtitle.textContent = [record.branchCode, record.branch].filter(Boolean).join(" · ") || "Filial não informada";
+  ui.ofGenerationModalTimeline.innerHTML = `<article><span>SC</span><strong>${escapeHtml(sc.code)}</strong><small>${escapeHtml(formatDate(sc.date))}</small></article><i><strong>${integerFormatter.format(days)} ${days === 1 ? "dia" : "dias"}</strong><small>${escapeHtml(bucket?.label || "Faixa não informada")}</small></i><article><span>OF</span><strong>${escapeHtml(of.code)}</strong><small>${escapeHtml(formatDate(of.date))}</small></article>`;
+  ui.ofGenerationModalSummary.innerHTML = `
+    <article><span>Tempo de geração</span><strong>${integerFormatter.format(days)} ${days === 1 ? "dia" : "dias"}</strong></article>
+    <article><span>Faixa do indicador</span><strong>${escapeHtml(bucket?.label || "—")}</strong></article>
+    <article><span>Data da SC</span><strong>${escapeHtml(formatDate(sc.date))}</strong></article>
+    <article><span>Data da OF</span><strong>${escapeHtml(formatDate(of.date))}</strong></article>
+    <article><span>Quantidade da SC</span><strong>${formatProcessNumber(sc.quantity)}</strong></article>
+    <article><span>Quantidade da OF</span><strong>${formatProcessNumber(of.requestedQuantity)}</strong></article>`;
+  ui.ofGenerationModalDetails.innerHTML = `
+    <div><dt>Solicitante</dt><dd>${escapeHtml(sc.requesterName || "Não informado")}</dd></div>
+    <div><dt>Fornecedor</dt><dd>${escapeHtml(of.supplier || "Não informado")}</dd></div>
+    <div><dt>E-mail do fornecedor</dt><dd>${escapeHtml(of.supplierEmail || "Não informado")}</dd></div>
+    <div><dt>Situação da SC</dt><dd>${escapeHtml(sc.status || "Não informada")}</dd></div>
+    <div><dt>Situação da OF</dt><dd>${escapeHtml(of.status || "Não informada")}</dd></div>
+    <div><dt>Classificação da compra</dt><dd>${escapeHtml(purchaseClassificationLabel(sc))}</dd></div>
+    <div><dt>CCU da etiqueta</dt><dd>${escapeHtml(sc.allocationCostCenter || "Não informado")}</dd></div>
+    <div><dt>Filial</dt><dd>${escapeHtml([record.branchCode, record.branch].filter(Boolean).join(" · ") || "Não informada")}</dd></div>
+    <div><dt>Códigos dos itens</dt><dd>${escapeHtml(itemCodes.join(", ") || "Não informados")}</dd></div>
+    <div><dt>Itens do processo</dt><dd>${escapeHtml(itemNames.join(" · ") || "Não informados")}</dd></div>
+    <div><dt>Data de entrega da OF</dt><dd>${escapeHtml(formatDate(of.deliveryDate))}</dd></div>
+    <div><dt>Valor estimado da SC</dt><dd>${formatProcessCurrency(sc.estimatedValue)}</dd></div>`;
+  if (typeof ui.ofGenerationModal.showModal === "function") ui.ofGenerationModal.showModal();
+  else ui.ofGenerationModal.setAttribute("open", "");
+  ui.ofGenerationModalClose.focus();
+}
+
+function closeOfGenerationModal() {
+  if (typeof ui.ofGenerationModal.close === "function" && ui.ofGenerationModal.open) ui.ofGenerationModal.close();
+  else ui.ofGenerationModal.removeAttribute("open");
+}
+
+function exportOfGeneration(format = "excel") {
+  const rows = state.visibleOfGenerationRows.map(({ sc, of, record, days, bucket, itemCodes, itemNames }) => [
+    sc.code, of.code, days, bucket?.label || "", sc.date, of.date,
+    sc.requesterName, record.branchCode, record.branch, sc.allocationCostCenter, purchaseClassificationLabel(sc),
+    of.supplierCode, of.supplier, of.supplierEmail, sc.status, of.status,
+    sc.quantity, sc.estimatedValue, of.requestedQuantity, of.deliveredQuantity, of.balance, of.unitValue,
+    of.deliveryDate, itemCodes.join(" | "), itemNames.join(" | "),
+  ]);
+  exportReport(format, {
+    title: "Tempo de Geração de OF",
+    filename: "tempo-geracao-of.xls",
+    headers: ["SC", "OF", "Tempo de geração em dias", "Faixa", "Data de criação da SC", "Data de emissão da OF", "Solicitante", "Código filial", "Filial", "SC - CCU Etq", "Classificação da compra", "Código do fornecedor", "Fornecedor", "E-mail do fornecedor", "Situação da SC", "Situação da OF", "Quantidade da SC", "Valor estimado da SC", "Quantidade solicitada na OF", "Quantidade entregue", "Saldo da OF", "Valor unitário da OF", "Data de entrega da OF", "Códigos dos itens", "Itens do processo"],
+    rows,
+    numericColumns: new Set([2, 16, 17, 18, 19, 20, 21]),
+    currencyColumns: new Set([17, 21]),
+    dateColumns: new Set([4, 5, 22]),
+    pdfIdentityColumns: [0, 1, 2],
+  });
+}
+
 function renderConsumptionReview() {
   const consumption = state.consumption || { available: false };
   ui.consumptionWaiting.classList.toggle("is-hidden", consumption.available);
@@ -4528,5 +4783,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics };
 }

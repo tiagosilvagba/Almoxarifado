@@ -1531,6 +1531,74 @@ html[data-theme="theme-t"] .report-card--need.is-cavaco-alert {
   box-shadow:0 20px 48px rgba(0,0,0,.3),0 0 28px rgba(249,115,22,.18),inset 0 1px 0 #fff;
 }
 
+/* Mark XX — painel dedicado ao tempo entre a criação da SC e a emissão da OF. */
+.of-generation-summary {
+  grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+  align-items:stretch;
+}
+
+.of-generation-summary__bucket {
+  min-width:0;
+  min-height:104px;
+  padding:15px;
+  border:var(--layout-card-border);
+  border-radius:var(--layout-card-radius);
+  color:var(--text);
+  background:var(--surface);
+  box-shadow:var(--layout-card-shadow);
+  text-align:left;
+  cursor:pointer;
+  transition:transform 150ms ease,border-color 150ms ease,box-shadow 150ms ease;
+}
+
+.of-generation-summary__bucket > span,
+.of-generation-summary__bucket > strong,
+.of-generation-summary__bucket > small { display:block; }
+.of-generation-summary__bucket > span { color:var(--muted); font-size:.72rem; font-weight:800; }
+.of-generation-summary__bucket > strong { margin-top:8px; font-size:1.65rem; line-height:1; }
+.of-generation-summary__bucket > small { margin-top:7px; color:var(--steel-500); font-size:.66rem; }
+.of-generation-summary__bucket:hover { transform:translateY(-2px); border-color:var(--blue-500); }
+.of-generation-summary__bucket.is-active { border-color:var(--blue-600); box-shadow:0 0 0 3px color-mix(in srgb,var(--blue-600) 18%,transparent),var(--layout-card-shadow); }
+.of-generation-summary__bucket--success { border-bottom:4px solid #16835d; }
+.of-generation-summary__bucket--process { border-bottom:4px solid #2870a5; }
+.of-generation-summary__bucket--need { border-bottom:4px solid #d97706; }
+.of-generation-summary__bucket--critical { border-bottom:4px solid #c2413b; }
+.of-generation-summary__headline { background:linear-gradient(145deg,color-mix(in srgb,var(--blue-100) 55%,var(--surface)),var(--surface)); border-color:color-mix(in srgb,var(--blue-600) 38%,var(--steel-200)) !important; }
+
+.report-card--of-generation { --card-accent:#2870a5; position:relative; overflow:hidden; }
+.report-card--of-generation::before { content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--card-accent); }
+.of-generation-card--success { --card-accent:#16835d; }
+.of-generation-card--process { --card-accent:#2870a5; }
+.of-generation-card--need { --card-accent:#d97706; }
+.of-generation-card--critical { --card-accent:#c2413b; }
+.of-generation-days { color:var(--card-accent); font-size:.92rem; }
+.of-generation-path { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--steel-200); border-radius:12px; background:var(--steel-50); }
+.of-generation-path span { min-width:0; }
+.of-generation-path small,.of-generation-path strong { display:block; }
+.of-generation-path small { color:var(--muted); font-size:.62rem; }
+.of-generation-path strong { margin-top:2px; font-size:.8rem; }
+.of-generation-path i { color:var(--card-accent); font-size:1.2rem; font-style:normal; font-weight:900; }
+
+.of-generation-modal-content { align-content:start; gap:10px; }
+.of-generation-timeline { display:grid; grid-template-columns:minmax(0,1fr) minmax(130px,.55fr) minmax(0,1fr); align-items:stretch; gap:10px; }
+.of-generation-timeline article,.of-generation-timeline > i { min-width:0; padding:13px 14px; border:1px solid var(--steel-200); border-radius:13px; background:var(--surface); }
+.of-generation-timeline article span,.of-generation-timeline article strong,.of-generation-timeline article small,.of-generation-timeline > i strong,.of-generation-timeline > i small { display:block; }
+.of-generation-timeline article span { color:var(--blue-600); font-size:.67rem; font-weight:900; letter-spacing:.08em; }
+.of-generation-timeline article strong { margin-top:4px; font-size:1.08rem; }
+.of-generation-timeline article small { margin-top:3px; color:var(--muted); }
+.of-generation-timeline > i { display:grid; place-content:center; color:#fff; background:linear-gradient(135deg,var(--blue-600),var(--navy-800)); text-align:center; font-style:normal; }
+.of-generation-timeline > i strong { font-size:1.18rem; }
+.of-generation-timeline > i small { margin-top:3px; color:rgba(255,255,255,.78); font-size:.65rem; }
+
+html[data-theme="theme-t"] .of-generation-summary__bucket { background:linear-gradient(150deg,#fff,#e5f0f6); }
+html[data-theme="theme-t"] .of-generation-summary__headline { background:linear-gradient(150deg,#eefcff,#ccebf5); }
+
+@media (max-width:700px) {
+  .of-generation-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .of-generation-timeline { grid-template-columns:1fr; }
+  .of-generation-timeline > i { min-height:70px; }
+}
+
 /* Mark XI — progresso contínuo da base e rolagem acessível nos modais. */
 .loading-panel > div:nth-child(2) { min-width:min(520px,60vw); }
 .loading-progress { width:100%; height:7px; margin-top:9px; overflow:hidden; border-radius:999px; background:rgba(100,116,139,.2); box-shadow:inset 0 1px 2px rgba(15,23,42,.14); }
