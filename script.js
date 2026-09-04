@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXIX";
+const APP_VERSION = "Mark XXX";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -451,6 +451,7 @@ const PT_EN = Object.freeze({
   "Todas as datas": "All dates",
   "Evolução": "Trend",
   "Tempo médio para gerar a OF": "Average PO generation time",
+  "Quantidade de itens por período": "Item quantity by period",
   "Evolução conforme a data de criação da SC.": "Trend based on PR creation date.",
   "Todas as faixas": "All ranges",
   "Visualizar por": "View by",
@@ -460,6 +461,7 @@ const PT_EN = Object.freeze({
   "Semanal": "Weekly",
   "Diário": "Daily",
   "Tempo médio em dias": "Average time in days",
+  "Quantidade de itens": "Item quantity",
   "Nenhum processo encontrado para esta faixa e período.": "No process found for this range and period.",
   "Até 7 dias": "Up to 7 days",
   "De 8 a 15 dias": "From 8 to 15 days",
@@ -3406,14 +3408,14 @@ function buildOfGenerationTrend(rows) {
   const groups = new Map();
   for (const row of rows) {
     const point = ofGenerationTrendPoint(row, granularity);
-    const group = groups.get(point.key) || { ...point, totalDays: 0, count: 0 };
-    group.totalDays += row.days;
-    group.count += 1;
+    const group = groups.get(point.key) || { ...point, itemCount: 0, processCount: 0 };
+    group.itemCount += Math.max(new Set(row.itemCodes || []).size, 1);
+    group.processCount += 1;
     groups.set(point.key, group);
   }
   return {
     granularity,
-    points: [...groups.values()].sort((a, b) => a.key.localeCompare(b.key)).map((point) => ({ ...point, average: point.totalDays / point.count })),
+    points: [...groups.values()].sort((a, b) => a.key.localeCompare(b.key)),
   };
 }
 
@@ -3443,8 +3445,8 @@ function renderOfGenerationTrend(rows) {
   const pad = { top: 28, right: 24, bottom: 56, left: 52 };
   const innerWidth = width - pad.left - pad.right;
   const innerHeight = height - pad.top - pad.bottom;
-  const maxAverage = Math.max(...trend.points.map(({ average }) => average), 1);
-  const maxY = Math.max(5, Math.ceil(maxAverage / 5) * 5);
+  const maxItemCount = Math.max(...trend.points.map(({ itemCount }) => itemCount), 1);
+  const maxY = Math.max(4, Math.ceil(maxItemCount / 4) * 4);
   const xAt = (index) => trend.points.length === 1 ? pad.left + innerWidth / 2 : pad.left + index * innerWidth / (trend.points.length - 1);
   const yAt = (value) => pad.top + innerHeight - (value / maxY * innerHeight);
   const grid = Array.from({ length: 5 }, (_, index) => {
@@ -3452,15 +3454,16 @@ function renderOfGenerationTrend(rows) {
     const y = yAt(value);
     return `<line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"/><text x="${pad.left - 10}" y="${y + 4}" text-anchor="end">${numberFormatter.format(value)}</text>`;
   }).join("");
-  const path = trend.points.map((point, index) => `${index ? "L" : "M"}${xAt(index).toFixed(1)},${yAt(point.average).toFixed(1)}`).join(" ");
+  const path = trend.points.map((point, index) => `${index ? "L" : "M"}${xAt(index).toFixed(1)},${yAt(point.itemCount).toFixed(1)}`).join(" ");
   const labelStep = Math.max(1, Math.ceil(trend.points.length / 10));
   const points = trend.points.map((point, index) => {
     const x = xAt(index);
-    const y = yAt(point.average);
+    const y = yAt(point.itemCount);
     const label = index % labelStep === 0 || index === trend.points.length - 1 ? `<text class="of-trend-chart__x-label" x="${x}" y="${height - 22}" text-anchor="middle">${escapeHtml(point.label)}</text>` : "";
-    return `<g><circle cx="${x}" cy="${y}" r="5"><title>${escapeHtml(point.label)}: ${numberFormatter.format(point.average)} dias · ${integerFormatter.format(point.count)} processos</title></circle><text class="of-trend-chart__value" x="${x}" y="${Math.max(14, y - 11)}" text-anchor="middle">${numberFormatter.format(point.average)}</text>${label}</g>`;
+    return `<g><circle cx="${x}" cy="${y}" r="5"><title>${escapeHtml(point.label)}: ${integerFormatter.format(point.itemCount)} itens · ${integerFormatter.format(point.processCount)} processos</title></circle><text class="of-trend-chart__value" x="${x}" y="${Math.max(14, y - 11)}" text-anchor="middle">${integerFormatter.format(point.itemCount)}</text>${label}</g>`;
   }).join("");
-  ui.ofGenerationTrendChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><g class="of-trend-chart__grid">${grid}</g><path class="of-trend-chart__line" d="${path}"/>${points}</svg><div class="of-trend-chart__caption"><span>Tempo médio em dias</span><strong>${integerFormatter.format(chartRows.length)} ${chartRows.length === 1 ? "processo" : "processos"}</strong></div>`;
+  const totalItems = chartRows.reduce((sum, row) => sum + Math.max(new Set(row.itemCodes || []).size, 1), 0);
+  ui.ofGenerationTrendChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><g class="of-trend-chart__grid">${grid}</g><path class="of-trend-chart__line" d="${path}"/>${points}</svg><div class="of-trend-chart__caption"><span>Quantidade de itens</span><strong>${integerFormatter.format(totalItems)} ${totalItems === 1 ? "item" : "itens"}</strong></div>`;
 }
 
 function renderOfGenerationAnalysis() {
