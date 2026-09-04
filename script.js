@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XIV";
+const APP_VERSION = "Mark XV";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -139,7 +139,7 @@ function cacheUi() {
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "procurementModalOperational", "photoInput", "photoUploadButton", "photoUploadStatus",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
-    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
+    "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewIncreaseValue", "reviewReductionValue", "reviewNetImpactValue", "reviewNetImpactCard", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
     "reviewModalSummary", "reviewModalRecommendation", "reviewModalDetails", "reviewModalOpenItem", "modalOperationalInsights",
   ];
@@ -649,6 +649,12 @@ const PT_EN = Object.freeze({
   ,"Valor do máximo atual": "Current maximum value"
   ,"Valor do máximo sugerido": "Recommended maximum value"
   ,"Impacto do ajuste do máximo": "Maximum adjustment impact"
+  ,"Aumento total": "Total increase"
+  ,"Redução total": "Total reduction"
+  ,"Impacto líquido": "Net impact"
+  ,"Capital adicional recomendado": "Recommended additional capital"
+  ,"Capital potencialmente liberado": "Potentially released capital"
+  ,"Aumentos menos reduções": "Increases minus reductions"
   ,"Consumo médio/mês": "Average monthly consumption"
   ,"Custo unitário atual": "Current unit cost"
   ,"Mínimo = consumo diário sem anomalias × lead time. Máximo = mínimo + 30 dias de consumo. Validação com tolerância de ±20%. Meses muito fora do padrão são excluídos por análise robusta da mediana.": "Minimum = anomaly-adjusted daily consumption × lead time. Maximum = minimum + 30 days of consumption. Validation uses a ±20% tolerance. Months far outside the pattern are excluded using robust median analysis."
@@ -2819,11 +2825,17 @@ function renderConsumptionReview() {
   const insufficient = visible.filter((review) => review.status === "insufficient").length;
   const leadTimes = visible.filter((review) => review.leadTimeSource === "real").map((review) => review.leadTimeDays);
   const averageLeadTime = leadTimes.length ? leadTimes.reduce((sum, value) => sum + value, 0) / leadTimes.length : 0;
+  const financialImpact = summarizeMinMaxFinancialImpact(visible);
   ui.reviewItemCount.textContent = integerFormatter.format(new Set(visible.map((review) => review.item.code)).size);
   ui.reviewIdealCount.textContent = integerFormatter.format(ideal);
   ui.reviewAdjustCount.textContent = integerFormatter.format(visible.length - ideal - insufficient);
   ui.reviewInsufficientCount.textContent = integerFormatter.format(insufficient);
   ui.reviewAverageLeadTime.textContent = leadTimes.length ? `${numberFormatter.format(averageLeadTime)} dias` : "Sem histórico";
+  ui.reviewIncreaseValue.textContent = currencyFormatter.format(financialImpact.increase);
+  ui.reviewReductionValue.textContent = currencyFormatter.format(financialImpact.reduction);
+  ui.reviewNetImpactValue.textContent = currencyFormatter.format(financialImpact.net);
+  ui.reviewNetImpactCard.classList.toggle("is-increase", financialImpact.net > 0);
+  ui.reviewNetImpactCard.classList.toggle("is-reduction", financialImpact.net < 0);
   ui.reviewResultCount.textContent = pluralize(visible.length, "posição", "posições");
   state.visibleMinMaxReviews = visible;
   state.minMaxReviewVisible = 0;
@@ -2836,6 +2848,17 @@ function renderConsumptionReview() {
   }
   ui.reviewCardsGrid.replaceChildren();
   renderNextMinMaxReviewBatch();
+}
+
+function summarizeMinMaxFinancialImpact(reviews) {
+  let increase = 0;
+  let reduction = 0;
+  for (const review of reviews || []) {
+    if (review?.status !== "adjust" || !Number.isFinite(review.maximumValueImpact)) continue;
+    if (review.maximumValueImpact > 0) increase += review.maximumValueImpact;
+    else if (review.maximumValueImpact < 0) reduction += Math.abs(review.maximumValueImpact);
+  }
+  return { increase, reduction, net: increase - reduction };
 }
 
 function renderNextMinMaxReviewBatch() {
@@ -4353,5 +4376,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact };
 }

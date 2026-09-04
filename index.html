@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=mark-xiv">
-    <script src="script.js?v=mark-xiv" defer></script>
+    <link rel="stylesheet" href="style.css?v=mark-xv">
+    <script src="script.js?v=mark-xv" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XIV</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XV</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -370,6 +370,9 @@
               <article><span>Recomendação de ajuste</span><strong id="reviewAdjustCount">—</strong></article>
               <article><span>Sem histórico suficiente</span><strong id="reviewInsufficientCount">—</strong></article>
               <article><span>Lead time médio</span><strong id="reviewAverageLeadTime">—</strong></article>
+              <article class="review-summary__financial review-summary__increase"><span>Aumento total</span><strong id="reviewIncreaseValue">—</strong><small>Capital adicional recomendado</small></article>
+              <article class="review-summary__financial review-summary__reduction"><span>Redução total</span><strong id="reviewReductionValue">—</strong><small>Capital potencialmente liberado</small></article>
+              <article id="reviewNetImpactCard" class="review-summary__financial review-summary__net"><span>Impacto líquido</span><strong id="reviewNetImpactValue">—</strong><small>Aumentos menos reduções</small></article>
             </div>
             <div class="table-heading report-heading">
               <div>
