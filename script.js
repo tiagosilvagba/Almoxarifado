@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXI";
+const APP_VERSION = "Mark XXII";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -105,6 +105,7 @@ const state = {
   filterRevision: 0,
   pageRenderRevision: new Map(),
   pageRenderToken: 0,
+  filterDraftSnapshot: null,
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
@@ -176,27 +177,6 @@ function bindEvents() {
   ui.themeSelect.addEventListener("change", () => applyTheme(ui.themeSelect.value, true));
   ui.languageToggle.addEventListener("click", () => applyLanguage(activeLanguage === "pt-BR" ? "en" : "pt-BR", true));
   ui.densityToggle.addEventListener("click", toggleDensity);
-  for (const select of [
-    ui.branchFilter,
-    ui.locationFilter,
-    ui.categoryFilter,
-    ui.unitFilter,
-    ui.supplierFilter,
-    ui.requesterFilter,
-    ui.ccuClassificationFilter,
-    ui.itemCodeFilter,
-    ui.stockStatusFilter,
-    ui.scStatusFilter,
-  ]) {
-    select.addEventListener("change", () => handleAutomaticFilter(select.id));
-  }
-  ui.positiveBalanceFilter.addEventListener("change", () => handleAutomaticFilter("positiveBalanceFilter"));
-  ui.searchInput.addEventListener("input", debounce(() => handleAutomaticFilter("searchInput"), 180));
-  ui.searchInput.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    applyAllFilters(true);
-  });
   ui.catalogSort.addEventListener("change", applyFilters);
   ui.catalogView.addEventListener("change", () => ui.cardsGrid.classList.toggle("is-list-view", ui.catalogView.value === "list"));
 
@@ -1020,15 +1000,47 @@ function pageTitle(page) {
 
 function toggleFilters() {
   const willOpen = ui.globalFiltersPanel.classList.contains("is-hidden");
-  ui.globalFiltersPanel.classList.toggle("is-hidden", !willOpen);
-  ui.filterToggleButton.setAttribute("aria-expanded", String(willOpen));
-  if (willOpen) window.requestAnimationFrame(() => ui.searchInput.focus());
+  if (!willOpen) {
+    closeFilters(true);
+    return;
+  }
+  state.filterDraftSnapshot = captureFilterValues();
+  ui.globalFiltersPanel.classList.remove("is-hidden");
+  ui.filterToggleButton.setAttribute("aria-expanded", "true");
+  window.requestAnimationFrame(() => ui.searchInput.focus());
 }
 
-function closeFilters() {
+function closeFilters(restoreDraft = true) {
+  if (restoreDraft && state.filterDraftSnapshot) restoreFilterValues(state.filterDraftSnapshot);
+  state.filterDraftSnapshot = null;
   ui.globalFiltersPanel.classList.add("is-hidden");
   ui.filterToggleButton.setAttribute("aria-expanded", "false");
   ui.filterToggleButton.focus();
+}
+
+function captureFilterValues() {
+  return {
+    searchInput: ui.searchInput.value,
+    branchFilter: ui.branchFilter.value,
+    locationFilter: ui.locationFilter.value,
+    categoryFilter: ui.categoryFilter.value,
+    unitFilter: ui.unitFilter.value,
+    supplierFilter: ui.supplierFilter.value,
+    requesterFilter: ui.requesterFilter.value,
+    ccuClassificationFilter: ui.ccuClassificationFilter.value,
+    itemCodeFilter: ui.itemCodeFilter.value,
+    stockStatusFilter: ui.stockStatusFilter.value,
+    scStatusFilter: ui.scStatusFilter.value,
+    positiveBalanceFilter: ui.positiveBalanceFilter.checked,
+  };
+}
+
+function restoreFilterValues(values) {
+  for (const [id, value] of Object.entries(values)) {
+    if (!ui[id]) continue;
+    if (id === "positiveBalanceFilter") ui[id].checked = Boolean(value);
+    else ui[id].value = value;
+  }
 }
 
 function applyAllFilters(shouldClose = false) {
@@ -1036,7 +1048,7 @@ function applyAllFilters(shouldClose = false) {
   state.filterRevision += 1;
   scheduleFilteredPage(pageFromHash(), true);
   updateFilterSummary();
-  if (shouldClose) closeFilters();
+  if (shouldClose) closeFilters(false);
 }
 
 function renderFilteredPage(page, force = false) {
@@ -1078,7 +1090,6 @@ function scheduleFilteredPage(page, force = false) {
 }
 
 function handleAutomaticFilter(changedId) {
-  refreshDependentFilters(changedId);
   applyAllFilters(false);
 }
 
@@ -1568,7 +1579,6 @@ function clearFilters() {
   ui.positiveBalanceFilter.checked = false;
   populateFilters();
   for (const option of ui.stockStatusFilter.options) option.disabled = false;
-  applyAllFilters(true);
 }
 
 function applyFilters(renderCatalog = true) {
