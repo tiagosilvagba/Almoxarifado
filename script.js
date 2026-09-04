@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XV";
+const APP_VERSION = "Mark XVI";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -118,7 +118,7 @@ function cacheUi() {
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
     "dashboardPriorityList", "dashboardExcessList", "procurementFunnel", "searchInput",
-    "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter", "ccuClassificationFilter", "itemCodeFilter", "scStatusFilter",
+    "branchFilter", "locationFilter", "categoryFilter", "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter", "itemCodeFilter", "scStatusFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
     "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
@@ -164,6 +164,7 @@ function bindEvents() {
     ui.categoryFilter,
     ui.unitFilter,
     ui.supplierFilter,
+    ui.requesterFilter,
     ui.ccuClassificationFilter,
     ui.itemCodeFilter,
     ui.stockStatusFilter,
@@ -373,6 +374,8 @@ const PT_EN = Object.freeze({
   "Todas as unidades": "All units",
   "Fornecedor": "Supplier",
   "Todos os fornecedores": "All suppliers",
+  "Solicitante da SC": "PR requester",
+  "Todos os solicitantes": "All requesters",
   "Classificação da compra": "Purchase classification",
   "Todas as classificações": "All classifications",
   "Entrada no almoxarifado · CCU 1500": "Warehouse receipt · CCU 1500",
@@ -1004,7 +1007,7 @@ function updateFilterSummary() {
   if (query) labels.push(["searchInput", `Busca: ${query}`]);
   if (ui.branchFilter.value) labels.push(["branchFilter", ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`]);
   if (ui.locationFilter.value) labels.push(["locationFilter", ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"]);
-  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.ccuClassificationFilter, ui.itemCodeFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
+  for (const select of [ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.requesterFilter, ui.ccuClassificationFilter, ui.itemCodeFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
     if (select.value) labels.push([select.id, select.selectedOptions[0]?.textContent || select.value]);
   }
   if (ui.positiveBalanceFilter.checked) labels.push(["positiveBalanceFilter", "Somente saldo positivo"]);
@@ -1234,6 +1237,9 @@ function prepareItems() {
 
   for (const item of state.items) {
     item.flags.locationAdjustment = itemNeedsLocationAdjustment(item);
+    item.requesters = [...new Set((item.history || [])
+      .map((record) => String(record.sc?.requesterName || "").trim())
+      .filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
     item.searchText = normalizeSearch([
       item.code,
       item.name,
@@ -1262,6 +1268,7 @@ function populateFilters() {
   const categories = new Set();
   const units = new Set();
   const suppliers = new Set();
+  const requesters = new Set();
   const directPurchaseItems = new Map();
 
   for (const item of state.items) {
@@ -1269,6 +1276,7 @@ function populateFilters() {
     for (const category of item.categories || []) if (category) categories.add(category);
     for (const unit of item.units || []) if (unit) units.add(unit);
     for (const supplier of item.suppliers || []) if (supplier) suppliers.add(supplier);
+    for (const requester of item.requesters || []) if (requester) requesters.add(requester);
     if (itemIsWarehouseStockItem(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
       directPurchaseItems.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
     }
@@ -1293,6 +1301,7 @@ function populateFilters() {
   fillSelect(ui.categoryFilter, [...categories].map((value) => [value, value]), "Todas as categorias");
   fillSelect(ui.unitFilter, [...units].map((value) => [value, value]), "Todas as unidades");
   fillSelect(ui.supplierFilter, [...suppliers].map((value) => [value, value]), "Todos os fornecedores");
+  fillSelect(ui.requesterFilter, [...requesters].map((value) => [value, value]), "Todos os solicitantes");
   fillSelect(ui.itemCodeFilter, [...directPurchaseItems], "Todos os códigos");
 }
 
@@ -1325,6 +1334,7 @@ function refreshDependentFilters(changedId) {
     ["categoryFilter", ui.categoryFilter, "Todas as categorias"],
     ["unitFilter", ui.unitFilter, "Todas as unidades"],
     ["supplierFilter", ui.supplierFilter, "Todos os fornecedores"],
+    ["requesterFilter", ui.requesterFilter, "Todos os solicitantes"],
     ["itemCodeFilter", ui.itemCodeFilter, "Todos os códigos"],
   ];
 
@@ -1367,6 +1377,10 @@ function collectDependentOptions(targetFilterId) {
       for (const value of item.suppliers || []) if (value) options.set(value, value);
       continue;
     }
+    if (targetFilterId === "requesterFilter") {
+      for (const value of item.requesters || []) if (value) options.set(value, value);
+      continue;
+    }
     if (targetFilterId === "itemCodeFilter") {
       if (itemIsWarehouseStockItem(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
         options.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
@@ -1396,6 +1410,7 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   const category = excludedFilterId === "categoryFilter" ? "" : ui.categoryFilter.value;
   const unit = excludedFilterId === "unitFilter" ? "" : ui.unitFilter.value;
   const supplier = excludedFilterId === "supplierFilter" ? "" : ui.supplierFilter.value;
+  const requester = excludedFilterId === "requesterFilter" ? "" : ui.requesterFilter.value;
   const ccuClassification = excludedFilterId === "ccuClassificationFilter" ? "" : ui.ccuClassificationFilter.value;
   const itemCode = excludedFilterId === "itemCodeFilter" ? "" : ui.itemCodeFilter.value;
   const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
@@ -1410,7 +1425,8 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   if (category && !(item.categories || []).includes(category)) return false;
   if (unit && !(item.units || []).includes(unit)) return false;
   if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-  if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch))) return false;
+  if (requester && !itemMatchesRequester(item, requester)) return false;
+  if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch), requester)) return false;
 
   const positions = (item.positions || []).filter((position) => {
     if (!positionMatchesBranch(position, branch)) return false;
@@ -1463,6 +1479,7 @@ function clearFilters() {
   ui.categoryFilter.value = "";
   ui.unitFilter.value = "";
   ui.supplierFilter.value = "";
+  ui.requesterFilter.value = "";
   ui.ccuClassificationFilter.value = "";
   ui.itemCodeFilter.value = "";
   ui.stockStatusFilter.value = "";
@@ -1480,6 +1497,7 @@ function applyFilters(renderCatalog = true) {
   const category = ui.categoryFilter.value;
   const unit = ui.unitFilter.value;
   const supplier = ui.supplierFilter.value;
+  const requester = ui.requesterFilter.value;
   const ccuClassification = ui.ccuClassificationFilter.value;
   const itemCode = ui.itemCodeFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
@@ -1502,7 +1520,8 @@ function applyFilters(renderCatalog = true) {
     if (category && !(item.categories || []).includes(category)) return false;
     if (unit && !(item.units || []).includes(unit)) return false;
     if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-    if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch))) return false;
+    if (requester && !itemMatchesRequester(item, requester)) return false;
+    if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch), requester)) return false;
     if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
   });
@@ -1568,10 +1587,11 @@ function procurementRecordStatus(record) {
   return "awaiting-delivery";
 }
 
-function itemMatchesProcurementStatus(item, status, branch = "") {
+function itemMatchesProcurementStatus(item, status, branch = "", requester = "") {
   if (!status) return true;
   return (item.history || []).some((record) => {
     if (branch && record.branchCode !== branch) return false;
+    if (!recordMatchesRequester(record, requester)) return false;
     return procurementRecordStatus(record) === status;
   });
 }
@@ -1605,6 +1625,7 @@ function currentScopedPositions(item, includeStatus = true) {
 function strictOpenOfRecords() {
   const branch = effectiveBranchFilter();
   const supplier = ui.supplierFilter.value;
+  const requester = ui.requesterFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
   const scStatus = ui.scStatusFilter.value;
   const rows = new Map();
@@ -1613,6 +1634,7 @@ function strictOpenOfRecords() {
       const of = record.of;
       if (!isOpenOfForPurchase(of)) continue;
       if (!recordMatchesCcuClassification(record, item, ui.ccuClassificationFilter.value)) continue;
+      if (!recordMatchesRequester(record, requester)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && normalizeSearch(of.supplier) !== normalizeSearch(supplier)) continue;
@@ -2019,6 +2041,7 @@ function collectPendingScRows() {
   const category = ui.categoryFilter.value;
   const unit = ui.unitFilter.value;
   const supplier = ui.supplierFilter.value;
+  const requester = ui.requesterFilter.value;
   const stockStatus = ui.stockStatusFilter.value;
   const scStatus = ui.scStatusFilter.value;
   const ccuClassification = ui.ccuClassificationFilter.value;
@@ -2031,6 +2054,7 @@ function collectPendingScRows() {
     if (category && !(item.categories || []).includes(category)) continue;
     if (unit && !(item.units || []).includes(unit)) continue;
     if (supplier && !(item.suppliers || []).includes(supplier)) continue;
+    if (requester && !itemMatchesRequester(item, requester)) continue;
     if (stockStatus || positiveOnly || ui.locationFilter.value) {
       const positions = (item.positions || []).filter((position) => {
         if (!positionMatchesBranch(position, ui.branchFilter.value || branch)) return false;
@@ -2047,6 +2071,7 @@ function collectPendingScRows() {
       const sc = record.sc;
       if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
       if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
+      if (!recordMatchesRequester(record, requester)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
@@ -2643,6 +2668,7 @@ function buildProcurementRows() {
 function collectProcurementRows(shouldSort = true) {
   const branch = effectiveBranchFilter();
   const supplier = ui.supplierFilter.value;
+  const requester = ui.requesterFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
   const scStatus = ui.scStatusFilter.value;
   const ccuClassification = ui.ccuClassificationFilter.value;
@@ -2651,6 +2677,7 @@ function collectProcurementRows(shouldSort = true) {
     for (const record of item.history || []) {
       if (!record.sc?.code && !record.of?.code) continue;
       if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
+      if (!recordMatchesRequester(record, requester)) continue;
       if (branch && record.branchCode !== branch) continue;
       if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
       if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
@@ -2671,6 +2698,17 @@ function recordMatchesQuery(item, record, query) {
   ].join(" ")).includes(query);
 }
 
+function recordMatchesRequester(record, requester) {
+  if (!requester) return true;
+  return normalizeSearch(record.sc?.requesterName) === normalizeSearch(requester);
+}
+
+function itemMatchesRequester(item, requester) {
+  if (!requester) return true;
+  const normalizedRequester = normalizeSearch(requester);
+  return (item.requesters || []).some((value) => normalizeSearch(value) === normalizedRequester);
+}
+
 function effectiveBranchFilter() {
   return branchCodeFromFilter(ui.branchFilter.value) || String(ui.locationFilter.value || "").split("::")[0] || "";
 }
@@ -2683,7 +2721,8 @@ function itemMatchesTransactionFilters(item) {
   if (ui.categoryFilter.value && !(item.categories || []).includes(ui.categoryFilter.value)) return false;
   if (ui.unitFilter.value && !(item.units || []).includes(ui.unitFilter.value)) return false;
   if (ui.supplierFilter.value && !(item.suppliers || []).includes(ui.supplierFilter.value)) return false;
-  if (ui.scStatusFilter.value && !itemMatchesProcurementStatus(item, ui.scStatusFilter.value, effectiveBranchFilter())) return false;
+  if (ui.requesterFilter.value && !itemMatchesRequester(item, ui.requesterFilter.value)) return false;
+  if (ui.scStatusFilter.value && !itemMatchesProcurementStatus(item, ui.scStatusFilter.value, effectiveBranchFilter(), ui.requesterFilter.value)) return false;
   const status = ui.stockStatusFilter.value;
   const positiveOnly = ui.positiveBalanceFilter.checked;
   const location = ui.locationFilter.value;
@@ -3260,12 +3299,14 @@ function modalScopedPositions(item) {
 function modalScopedHistory(item) {
   const branch = effectiveBranchFilter();
   const supplier = normalizeSearch(ui.supplierFilter.value);
+  const requester = ui.requesterFilter.value;
   const scStatus = ui.scStatusFilter.value;
   const query = normalizeSearch(ui.searchInput.value);
   return (item.history || []).filter((record) => {
     if (!recordMatchesCcuClassification(record, item, ui.ccuClassificationFilter.value)) return false;
     if (branch && record.branchCode !== branch) return false;
     if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === supplier)) return false;
+    if (!recordMatchesRequester(record, requester)) return false;
     if (scStatus && procurementRecordStatus(record) !== scStatus) return false;
     if (query && !recordMatchesQuery(item, record, query)) return false;
     return true;
