@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXVIII</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXIX</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -368,7 +368,13 @@
           </div>
           <div id="ofGenerationSummary" class="need-summary of-generation-summary" aria-label="Distribuição do tempo de geração de OF"></div>
           <section class="of-trend-card" aria-labelledby="ofGenerationTrendTitle">
-            <div class="of-trend-card__heading"><div><span class="eyebrow">Evolução</span><h3 id="ofGenerationTrendTitle">Tempo médio para gerar a OF</h3><p id="ofGenerationTrendSubtitle">Evolução conforme a data de criação da SC.</p></div><div id="ofGenerationChartBuckets" class="of-chart-buckets" aria-label="Faixa de dias exibida no gráfico"></div></div>
+            <div class="of-trend-card__heading">
+              <div><span class="eyebrow">Evolução</span><h3 id="ofGenerationTrendTitle">Tempo médio para gerar a OF</h3><p id="ofGenerationTrendSubtitle">Evolução conforme a data de criação da SC.</p></div>
+              <div class="of-trend-card__controls">
+                <div class="of-trend-option"><span>Visualizar por</span><div id="ofGenerationChartGranularity" class="of-chart-granularity" aria-label="Periodicidade do gráfico"></div></div>
+                <div class="of-trend-option"><span>Faixa de dias</span><div id="ofGenerationChartBuckets" class="of-chart-buckets" aria-label="Faixa de dias exibida no gráfico"></div></div>
+              </div>
+            </div>
             <div id="ofGenerationTrendChart" class="of-trend-chart" role="img" aria-label="Gráfico de evolução do tempo de geração de OF"></div>
           </section>
           <div class="table-heading report-heading">

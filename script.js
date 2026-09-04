@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXVIII";
+const APP_VERSION = "Mark XXIX";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -97,6 +97,7 @@ const state = {
   activeOfGeneration: null,
   ofGenerationBucket: "all",
   ofGenerationChartBucket: "all",
+  ofGenerationChartGranularity: "month",
   ofGenerationPeriod: { year: "", month: "", week: "", date: "" },
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
@@ -161,7 +162,7 @@ function cacheUi() {
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "procurementModalOperational", "photoInput", "photoUploadButton", "photoUploadStatus",
     "ofGenerationCount", "ofGenerationSummary", "ofGenerationGrid", "ofGenerationLoadMore", "ofGenerationVisibleCount", "clearOfGenerationRange", "exportOfGenerationButton", "ofGenerationExportFormat",
-    "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter", "clearOfGenerationPeriod", "ofGenerationChartBuckets", "ofGenerationTrendChart", "ofGenerationTrendSubtitle",
+    "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter", "clearOfGenerationPeriod", "ofGenerationChartGranularity", "ofGenerationChartBuckets", "ofGenerationTrendChart", "ofGenerationTrendSubtitle",
     "ofGenerationModal", "ofGenerationModalClose", "ofGenerationModalCode", "ofGenerationModalTitle", "ofGenerationModalSubtitle", "ofGenerationModalTimeline", "ofGenerationModalSummary", "ofGenerationModalDetails", "ofGenerationModalOpenItem",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
     "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewIncreaseValue", "reviewReductionValue", "reviewNetImpactValue", "reviewNetImpactCard", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
@@ -312,6 +313,12 @@ function bindEvents() {
     state.ofGenerationChartBucket = trigger.dataset.ofChartBucket;
     renderOfGenerationAnalysis();
   });
+  ui.ofGenerationChartGranularity.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-of-chart-granularity]");
+    if (!trigger) return;
+    state.ofGenerationChartGranularity = trigger.dataset.ofChartGranularity;
+    renderOfGenerationAnalysis();
+  });
   ui.ofGenerationLoadMore.addEventListener("click", renderNextOfGenerationBatch);
   ui.ofGenerationGrid.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-of-generation-key]");
@@ -446,6 +453,12 @@ const PT_EN = Object.freeze({
   "Tempo médio para gerar a OF": "Average PO generation time",
   "Evolução conforme a data de criação da SC.": "Trend based on PR creation date.",
   "Todas as faixas": "All ranges",
+  "Visualizar por": "View by",
+  "Faixa de dias": "Day range",
+  "Anual": "Yearly",
+  "Mensal": "Monthly",
+  "Semanal": "Weekly",
+  "Diário": "Daily",
   "Tempo médio em dias": "Average time in days",
   "Nenhum processo encontrado para esta faixa e período.": "No process found for this range and period.",
   "Até 7 dias": "Up to 7 days",
@@ -3375,11 +3388,9 @@ function populateOfGenerationPeriodFilters(rows) {
 }
 
 function ofGenerationTrendGranularity(rows) {
-  const period = state.ofGenerationPeriod;
-  if (period.date || period.week) return "date";
-  if (period.month) return "week";
-  if (period.year) return "month";
-  return new Set(rows.map((row) => row.scPeriod?.year)).size > 1 ? "year" : "month";
+  return ["year", "month", "week", "date"].includes(state.ofGenerationChartGranularity)
+    ? state.ofGenerationChartGranularity
+    : "month";
 }
 
 function ofGenerationTrendPoint(row, granularity) {
@@ -3410,6 +3421,13 @@ function renderOfGenerationTrend(rows) {
   const selectedBucket = state.ofGenerationChartBucket;
   const chartRows = selectedBucket === "all" ? rows : rows.filter((row) => row.bucket?.id === selectedBucket);
   const choices = [{ id: "all", label: "Todas as faixas" }, ...OF_GENERATION_BUCKETS];
+  const granularities = [
+    { id: "year", label: "Anual" },
+    { id: "month", label: "Mensal" },
+    { id: "week", label: "Semanal" },
+    { id: "date", label: "Diário" },
+  ];
+  ui.ofGenerationChartGranularity.innerHTML = granularities.map(({ id, label }) => `<button type="button" data-of-chart-granularity="${id}" class="${state.ofGenerationChartGranularity === id ? "is-active" : ""}" aria-pressed="${String(state.ofGenerationChartGranularity === id)}">${escapeHtml(label)}</button>`).join("");
   ui.ofGenerationChartBuckets.innerHTML = choices.map(({ id, label }) => `<button type="button" data-of-chart-bucket="${id}" class="${selectedBucket === id ? "is-active" : ""}" aria-pressed="${String(selectedBucket === id)}">${escapeHtml(label)}</button>`).join("");
   const trend = buildOfGenerationTrend(chartRows);
   const granularityLabels = { year: "ano", month: "mês", week: "semana", date: "data" };
