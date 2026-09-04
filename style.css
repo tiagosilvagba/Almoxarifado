@@ -1499,6 +1499,38 @@ html[data-theme="theme-t"] .branch-balance-grid article { background:linear-grad
   *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; }
 }
 
+/* Mark XVII — alerta operacional exclusivo para OF de Cavaco abaixo de 200. */
+.report-card--need.is-cavaco-alert {
+  --card-accent:#f97316;
+  position:relative;
+  border:2px solid color-mix(in srgb,#f97316 68%,var(--steel-200));
+  background:linear-gradient(145deg,color-mix(in srgb,#fff7ed 88%,var(--surface)),var(--surface));
+  box-shadow:0 16px 38px rgba(194,65,12,.16),inset 0 1px 0 rgba(255,255,255,.88);
+}
+
+.report-card--need.is-cavaco-alert::before {
+  content:"ALERTA CAVACO";
+  position:absolute;
+  top:0;
+  right:18px;
+  padding:4px 10px 5px;
+  border-radius:0 0 9px 9px;
+  color:#fff;
+  background:linear-gradient(135deg,#c2410c,#f97316);
+  font-size:.58rem;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+
+.status-pill--cavaco { color:#9a3412; border-color:#fdba74; background:#ffedd5; }
+.cavaco-alert-note { color:#9a3412; border-color:#fed7aa; background:rgba(255,237,213,.76); font-weight:760; }
+
+html[data-theme="theme-t"] .report-card--need.is-cavaco-alert {
+  border-color:rgba(251,146,60,.82);
+  background:linear-gradient(145deg,#fffaf5,#ffe4c7);
+  box-shadow:0 20px 48px rgba(0,0,0,.3),0 0 28px rgba(249,115,22,.18),inset 0 1px 0 #fff;
+}
+
 /* Mark XI — progresso contínuo da base e rolagem acessível nos modais. */
 .loading-panel > div:nth-child(2) { min-width:min(520px,60vw); }
 .loading-progress { width:100%; height:7px; margin-top:9px; overflow:hidden; border-radius:999px; background:rgba(100,116,139,.2); box-shadow:inset 0 1px 2px rgba(15,23,42,.14); }
