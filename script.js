@@ -14,8 +14,9 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XVIII";
+const APP_VERSION = "Mark XIX";
 const CAVACO_OF_THRESHOLD = 200;
+const MINIMUM_SAFETY_FACTOR = 1.2;
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -637,6 +638,10 @@ const PT_EN = Object.freeze({
   ,"Mínimo atual": "Current minimum"
   ,"Máximo atual": "Current maximum"
   ,"Mínimo sugerido": "Recommended minimum"
+  ,"Mín. atual · margem +20%": "Current min. · +20% margin"
+  ,"inclui margem preventiva de 20%": "includes a 20% preventive margin"
+  ,"Consumo sem anomalias, lead time real e margem preventiva de 20% no mínimo sugerido.": "Anomaly-adjusted consumption, actual lead time and a 20% preventive margin in the recommended minimum."
+  ,"Mínimo = (consumo diário sem anomalias × lead time) + margem preventiva de 20%. Máximo = mínimo sugerido + 30 dias de consumo. Validação com tolerância de ±20%. Meses muito fora do padrão são excluídos por análise robusta da mediana.": "Minimum = (anomaly-adjusted daily consumption × lead time) plus a 20% preventive margin. Maximum = recommended minimum plus 30 days of consumption. Validation uses a ±20% tolerance. Months far outside the pattern are excluded using robust median analysis."
   ,"Máximo sugerido": "Recommended maximum"
   ,"Meses analisados": "Months analyzed"
   ,"Meses considerados": "Months included"
@@ -2447,7 +2452,7 @@ function exportMinMaxReviews(format = "excel") {
       review.currentMinimumValue, review.recommendedMinimumValue, review.minimumValueImpact,
       review.currentMaximumValue, review.recommendedMaximumValue, review.maximumValueImpact,
       monthlyHistory, excludedMonths,
-      "Mínimo = consumo diário sem anomalias × lead time; Máximo = mínimo + 30 dias de consumo; tolerância de ±20%. Anomalias identificadas pelo desvio absoluto mediano (MAD).",
+      "Mínimo = (consumo diário sem anomalias × lead time) + margem preventiva de 20%; Máximo = mínimo sugerido + 30 dias de consumo; tolerância de validação de ±20%. Anomalias identificadas pelo desvio absoluto mediano (MAD).",
     ];
   });
   exportReport(format, {
@@ -3016,7 +3021,7 @@ function renderNextMinMaxReviewBatch() {
       <span class="report-card__code">Código ${escapeHtml(review.item.code)}</span>
       <span class="item-card__address">${escapeHtml(`Repartição ${review.position.partition || "—"} · Prateleira ${review.position.shelf || "—"} · Divisão ${review.position.division || "—"}`)}</span>
       <span class="review-card__comparison">
-        <span><small>Mín. atual</small><strong>${formatOptionalNumber(review.currentMinimum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMinimum)}</i></span>
+        <span><small>Mín. atual · margem +20%</small><strong>${formatOptionalNumber(review.currentMinimum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMinimum)}</i></span>
         <span><small>Máx. atual</small><strong>${formatOptionalNumber(review.currentMaximum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMaximum)}</i></span>
       </span>
       <span class="report-card__meta"><span><small>Consumo médio/mês</small><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></span><span><small>Lead time</small><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></span></span>
@@ -3059,6 +3064,7 @@ function buildMinMaxReviews() {
       });
       const {
         monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount, averageMonthlyConsumption,
+        minimumWithoutSafetyMargin, minimumSafetyPercent,
         recommendedMinimum, recommendedMaximum, currentMinimumValue, recommendedMinimumValue,
         minimumValueImpact, currentMaximumValue, recommendedMaximumValue, maximumValueImpact,
       } = metrics;
@@ -3070,7 +3076,7 @@ function buildMinMaxReviews() {
       const recommendedTotal = recommendedMinimum + recommendedMaximum;
       reviews.push({
         item, position, consumption, monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount,
-        averageMonthlyConsumption, leadTimeDays,
+        averageMonthlyConsumption, leadTimeDays, minimumWithoutSafetyMargin, minimumSafetyPercent,
         leadTimeSource: leadSamples.length ? "real" : "estimated", leadSamples,
         currentMinimum, currentMaximum, recommendedMinimum, recommendedMaximum, status,
         referencePrice, referencePriceSource, currentMinimumValue, recommendedMinimumValue,
@@ -3102,8 +3108,10 @@ function calculateMinMaxMetrics({ monthlyTotals = {}, leadTimeDays = 30, current
   const averageMonthlyConsumption = consideredMonthCount
     ? consideredValues.reduce((sum, value) => sum + value, 0) / consideredMonthCount
     : 0;
-  const recommendedMinimum = Math.ceil(averageMonthlyConsumption / 30 * leadTimeDays);
-  const recommendedMaximum = Math.ceil(averageMonthlyConsumption / 30 * (leadTimeDays + 30));
+  const dailyConsumption = averageMonthlyConsumption / 30;
+  const minimumWithoutSafetyMargin = dailyConsumption * leadTimeDays;
+  const recommendedMinimum = Math.ceil(minimumWithoutSafetyMargin * MINIMUM_SAFETY_FACTOR);
+  const recommendedMaximum = Math.ceil(recommendedMinimum + averageMonthlyConsumption);
   const hasReferencePrice = Number(referencePrice) > 0;
   const currentMinimumValue = hasReferencePrice ? currentMinimum * referencePrice : null;
   const recommendedMinimumValue = hasReferencePrice ? recommendedMinimum * referencePrice : null;
@@ -3111,6 +3119,7 @@ function calculateMinMaxMetrics({ monthlyTotals = {}, leadTimeDays = 30, current
   const recommendedMaximumValue = hasReferencePrice ? recommendedMaximum * referencePrice : null;
   return {
     monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount, averageMonthlyConsumption,
+    minimumWithoutSafetyMargin, minimumSafetyPercent: 20,
     recommendedMinimum, recommendedMaximum, currentMinimumValue, recommendedMinimumValue,
     minimumValueImpact: hasReferencePrice ? recommendedMinimumValue - currentMinimumValue : null,
     currentMaximumValue, recommendedMaximumValue,
@@ -3261,7 +3270,7 @@ function openMinMaxReviewModal(key) {
     <article><span>Saldo atual</span><strong>${numberFormatter.format(position.quantity)}</strong></article>
     <article><span>Mínimo atual</span><strong>${formatOptionalNumber(review.currentMinimum)}</strong></article>
     <article><span>Máximo atual</span><strong>${formatOptionalNumber(review.currentMaximum)}</strong></article>
-    <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong></article>
+    <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong><small>inclui margem preventiva de 20%</small></article>
     <article><span>Máximo sugerido</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong></article>
     <article><span>Próxima compra</span><strong>${escapeHtml(getOperationalInsight(item, position.branchCode, position).nextPurchase)}</strong></article>
     <article><span>Preço de referência</span><strong>${review.referencePrice > 0 ? currencyFormatter.format(review.referencePrice) : "Não disponível"}</strong><small>${review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível"}</small></article>
@@ -3272,7 +3281,7 @@ function openMinMaxReviewModal(key) {
       ? "Não há histórico suficiente para uma validação conclusiva. A sugestão é indicativa e usa 30 dias quando não existe lead time real."
       : `${review.direction === "increase" ? "Elevar" : "Reduzir"} os parâmetros para aproximar a cobertura do consumo e do prazo real de reposição.`;
   ui.reviewModalRecommendation.className = `review-recommendation review-recommendation--${review.status}`;
-  ui.reviewModalRecommendation.innerHTML = `<span>${review.status === "ideal" ? "Parâmetro validado" : review.status === "adjust" ? "Alteração proposta" : "Análise indicativa"}</span><strong>${escapeHtml(message)}</strong><small>Mínimo = consumo diário sem anomalias × lead time. Máximo = mínimo + 30 dias de consumo. Validação com tolerância de ±20%. Meses muito fora do padrão são excluídos por análise robusta da mediana.</small>`;
+  ui.reviewModalRecommendation.innerHTML = `<span>${review.status === "ideal" ? "Parâmetro validado" : review.status === "adjust" ? "Alteração proposta" : "Análise indicativa"}</span><strong>${escapeHtml(message)}</strong><small>Mínimo = (consumo diário sem anomalias × lead time) + margem preventiva de 20%. Máximo = mínimo sugerido + 30 dias de consumo. Validação com tolerância de ±20%. Meses muito fora do padrão são excluídos por análise robusta da mediana.</small>`;
   const months = review.monthlyAnalysis;
   ui.reviewModalDetails.innerHTML = `
     <section><h3>Consumo mensal</h3><div class="monthly-consumption-list">${months.map(({ month, value, isOutlier }) => `<span class="${isOutlier ? "is-outlier" : "is-considered"}"><small>${escapeHtml(month)}</small><strong>${numberFormatter.format(value)}</strong><i>${isOutlier ? "Anomalia excluída" : "Considerado na média"}</i></span>`).join("")}</div></section>
