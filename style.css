@@ -1524,6 +1524,8 @@ html[data-theme="theme-t"] .branch-balance-grid article { background:linear-grad
 
 .status-pill--cavaco { color:#9a3412; border-color:#fdba74; background:#ffedd5; }
 .cavaco-alert-note { color:#9a3412; border-color:#fed7aa; background:rgba(255,237,213,.76); font-weight:760; }
+.cavaco-supplier-note { color:var(--steel-700); border-color:color-mix(in srgb,#f97316 34%,var(--steel-200)); background:color-mix(in srgb,#fff7ed 58%,var(--surface)); }
+.cavaco-supplier-note strong { color:#9a3412; }
 
 html[data-theme="theme-t"] .report-card--need.is-cavaco-alert {
   border-color:rgba(251,146,60,.82);
