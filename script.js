@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXVI";
+const APP_VERSION = "Mark XXVII";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -2125,28 +2125,31 @@ function getItemPurchaseCommitments(item) {
       const existing = orders.get(orderKey) || {
         code: record.of.code,
         branchCode,
-        deliveryLineBalances: new Map(),
+        lineBalances: new Map(),
       };
-      const deliveryLineKey = normalizeSearch(record.of.deliveryDate) || "sem-data";
-      const previousBalance = existing.deliveryLineBalances.get(deliveryLineKey) || 0;
-      existing.deliveryLineBalances.set(deliveryLineKey, Math.max(previousBalance, record.of.balance));
+      const lineKey = purchaseCommitmentLineKey(record);
+      const previousBalance = existing.lineBalances.get(lineKey) || 0;
+      existing.lineBalances.set(lineKey, Math.max(previousBalance, record.of.balance));
       orders.set(orderKey, existing);
     }
     if (record.sc?.code) {
-      const existing = requests.get(record.sc.code) || {
+      const requestKey = `${record.sc.code}::${branchCode}`;
+      const existing = requests.get(requestKey) || {
         code: record.sc.code,
         branchCode,
-        quantity: 0,
         status: record.sc.status,
         cancelled: record.sc.cancelled,
-        hasOf: false,
+        lines: new Map(),
       };
-      existing.hasOf ||= Boolean(record.of?.code);
-      existing.quantity = Math.max(existing.quantity, record.sc.quantity || 0);
+      const lineKey = purchaseCommitmentLineKey(record);
+      const line = existing.lines.get(lineKey) || { quantity: 0, hasOf: false };
+      line.quantity = Math.max(line.quantity, record.sc.quantity || 0);
+      line.hasOf ||= Boolean(record.of?.code);
+      existing.lines.set(lineKey, line);
       existing.branchCode ||= branchCode;
       existing.status ||= record.sc.status;
       existing.cancelled ||= record.sc.cancelled;
-      requests.set(record.sc.code, existing);
+      requests.set(requestKey, existing);
     }
   }
   const byBranch = new Map();
@@ -2155,7 +2158,7 @@ function getItemPurchaseCommitments(item) {
     return byBranch.get(branchCode);
   };
   for (const order of orders.values()) {
-    const quantity = [...order.deliveryLineBalances.values()].reduce((sum, balance) => sum + balance, 0);
+    const quantity = [...order.lineBalances.values()].reduce((sum, balance) => sum + balance, 0);
     ensureBranch(order.branchCode).ofs.push({
       code: order.code,
       branchCode: order.branchCode,
@@ -2164,10 +2167,27 @@ function getItemPurchaseCommitments(item) {
     });
   }
   for (const request of requests.values()) {
-    if (request.hasOf || !(request.quantity > 0) || !isActiveScForPurchaseCoverage(request)) continue;
-    ensureBranch(request.branchCode).scs.push({ ...request, remaining: request.quantity });
+    if (!isActiveScForPurchaseCoverage(request)) continue;
+    const quantity = [...request.lines.values()]
+      .filter((line) => !line.hasOf)
+      .reduce((sum, line) => sum + line.quantity, 0);
+    if (!(quantity > 0)) continue;
+    ensureBranch(request.branchCode).scs.push({
+      code: request.code,
+      branchCode: request.branchCode,
+      quantity,
+      remaining: quantity,
+    });
   }
   return byBranch;
+}
+
+function purchaseCommitmentLineKey(record) {
+  const scCode = normalizeSearch(record.sc?.code) || "sem-sc";
+  const sequence = normalizeSearch(record.sc?.sequence);
+  if (sequence) return `${scCode}::seq:${sequence}`;
+  const deliveryDate = normalizeSearch(record.of?.deliveryDate || record.sc?.deliveryDate);
+  return `${scCode}::data:${deliveryDate || "sem-data"}`;
 }
 
 function isActiveScForPurchaseCoverage(sc) {
