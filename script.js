@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXVII";
+const APP_VERSION = "Mark XXVIII";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -96,6 +96,8 @@ const state = {
   ofGenerationByKey: new Map(),
   activeOfGeneration: null,
   ofGenerationBucket: "all",
+  ofGenerationChartBucket: "all",
+  ofGenerationPeriod: { year: "", month: "", week: "", date: "" },
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
   minMaxReviews: [],
@@ -159,6 +161,7 @@ function cacheUi() {
     "procurementModalCode", "procurementModalTitle", "procurementModalSubtitle", "procurementModalStages",
     "procurementModalDetails", "procurementModalOpenItem", "procurementModalOperational", "photoInput", "photoUploadButton", "photoUploadStatus",
     "ofGenerationCount", "ofGenerationSummary", "ofGenerationGrid", "ofGenerationLoadMore", "ofGenerationVisibleCount", "clearOfGenerationRange", "exportOfGenerationButton", "ofGenerationExportFormat",
+    "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter", "clearOfGenerationPeriod", "ofGenerationChartBuckets", "ofGenerationTrendChart", "ofGenerationTrendSubtitle",
     "ofGenerationModal", "ofGenerationModalClose", "ofGenerationModalCode", "ofGenerationModalTitle", "ofGenerationModalSubtitle", "ofGenerationModalTimeline", "ofGenerationModalSummary", "ofGenerationModalDetails", "ofGenerationModalOpenItem",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
     "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewIncreaseValue", "reviewReductionValue", "reviewNetImpactValue", "reviewNetImpactCard", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
@@ -291,6 +294,24 @@ function bindEvents() {
     state.ofGenerationBucket = "all";
     renderOfGenerationAnalysis();
   });
+  ["year", "month", "week", "date"].forEach((periodPart, index, parts) => {
+    const control = ui[`ofGeneration${periodPart[0].toUpperCase()}${periodPart.slice(1)}Filter`];
+    control.addEventListener("change", () => {
+      state.ofGenerationPeriod[periodPart] = control.value;
+      parts.slice(index + 1).forEach((dependentPart) => { state.ofGenerationPeriod[dependentPart] = ""; });
+      renderOfGenerationAnalysis();
+    });
+  });
+  ui.clearOfGenerationPeriod.addEventListener("click", () => {
+    state.ofGenerationPeriod = { year: "", month: "", week: "", date: "" };
+    renderOfGenerationAnalysis();
+  });
+  ui.ofGenerationChartBuckets.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-of-chart-bucket]");
+    if (!trigger) return;
+    state.ofGenerationChartBucket = trigger.dataset.ofChartBucket;
+    renderOfGenerationAnalysis();
+  });
   ui.ofGenerationLoadMore.addEventListener("click", renderNextOfGenerationBatch);
   ui.ofGenerationGrid.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-of-generation-key]");
@@ -410,6 +431,23 @@ const PT_EN = Object.freeze({
   "Processos medidos": "Measured processes",
   "SC criada → OF emitida": "PR created → PO issued",
   "SC + OF únicas": "Unique PR + PO pairs",
+  "Período de análise": "Analysis period",
+  "Data de criação da SC": "PR creation date",
+  "Limpar período": "Clear period",
+  "Ano": "Year",
+  "Mês": "Month",
+  "Semana": "Week",
+  "Data": "Date",
+  "Todos os anos": "All years",
+  "Todos os meses": "All months",
+  "Todas as semanas": "All weeks",
+  "Todas as datas": "All dates",
+  "Evolução": "Trend",
+  "Tempo médio para gerar a OF": "Average PO generation time",
+  "Evolução conforme a data de criação da SC.": "Trend based on PR creation date.",
+  "Todas as faixas": "All ranges",
+  "Tempo médio em dias": "Average time in days",
+  "Nenhum processo encontrado para esta faixa e período.": "No process found for this range and period.",
   "Até 7 dias": "Up to 7 days",
   "De 8 a 15 dias": "From 8 to 15 days",
   "De 16 a 20 dias": "From 16 to 20 days",
@@ -3232,6 +3270,7 @@ function collectOfGenerationRows() {
         of,
         days,
         bucket: ofGenerationBucketFor(days),
+        scPeriod: ofGenerationDateParts(sc.date),
         itemCodes: new Set(),
         itemNames: new Set(),
       };
@@ -3257,8 +3296,159 @@ function ofGenerationTone(bucketId) {
   return "critical";
 }
 
+function ofGenerationDateParts(value) {
+  const timestamp = dateTimestamp(value);
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  const year = String(date.getUTCFullYear());
+  const monthNumber = date.getUTCMonth() + 1;
+  const month = `${year}-${String(monthNumber).padStart(2, "0")}`;
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const isoDate = `${month}-${day}`;
+  const weekDate = new Date(timestamp);
+  weekDate.setUTCDate(weekDate.getUTCDate() + 4 - (weekDate.getUTCDay() || 7));
+  const weekYear = weekDate.getUTCFullYear();
+  const yearStart = Date.UTC(weekYear, 0, 1);
+  const weekNumber = Math.ceil((((weekDate.getTime() - yearStart) / 86400000) + 1) / 7);
+  return {
+    timestamp,
+    year,
+    month,
+    week: `${weekYear}-W${String(weekNumber).padStart(2, "0")}`,
+    date: isoDate,
+  };
+}
+
+function ofGenerationMonthLabel(value) {
+  const match = String(value).match(/^(\d{4})-(\d{2})$/);
+  if (!match) return value;
+  const label = new Intl.DateTimeFormat(activeLanguage === "en" ? "en-US" : "pt-BR", { month: "long", year: "numeric", timeZone: "UTC" })
+    .format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)));
+  return label[0].toUpperCase() + label.slice(1);
+}
+
+function ofGenerationWeekLabel(value) {
+  const match = String(value).match(/^(\d{4})-W(\d{2})$/);
+  return match ? `${translateUiText("Semana")} ${Number(match[2])} · ${match[1]}` : value;
+}
+
+function setOfGenerationPeriodOptions(control, values, allLabel, labelForValue = (value) => value, selected = "") {
+  control.innerHTML = `<option value="">${escapeHtml(translateUiText(allLabel))}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labelForValue(value))}</option>`).join("")}`;
+  control.value = values.includes(selected) ? selected : "";
+}
+
+function rowMatchesOfGenerationPeriod(row, period = state.ofGenerationPeriod) {
+  const parts = row.scPeriod;
+  if (!parts) return false;
+  return (!period.year || parts.year === period.year)
+    && (!period.month || parts.month === period.month)
+    && (!period.week || parts.week === period.week)
+    && (!period.date || parts.date === period.date);
+}
+
+function populateOfGenerationPeriodFilters(rows) {
+  const period = state.ofGenerationPeriod;
+  const unique = (values) => [...new Set(values.filter(Boolean))].sort();
+  const years = unique(rows.map((row) => row.scPeriod?.year));
+  if (period.year && !years.includes(period.year)) Object.assign(period, { year: "", month: "", week: "", date: "" });
+  setOfGenerationPeriodOptions(ui.ofGenerationYearFilter, years, "Todos os anos", (value) => value, period.year);
+  period.year = ui.ofGenerationYearFilter.value;
+
+  const yearRows = rows.filter((row) => !period.year || row.scPeriod?.year === period.year);
+  const months = unique(yearRows.map((row) => row.scPeriod?.month));
+  if (period.month && !months.includes(period.month)) { period.month = ""; period.week = ""; period.date = ""; }
+  setOfGenerationPeriodOptions(ui.ofGenerationMonthFilter, months, "Todos os meses", ofGenerationMonthLabel, period.month);
+  ui.ofGenerationMonthFilter.value = period.month;
+
+  const monthRows = yearRows.filter((row) => !period.month || row.scPeriod?.month === period.month);
+  const weeks = unique(monthRows.map((row) => row.scPeriod?.week));
+  if (period.week && !weeks.includes(period.week)) { period.week = ""; period.date = ""; }
+  setOfGenerationPeriodOptions(ui.ofGenerationWeekFilter, weeks, "Todas as semanas", ofGenerationWeekLabel, period.week);
+  ui.ofGenerationWeekFilter.value = period.week;
+
+  const weekRows = monthRows.filter((row) => !period.week || row.scPeriod?.week === period.week);
+  const dates = unique(weekRows.map((row) => row.scPeriod?.date));
+  if (period.date && !dates.includes(period.date)) period.date = "";
+  setOfGenerationPeriodOptions(ui.ofGenerationDateFilter, dates, "Todas as datas", (value) => formatDate(value), period.date);
+  ui.ofGenerationDateFilter.value = period.date;
+  ui.clearOfGenerationPeriod.classList.toggle("is-hidden", !Object.values(period).some(Boolean));
+}
+
+function ofGenerationTrendGranularity(rows) {
+  const period = state.ofGenerationPeriod;
+  if (period.date || period.week) return "date";
+  if (period.month) return "week";
+  if (period.year) return "month";
+  return new Set(rows.map((row) => row.scPeriod?.year)).size > 1 ? "year" : "month";
+}
+
+function ofGenerationTrendPoint(row, granularity) {
+  const parts = row.scPeriod;
+  if (granularity === "year") return { key: parts.year, label: parts.year };
+  if (granularity === "month") return { key: parts.month, label: ofGenerationMonthLabel(parts.month).replace(/ de /gi, " ") };
+  if (granularity === "week") return { key: parts.week, label: `S${Number(parts.week.slice(-2))}` };
+  return { key: parts.date, label: formatDate(parts.date).slice(0, 5) };
+}
+
+function buildOfGenerationTrend(rows) {
+  const granularity = ofGenerationTrendGranularity(rows);
+  const groups = new Map();
+  for (const row of rows) {
+    const point = ofGenerationTrendPoint(row, granularity);
+    const group = groups.get(point.key) || { ...point, totalDays: 0, count: 0 };
+    group.totalDays += row.days;
+    group.count += 1;
+    groups.set(point.key, group);
+  }
+  return {
+    granularity,
+    points: [...groups.values()].sort((a, b) => a.key.localeCompare(b.key)).map((point) => ({ ...point, average: point.totalDays / point.count })),
+  };
+}
+
+function renderOfGenerationTrend(rows) {
+  const selectedBucket = state.ofGenerationChartBucket;
+  const chartRows = selectedBucket === "all" ? rows : rows.filter((row) => row.bucket?.id === selectedBucket);
+  const choices = [{ id: "all", label: "Todas as faixas" }, ...OF_GENERATION_BUCKETS];
+  ui.ofGenerationChartBuckets.innerHTML = choices.map(({ id, label }) => `<button type="button" data-of-chart-bucket="${id}" class="${selectedBucket === id ? "is-active" : ""}" aria-pressed="${String(selectedBucket === id)}">${escapeHtml(label)}</button>`).join("");
+  const trend = buildOfGenerationTrend(chartRows);
+  const granularityLabels = { year: "ano", month: "mês", week: "semana", date: "data" };
+  const selectedLabel = choices.find(({ id }) => id === selectedBucket)?.label || "Todas as faixas";
+  ui.ofGenerationTrendSubtitle.textContent = `${selectedLabel} · evolução por ${granularityLabels[trend.granularity]}. Período baseado na criação da SC.`;
+  if (!trend.points.length) {
+    ui.ofGenerationTrendChart.innerHTML = `<div class="table-empty">Nenhum processo encontrado para esta faixa e período.</div>`;
+    return;
+  }
+
+  const width = 960;
+  const height = 300;
+  const pad = { top: 28, right: 24, bottom: 56, left: 52 };
+  const innerWidth = width - pad.left - pad.right;
+  const innerHeight = height - pad.top - pad.bottom;
+  const maxAverage = Math.max(...trend.points.map(({ average }) => average), 1);
+  const maxY = Math.max(5, Math.ceil(maxAverage / 5) * 5);
+  const xAt = (index) => trend.points.length === 1 ? pad.left + innerWidth / 2 : pad.left + index * innerWidth / (trend.points.length - 1);
+  const yAt = (value) => pad.top + innerHeight - (value / maxY * innerHeight);
+  const grid = Array.from({ length: 5 }, (_, index) => {
+    const value = maxY * index / 4;
+    const y = yAt(value);
+    return `<line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"/><text x="${pad.left - 10}" y="${y + 4}" text-anchor="end">${numberFormatter.format(value)}</text>`;
+  }).join("");
+  const path = trend.points.map((point, index) => `${index ? "L" : "M"}${xAt(index).toFixed(1)},${yAt(point.average).toFixed(1)}`).join(" ");
+  const labelStep = Math.max(1, Math.ceil(trend.points.length / 10));
+  const points = trend.points.map((point, index) => {
+    const x = xAt(index);
+    const y = yAt(point.average);
+    const label = index % labelStep === 0 || index === trend.points.length - 1 ? `<text class="of-trend-chart__x-label" x="${x}" y="${height - 22}" text-anchor="middle">${escapeHtml(point.label)}</text>` : "";
+    return `<g><circle cx="${x}" cy="${y}" r="5"><title>${escapeHtml(point.label)}: ${numberFormatter.format(point.average)} dias · ${integerFormatter.format(point.count)} processos</title></circle><text class="of-trend-chart__value" x="${x}" y="${Math.max(14, y - 11)}" text-anchor="middle">${numberFormatter.format(point.average)}</text>${label}</g>`;
+  }).join("");
+  ui.ofGenerationTrendChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><g class="of-trend-chart__grid">${grid}</g><path class="of-trend-chart__line" d="${path}"/>${points}</svg><div class="of-trend-chart__caption"><span>Tempo médio em dias</span><strong>${integerFormatter.format(chartRows.length)} ${chartRows.length === 1 ? "processo" : "processos"}</strong></div>`;
+}
+
 function renderOfGenerationAnalysis() {
-  const rows = collectOfGenerationRows();
+  const allRows = collectOfGenerationRows();
+  populateOfGenerationPeriodFilters(allRows);
+  const rows = allRows.filter((row) => rowMatchesOfGenerationPeriod(row));
   const metrics = calculateOfGenerationMetrics(rows);
   state.ofGenerationRows = rows;
   const selectedBucket = state.ofGenerationBucket;
@@ -3267,6 +3457,7 @@ function renderOfGenerationAnalysis() {
   state.ofGenerationVisible = 0;
   state.ofGenerationByKey.clear();
   rows.forEach((row) => state.ofGenerationByKey.set(row.key, row));
+  renderOfGenerationTrend(rows);
 
   ui.ofGenerationSummary.innerHTML = `
     <article class="of-generation-summary__headline"><span>Média geral</span><strong>${numberFormatter.format(metrics.average)} dias</strong><small>SC criada → OF emitida</small></article>
@@ -4995,5 +5186,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }

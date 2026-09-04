@@ -1614,10 +1614,63 @@ html[data-theme="theme-t"] .report-card--need.is-cavaco-alert {
 html[data-theme="theme-t"] .of-generation-summary__bucket { background:linear-gradient(150deg,#fff,#e5f0f6); }
 html[data-theme="theme-t"] .of-generation-summary__headline { background:linear-gradient(150deg,#eefcff,#ccebf5); }
 
+.of-period-slicer {
+  position:sticky;
+  top:8px;
+  z-index:12;
+  display:grid;
+  grid-template-columns:minmax(185px,.55fr) minmax(0,2fr);
+  gap:16px;
+  margin:0 0 18px;
+  padding:14px;
+  border:var(--layout-card-border);
+  border-radius:var(--layout-card-radius);
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  box-shadow:0 14px 34px rgba(15,23,42,.12);
+  backdrop-filter:blur(18px);
+}
+
+.of-period-slicer__heading { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+.of-period-slicer__heading strong { display:block; margin-top:3px; font-size:.9rem; }
+.of-period-slicer__heading .button { min-height:34px; padding:7px 10px; font-size:.76rem; }
+.of-period-slicer__controls { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.of-period-slicer__controls label { display:grid; gap:5px; min-width:0; padding:8px 10px; border:1px solid var(--steel-200); border-radius:12px; background:var(--steel-50); }
+.of-period-slicer__controls label > span { color:var(--blue-600); font-size:.75rem; font-weight:850; letter-spacing:.035em; }
+.of-period-slicer__controls select { width:100%; min-width:0; border:0; outline:0; color:var(--text); background:transparent; font:inherit; font-size:.82rem; font-weight:750; cursor:pointer; }
+.of-period-slicer__controls label:focus-within { border-color:var(--blue-500); box-shadow:0 0 0 3px color-mix(in srgb,var(--blue-500) 16%,transparent); }
+
+.of-trend-card { margin:18px 0 22px; padding:18px; border:var(--layout-card-border); border-radius:var(--layout-card-radius); background:var(--surface); box-shadow:var(--layout-card-shadow); }
+.of-trend-card__heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.of-trend-card__heading h3 { margin:4px 0 0; font-size:1.08rem; }
+.of-trend-card__heading p { margin:5px 0 0; color:var(--muted); font-size:.8rem; }
+.of-chart-buckets { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; max-width:670px; }
+.of-chart-buckets button { min-height:34px; padding:7px 11px; border:1px solid var(--steel-200); border-radius:999px; color:var(--muted); background:var(--steel-50); font:inherit; font-size:.75rem; font-weight:800; cursor:pointer; }
+.of-chart-buckets button:hover { border-color:var(--blue-500); color:var(--blue-600); }
+.of-chart-buckets button.is-active { color:#fff; border-color:var(--blue-600); background:linear-gradient(135deg,var(--blue-600),var(--navy-800)); box-shadow:0 6px 16px color-mix(in srgb,var(--blue-600) 24%,transparent); }
+.of-trend-chart { min-height:270px; margin-top:14px; overflow-x:auto; }
+.of-trend-chart svg { display:block; width:100%; min-width:680px; height:auto; overflow:visible; }
+.of-trend-chart__grid line { stroke:var(--steel-200); stroke-width:1; }
+.of-trend-chart__grid text,.of-trend-chart__x-label { fill:var(--muted); font-size:11px; font-weight:700; }
+.of-trend-chart__line { fill:none; stroke:var(--blue-600); stroke-width:4; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 5px 5px color-mix(in srgb,var(--blue-600) 25%,transparent)); }
+.of-trend-chart circle { fill:var(--surface); stroke:var(--blue-600); stroke-width:4; }
+.of-trend-chart__value { fill:var(--text); font-size:11px; font-weight:900; }
+.of-trend-chart__caption { display:flex; justify-content:space-between; gap:12px; padding:8px 12px 0; border-top:1px solid var(--steel-100); color:var(--muted); font-size:.78rem; }
+.of-trend-chart__caption strong { color:var(--text); }
+
+html[data-theme="theme-t"] .of-period-slicer,
+html[data-theme="theme-t"] .of-trend-card { border-color:rgba(92,217,246,.3); background:linear-gradient(150deg,rgba(250,254,255,.97),rgba(222,239,247,.96)); }
+
 @media (max-width:700px) {
   .of-generation-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .of-generation-timeline { grid-template-columns:1fr; }
   .of-generation-timeline > i { min-height:70px; }
+  .of-period-slicer { top:4px; grid-template-columns:1fr; padding:11px; border-radius:16px; }
+  .of-period-slicer__controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .of-trend-card { padding:14px; }
+  .of-trend-card__heading { display:grid; }
+  .of-chart-buckets { justify-content:flex-start; max-width:none; overflow-x:auto; flex-wrap:nowrap; padding-bottom:3px; }
+  .of-chart-buckets button { flex:0 0 auto; }
+  .of-trend-chart { margin-inline:-8px; }
 }
 
 /* Mark XI — progresso contínuo da base e rolagem acessível nos modais. */

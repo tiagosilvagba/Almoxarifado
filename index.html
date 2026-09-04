@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXVII</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXVIII</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -357,7 +357,20 @@
             </div>
             <div class="heading-actions"><span id="ofGenerationCount" class="context-label">0 processos</span><div class="export-control"><label><span>Formato</span><select id="ofGenerationExportFormat" aria-label="Formato da exportação do tempo de geração de OF"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="exportOfGenerationButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div>
           </div>
+          <div class="of-period-slicer" aria-label="Segmentação pela data de criação da SC">
+            <div class="of-period-slicer__heading"><div><span class="eyebrow">Período de análise</span><strong>Data de criação da SC</strong></div><button id="clearOfGenerationPeriod" class="button button--secondary is-hidden" type="button">Limpar período</button></div>
+            <div class="of-period-slicer__controls">
+              <label><span>Ano</span><select id="ofGenerationYearFilter"><option value="">Todos os anos</option></select></label>
+              <label><span>Mês</span><select id="ofGenerationMonthFilter"><option value="">Todos os meses</option></select></label>
+              <label><span>Semana</span><select id="ofGenerationWeekFilter"><option value="">Todas as semanas</option></select></label>
+              <label><span>Data</span><select id="ofGenerationDateFilter"><option value="">Todas as datas</option></select></label>
+            </div>
+          </div>
           <div id="ofGenerationSummary" class="need-summary of-generation-summary" aria-label="Distribuição do tempo de geração de OF"></div>
+          <section class="of-trend-card" aria-labelledby="ofGenerationTrendTitle">
+            <div class="of-trend-card__heading"><div><span class="eyebrow">Evolução</span><h3 id="ofGenerationTrendTitle">Tempo médio para gerar a OF</h3><p id="ofGenerationTrendSubtitle">Evolução conforme a data de criação da SC.</p></div><div id="ofGenerationChartBuckets" class="of-chart-buckets" aria-label="Faixa de dias exibida no gráfico"></div></div>
+            <div id="ofGenerationTrendChart" class="of-trend-chart" role="img" aria-label="Gráfico de evolução do tempo de geração de OF"></div>
+          </section>
           <div class="table-heading report-heading">
             <div><h3>Processos medidos</h3><p>Selecione uma faixa acima para detalhar somente os processos daquele intervalo.</p></div>
             <button id="clearOfGenerationRange" class="button button--secondary is-hidden" type="button">Exibir todas as faixas</button>
