@@ -14,7 +14,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XIII";
+const APP_VERSION = "Mark XIV";
 
 const THEME_IDS = new Set([
   "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
@@ -1729,20 +1729,25 @@ function renderDashboardCharts() {
 }
 
 function renderProcurementFunnel() {
+  const counts = procurementFunnelCounts(collectProcurementRows(false));
+  const max = Math.max(1, counts.sc, counts.of, counts.rec);
+  ui.procurementFunnel.innerHTML = [
+    ["SC", "Solicitações", counts.sc, "var(--violet)"],
+    ["OF", "Ordens de fornecimento", counts.of, "var(--blue-600)"],
+    ["REC", "Recebimentos", counts.rec, "var(--green)"],
+  ].map(([prefix, label, count, color]) => `<button type="button" data-page-link="consulta-sc-of" style="--funnel-color:${color};--funnel-width:${Math.max(18, count / max * 100)}%"><span>${prefix}</span><strong>${integerFormatter.format(count)}</strong><small>${label}</small><i></i></button>`).join("");
+}
+
+function procurementFunnelCounts(rows) {
   const sc = new Set();
   const of = new Set();
   const rec = new Set();
-  for (const { record } of state.procurementRows) {
+  for (const { record } of rows) {
     if (record.sc?.code) sc.add(record.sc.code);
     if (record.of?.code) of.add(record.of.code);
     if (record.rec?.invoice) rec.add(`${record.rec.invoice}::${record.rec.series || ""}`);
   }
-  const max = Math.max(1, sc.size, of.size, rec.size);
-  ui.procurementFunnel.innerHTML = [
-    ["SC", "Solicitações", sc.size, "var(--violet)"],
-    ["OF", "Ordens de fornecimento", of.size, "var(--blue-600)"],
-    ["REC", "Recebimentos", rec.size, "var(--green)"],
-  ].map(([prefix, label, count, color]) => `<button type="button" data-page-link="consulta-sc-of" style="--funnel-color:${color};--funnel-width:${Math.max(18, count / max * 100)}%"><span>${prefix}</span><strong>${integerFormatter.format(count)}</strong><small>${label}</small><i></i></button>`).join("");
+  return { sc: sc.size, of: of.size, rec: rec.size };
 }
 
 function renderDecisionLists() {
@@ -2605,24 +2610,7 @@ function escapeXml(value) {
 }
 
 function buildProcurementRows() {
-  const branch = effectiveBranchFilter();
-  const supplier = ui.supplierFilter.value;
-  const query = normalizeSearch(ui.searchInput.value);
-  const scStatus = ui.scStatusFilter.value;
-  const ccuClassification = ui.ccuClassificationFilter.value;
-  const rows = [];
-  for (const item of state.items.filter(itemMatchesTransactionFilters)) {
-    for (const record of item.history || []) {
-      if (!record.sc?.code && !record.of?.code) continue;
-      if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
-      if (branch && record.branchCode !== branch) continue;
-      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
-      if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
-      if (query && !recordMatchesQuery(item, record, query)) continue;
-      rows.push({ item, record });
-    }
-  }
-  rows.sort((a, b) => (b.record.sortKey || 0) - (a.record.sortKey || 0));
+  const rows = collectProcurementRows(true);
   state.procurementRows = rows;
   state.procurementByKey.clear();
   rows.forEach((row, index) => { row.key = `process-${index}`; state.procurementByKey.set(row.key, row); });
@@ -2644,6 +2632,28 @@ function buildProcurementRows() {
   ui.procurementPartial.textContent = integerFormatter.format(partial.size);
   ui.procurementReceived.textContent = integerFormatter.format(received.size);
   renderNextProcurementBatch();
+}
+
+function collectProcurementRows(shouldSort = true) {
+  const branch = effectiveBranchFilter();
+  const supplier = ui.supplierFilter.value;
+  const query = normalizeSearch(ui.searchInput.value);
+  const scStatus = ui.scStatusFilter.value;
+  const ccuClassification = ui.ccuClassificationFilter.value;
+  const rows = [];
+  for (const item of state.items.filter(itemMatchesTransactionFilters)) {
+    for (const record of item.history || []) {
+      if (!record.sc?.code && !record.of?.code) continue;
+      if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
+      if (branch && record.branchCode !== branch) continue;
+      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
+      if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
+      if (query && !recordMatchesQuery(item, record, query)) continue;
+      rows.push({ item, record });
+    }
+  }
+  if (shouldSort) rows.sort((a, b) => (b.record.sortKey || 0) - (a.record.sortKey || 0));
+  return rows;
 }
 
 function recordMatchesQuery(item, record, query) {
@@ -4343,5 +4353,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts };
 }
