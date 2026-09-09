@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXXI";
+const APP_VERSION = "Mark XXXII";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -4692,9 +4692,11 @@ function inventoryWorker() {
         const branchCode = clean(get("Cd Filial"));
         const localCode = clean(get("Cd Local"));
         const partition = clean(get("Cd Reparticao"));
+        const originalBranchName = clean(get("Nm Filial"));
+        const resolvedBranchName = resolveStockBranchName(branchCode, localCode, partition, originalBranchName);
         const position = {
           branchCode,
-          branchName: resolveStockBranchName(branchCode, localCode, partition, clean(get("Nm Filial"))),
+          branchName: resolvedBranchName,
           localType: clean(get("Tipo Local")),
           localCode,
           localName: clean(get("Ds Local Estoque")),
@@ -4707,7 +4709,12 @@ function inventoryWorker() {
           shelf: clean(get("Cd Prateleira")),
           partition,
           division: clean(get("Cd Divisao")),
-          replenishmentResponsibles: replenishmentByLocation.get(responsibleLocationKey(branchCode, localCode)) || [],
+          replenishmentResponsibles: resolveReplenishmentResponsibles(
+            replenishmentByLocation,
+            branchCode,
+            localCode,
+            resolvedBranchName,
+          ),
           belowMin: minimum > 0 && quantity < minimum,
           aboveMax: maximum > 0 && quantity > maximum,
           outOfStock: limitsSumZero && quantity === 0,
@@ -5041,15 +5048,35 @@ function inventoryWorker() {
     parseCsv(meaningfulText, (headers, row) => {
       const get = rowGetter(headers, row);
       const branchCode = clean(get("FILIAL"));
+      const branchName = clean(get("NM EMPRESA"));
       const localCode = clean(get("CD LOCAL"));
       const responsible = clean(get("NOME REPOSITOR"));
       if (!branchCode || !localCode || !responsible) return;
       const key = responsibleLocationKey(branchCode, localCode);
       const values = assignments.get(key) || [];
-      if (!values.some((value) => normalizeText(value) === normalizeText(responsible))) values.push(responsible);
+      if (!values.some((value) => normalizeText(value.responsible) === normalizeText(responsible)
+        && normalizeBranchIdentity(value.branchName) === normalizeBranchIdentity(branchName))) {
+        values.push({ responsible, branchName });
+      }
       assignments.set(key, values);
     });
     return assignments;
+  }
+
+  function resolveReplenishmentResponsibles(assignments, branchCode, localCode, resolvedBranchName) {
+    const values = assignments.get(responsibleLocationKey(branchCode, localCode)) || [];
+    const resolvedIdentity = normalizeBranchIdentity(resolvedBranchName);
+    return values
+      .filter((entry) => !entry.branchName || normalizeBranchIdentity(entry.branchName) === resolvedIdentity)
+      .map((entry) => entry.responsible);
+  }
+
+  function normalizeBranchIdentity(value) {
+    return clean(value)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
   }
 
   function responsibleLocationKey(branchCode, localCode) {
