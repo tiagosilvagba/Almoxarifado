@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXXIII";
+const APP_VERSION = "Mark XXXIV";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -2086,29 +2086,42 @@ function buildPurchaseNeeds() {
     if (isCavacoItem(item)) {
       for (const record of item.history || []) {
         const of = record.of;
-        if (!isCavacoOfAlert(item, of)) continue;
+        if (!isCavacoItem(item) || !isOpenOfForPurchase(of) || !Number.isFinite(of.balance)) continue;
         const key = `${item.code}::${of.code}`;
         const previous = cavacoOrders.get(key);
         if (!previous || (record.sortKey || 0) > (previous.sortKey || 0)) cavacoOrders.set(key, record);
       }
     }
 
+    const cavacoGroups = new Map();
     for (const record of cavacoOrders.values()) {
+      const of = record.of;
+      const supplierKey = normalizeSearch(of.supplierCode || of.supplier || "fornecedor-nao-informado");
+      const key = `${record.branchCode || ""}::${supplierKey}`;
+      const group = cavacoGroups.get(key) || { records: [], balance: 0 };
+      group.records.push(record);
+      group.balance += of.balance;
+      cavacoGroups.set(key, group);
+    }
+
+    for (const group of cavacoGroups.values()) {
+      if (group.balance >= CAVACO_OF_THRESHOLD) continue;
+      const record = group.records.reduce((latest, candidate) => !latest || (candidate.sortKey || 0) > (latest.sortKey || 0) ? candidate : latest, null);
       const of = record.of;
       const position = (item.positions || []).find((entry) => entry.branchCode === record.branchCode)
         || createCavacoAlertPosition(record);
-      const netSuggested = Math.max(CAVACO_OF_THRESHOLD - of.balance, 0);
+      const netSuggested = Math.max(CAVACO_OF_THRESHOLD - group.balance, 0);
       const referencePrice = [of.unitValue, latestPurchasePrice(item), position.unitCost].find((value) => value > 0) || 0;
       needs.push({
         item,
         position,
         target: CAVACO_OF_THRESHOLD,
         suggested: netSuggested,
-        openOfBalance: of.balance,
+        openOfBalance: group.balance,
         pendingScQuantity: 0,
         coveredQuantity: 0,
-        ofCodes: [of.code],
-        scCodes: record.sc?.code ? [record.sc.code] : [],
+        ofCodes: unique(group.records.map((entry) => entry.of?.code)),
+        scCodes: unique(group.records.map((entry) => entry.sc?.code)),
         coverageSource: "Alerta especial de Cavaco",
         netSuggested,
         referencePrice,
@@ -2116,7 +2129,7 @@ function buildPurchaseNeeds() {
         rupture: false,
         cavacoAlert: true,
         cavacoThreshold: CAVACO_OF_THRESHOLD,
-        cavacoOfBalance: of.balance,
+        cavacoOfBalance: group.balance,
         cavacoSupplier: of.supplier || "Não informado",
         record,
       });
@@ -2518,7 +2531,7 @@ function renderNextPurchaseNeedBatch() {
     <span class="item-card__address">Reposição: ${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informada")}</span>
     <span class="purchase-min-max"><span>Mín. cadastrado <strong>${formatOptionalNumber(position.minimum)}</strong></span><span>Máx. cadastrado <strong>${formatOptionalNumber(position.maximum)}</strong></span></span>
     ${cavacoAlert
-      ? `<span class="report-card__meta"><span><small>OF</small><strong>${escapeHtml(ofCodes[0] || "—")}</strong></span><span><small>Saldo da OF</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-supplier-note"><strong>Fornecedor:</strong> ${escapeHtml(cavacoSupplier || "Não informado")}</span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo da OF de Cavaco ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
+      ? `<span class="report-card__meta"><span><small>OFs</small><strong>${escapeHtml(ofCodes.join(", ") || "—")}</strong></span><span><small>Saldo somado das OFs</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-supplier-note"><strong>Fornecedor:</strong> ${escapeHtml(cavacoSupplier || "Não informado")}</span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo somado das OFs abertas deste fornecedor ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
       : `<span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}`}
     <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
   </button>`).join(""));
@@ -2568,8 +2581,8 @@ function openPurchaseNeedModal(key) {
     <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
     <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
     <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
-    <div><dt>Observação</dt><dd>${cavacoAlert ? `A OF ${escapeHtml(ofCodes[0] || "—")} possui saldo de ${numberFormatter.format(cavacoOfBalance)}, abaixo do gatilho operacional de ${numberFormatter.format(cavacoThreshold)}.` : coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
-    <div><dt>Critério da sugestão</dt><dd>${cavacoAlert ? "Reposição especial pela diferença entre 200 e o saldo atual da OF" : position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
+    <div><dt>Observação</dt><dd>${cavacoAlert ? `As OFs ${escapeHtml(ofCodes.join(", ") || "—")} possuem saldo somado de ${numberFormatter.format(cavacoOfBalance)}, abaixo do gatilho operacional de ${numberFormatter.format(cavacoThreshold)} para o fornecedor.` : coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
+    <div><dt>Critério da sugestão</dt><dd>${cavacoAlert ? "Reposição especial pela diferença entre 200 e o saldo somado das OFs abertas do fornecedor" : position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
 
   if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
   else ui.purchaseNeedModal.setAttribute("open", "");
@@ -2663,7 +2676,7 @@ function exportPurchaseNeeds(format = "excel") {
     referencePrice, estimatedValue, cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
     position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
     cavacoAlert ? "Reposição especial por saldo de OF de Cavaco abaixo de 200" : position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
-    cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo", cavacoAlert ? ofCodes[0] : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
+    cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo", cavacoAlert ? ofCodes.join(" | ") : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
     (position.replenishmentResponsibles || []).join(" | "),
   ]);
   exportReport(format, {
