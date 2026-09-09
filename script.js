@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Mark XXXIV";
+const APP_VERSION = "Versão 1.1";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -197,7 +197,21 @@ function bindEvents() {
     ui.stockStatusFilter,
     ui.scStatusFilter,
   ]) {
-    select.addEventListener("change", () => scheduleDraftFilterRefresh(select.id));
+    select.addEventListener("mousedown", (event) => {
+      const option = event.target.closest?.("option");
+      if (!option || event.button !== 0) return;
+      event.preventDefault();
+      if (!option.value) setFilterValues(select, []);
+      else {
+        option.selected = !option.selected;
+        normalizeMultiSelection(select);
+      }
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    select.addEventListener("change", () => {
+      normalizeMultiSelection(select);
+      scheduleDraftFilterRefresh(select.id);
+    });
   }
   ui.positiveBalanceFilter.addEventListener("change", () => scheduleDraftFilterRefresh("positiveBalanceFilter"));
   ui.searchInput.addEventListener("input", debounce(() => scheduleDraftFilterRefresh("searchInput"), 180));
@@ -212,7 +226,11 @@ function bindEvents() {
     if (!trigger) return;
     const id = trigger.dataset.clearFilter;
     if (id === "positiveBalanceFilter") ui.positiveBalanceFilter.checked = false;
-    else if (ui[id]) ui[id].value = "";
+    else if (ui[id]) {
+      const value = trigger.dataset.clearFilterValue;
+      if (value) setFilterValues(ui[id], filterValues(ui[id]).filter((entry) => entry !== value));
+      else setFilterValues(ui[id], []);
+    }
     handleAutomaticFilter(id);
   });
   ui.closeFiltersButton.addEventListener("click", closeFilters);
@@ -375,7 +393,7 @@ function bindEvents() {
     if (pageLink) navigateToPage(pageLink.dataset.pageLink, true);
     const filterLink = event.target.closest("[data-filter-link]");
     if (filterLink) {
-      ui.stockStatusFilter.value = filterLink.dataset.filterLink;
+      setFilterValues(ui.stockStatusFilter, [filterLink.dataset.filterLink]);
       handleAutomaticFilter("stockStatusFilter");
       navigateToPage("catalogo", true);
     }
@@ -427,7 +445,7 @@ const PT_EN = Object.freeze({
   "Manual operacional": "Operating manual",
   "Como utilizar o Painel de Gestão de Almoxarifado": "How to use the Warehouse Management Dashboard",
   "Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.": "Complete guide to data sources, filters, indicators, calculations, modals and exports. Use the index to go directly to the required feature.",
-  "Regras vigentes · Mark XXXI": "Current rules · Mark XXXI",
+  "Regras vigentes · Versão 1.1": "Current rules · Version 1.1",
   "Índice rápido": "Quick index",
   "1. Primeiros passos": "1. Getting started",
   "2. Bases de dados": "2. Data sources",
@@ -1108,10 +1126,38 @@ function toggleFilters() {
   window.requestAnimationFrame(() => ui.searchInput.focus());
 }
 
+function filterValues(select) {
+  if (!select) return [];
+  return [...select.selectedOptions].map((option) => option.value).filter(Boolean);
+}
+
+function setFilterValues(select, values) {
+  const selected = new Set(Array.isArray(values) ? values : values ? [values] : []);
+  for (const option of select.options) option.selected = option.value ? selected.has(option.value) : selected.size === 0;
+}
+
+function normalizeMultiSelection(select) {
+  const chosen = filterValues(select);
+  if (chosen.length) {
+    const allOption = [...select.options].find((option) => !option.value);
+    if (allOption) allOption.selected = false;
+  } else {
+    setFilterValues(select, []);
+  }
+}
+
+function anySelected(values, predicate) {
+  return !values.length || values.some(predicate);
+}
+
+function selectedIncludes(values, value) {
+  return !values.length || values.includes(value);
+}
+
 function closeFilters(restoreDraft = true) {
   cancelDraftFilterRefresh();
   if (restoreDraft && state.filterDraftSnapshot) {
-    ui.branchFilter.value = state.filterDraftSnapshot.branchFilter;
+    setFilterValues(ui.branchFilter, state.filterDraftSnapshot.branchFilter);
     populateFilters();
     restoreFilterValues(state.filterDraftSnapshot);
     for (const option of ui.stockStatusFilter.options) option.disabled = false;
@@ -1125,17 +1171,17 @@ function closeFilters(restoreDraft = true) {
 function captureFilterValues() {
   return {
     searchInput: ui.searchInput.value,
-    branchFilter: ui.branchFilter.value,
-    locationFilter: ui.locationFilter.value,
-    replenishmentResponsibleFilter: ui.replenishmentResponsibleFilter.value,
-    categoryFilter: ui.categoryFilter.value,
-    unitFilter: ui.unitFilter.value,
-    supplierFilter: ui.supplierFilter.value,
-    requesterFilter: ui.requesterFilter.value,
-    ccuClassificationFilter: ui.ccuClassificationFilter.value,
-    itemCodeFilter: ui.itemCodeFilter.value,
-    stockStatusFilter: ui.stockStatusFilter.value,
-    scStatusFilter: ui.scStatusFilter.value,
+    branchFilter: filterValues(ui.branchFilter),
+    locationFilter: filterValues(ui.locationFilter),
+    replenishmentResponsibleFilter: filterValues(ui.replenishmentResponsibleFilter),
+    categoryFilter: filterValues(ui.categoryFilter),
+    unitFilter: filterValues(ui.unitFilter),
+    supplierFilter: filterValues(ui.supplierFilter),
+    requesterFilter: filterValues(ui.requesterFilter),
+    ccuClassificationFilter: filterValues(ui.ccuClassificationFilter),
+    itemCodeFilter: filterValues(ui.itemCodeFilter),
+    stockStatusFilter: filterValues(ui.stockStatusFilter),
+    scStatusFilter: filterValues(ui.scStatusFilter),
     positiveBalanceFilter: ui.positiveBalanceFilter.checked,
   };
 }
@@ -1144,7 +1190,7 @@ function restoreFilterValues(values) {
   for (const [id, value] of Object.entries(values)) {
     if (!ui[id]) continue;
     if (id === "positiveBalanceFilter") ui[id].checked = Boolean(value);
-    else ui[id].value = value;
+    else setFilterValues(ui[id], value);
   }
 }
 
@@ -1219,17 +1265,17 @@ function updateFilterSummary() {
   const labels = [];
   const query = ui.searchInput.value.trim();
   if (query) labels.push(["searchInput", `Busca: ${query}`]);
-  if (ui.branchFilter.value) labels.push(["branchFilter", ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`]);
-  if (ui.locationFilter.value) labels.push(["locationFilter", ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"]);
-  for (const select of [ui.replenishmentResponsibleFilter, ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.requesterFilter, ui.ccuClassificationFilter, ui.itemCodeFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
-    if (select.value) labels.push([select.id, select.selectedOptions[0]?.textContent || select.value]);
+  for (const select of [ui.branchFilter, ui.locationFilter, ui.replenishmentResponsibleFilter, ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.requesterFilter, ui.ccuClassificationFilter, ui.itemCodeFilter, ui.stockStatusFilter, ui.scStatusFilter]) {
+    for (const option of [...select.selectedOptions].filter((entry) => entry.value)) {
+      labels.push([select.id, option.textContent || option.value, option.value]);
+    }
   }
   if (ui.positiveBalanceFilter.checked) labels.push(["positiveBalanceFilter", "Somente saldo positivo"]);
 
   ui.activeFilterCount.textContent = String(labels.length);
   ui.activeFilterCount.classList.toggle("is-hidden", !labels.length);
   ui.filterSummary.innerHTML = labels.length
-    ? labels.map(([id, label]) => `<button type="button" data-clear-filter="${escapeHtml(id)}" title="Remover filtro ${escapeHtml(label)}"><span>${escapeHtml(label)}</span><b aria-hidden="true">×</b></button>`).join("")
+    ? labels.map(([id, label, value]) => `<button type="button" data-clear-filter="${escapeHtml(id)}"${value ? ` data-clear-filter-value="${escapeHtml(value)}"` : ""} title="Remover filtro ${escapeHtml(label)}"><span>${escapeHtml(label)}</span><b aria-hidden="true">×</b></button>`).join("")
     : "Todas as filiais · todos os itens";
 }
 
@@ -1515,7 +1561,7 @@ function populateFilters() {
   }
 
   fillSelect(ui.branchFilter, [...branches], "Todas as filiais");
-  updateLocationFilter(ui.locationFilter, ui.branchFilter.value);
+  updateLocationFilter(ui.locationFilter, filterValues(ui.branchFilter));
   fillSelect(ui.replenishmentResponsibleFilter, [...replenishmentResponsibles].map((value) => [value, value]), "Todos os responsáveis");
   fillSelect(ui.categoryFilter, [...categories].map((value) => [value, value]), "Todas as categorias");
   fillSelect(ui.unitFilter, [...units].map((value) => [value, value]), "Todas as unidades");
@@ -1524,13 +1570,13 @@ function populateFilters() {
   fillSelect(ui.itemCodeFilter, [...directPurchaseItems], "Todos os códigos");
 }
 
-function updateLocationFilter(select, branchKey) {
-  const currentValue = select.value;
+function updateLocationFilter(select, branchKeys) {
+  const currentValues = filterValues(select);
   const locations = new Map();
 
   for (const item of state.items) {
     for (const position of item.positions || []) {
-      if (!positionMatchesBranch(position, branchKey)) continue;
+      if (!positionMatchesBranch(position, branchKeys)) continue;
       if (!position.locationKey) continue;
       locations.set(position.locationKey, [
         position.branchCode,
@@ -1541,7 +1587,7 @@ function updateLocationFilter(select, branchKey) {
   }
 
   fillSelect(select, [...locations], "Todos os locais");
-  if ([...locations].some(([value]) => value === currentValue)) select.value = currentValue;
+  setFilterValues(select, currentValues.filter((currentValue) => locations.has(currentValue)));
 }
 
 function refreshDependentFilters(changedId) {
@@ -1562,21 +1608,21 @@ function refreshDependentFilters(changedId) {
     let invalidatedSelection = false;
     for (const [filterId, select, firstLabel] of definitions) {
       if (filterId === changedId) continue;
-      const currentValue = select.value;
+      const currentValues = filterValues(select);
       const entries = collectDependentOptions(filterId);
-      invalidatedSelection = updateDependentSelect(select, entries, firstLabel, currentValue) || invalidatedSelection;
+      invalidatedSelection = updateDependentSelect(select, entries, firstLabel, currentValues) || invalidatedSelection;
     }
     const statusInvalidated = refreshStatusAvailability(changedId);
     if (!invalidatedSelection && !statusInvalidated) break;
   }
 }
 
-function updateDependentSelect(select, entries, firstLabel, currentValue) {
+function updateDependentSelect(select, entries, firstLabel, currentValues) {
   const sorted = entries
     .filter(([value]) => value)
     .sort((a, b) => a[1].localeCompare(b[1], "pt-BR", { numeric: true, sensitivity: "base" }));
   const signature = JSON.stringify(sorted);
-  const remainsValid = !currentValue || sorted.some(([value]) => value === currentValue);
+  const validValues = currentValues.filter((currentValue) => sorted.some(([value]) => value === currentValue));
 
   if (state.filterOptionSignatures.get(select) !== signature) {
     select.replaceChildren(new Option(firstLabel, ""));
@@ -1586,8 +1632,8 @@ function updateDependentSelect(select, entries, firstLabel, currentValue) {
     state.filterOptionSignatures.set(select, signature);
   }
 
-  select.value = remainsValid ? currentValue : "";
-  return Boolean(currentValue) && !remainsValid;
+  setFilterValues(select, validValues);
+  return validValues.length !== currentValues.length;
 }
 
 function collectDependentOptions(targetFilterId) {
@@ -1620,18 +1666,18 @@ function collectDependentOptions(targetFilterId) {
     }
 
     if (targetFilterId === "replenishmentResponsibleFilter") {
-      const status = ui.stockStatusFilter.value;
+      const status = filterValues(ui.stockStatusFilter);
       const positions = draftPositions(item, targetFilterId)
-        .filter((position) => !status || status === "adjust-location" || positionMatchesStatus(position, status));
+        .filter((position) => !status.length || status.includes("adjust-location") || status.some((value) => positionMatchesStatus(position, value)));
       for (const position of positions) {
         for (const value of position.replenishmentResponsibles || []) if (value) options.set(value, value);
       }
       continue;
     }
 
-    const status = ui.stockStatusFilter.value;
+    const status = filterValues(ui.stockStatusFilter);
     const positions = draftPositions(item, targetFilterId)
-      .filter((position) => !status || positionMatchesStatus(position, status));
+      .filter((position) => !status.length || status.some((value) => positionMatchesStatus(position, value)));
     for (const position of positions) {
       if (targetFilterId === "branchFilter" && position.branchCode) {
         options.set(position.branchKey, [position.branchCode, position.branchName].filter(Boolean).join(" · "));
@@ -1646,50 +1692,51 @@ function collectDependentOptions(targetFilterId) {
 
 function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
   const query = normalizeSearch(ui.searchInput.value);
-  const branch = excludedFilterId === "branchFilter" ? "" : ui.branchFilter.value;
-  const location = excludedFilterId === "locationFilter" ? "" : ui.locationFilter.value;
-  const replenishmentResponsible = excludedFilterId === "replenishmentResponsibleFilter" ? "" : ui.replenishmentResponsibleFilter.value;
-  const category = excludedFilterId === "categoryFilter" ? "" : ui.categoryFilter.value;
-  const unit = excludedFilterId === "unitFilter" ? "" : ui.unitFilter.value;
-  const supplier = excludedFilterId === "supplierFilter" ? "" : ui.supplierFilter.value;
-  const requester = excludedFilterId === "requesterFilter" ? "" : ui.requesterFilter.value;
-  const ccuClassification = excludedFilterId === "ccuClassificationFilter" ? "" : ui.ccuClassificationFilter.value;
-  const itemCode = excludedFilterId === "itemCodeFilter" ? "" : ui.itemCodeFilter.value;
-  const status = statusOverride ?? (excludedFilterId === "stockStatusFilter" ? "" : ui.stockStatusFilter.value);
-  const scStatus = excludedFilterId === "scStatusFilter" ? "" : ui.scStatusFilter.value;
+  const branch = excludedFilterId === "branchFilter" ? [] : filterValues(ui.branchFilter);
+  const location = excludedFilterId === "locationFilter" ? [] : filterValues(ui.locationFilter);
+  const replenishmentResponsible = excludedFilterId === "replenishmentResponsibleFilter" ? [] : filterValues(ui.replenishmentResponsibleFilter);
+  const category = excludedFilterId === "categoryFilter" ? [] : filterValues(ui.categoryFilter);
+  const unit = excludedFilterId === "unitFilter" ? [] : filterValues(ui.unitFilter);
+  const supplier = excludedFilterId === "supplierFilter" ? [] : filterValues(ui.supplierFilter);
+  const requester = excludedFilterId === "requesterFilter" ? [] : filterValues(ui.requesterFilter);
+  const ccuClassification = excludedFilterId === "ccuClassificationFilter" ? [] : filterValues(ui.ccuClassificationFilter);
+  const itemCode = excludedFilterId === "itemCodeFilter" ? [] : filterValues(ui.itemCodeFilter);
+  const status = statusOverride ? [statusOverride] : (excludedFilterId === "stockStatusFilter" ? [] : filterValues(ui.stockStatusFilter));
+  const scStatus = excludedFilterId === "scStatusFilter" ? [] : filterValues(ui.scStatusFilter);
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
   if (item.flags.inactiveOnly) return false;
 
   if (query && !item.searchText.includes(query)) return false;
-  if (itemCode && item.code !== itemCode) return false;
-  if (ccuClassification && !itemMatchesCcuClassification(item, ccuClassification)) return false;
-  if (category && !(item.categories || []).includes(category)) return false;
-  if (unit && !(item.units || []).includes(unit)) return false;
-  if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-  if (requester && !itemMatchesRequester(item, requester)) return false;
-  if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch), requester)) return false;
+  if (itemCode.length && !itemCode.includes(item.code)) return false;
+  if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
+  if (category.length && !category.some((value) => (item.categories || []).includes(value))) return false;
+  if (unit.length && !unit.some((value) => (item.units || []).includes(value))) return false;
+  if (supplier.length && !supplier.some((value) => (item.suppliers || []).includes(value))) return false;
+  if (requester.length && !requester.some((value) => itemMatchesRequester(item, value))) return false;
+  if (scStatus.length && !scStatus.some((value) => itemMatchesProcurementStatus(item, value, branch, requester))) return false;
 
   const positions = (item.positions || []).filter((position) => {
     if (!positionMatchesBranch(position, branch)) return false;
-    if (location && position.locationKey !== location) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
     if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
     return true;
   });
-  if ((branch || location || replenishmentResponsible || status || positiveOnly) && !positions.length) return false;
-  if (status === "adjust-location" && !itemNeedsLocationAdjustment(item, branch, location)) return false;
-  if (status && status !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, status))) return false;
+  if ((branch.length || location.length || replenishmentResponsible.length || status.length || positiveOnly) && !positions.length) return false;
+  const adjustmentMatches = status.includes("adjust-location") && itemNeedsLocationAdjustment(item, branch, location);
+  const regularStatusMatches = status.some((value) => value !== "adjust-location" && positions.some((position) => positionMatchesStatus(position, value)));
+  if (status.length && !adjustmentMatches && !regularStatusMatches) return false;
   if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
   return true;
 }
 
 function draftPositions(item, excludedFilterId) {
-  const branch = excludedFilterId === "branchFilter" ? "" : ui.branchFilter.value;
-  const location = excludedFilterId === "locationFilter" ? "" : ui.locationFilter.value;
-  const replenishmentResponsible = excludedFilterId === "replenishmentResponsibleFilter" ? "" : ui.replenishmentResponsibleFilter.value;
+  const branch = excludedFilterId === "branchFilter" ? [] : filterValues(ui.branchFilter);
+  const location = excludedFilterId === "locationFilter" ? [] : filterValues(ui.locationFilter);
+  const replenishmentResponsible = excludedFilterId === "replenishmentResponsibleFilter" ? [] : filterValues(ui.replenishmentResponsibleFilter);
   return (item.positions || []).filter((position) => {
     if (!positionMatchesBranch(position, branch)) return false;
-    if (location && position.locationKey !== location) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
     if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
     return true;
   });
@@ -1701,9 +1748,10 @@ function refreshStatusAvailability(changedId) {
     if (!option.value) continue;
     option.disabled = !state.items.some((item) => itemMatchesDraftFilters(item, "stockStatusFilter", option.value));
   }
-  if (!ui.stockStatusFilter.selectedOptions[0]?.disabled) return false;
-  ui.stockStatusFilter.value = "";
-  return true;
+  const before = filterValues(ui.stockStatusFilter);
+  const valid = before.filter((value) => ![...ui.stockStatusFilter.options].find((option) => option.value === value)?.disabled);
+  setFilterValues(ui.stockStatusFilter, valid);
+  return before.length !== valid.length;
 }
 
 function fillSelect(select, entries, firstLabel) {
@@ -1720,17 +1768,7 @@ function fillSelect(select, entries, firstLabel) {
 
 function clearFilters() {
   ui.searchInput.value = "";
-  ui.branchFilter.value = "";
-  ui.locationFilter.value = "";
-  ui.replenishmentResponsibleFilter.value = "";
-  ui.categoryFilter.value = "";
-  ui.unitFilter.value = "";
-  ui.supplierFilter.value = "";
-  ui.requesterFilter.value = "";
-  ui.ccuClassificationFilter.value = "";
-  ui.itemCodeFilter.value = "";
-  ui.stockStatusFilter.value = "";
-  ui.scStatusFilter.value = "";
+  for (const select of [ui.branchFilter, ui.locationFilter, ui.replenishmentResponsibleFilter, ui.categoryFilter, ui.unitFilter, ui.supplierFilter, ui.requesterFilter, ui.ccuClassificationFilter, ui.itemCodeFilter, ui.stockStatusFilter, ui.scStatusFilter]) setFilterValues(select, []);
   ui.positiveBalanceFilter.checked = false;
   populateFilters();
   for (const option of ui.stockStatusFilter.options) option.disabled = false;
@@ -1738,38 +1776,39 @@ function clearFilters() {
 
 function applyFilters(renderCatalog = true) {
   const query = normalizeSearch(ui.searchInput.value);
-  const branch = ui.branchFilter.value;
-  const location = ui.locationFilter.value;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
-  const category = ui.categoryFilter.value;
-  const unit = ui.unitFilter.value;
-  const supplier = ui.supplierFilter.value;
-  const requester = ui.requesterFilter.value;
-  const ccuClassification = ui.ccuClassificationFilter.value;
-  const itemCode = ui.itemCodeFilter.value;
-  const stockStatus = ui.stockStatusFilter.value;
-  const scStatus = ui.scStatusFilter.value;
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const category = filterValues(ui.categoryFilter);
+  const unit = filterValues(ui.unitFilter);
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
+  const ccuClassification = filterValues(ui.ccuClassificationFilter);
+  const itemCode = filterValues(ui.itemCodeFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
+  const scStatus = filterValues(ui.scStatusFilter);
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
   state.filteredItems = state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
     if (query && !item.searchText.includes(query)) return false;
-    if (itemCode && item.code !== itemCode) return false;
-    if (ccuClassification && !itemMatchesCcuClassification(item, ccuClassification)) return false;
+    if (itemCode.length && !itemCode.includes(item.code)) return false;
+    if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
       if (!positionMatchesBranch(position, branch)) return false;
-      if (location && position.locationKey !== location) return false;
+      if (location.length && !location.includes(position.locationKey)) return false;
       if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
       return true;
     });
-    if ((branch || location || replenishmentResponsible) && !matchingPositions.length) return false;
-    if (stockStatus === "adjust-location" && !itemNeedsLocationAdjustment(item, branch, location)) return false;
-    if (stockStatus && stockStatus !== "adjust-location" && !matchingPositions.some((position) => positionMatchesStatus(position, stockStatus))) return false;
-    if (category && !(item.categories || []).includes(category)) return false;
-    if (unit && !(item.units || []).includes(unit)) return false;
-    if (supplier && !(item.suppliers || []).includes(supplier)) return false;
-    if (requester && !itemMatchesRequester(item, requester)) return false;
-    if (scStatus && !itemMatchesProcurementStatus(item, scStatus, branchCodeFromFilter(branch), requester)) return false;
+    if ((branch.length || location.length || replenishmentResponsible.length) && !matchingPositions.length) return false;
+    const adjustmentMatches = stockStatus.includes("adjust-location") && itemNeedsLocationAdjustment(item, branch, location);
+    const regularStatusMatches = stockStatus.some((value) => value !== "adjust-location" && matchingPositions.some((position) => positionMatchesStatus(position, value)));
+    if (stockStatus.length && !adjustmentMatches && !regularStatusMatches) return false;
+    if (category.length && !category.some((value) => (item.categories || []).includes(value))) return false;
+    if (unit.length && !unit.some((value) => (item.units || []).includes(value))) return false;
+    if (supplier.length && !supplier.some((value) => (item.suppliers || []).includes(value))) return false;
+    if (requester.length && !requester.some((value) => itemMatchesRequester(item, value))) return false;
+    if (scStatus.length && !scStatus.some((value) => itemMatchesProcurementStatus(item, value, branch, requester))) return false;
     if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
   });
@@ -1837,21 +1876,23 @@ function procurementRecordStatus(record) {
 
 function itemMatchesProcurementStatus(item, status, branch = "", requester = "") {
   if (!status) return true;
+  const branches = Array.isArray(branch) ? branch.map(branchCodeFromFilter).filter(Boolean) : branch ? [branchCodeFromFilter(branch)] : [];
   return (item.history || []).some((record) => {
-    if (branch && record.branchCode !== branch) return false;
+    if (branches.length && !branches.includes(record.branchCode)) return false;
     if (!recordMatchesRequester(record, requester)) return false;
     return procurementRecordStatus(record) === status;
   });
 }
 
 function itemNeedsLocationAdjustment(item, branch = "", location = "") {
+  const locations = Array.isArray(location) ? location : location ? [location] : [];
   const positions = (item.positions || []).filter((position) => positionMatchesBranch(position, branch));
   for (const balancePosition of positions) {
     if (!(balancePosition.quantity > 0)) continue;
     for (const limitsPosition of positions) {
       if (limitsPosition.locationKey === balancePosition.locationKey) continue;
       if (!((limitsPosition.minimum || 0) + (limitsPosition.maximum || 0) > 0)) continue;
-      if (location && balancePosition.locationKey !== location && limitsPosition.locationKey !== location) continue;
+      if (locations.length && !locations.includes(balancePosition.locationKey) && !locations.includes(limitsPosition.locationKey)) continue;
       return true;
     }
   }
@@ -1859,35 +1900,36 @@ function itemNeedsLocationAdjustment(item, branch = "", location = "") {
 }
 
 function currentScopedPositions(item, includeStatus = true) {
-  const branch = ui.branchFilter.value;
-  const location = ui.locationFilter.value;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
-  const status = includeStatus ? ui.stockStatusFilter.value : "";
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const status = includeStatus ? filterValues(ui.stockStatusFilter) : [];
   return (item.positions || []).filter((position) => {
     if (!positionMatchesBranch(position, branch)) return false;
-    if (location && position.locationKey !== location) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
     if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
-    if (status && status !== "adjust-location" && !positionMatchesStatus(position, status)) return false;
+    if (status.length && !status.includes("adjust-location") && !status.some((value) => positionMatchesStatus(position, value))) return false;
     return true;
   });
 }
 
 function strictOpenOfRecords() {
-  const branch = effectiveBranchFilter();
-  const supplier = ui.supplierFilter.value;
-  const requester = ui.requesterFilter.value;
+  const branchCodes = selectedBranchCodes();
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
   const query = normalizeSearch(ui.searchInput.value);
-  const scStatus = ui.scStatusFilter.value;
+  const scStatus = filterValues(ui.scStatusFilter);
+  const classifications = filterValues(ui.ccuClassificationFilter);
   const rows = new Map();
   for (const item of state.filteredItems) {
     for (const record of item.history || []) {
       const of = record.of;
       if (!isOpenOfForPurchase(of)) continue;
-      if (!recordMatchesCcuClassification(record, item, ui.ccuClassificationFilter.value)) continue;
+      if (classifications.length && !classifications.some((value) => recordMatchesCcuClassification(record, item, value))) continue;
       if (!recordMatchesRequester(record, requester)) continue;
-      if (branch && record.branchCode !== branch) continue;
-      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
-      if (supplier && normalizeSearch(of.supplier) !== normalizeSearch(supplier)) continue;
+      if (branchCodes.length && !branchCodes.includes(record.branchCode)) continue;
+      if (scStatus.length && !scStatus.includes(procurementRecordStatus(record))) continue;
+      if (supplier.length && !supplier.some((value) => normalizeSearch(of.supplier) === normalizeSearch(value))) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
       if (!rows.has(of.code)) rows.set(of.code, { item, record, of });
     }
@@ -1955,10 +1997,12 @@ function updateDashboardMetrics() {
   ui.metricActionProcesses.textContent = integerFormatter.format(pendingSc.size + openOf.length);
   const dateAnomalies = countFutureDateAnomalies();
   ui.metricReconciliation.textContent = `${integerFormatter.format(scopedItems.size)} códigos ativos · ${integerFormatter.format(codesWithStock.size)} com saldo consolidado diferente de zero · ${integerFormatter.format(zeroCodes.size)} com posição zerada parametrizada${dateAnomalies ? ` · Atenção: ${pluralize(dateAnomalies, "data futura atípica", "datas futuras atípicas")}` : ""}`;
-  ui.metricsContext.textContent = ui.locationFilter.value
-    ? ui.locationFilter.selectedOptions[0]?.textContent || "Local selecionado"
-    : ui.branchFilter.value
-      ? ui.branchFilter.selectedOptions[0]?.textContent || `Filial ${ui.branchFilter.value}`
+  const selectedLocations = filterValues(ui.locationFilter);
+  const selectedBranches = filterValues(ui.branchFilter);
+  ui.metricsContext.textContent = selectedLocations.length
+    ? `${selectedLocations.length} local(is) selecionado(s)`
+    : selectedBranches.length
+      ? `${selectedBranches.length} filial(is) selecionada(s)`
       : "Todas as filiais · códigos únicos";
 }
 
@@ -2044,8 +2088,8 @@ function renderDecisionLists() {
 function handleChartFilter(event) {
   const branch = event.target.closest("[data-chart-branch]")?.dataset.chartBranch;
   const status = event.target.closest("[data-chart-status]")?.dataset.chartStatus;
-  if (branch) ui.branchFilter.value = ui.branchFilter.value === branch ? "" : branch;
-  if (status) ui.stockStatusFilter.value = ui.stockStatusFilter.value === status ? "" : status;
+  if (branch) setFilterValues(ui.branchFilter, filterValues(ui.branchFilter).includes(branch) ? filterValues(ui.branchFilter).filter((value) => value !== branch) : [...filterValues(ui.branchFilter), branch]);
+  if (status) setFilterValues(ui.stockStatusFilter, filterValues(ui.stockStatusFilter).includes(status) ? filterValues(ui.stockStatusFilter).filter((value) => value !== status) : [...filterValues(ui.stockStatusFilter), status]);
   handleAutomaticFilter(branch ? "branchFilter" : "stockStatusFilter");
 }
 
@@ -2327,16 +2371,19 @@ function isOpenOfForPurchase(of) {
 }
 
 function branchCodeFromFilter(value) {
+  if (Array.isArray(value)) return value.length === 1 ? branchCodeFromFilter(value[0]) : "";
   return String(value || "").split("::branch::")[0];
 }
 
 function positionMatchesBranch(position, selectedBranch) {
+  if (Array.isArray(selectedBranch)) return !selectedBranch.length || selectedBranch.some((value) => positionMatchesBranch(position, value));
   if (!selectedBranch) return true;
   if (String(selectedBranch).includes("::branch::")) return position.branchKey === selectedBranch;
   return position.branchCode === selectedBranch;
 }
 
 function positionMatchesReplenishmentResponsible(position, selectedResponsible) {
+  if (Array.isArray(selectedResponsible)) return !selectedResponsible.length || selectedResponsible.some((value) => positionMatchesReplenishmentResponsible(position, value));
   if (!selectedResponsible) return true;
   const normalized = normalizeSearch(selectedResponsible);
   return (position.replenishmentResponsibles || []).some((value) => normalizeSearch(value) === normalized);
@@ -2431,45 +2478,49 @@ function renderNextPendingScBatch() {
 function collectPendingScRows() {
   const rowsByKey = new Map();
   const branch = effectiveBranchFilter();
+  const branchCodes = selectedBranchCodes();
   const query = normalizeSearch(ui.searchInput.value);
-  const category = ui.categoryFilter.value;
-  const unit = ui.unitFilter.value;
-  const supplier = ui.supplierFilter.value;
-  const requester = ui.requesterFilter.value;
-  const stockStatus = ui.stockStatusFilter.value;
-  const scStatus = ui.scStatusFilter.value;
-  const ccuClassification = ui.ccuClassificationFilter.value;
-  const itemCode = ui.itemCodeFilter.value;
+  const category = filterValues(ui.categoryFilter);
+  const unit = filterValues(ui.unitFilter);
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
+  const scStatus = filterValues(ui.scStatusFilter);
+  const ccuClassification = filterValues(ui.ccuClassificationFilter);
+  const itemCode = filterValues(ui.itemCodeFilter);
   const positiveOnly = ui.positiveBalanceFilter.checked;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
   for (const item of state.items) {
-    if (itemCode && item.code !== itemCode) continue;
-    if (ccuClassification && !itemMatchesCcuClassification(item, ccuClassification)) continue;
+    if (itemCode.length && !itemCode.includes(item.code)) continue;
+    if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) continue;
     if (query && !item.searchText.includes(query)) continue;
-    if (category && !(item.categories || []).includes(category)) continue;
-    if (unit && !(item.units || []).includes(unit)) continue;
-    if (supplier && !(item.suppliers || []).includes(supplier)) continue;
-    if (requester && !itemMatchesRequester(item, requester)) continue;
-    if (stockStatus || positiveOnly || ui.locationFilter.value || replenishmentResponsible) {
+    if (category.length && !category.some((value) => (item.categories || []).includes(value))) continue;
+    if (unit.length && !unit.some((value) => (item.units || []).includes(value))) continue;
+    if (supplier.length && !supplier.some((value) => (item.suppliers || []).includes(value))) continue;
+    if (requester.length && !itemMatchesRequester(item, requester)) continue;
+    const selectedLocations = filterValues(ui.locationFilter);
+    const selectedBranches = filterValues(ui.branchFilter);
+    if (stockStatus.length || positiveOnly || selectedLocations.length || replenishmentResponsible.length) {
       const positions = (item.positions || []).filter((position) => {
-        if (!positionMatchesBranch(position, ui.branchFilter.value || branch)) return false;
-        if (ui.locationFilter.value && position.locationKey !== ui.locationFilter.value) return false;
+        if (!positionMatchesBranch(position, selectedBranches.length ? selectedBranches : branch)) return false;
+        if (selectedLocations.length && !selectedLocations.includes(position.locationKey)) return false;
         if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
         return true;
       });
       if (!positions.length) continue;
-      if (stockStatus === "adjust-location" && !itemNeedsLocationAdjustment(item, ui.branchFilter.value || branch, ui.locationFilter.value)) continue;
-      if (stockStatus && stockStatus !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, stockStatus))) continue;
+      const adjustmentMatches = stockStatus.includes("adjust-location") && itemNeedsLocationAdjustment(item, selectedBranches.length ? selectedBranches : branch, selectedLocations);
+      const regularMatches = stockStatus.some((value) => value !== "adjust-location" && positions.some((position) => positionMatchesStatus(position, value)));
+      if (stockStatus.length && !adjustmentMatches && !regularMatches) continue;
       if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) continue;
     }
     const pendingCodes = new Set(item.pendingScCodes || []);
     for (const record of item.history || []) {
       const sc = record.sc;
       if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
-      if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
+      if (ccuClassification.length && !ccuClassification.some((value) => recordMatchesCcuClassification(record, item, value))) continue;
       if (!recordMatchesRequester(record, requester)) continue;
-      if (branch && record.branchCode !== branch) continue;
-      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
+      if (branchCodes.length && !branchCodes.includes(record.branchCode)) continue;
+      if (scStatus.length && !scStatus.includes(procurementRecordStatus(record))) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
       const key = `${sc.code}::${item.code}`;
       if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
@@ -2479,19 +2530,19 @@ function collectPendingScRows() {
 }
 
 function renderPurchaseNeeds() {
-  const branch = ui.branchFilter.value;
-  const location = ui.locationFilter.value;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
-  const stockStatus = ui.stockStatusFilter.value;
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
   const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
   const visible = state.purchaseNeeds.filter((need) => {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
-    if (location && position.locationKey !== location) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
     if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
-    if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
+    if (stockStatus.length && !stockStatus.includes("adjust-location") && !stockStatus.some((value) => positionMatchesStatus(position, value))) return false;
     return true;
   });
 
@@ -2639,19 +2690,19 @@ function closePendingScModal() {
 }
 
 function getVisiblePurchaseNeeds() {
-  const branch = ui.branchFilter.value;
-  const location = ui.locationFilter.value;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
-  const stockStatus = ui.stockStatusFilter.value;
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
   const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
   return state.purchaseNeeds.filter((need) => {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
-    if (location && position.locationKey !== location) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
     if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
-    if (stockStatus && stockStatus !== "adjust-location" && !positionMatchesStatus(position, stockStatus)) return false;
+    if (stockStatus.length && !stockStatus.includes("adjust-location") && !stockStatus.some((value) => positionMatchesStatus(position, value))) return false;
     return true;
   });
 }
@@ -2659,10 +2710,13 @@ function getVisiblePurchaseNeeds() {
 function cavacoNeedMatchesProcessFilters(need) {
   if (!need.cavacoAlert) return true;
   const record = need.record;
-  if (!recordMatchesRequester(record, ui.requesterFilter.value)) return false;
-  if (ui.supplierFilter.value && normalizeSearch(record.of?.supplier) !== normalizeSearch(ui.supplierFilter.value)) return false;
-  if (ui.scStatusFilter.value && procurementRecordStatus(record) !== ui.scStatusFilter.value) return false;
-  if (ui.ccuClassificationFilter.value && !recordMatchesCcuClassification(record, need.item, ui.ccuClassificationFilter.value)) return false;
+  if (!recordMatchesRequester(record, filterValues(ui.requesterFilter))) return false;
+  const suppliers = filterValues(ui.supplierFilter);
+  if (suppliers.length && !suppliers.some((value) => normalizeSearch(record.of?.supplier) === normalizeSearch(value))) return false;
+  const statuses = filterValues(ui.scStatusFilter);
+  if (statuses.length && !statuses.includes(procurementRecordStatus(record))) return false;
+  const classifications = filterValues(ui.ccuClassificationFilter);
+  if (classifications.length && !classifications.some((value) => recordMatchesCcuClassification(record, need.item, value))) return false;
   const query = normalizeSearch(ui.searchInput.value);
   return !query || recordMatchesQuery(need.item, record, query);
 }
@@ -3090,21 +3144,21 @@ function buildProcurementRows() {
 }
 
 function collectProcurementRows(shouldSort = true) {
-  const branch = effectiveBranchFilter();
-  const supplier = ui.supplierFilter.value;
-  const requester = ui.requesterFilter.value;
+  const branchCodes = selectedBranchCodes();
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
   const query = normalizeSearch(ui.searchInput.value);
-  const scStatus = ui.scStatusFilter.value;
-  const ccuClassification = ui.ccuClassificationFilter.value;
+  const scStatus = filterValues(ui.scStatusFilter);
+  const ccuClassification = filterValues(ui.ccuClassificationFilter);
   const rows = [];
   for (const item of state.items.filter(itemMatchesTransactionFilters)) {
     for (const record of item.history || []) {
       if (!record.sc?.code && !record.of?.code) continue;
-      if (!recordMatchesCcuClassification(record, item, ccuClassification)) continue;
+      if (ccuClassification.length && !ccuClassification.some((value) => recordMatchesCcuClassification(record, item, value))) continue;
       if (!recordMatchesRequester(record, requester)) continue;
-      if (branch && record.branchCode !== branch) continue;
-      if (scStatus && procurementRecordStatus(record) !== scStatus) continue;
-      if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(supplier))) continue;
+      if (branchCodes.length && !branchCodes.includes(record.branchCode)) continue;
+      if (scStatus.length && !scStatus.includes(procurementRecordStatus(record))) continue;
+      if (supplier.length && !supplier.some((selected) => [record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(selected)))) continue;
       if (query && !recordMatchesQuery(item, record, query)) continue;
       rows.push({ item, record });
     }
@@ -3123,44 +3177,64 @@ function recordMatchesQuery(item, record, query) {
 }
 
 function recordMatchesRequester(record, requester) {
+  if (Array.isArray(requester)) return !requester.length || requester.some((value) => recordMatchesRequester(record, value));
   if (!requester) return true;
   return normalizeSearch(record.sc?.requesterName) === normalizeSearch(requester);
 }
 
 function itemMatchesRequester(item, requester) {
+  if (Array.isArray(requester)) return !requester.length || requester.some((value) => itemMatchesRequester(item, value));
   if (!requester) return true;
   const normalizedRequester = normalizeSearch(requester);
   return (item.requesters || []).some((value) => normalizeSearch(value) === normalizedRequester);
 }
 
 function effectiveBranchFilter() {
-  return branchCodeFromFilter(ui.branchFilter.value) || String(ui.locationFilter.value || "").split("::")[0] || "";
+  const branches = filterValues(ui.branchFilter);
+  const locations = filterValues(ui.locationFilter);
+  return branchCodeFromFilter(branches) || (locations.length === 1 ? String(locations[0]).split("::")[0] : "");
+}
+
+function selectedBranchCodes() {
+  return unique([
+    ...filterValues(ui.branchFilter).map((value) => String(value).split("::branch::")[0]),
+    ...filterValues(ui.locationFilter).map((value) => String(value).split("::")[0]),
+  ]);
 }
 
 function itemMatchesTransactionFilters(item) {
   const query = normalizeSearch(ui.searchInput.value);
+  const itemCodes = filterValues(ui.itemCodeFilter);
+  const classifications = filterValues(ui.ccuClassificationFilter);
+  const categories = filterValues(ui.categoryFilter);
+  const units = filterValues(ui.unitFilter);
+  const suppliers = filterValues(ui.supplierFilter);
+  const requesters = filterValues(ui.requesterFilter);
+  const scStatuses = filterValues(ui.scStatusFilter);
   if (query && !item.searchText.includes(query)) return false;
-  if (ui.itemCodeFilter.value && item.code !== ui.itemCodeFilter.value) return false;
-  if (ui.ccuClassificationFilter.value && !itemMatchesCcuClassification(item, ui.ccuClassificationFilter.value)) return false;
-  if (ui.categoryFilter.value && !(item.categories || []).includes(ui.categoryFilter.value)) return false;
-  if (ui.unitFilter.value && !(item.units || []).includes(ui.unitFilter.value)) return false;
-  if (ui.supplierFilter.value && !(item.suppliers || []).includes(ui.supplierFilter.value)) return false;
-  if (ui.requesterFilter.value && !itemMatchesRequester(item, ui.requesterFilter.value)) return false;
-  if (ui.scStatusFilter.value && !itemMatchesProcurementStatus(item, ui.scStatusFilter.value, effectiveBranchFilter(), ui.requesterFilter.value)) return false;
-  const status = ui.stockStatusFilter.value;
+  if (itemCodes.length && !itemCodes.includes(item.code)) return false;
+  if (classifications.length && !classifications.some((value) => itemMatchesCcuClassification(item, value))) return false;
+  if (categories.length && !categories.some((value) => (item.categories || []).includes(value))) return false;
+  if (units.length && !units.some((value) => (item.units || []).includes(value))) return false;
+  if (suppliers.length && !suppliers.some((value) => (item.suppliers || []).includes(value))) return false;
+  if (requesters.length && !itemMatchesRequester(item, requesters)) return false;
+  if (scStatuses.length && !scStatuses.some((value) => itemMatchesProcurementStatus(item, value, effectiveBranchFilter(), requesters))) return false;
+  const status = filterValues(ui.stockStatusFilter);
   const positiveOnly = ui.positiveBalanceFilter.checked;
-  const location = ui.locationFilter.value;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
-  if (status || positiveOnly || location || replenishmentResponsible) {
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const branches = filterValues(ui.branchFilter);
+  if (status.length || positiveOnly || location.length || replenishmentResponsible.length || branches.length) {
     const positions = (item.positions || []).filter((position) => {
-      if (!positionMatchesBranch(position, ui.branchFilter.value)) return false;
-      if (location && position.locationKey !== location) return false;
+      if (!positionMatchesBranch(position, branches)) return false;
+      if (location.length && !location.includes(position.locationKey)) return false;
       if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
       return true;
     });
     if (!positions.length) return false;
-    if (status === "adjust-location" && !itemNeedsLocationAdjustment(item, ui.branchFilter.value, location)) return false;
-    if (status && status !== "adjust-location" && !positions.some((position) => positionMatchesStatus(position, status))) return false;
+    const adjustmentMatches = status.includes("adjust-location") && itemNeedsLocationAdjustment(item, branches, location);
+    const regularMatches = status.some((value) => value !== "adjust-location" && positions.some((position) => positionMatchesStatus(position, value)));
+    if (status.length && !adjustmentMatches && !regularMatches) return false;
     if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
   }
   return true;
@@ -3625,13 +3699,13 @@ function renderConsumptionReview() {
   if (!consumption.available) return;
 
   const visibleCodes = new Set(state.filteredItems.map((item) => item.code));
-  const branch = ui.branchFilter.value;
-  const location = ui.locationFilter.value;
-  const replenishmentResponsible = ui.replenishmentResponsibleFilter.value;
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
   const visible = state.minMaxReviews.filter((review) => {
     if (!visibleCodes.has(review.item.code)) return false;
     if (!positionMatchesBranch(review.position, branch)) return false;
-    if (location && review.position.locationKey !== location) return false;
+    if (location.length && !location.includes(review.position.locationKey)) return false;
     if (!positionMatchesReplenishmentResponsible(review.position, replenishmentResponsible)) return false;
     return true;
   });
@@ -4062,7 +4136,7 @@ function statusBadges(item, scopedPositions = null, scopedHistory = null) {
   if (positions.some((position) => position.minimum > 0 && position.quantity > 0 && position.quantity < position.minimum)) badges.push(["Abaixo do mínimo", "warning"]);
   if (positions.some((position) => position.maximum > 0 && position.quantity > position.maximum)) badges.push(["Acima do máximo", "danger"]);
   if (positions.some((position) => position.quantity > 0 && position.minimum + position.maximum === 0)) badges.push(["Com saldo sem mín. e máx.", "info"]);
-  if ((!scoped && item.flags.locationAdjustment) || (scoped && itemNeedsLocationAdjustment(item, ui.branchFilter.value, ui.locationFilter.value))) badges.push(["Ajustar local de estoque", "warning"]);
+  if ((!scoped && item.flags.locationAdjustment) || (scoped && itemNeedsLocationAdjustment(item, filterValues(ui.branchFilter), filterValues(ui.locationFilter)))) badges.push(["Ajustar local de estoque", "warning"]);
   const history = scopedHistory || item.history || [];
   if (history.some((record) => record.sc?.code && !record.of?.code && isActiveScForPurchaseCoverage(record.sc))) badges.push(["SC sem OF", "violet"]);
   if (!badges.length && positions.reduce((sum, position) => sum + (position.quantity || 0), 0) > 0) badges.push(["Saldo disponível", "success"]);
@@ -4080,17 +4154,18 @@ function modalScopedPositions(item) {
 }
 
 function modalScopedHistory(item) {
-  const branch = effectiveBranchFilter();
-  const supplier = normalizeSearch(ui.supplierFilter.value);
-  const requester = ui.requesterFilter.value;
-  const scStatus = ui.scStatusFilter.value;
+  const branchCodes = selectedBranchCodes();
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
+  const scStatus = filterValues(ui.scStatusFilter);
+  const classifications = filterValues(ui.ccuClassificationFilter);
   const query = normalizeSearch(ui.searchInput.value);
   return (item.history || []).filter((record) => {
-    if (!recordMatchesCcuClassification(record, item, ui.ccuClassificationFilter.value)) return false;
-    if (branch && record.branchCode !== branch) return false;
-    if (supplier && ![record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === supplier)) return false;
+    if (classifications.length && !classifications.some((value) => recordMatchesCcuClassification(record, item, value))) return false;
+    if (branchCodes.length && !branchCodes.includes(record.branchCode)) return false;
+    if (supplier.length && !supplier.some((selected) => [record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(selected)))) return false;
     if (!recordMatchesRequester(record, requester)) return false;
-    if (scStatus && procurementRecordStatus(record) !== scStatus) return false;
+    if (scStatus.length && !scStatus.includes(procurementRecordStatus(record))) return false;
     if (query && !recordMatchesQuery(item, record, query)) return false;
     return true;
   });
@@ -4186,7 +4261,7 @@ function renderStorageAddresses(item, scopedPositions = null) {
 }
 
 function formatItemAddress(item, branchCode = "") {
-  const responsible = ui.replenishmentResponsibleFilter.value;
+  const responsible = filterValues(ui.replenishmentResponsibleFilter);
   const scoped = (item.positions || []).filter((position) => {
     if (branchCode && position.branchCode !== branchCode) return false;
     return positionMatchesReplenishmentResponsible(position, responsible);

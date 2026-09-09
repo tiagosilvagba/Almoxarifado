@@ -786,6 +786,39 @@
   }
 }
 
+/* Seletores globais com múltiplas escolhas. */
+.multi-filter-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 88%, var(--steel-100));
+  font-size: .72rem;
+  line-height: 1.35;
+}
+
+.global-filters select[multiple] {
+  min-height: 78px;
+  padding: 5px;
+  background-image: none;
+}
+
+.global-filters select[multiple] option {
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.global-filters select[multiple] option:checked {
+  color: #fff;
+  background: var(--blue-700) linear-gradient(var(--blue-700), var(--blue-700));
+}
+
+html[data-theme="theme-t"] .global-filters select[multiple] option:checked {
+  color: #061019;
+  background: #7edcf1 linear-gradient(#7edcf1, #7edcf1);
+}
+
 
 /* Theme layout identities — 2026-09-03 */
 

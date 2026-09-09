@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=mark-xxxiv">
-    <script src="script.js?v=mark-xxxiv" defer></script>
+    <link rel="stylesheet" href="style.css?v=1-1">
+    <script src="script.js?v=1-1" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Mark XXXIV</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 1.1</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -109,26 +109,27 @@
                 <input id="searchInput" type="search" autocomplete="off" placeholder="Busque item, SC, OF, NF ou fornecedor">
               </span>
             </label>
-            <label class="field"><span>Filial</span><select id="branchFilter"><option value="">Todas as filiais</option></select></label>
-            <label class="field"><span>Local de estoque</span><select id="locationFilter"><option value="">Todos os locais</option></select></label>
-            <label class="field"><span>Responsável pela reposição</span><select id="replenishmentResponsibleFilter"><option value="">Todos os responsáveis</option></select></label>
-            <label class="field"><span>Categoria ou grupo</span><select id="categoryFilter"><option value="">Todas as categorias</option></select></label>
-            <label class="field"><span>Unidade</span><select id="unitFilter"><option value="">Todas as unidades</option></select></label>
-            <label class="field"><span>Fornecedor</span><select id="supplierFilter"><option value="">Todos os fornecedores</option></select></label>
-            <label class="field"><span>Solicitante da SC</span><select id="requesterFilter"><option value="">Todos os solicitantes</option></select></label>
+            <p class="multi-filter-hint">Clique ou toque nas opções para marcar várias. Clique novamente para remover uma seleção.</p>
+            <label class="field"><span>Filial</span><select id="branchFilter" multiple size="3"><option value="">Todas as filiais</option></select></label>
+            <label class="field"><span>Local de estoque</span><select id="locationFilter" multiple size="3"><option value="">Todos os locais</option></select></label>
+            <label class="field"><span>Responsável pela reposição</span><select id="replenishmentResponsibleFilter" multiple size="3"><option value="">Todos os responsáveis</option></select></label>
+            <label class="field"><span>Categoria ou grupo</span><select id="categoryFilter" multiple size="3"><option value="">Todas as categorias</option></select></label>
+            <label class="field"><span>Unidade</span><select id="unitFilter" multiple size="3"><option value="">Todas as unidades</option></select></label>
+            <label class="field"><span>Fornecedor</span><select id="supplierFilter" multiple size="3"><option value="">Todos os fornecedores</option></select></label>
+            <label class="field"><span>Solicitante da SC</span><select id="requesterFilter" multiple size="3"><option value="">Todos os solicitantes</option></select></label>
             <label class="field">
               <span>Classificação da compra</span>
-              <select id="ccuClassificationFilter">
+              <select id="ccuClassificationFilter" multiple size="3">
                 <option value="">Todas as classificações</option>
                 <option value="warehouse">Entrada no almoxarifado · CCU 1500</option>
                 <option value="direct">Direto para a área · CCU diferente de 1500</option>
                 <option value="direct-with-stock">Compra direta de item de estoque do almoxarifado</option>
               </select>
             </label>
-            <label class="field"><span>Código do item em compra direta</span><select id="itemCodeFilter"><option value="">Todos os códigos</option></select></label>
+            <label class="field"><span>Código do item em compra direta</span><select id="itemCodeFilter" multiple size="3"><option value="">Todos os códigos</option></select></label>
             <label class="field">
               <span>Situação do estoque</span>
-              <select id="stockStatusFilter">
+              <select id="stockStatusFilter" multiple size="4">
                 <option value="">Todas as situações</option>
                 <option value="zero">Itens zerados (mín. + máx. &gt; 0)</option>
                 <option value="below-min">Itens abaixo do mínimo</option>
@@ -141,7 +142,7 @@
             </label>
             <label class="field">
               <span>Situação da SC e entrega</span>
-              <select id="scStatusFilter">
+              <select id="scStatusFilter" multiple size="4">
                 <option value="">Todas as situações</option>
                 <option value="awaiting-of">Aguardando OF</option>
                 <option value="partial">Entrega parcial</option>
@@ -446,7 +447,7 @@
               <h2 id="instructionsTitle">Como utilizar o Painel de Gestão de Almoxarifado</h2>
               <p>Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.</p>
             </div>
-            <span class="instructions-version">Regras vigentes · Mark XXXIV</span>
+            <span class="instructions-version">Regras vigentes · Versão 1.1</span>
           </header>
 
           <div class="instructions-layout">
@@ -487,7 +488,7 @@
 
               <article id="instr-filtros" class="instruction-section">
                 <span class="instruction-section__number">03</span>
-                <div><h3>Filtros globais</h3><p>Os filtros afetam todas as análises relacionadas. Dentro do painel de filtros, as opções são dependentes e se ajustam dinamicamente às seleções realizadas. Os resultados da página só são recalculados ao clicar em <strong>Concluir e fechar</strong>, evitando lentidão.</p>
+                <div><h3>Filtros globais</h3><p>Os filtros afetam todas as análises relacionadas e permitem selecionar várias opções no mesmo campo. Dentro do painel, as opções são dependentes e se ajustam dinamicamente às seleções realizadas. Os resultados da página só são recalculados ao clicar em <strong>Concluir e fechar</strong>, evitando lentidão.</p>
                 <div class="instruction-grid"><section><h4>Pesquisa</h4><p>Localiza código, descrição, SC, OF, nota fiscal, fornecedor, solicitante e informações relacionadas.</p></section><section><h4>Estrutura</h4><p>Filial, local de estoque, responsável pela reposição, categoria e unidade.</p></section><section><h4>Compras</h4><p>Fornecedor, solicitante da SC, situação da SC/entrega e classificação pelo CCU da etiqueta.</p></section><section><h4>Estoque</h4><p>Código do item em compra direta, situação do estoque e opção de saldo positivo.</p></section></div>
                 <ul><li><strong>CCU 1500:</strong> compra destinada à entrada no almoxarifado.</li><li><strong>CCU diferente de 1500:</strong> compra direta para o centro de custo da área.</li><li><strong>Compra direta de item de estoque:</strong> compra fora do CCU 1500 de item que possui saldo positivo ou mínimo/máximo cadastrado.</li><li><strong>Situações do estoque:</strong> zerado parametrizado, abaixo do mínimo, acima do máximo, dentro da faixa, saldo sem parâmetros, negativo ou local a ajustar.</li><li><strong>Fechar sem concluir:</strong> restaura o recorte anteriormente aplicado.</li></ul></div>
               </article>
