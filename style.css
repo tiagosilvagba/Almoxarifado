@@ -798,26 +798,21 @@
   line-height: 1.35;
 }
 
-.global-filters select[multiple] {
-  min-height: 78px;
-  padding: 5px;
-  background-image: none;
-}
-
-.global-filters select[multiple] option {
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-
-.global-filters select[multiple] option:checked {
-  color: #fff;
-  background: var(--blue-700) linear-gradient(var(--blue-700), var(--blue-700));
-}
-
-html[data-theme="theme-t"] .global-filters select[multiple] option:checked {
-  color: #061019;
-  background: #7edcf1 linear-gradient(#7edcf1, #7edcf1);
-}
+.excel-filter-select { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.excel-filter { position:relative; width:100%; margin-top:5px; }
+.excel-filter__trigger { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:38px; padding:8px 10px; border:1px solid var(--steel-300); border-radius:9px; color:var(--text); background:var(--surface); font:inherit; font-size:.82rem; text-align:left; cursor:pointer; }
+.excel-filter__trigger:hover,.excel-filter__trigger[aria-expanded="true"] { border-color:var(--blue-500); box-shadow:0 0 0 3px color-mix(in srgb,var(--blue-500) 14%,transparent); }
+.excel-filter__label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.excel-filter__arrow { flex:0 0 auto; color:var(--blue-600); font-size:1.15rem; font-weight:900; line-height:1; }
+.excel-filter__menu { position:absolute; z-index:40; top:calc(100% + 5px); left:0; width:max(100%,245px); max-width:min(420px,calc(100vw - 34px)); padding:8px; border:1px solid var(--steel-300); border-radius:11px; background:var(--surface); box-shadow:0 15px 32px rgba(15,23,42,.2); }
+.excel-filter__menu.is-hidden { display:none; }
+.excel-filter__search { width:100%; min-height:34px; padding:7px 9px; border:1px solid var(--steel-200); border-radius:7px; color:var(--text); background:var(--steel-50); font:inherit; font-size:.78rem; }
+.excel-filter__actions { display:flex; gap:6px; margin:7px 0; }
+.excel-filter__actions button { padding:5px 8px; border:0; border-radius:6px; color:var(--blue-700); background:var(--blue-100); font:inherit; font-size:.7rem; font-weight:800; cursor:pointer; }
+.excel-filter__options { max-height:225px; overflow:auto; border-top:1px solid var(--steel-200); }
+.excel-filter__option { display:flex; align-items:center; gap:8px; padding:7px 5px; border-bottom:1px solid var(--steel-100); color:var(--text); font-size:.78rem; line-height:1.25; cursor:pointer; }
+.excel-filter__option:hover { background:var(--steel-50); }
+.excel-filter__option input { flex:0 0 auto; accent-color:var(--blue-600); }
 
 
 /* Theme layout identities — 2026-09-03 */
