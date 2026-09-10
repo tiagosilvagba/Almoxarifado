@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 1.5";
+const APP_VERSION = "Versão 1.6";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -1173,6 +1173,7 @@ function initializeExcelFilterControls() {
       closeExcelFilterControls(select);
       if (!opening) return;
       menu.classList.remove("is-hidden");
+      control.classList.add("is-open");
       trigger.setAttribute("aria-expanded", "true");
       search.focus();
     });
@@ -1203,6 +1204,7 @@ function closeExcelFilterControls(exceptSelect = null) {
     const control = state.excelFilterControls.get(select);
     if (!control) continue;
     control.querySelector(".excel-filter__menu")?.classList.add("is-hidden");
+    control.classList.remove("is-open");
     control.querySelector(".excel-filter__trigger")?.setAttribute("aria-expanded", "false");
   }
 }
