@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 1.6";
+const APP_VERSION = "Versão 1.7";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -28,7 +28,7 @@ const OF_GENERATION_BUCKETS = Object.freeze([
 ]);
 
 const THEME_IDS = new Set([
-  "theme-t", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
+  "theme-t", "logistica-neon", "aurora", "polar", "rubi", "industrial", "graphite", "operations",
   "logistics", "corporate", "ocean", "neutral", "contrast",
 ]);
 
