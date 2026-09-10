@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=1-2">
-    <script src="script.js?v=1-2" defer></script>
+    <link rel="stylesheet" href="style.css?v=1-3">
+    <script src="script.js?v=1-3" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 1.2</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 1.3</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -205,7 +205,7 @@
             <button class="metric metric--amber" type="button" data-filter-link="below-min"><span class="metric__label">Abaixo do mínimo</span><strong id="metricBelowMin">—</strong><small>saldo positivo abaixo do mínimo</small></button>
             <button class="metric metric--red" type="button" data-filter-link="above-max"><span class="metric__label">Acima do máximo</span><strong id="metricAboveMax">—</strong><small>com máximo parametrizado</small></button>
             <button class="metric metric--cyan" type="button" data-filter-link="unconfigured"><span class="metric__label">Saldo sem mín. e máx.</span><strong id="metricUnconfigured">—</strong><small>saldo positivo sem limites</small></button>
-            <button class="metric metric--violet" type="button" data-page-link="sc-pendente-of"><span class="metric__label">SC sem OF</span><strong id="metricPendingSc">—</strong><small>confirmadas ou em negociação</small></button>
+            <button class="metric metric--violet" type="button" data-page-link="sc-pendente-of"><span class="metric__label">SC sem OF</span><strong id="metricPendingSc">—</strong><small>confirmadas, aguardando aprovação ou em negociação</small></button>
             <button class="metric metric--charcoal" type="button" data-filter-link="negative">
               <span class="metric__label">Saldo negativo</span>
               <strong id="metricNegative">—</strong>
@@ -307,7 +307,7 @@
             <div>
               <span class="eyebrow">Compras pendentes</span>
               <h2 id="pendingScTitle">SC pendente de OF</h2>
-              <p class="section-description">Solicitações com compra confirmada ou comprador negociando, não canceladas e sem código de OF gerado.</p>
+              <p class="section-description">Solicitações confirmadas, aguardando aprovação ou em negociação, não canceladas e sem código de OF gerado.</p>
             </div>
             <span id="pendingScListCount" class="context-label">0 registros</span>
           </div>
@@ -447,7 +447,7 @@
               <h2 id="instructionsTitle">Como utilizar o Painel de Gestão de Almoxarifado</h2>
               <p>Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.</p>
             </div>
-            <span class="instructions-version">Regras vigentes · Versão 1.2</span>
+            <span class="instructions-version">Regras vigentes · Versão 1.3</span>
           </header>
 
           <div class="instructions-layout">
@@ -510,14 +510,14 @@
               <article id="instr-necessidade" class="instruction-section instruction-section--accent">
                 <span class="instruction-section__number">06</span>
                 <div><h3>Necessidade de compra</h3><p>Uma posição entra como pendência quando possui mínimo positivo, o saldo está abaixo do mínimo e a necessidade líquida final é maior que zero.</p>
-                <div class="instruction-formulas"><div><span>Meta de reposição</span><code>máximo cadastrado; se não existir, mínimo cadastrado</code></div><div><span>Necessidade bruta</span><code>máx(meta − saldo atual; 0)</code></div><div><span>Cobertura existente</span><code>saldo de OF aberta no CCU 1500 + SC ativa sem OF no CCU 1500</code></div><div><span>Compra líquida</span><code>máx(necessidade bruta − cobertura existente; 0)</code></div><div><span>Valor estimado</span><code>compra líquida × preço de referência</code></div></div>
+                <div class="instruction-formulas"><div><span>Meta de reposição</span><code>máximo cadastrado; se não existir, mínimo cadastrado</code></div><div><span>Necessidade bruta</span><code>máx(meta − saldo atual; 0)</code></div><div><span>Cobertura existente</span><code>saldo de OF aberta no CCU 1500 + SC ativa sem OF no CCU 1500, inclusive aguardando aprovação</code></div><div><span>Compra líquida</span><code>máx(necessidade bruta − cobertura existente; 0)</code></div><div><span>Valor estimado</span><code>compra líquida × preço de referência</code></div></div>
                 <ul><li>Se a compra líquida for zero, o item não é exibido como pendência.</li><li>OF fechada não cobre a necessidade; ela permanece disponível somente para históricos e cálculo de lead time.</li><li>SC ou OF fora do CCU 1500 não reduz a compra do almoxarifado.</li><li>Quando há OF + SC, os documentos precisam ser processos distintos; os números de ambos são mantidos.</li><li>Dentro da mesma SC e do mesmo item, sequências diferentes são somadas. Se a <strong>SC - Seq.</strong> se repetir, a linha é considerada apenas uma vez.</li><li>O preço de referência usa primeiro o custo do estoque e, se indisponível, o preço de compra mais recente.</li><li>Os cards mostram saldo, mínimo e máximo cadastrados, consumo médio mensal sem anomalias, cobertura, compra líquida, endereço e responsável. O mesmo consumo integra a exportação completa.</li></ul>
                 <aside class="instruction-alert"><strong>Alerta especial de Cavaco</strong><span>As OFs abertas de Cavaco são consolidadas por fornecedor e filial. O card especial só é gerado quando a soma dos saldos fica abaixo de 200. Necessidade = 200 − saldo somado das OFs. O fornecedor e os números das OFs são exibidos.</span></aside></div>
               </article>
 
               <article id="instr-sc" class="instruction-section">
                 <span class="instruction-section__number">07</span>
-                <div><h3>SC pendente de OF</h3><p>Exibe solicitações com situação <strong>Compra confirmada</strong> ou <strong>Comprador negociando</strong>, não canceladas e ainda sem código de OF.</p>
+                <div><h3>SC pendente de OF</h3><p>Exibe solicitações com situação <strong>Compra confirmada</strong>, <strong>Aguardando aprovação</strong> ou <strong>Comprador negociando</strong>, não canceladas e ainda sem código de OF.</p>
                 <ul><li>O tempo pendente é contado em dias entre a criação da SC e a data atual.</li><li>Os cards informam solicitante, item, quantidade, entrega prevista, idade da SC, endereço e responsável pela reposição.</li><li>O modal organiza todos os campos da solicitação e apresenta o contexto operacional do item.</li><li>No PDF, somente SCs pendentes há mais de 7 dias são incluídas. O Excel mantém todo o conjunto filtrado.</li></ul></div>
               </article>
 

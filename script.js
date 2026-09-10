@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 1.2";
+const APP_VERSION = "Versão 1.3";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -445,7 +445,7 @@ const PT_EN = Object.freeze({
   "Manual operacional": "Operating manual",
   "Como utilizar o Painel de Gestão de Almoxarifado": "How to use the Warehouse Management Dashboard",
   "Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.": "Complete guide to data sources, filters, indicators, calculations, modals and exports. Use the index to go directly to the required feature.",
-  "Regras vigentes · Versão 1.2": "Current rules · Version 1.2",
+  "Regras vigentes · Versão 1.3": "Current rules · Version 1.3",
   "Índice rápido": "Quick index",
   "1. Primeiros passos": "1. Getting started",
   "2. Bases de dados": "2. Data sources",
@@ -591,7 +591,7 @@ const PT_EN = Object.freeze({
   "Sem mín. e máx.": "Without min./max.",
   "saldo positivo sem limites": "positive stock without limits",
   "SC sem OF": "PR without PO",
-  "confirmadas ou em negociação": "confirmed or under negotiation",
+  "confirmadas, aguardando aprovação ou em negociação": "confirmed, awaiting approval or under negotiation",
   "em ao menos uma posição": "in at least one position",
   "OF com saldo pendente": "PO with open balance",
   "ordens ainda não totalmente atendidas": "orders not yet fully fulfilled",
@@ -647,7 +647,7 @@ const PT_EN = Object.freeze({
   "Exportar Excel": "Export to Excel",
   "Carregar mais necessidades": "Load more requirements",
   "Compras pendentes": "Pending purchases",
-  "Solicitações com compra confirmada ou comprador negociando, não canceladas e sem código de OF gerado.": "Confirmed or under-negotiation requests that are not cancelled and do not yet have a PO.",
+  "Solicitações confirmadas, aguardando aprovação ou em negociação, não canceladas e sem código de OF gerado.": "Confirmed, awaiting-approval or under-negotiation requests that are not cancelled and do not yet have a PO.",
   "Solicitações encontradas": "Requests found",
   "Selecione um cartão para consultar todos os detalhes da solicitação.": "Select a card to view all request details.",
   "Carregar mais solicitações": "Load more requests",
@@ -891,6 +891,7 @@ const PT_EN = Object.freeze({
   ,"Valor doc./estimado": "Document/estimated value"
   ,"Compra confirmada": "Purchase confirmed"
   ,"Comprador negociando": "Buyer negotiating"
+  ,"Aguardando aprovação": "Awaiting approval"
   ,"Aberta": "Open"
   ,"Fechada": "Closed"
   ,"Parcial": "Partial"
@@ -2332,6 +2333,7 @@ function purchaseCommitmentLineKey(record) {
 function isActiveScForPurchaseCoverage(sc) {
   if (["s", "sim", "1", "true"].includes(normalizeSearch(sc.cancelled))) return false;
   const status = normalizeSearch(sc.status);
+  if (status.includes("aguardando aprovacao")) return true;
   return !/(cancelad|reprovad|exclu[ií]d|encerrad)/.test(status);
 }
 
@@ -4973,9 +4975,11 @@ function inventoryWorker() {
           sortKey: dateKey(first(rec?.entryDate, rec?.issueDate, of?.date, sc?.date)),
         };
 
+        const normalizedScStatus = normalizeText(scStatus);
         const pending = Boolean(
           scCode
-          && ["compra confirmada", "comprador negociando"].includes(normalizeText(scStatus))
+          && (["compra confirmada", "comprador negociando"].includes(normalizedScStatus)
+            || normalizedScStatus.includes("aguardando aprovacao"))
           && scCancelled.toUpperCase() !== "S"
           && !ofCode
         );
@@ -5352,5 +5356,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
