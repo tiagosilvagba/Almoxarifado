@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 1.3";
+const APP_VERSION = "Versão 1.4";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -2333,8 +2333,14 @@ function purchaseCommitmentLineKey(record) {
 function isActiveScForPurchaseCoverage(sc) {
   if (["s", "sim", "1", "true"].includes(normalizeSearch(sc.cancelled))) return false;
   const status = normalizeSearch(sc.status);
-  if (status.includes("aguardando aprovacao")) return true;
-  return !/(cancelad|reprovad|exclu[ií]d|encerrad)/.test(status);
+  // A cobertura de reposição considera somente SCs ainda efetivamente em fluxo
+  // de compra. "Aguardando aprovação" precisa reduzir a necessidade líquida,
+  // assim como as SCs confirmadas e em negociação.
+  return [
+    "compra confirmada",
+    "aguardando aprovacao",
+    "comprador negociando",
+  ].some((eligibleStatus) => status.includes(eligibleStatus));
 }
 
 function isWarehouseSc(sc) {
