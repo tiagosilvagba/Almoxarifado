@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 1.4";
+const APP_VERSION = "Versão 1.5";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -33,6 +33,11 @@ const THEME_IDS = new Set([
 ]);
 
 const LANGUAGE_IDS = new Set(["pt-BR", "en"]);
+const MULTI_FILTER_IDS = [
+  "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter",
+  "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter",
+  "itemCodeFilter", "stockStatusFilter", "scStatusFilter",
+];
 let activeLanguage = "pt-BR";
 let languageObserver = null;
 
@@ -112,6 +117,7 @@ const state = {
   filterDraftSnapshot: null,
   draftFilterRefreshTimer: null,
   filterOptionSignatures: new WeakMap(),
+  excelFilterControls: new WeakMap(),
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
@@ -125,6 +131,7 @@ if (typeof document !== "undefined") {
 
 async function init() {
   cacheUi();
+  initializeExcelFilterControls();
   initializeLanguage();
   initializeTheme();
   initializeDensity();
@@ -210,6 +217,7 @@ function bindEvents() {
     });
     select.addEventListener("change", () => {
       normalizeMultiSelection(select);
+      syncExcelFilterControl(select);
       scheduleDraftFilterRefresh(select.id);
     });
   }
@@ -1135,6 +1143,108 @@ function filterValues(select) {
 function setFilterValues(select, values) {
   const selected = new Set(Array.isArray(values) ? values : values ? [values] : []);
   for (const option of select.options) option.selected = option.value ? selected.has(option.value) : selected.size === 0;
+  syncExcelFilterControl(select);
+}
+
+function initializeExcelFilterControls() {
+  for (const id of MULTI_FILTER_IDS) {
+    const select = ui[id];
+    if (!select || state.excelFilterControls.has(select)) continue;
+
+    select.classList.add("excel-filter-select");
+    const control = document.createElement("div");
+    control.className = "excel-filter";
+    control.innerHTML = `
+      <button class="excel-filter__trigger" type="button" aria-expanded="false">
+        <span class="excel-filter__label"></span><span class="excel-filter__arrow" aria-hidden="true">⌄</span>
+      </button>
+      <div class="excel-filter__menu is-hidden">
+        <input class="excel-filter__search" type="search" autocomplete="off" placeholder="Pesquisar na lista">
+        <div class="excel-filter__actions"><button type="button" data-excel-filter-action="all">Marcar todos</button><button type="button" data-excel-filter-action="clear">Limpar</button></div>
+        <div class="excel-filter__options" role="group"></div>
+      </div>`;
+    select.insertAdjacentElement("afterend", control);
+    const trigger = control.querySelector(".excel-filter__trigger");
+    const menu = control.querySelector(".excel-filter__menu");
+    const search = control.querySelector(".excel-filter__search");
+
+    trigger.addEventListener("click", () => {
+      const opening = menu.classList.contains("is-hidden");
+      closeExcelFilterControls(select);
+      if (!opening) return;
+      menu.classList.remove("is-hidden");
+      trigger.setAttribute("aria-expanded", "true");
+      search.focus();
+    });
+    search.addEventListener("input", () => filterExcelFilterOptions(control, search.value));
+    control.addEventListener("click", (event) => {
+      const action = event.target.closest("[data-excel-filter-action]")?.dataset.excelFilterAction;
+      if (action === "all") setFilterValues(select, [...select.options].filter((option) => option.value && !option.disabled).map((option) => option.value));
+      if (action === "clear") setFilterValues(select, []);
+      if (action) select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    new MutationObserver(() => syncExcelFilterControl(select)).observe(select, { childList: true, subtree: true });
+    state.excelFilterControls.set(select, control);
+    syncExcelFilterControl(select);
+  }
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".excel-filter")) closeExcelFilterControls();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeExcelFilterControls();
+  });
+}
+
+function closeExcelFilterControls(exceptSelect = null) {
+  for (const id of MULTI_FILTER_IDS) {
+    const select = ui[id];
+    if (!select || select === exceptSelect) continue;
+    const control = state.excelFilterControls.get(select);
+    if (!control) continue;
+    control.querySelector(".excel-filter__menu")?.classList.add("is-hidden");
+    control.querySelector(".excel-filter__trigger")?.setAttribute("aria-expanded", "false");
+  }
+}
+
+function syncExcelFilterControl(select) {
+  const control = state.excelFilterControls.get(select);
+  if (!control) return;
+  const selected = new Set(filterValues(select));
+  const options = [...select.options].filter((option) => option.value);
+  const list = control.querySelector(".excel-filter__options");
+  const previousQuery = control.querySelector(".excel-filter__search").value;
+  list.replaceChildren();
+  for (const option of options) {
+    const row = document.createElement("label");
+    row.className = "excel-filter__option";
+    row.hidden = false;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = option.value;
+    checkbox.checked = selected.has(option.value);
+    checkbox.disabled = option.disabled;
+    checkbox.addEventListener("change", () => {
+      const next = new Set(filterValues(select));
+      if (checkbox.checked) next.add(option.value); else next.delete(option.value);
+      setFilterValues(select, [...next]);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    row.append(checkbox, document.createTextNode(option.textContent || option.value));
+    list.append(row);
+  }
+  const label = control.querySelector(".excel-filter__label");
+  label.textContent = selected.size === 0 ? (select.options[0]?.textContent || "Todos")
+    : selected.size === 1 ? options.find((option) => selected.has(option.value))?.textContent || "1 selecionado"
+      : `${selected.size} selecionados`;
+  filterExcelFilterOptions(control, previousQuery);
+}
+
+function filterExcelFilterOptions(control, query) {
+  const normalizedQuery = normalizeSearch(query);
+  for (const row of control.querySelectorAll(".excel-filter__option")) {
+    row.hidden = Boolean(normalizedQuery) && !normalizeSearch(row.textContent).includes(normalizedQuery);
+  }
 }
 
 function normalizeMultiSelection(select) {
