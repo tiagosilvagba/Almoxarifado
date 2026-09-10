@@ -1864,3 +1864,33 @@ html[data-theme="theme-t"] .instructions-index,html[data-theme="theme-t"] .instr
 @media (max-width:430px) {
   .review-summary { grid-template-columns:1fr; }
 }
+
+/* Logística Neon — inspirado em centrais logísticas noturnas: azul profundo, roxo elétrico e amarelo de sinalização. */
+html[data-theme="logistica-neon"] {
+  --navy-950:#03040b; --navy-900:#07091a; --navy-800:#0b1030; --navy-700:#151a45;
+  --blue-600:#8b46ff; --blue-500:#b160ff; --blue-100:#eee4ff;
+  --steel-700:#c1c5e5; --steel-500:#868db8; --steel-300:#2b3264; --steel-200:#202752; --steel-100:#151b3f; --steel-50:#0c1129;
+  --text:#f6f4ff; --muted:#a8add0; --topbar-text:#eeeaff; --active-accent:#ffe726;
+  --focus-color:rgba(177,96,255,.42); --filter-count-bg:#ffe726; --theme-wash:rgba(139,70,255,.14);
+  --surface:#0b1026;
+}
+html[data-theme="logistica-neon"] body { color:var(--text); background:radial-gradient(circle at 87% 15%,rgba(139,70,255,.22),transparent 24rem),radial-gradient(circle at 12% 76%,rgba(255,231,38,.09),transparent 27rem),linear-gradient(145deg,#03040b,#070b1c 48%,#02030a); background-attachment:fixed; }
+html[data-theme="logistica-neon"] body::before { background-image:linear-gradient(rgba(138,94,255,.065) 1px,transparent 1px),linear-gradient(90deg,rgba(138,94,255,.05) 1px,transparent 1px); background-size:42px 42px; opacity:1; }
+html[data-theme="logistica-neon"] .topbar { border-bottom:1px solid rgba(161,92,255,.34); background:linear-gradient(110deg,#090717,#11103a 58%,#080716); box-shadow:0 12px 42px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,231,38,.22); }
+html[data-theme="logistica-neon"] .brand h1,html[data-theme="logistica-neon"] .section-heading h2,html[data-theme="logistica-neon"] .analytics-card__heading h3 { color:#fff; }
+html[data-theme="logistica-neon"] .brand__mark { color:#ffea38; background:linear-gradient(145deg,#6d2fff,#b35cff); box-shadow:0 0 22px rgba(170,83,255,.46); }
+html[data-theme="logistica-neon"] .app-nav__tab { color:#b9bcdd; border-radius:9px; }
+html[data-theme="logistica-neon"] .app-nav__tab:hover { color:#fff; background:rgba(172,92,255,.16); }
+html[data-theme="logistica-neon"] .app-nav__tab.is-active { color:#100c22; background:linear-gradient(135deg,#c165ff,#8140f1); box-shadow:0 0 22px rgba(167,81,255,.38); }
+html[data-theme="logistica-neon"] .metric,html[data-theme="logistica-neon"] .analytics-card,html[data-theme="logistica-neon"] .filter-panel,html[data-theme="logistica-neon"] .global-filter-bar,html[data-theme="logistica-neon"] .item-card,html[data-theme="logistica-neon"] .report-card,html[data-theme="logistica-neon"] .need-summary article,html[data-theme="logistica-neon"] .page-panel { border-color:rgba(105,117,224,.36); color:var(--text); background:linear-gradient(145deg,rgba(16,21,56,.94),rgba(7,10,29,.97)); box-shadow:0 13px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(192,160,255,.08); }
+html[data-theme="logistica-neon"] .metric { border-top:2px solid var(--metric-accent); }
+html[data-theme="logistica-neon"] .metric:nth-child(odd)::before { background:#a957ff; box-shadow:0 0 16px rgba(169,87,255,.7); }
+html[data-theme="logistica-neon"] .metric:nth-child(even)::before { background:#ffe226; box-shadow:0 0 16px rgba(255,226,38,.55); }
+html[data-theme="logistica-neon"] .eyebrow,html[data-theme="logistica-neon"] .analytics-card__heading small { color:#b86bff; }
+html[data-theme="logistica-neon"] .field > span,html[data-theme="logistica-neon"] .switch-field,html[data-theme="logistica-neon"] .section-description { color:#b8bddc; }
+html[data-theme="logistica-neon"] select,html[data-theme="logistica-neon"] input,html[data-theme="logistica-neon"] .excel-filter__trigger,html[data-theme="logistica-neon"] .excel-filter__menu { color:#f7f4ff; border-color:#3d3775; background:#0a0f25; }
+html[data-theme="logistica-neon"] select option { color:#f7f4ff; background:#0a0f25; }
+html[data-theme="logistica-neon"] .excel-filter__option:hover,html[data-theme="logistica-neon"] .excel-filter__actions button { color:#fff; background:rgba(139,70,255,.24); }
+html[data-theme="logistica-neon"] .button--primary,html[data-theme="logistica-neon"] .button--export { color:#160d24; border-color:#e8c9ff; background:linear-gradient(135deg,#bd6dff,#7f3dff); box-shadow:0 0 20px rgba(165,79,255,.32); }
+html[data-theme="logistica-neon"] .button--ghost { color:#ffe83a; border-color:rgba(255,232,58,.52); background:rgba(255,232,58,.07); }
+html[data-theme="logistica-neon"] .status-pill--critical,html[data-theme="logistica-neon"] .metric--amber strong { color:#ffe83a; }
