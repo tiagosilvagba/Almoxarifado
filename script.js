@@ -11,6 +11,7 @@
 const ALMOX_APP_SOURCE = "https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@10730819db42aad163c4b3c335e60058b95e67ab/script.js";
 const ALMOX_APP_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/10730819db42aad163c4b3c335e60058b95e67ab/script.js";
 let csvRefreshTimer = null;
+let applicationInitialized = false;
 
 function loadApplicationScript(source) {
   return new Promise((resolve, reject) => {
@@ -61,6 +62,21 @@ function bindCsvUpdateListener() {
   });
 }
 
+async function initializeLoadedApplication() {
+  if (applicationInitialized) return;
+  applicationInitialized = true;
+
+  /*
+   * A aplicação consolidada registra init() no DOMContentLoaded. Como ela é
+   * carregada dinamicamente após o Service Worker ficar pronto, esse evento
+   * pode já ter ocorrido (principalmente no Safari/iPhone). Nesse caso,
+   * iniciamos a aplicação explicitamente para evitar o painel preso em 0%.
+   */
+  if (document.readyState !== "loading" && typeof window.init === "function") {
+    await window.init();
+  }
+}
+
 (async function startAlmoxarifado() {
   bindCsvUpdateListener();
   await ensureCsvCacheWorker();
@@ -70,4 +86,6 @@ function bindCsvUpdateListener() {
   } catch {
     await loadApplicationScript(ALMOX_APP_FALLBACK);
   }
+
+  await initializeLoadedApplication();
 })();
