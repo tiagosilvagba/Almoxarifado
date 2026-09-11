@@ -33,7 +33,7 @@ async function ensureCsvCacheWorker() {
   if (!("serviceWorker" in navigator)) return;
 
   try {
-    await navigator.serviceWorker.register("./sw-data-cache.js", { scope: "./" });
+    await navigator.serviceWorker.register("./sw-data-cache.js", { scope: "./", updateViaCache: "none" });
     await navigator.serviceWorker.ready;
 
     if (!navigator.serviceWorker.controller) {
@@ -63,7 +63,16 @@ function filterVisibleExcelOptions(searchInput) {
   if (!control) return;
   const query = normalizeFilterText(searchInput.value);
   for (const row of control.querySelectorAll(".excel-filter__option")) {
-    row.hidden = Boolean(query) && !normalizeFilterText(row.textContent).includes(query);
+    const shouldHide = Boolean(query) && !normalizeFilterText(row.textContent).includes(query);
+    row.hidden = shouldHide;
+    row.style.display = shouldHide ? "none" : "";
+    row.setAttribute("aria-hidden", shouldHide ? "true" : "false");
+  }
+}
+
+function reapplyOpenFilterSearches() {
+  for (const search of document.querySelectorAll(".excel-filter__search")) {
+    filterVisibleExcelOptions(search);
   }
 }
 
@@ -73,6 +82,7 @@ function syncAllExcelFilters() {
     const select = document.getElementById(id);
     if (select) window.syncExcelFilterControl(select);
   }
+  window.requestAnimationFrame(reapplyOpenFilterSearches);
 }
 
 function closeFilterMenus() {
@@ -89,8 +99,24 @@ function forceHideGlobalFilters() {
   if (!panel) return;
   closeFilterMenus();
   panel.classList.add("is-hidden");
+  panel.setAttribute("hidden", "");
   panel.removeAttribute("aria-busy");
   trigger?.setAttribute("aria-expanded", "false");
+}
+
+function ensureGlobalFiltersCanOpen() {
+  const trigger = document.getElementById("filterToggleButton");
+  const panel = document.getElementById("globalFiltersPanel");
+  if (!trigger || !panel) return;
+  trigger.addEventListener("click", () => {
+    if (trigger.getAttribute("aria-expanded") === "true" || !panel.classList.contains("is-hidden")) {
+      panel.removeAttribute("hidden");
+    } else {
+      window.requestAnimationFrame(() => {
+        if (!panel.classList.contains("is-hidden")) panel.removeAttribute("hidden");
+      });
+    }
+  }, true);
 }
 
 function refreshFilterOptionsAfterApply() {
@@ -117,6 +143,12 @@ function refreshFilterOptionsAfterApply() {
   syncAllExcelFilters();
 }
 
+function reliableCloseFilters(event) {
+  event?.preventDefault?.();
+  forceHideGlobalFilters();
+  window.requestAnimationFrame(forceHideGlobalFilters);
+}
+
 function initializeFilterRepairs() {
   if (filterRepairInitialized) return;
   filterRepairInitialized = true;
@@ -125,27 +157,35 @@ function initializeFilterRepairs() {
   const applyButton = document.getElementById("applyFiltersButton");
   const panel = document.getElementById("globalFiltersPanel");
 
-  /* Garante que o X sempre feche o painel, mesmo se a rotina original falhar. */
-  closeButton?.addEventListener("click", () => {
-    window.requestAnimationFrame(forceHideGlobalFilters);
-  }, true);
+  /* X confiável também em Safari/iPhone. */
+  closeButton?.addEventListener("pointerup", reliableCloseFilters, true);
+  closeButton?.addEventListener("click", reliableCloseFilters, true);
 
-  /* Pesquisa delegada: funciona mesmo quando a lista visual é reconstruída. */
+  /* Pesquisa delegada: continua funcionando mesmo se a lista for recriada. */
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || !target.classList.contains("excel-filter__search")) return;
     filterVisibleExcelOptions(target);
   }, true);
+  document.addEventListener("search", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !target.classList.contains("excel-filter__search")) return;
+    filterVisibleExcelOptions(target);
+  }, true);
 
-  /* Depois de Concluir e fechar, atualiza as listas e só então fecha. */
+  /* Depois de Concluir e fechar, sincroniza seleção + opções atualizadas. */
   applyButton?.addEventListener("click", () => {
     window.setTimeout(() => {
       refreshFilterOptionsAfterApply();
       forceHideGlobalFilters();
     }, 0);
+    window.setTimeout(() => {
+      refreshFilterOptionsAfterApply();
+      forceHideGlobalFilters();
+    }, 180);
   });
 
-  /* Se as opções mudarem por atualização dos CSVs, a camada visual acompanha. */
+  /* Qualquer mudança nas opções causada pelos dados/CSV atualiza a lista visual. */
   filterMutationObserver = new MutationObserver((mutations) => {
     const changedSelects = new Set();
     for (const mutation of mutations) {
@@ -156,6 +196,7 @@ function initializeFilterRepairs() {
     if (!changedSelects.size || typeof window.syncExcelFilterControl !== "function") return;
     window.requestAnimationFrame(() => {
       for (const select of changedSelects) window.syncExcelFilterControl(select);
+      reapplyOpenFilterSearches();
     });
   });
 
@@ -165,9 +206,10 @@ function initializeFilterRepairs() {
   }
 
   panel?.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") window.requestAnimationFrame(forceHideGlobalFilters);
+    if (event.key === "Escape") reliableCloseFilters(event);
   }, true);
 
+  ensureGlobalFiltersCanOpen();
   syncAllExcelFilters();
 }
 
@@ -183,6 +225,7 @@ function bindCsvUpdateListener() {
         try {
           await window.loadCatalog();
           window.setTimeout(refreshFilterOptionsAfterApply, 0);
+          window.setTimeout(refreshFilterOptionsAfterApply, 250);
         } catch (error) {
           console.warn("Falha ao atualizar catálogo após alteração dos CSVs.", error);
         }
