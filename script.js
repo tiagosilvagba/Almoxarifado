@@ -15,7 +15,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 1.7";
+const APP_VERSION = "Versão 1.8";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -115,7 +115,7 @@ const state = {
   pageRenderRevision: new Map(),
   pageRenderToken: 0,
   filterDraftSnapshot: null,
-  draftFilterRefreshTimer: null,
+  filterDraftDirty: false,
   filterOptionSignatures: new WeakMap(),
   excelFilterControls: new WeakMap(),
   loadingProgressValue: 0,
@@ -218,11 +218,11 @@ function bindEvents() {
     select.addEventListener("change", () => {
       normalizeMultiSelection(select);
       syncExcelFilterControl(select);
-      scheduleDraftFilterRefresh(select.id);
+      markFilterDraftDirty();
     });
   }
-  ui.positiveBalanceFilter.addEventListener("change", () => scheduleDraftFilterRefresh("positiveBalanceFilter"));
-  ui.searchInput.addEventListener("input", debounce(() => scheduleDraftFilterRefresh("searchInput"), 180));
+  ui.positiveBalanceFilter.addEventListener("change", markFilterDraftDirty);
+  ui.searchInput.addEventListener("input", markFilterDraftDirty);
   ui.catalogSort.addEventListener("change", applyFilters);
   ui.catalogView.addEventListener("change", () => ui.cardsGrid.classList.toggle("is-list-view", ui.catalogView.value === "list"));
 
@@ -1130,6 +1130,7 @@ function toggleFilters() {
     return;
   }
   state.filterDraftSnapshot = captureFilterValues();
+  state.filterDraftDirty = false;
   ui.globalFiltersPanel.classList.remove("is-hidden");
   ui.filterToggleButton.setAttribute("aria-expanded", "true");
   window.requestAnimationFrame(() => ui.searchInput.focus());
@@ -1307,28 +1308,21 @@ function restoreFilterValues(values) {
   }
 }
 
-function scheduleDraftFilterRefresh(changedId) {
-  if (!state.items.length) return;
-  window.clearTimeout(state.draftFilterRefreshTimer);
-  ui.globalFiltersPanel.setAttribute("aria-busy", "true");
-  state.draftFilterRefreshTimer = window.setTimeout(() => {
-    state.draftFilterRefreshTimer = null;
-    refreshDependentFilters(changedId);
-    ui.globalFiltersPanel.removeAttribute("aria-busy");
-  }, 32);
+function markFilterDraftDirty() {
+  state.filterDraftDirty = true;
 }
 
 function cancelDraftFilterRefresh() {
-  window.clearTimeout(state.draftFilterRefreshTimer);
-  state.draftFilterRefreshTimer = null;
   ui.globalFiltersPanel.removeAttribute("aria-busy");
 }
 
 function applyAllFilters(shouldClose = false) {
+  cancelDraftFilterRefresh();
   applyFilters(false);
   state.filterRevision += 1;
   scheduleFilteredPage(pageFromHash(), true);
   updateFilterSummary();
+  state.filterDraftDirty = false;
   if (shouldClose) closeFilters(false);
 }
 
@@ -1360,14 +1354,16 @@ function scheduleFilteredPage(page, force = false) {
   const token = ++state.pageRenderToken;
   const panel = ui.pagePanels.find((entry) => entry.dataset.pagePanel === page);
   panel?.setAttribute("aria-busy", "true");
-  window.requestAnimationFrame(() => {
+  // Dois frames dão ao navegador tempo para exibir a nova aba antes de iniciar
+  // cálculos mais pesados (relatórios, gráficos e revisão de mínimo/máximo).
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
     if (token !== state.pageRenderToken || pageFromHash() !== page) {
       panel?.removeAttribute("aria-busy");
       return;
     }
     renderFilteredPage(page, force);
     panel?.removeAttribute("aria-busy");
-  });
+  }));
 }
 
 function handleAutomaticFilter(changedId) {

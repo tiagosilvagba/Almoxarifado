@@ -1373,6 +1373,32 @@ html[data-theme="theme-t"] .item-modal .modal-header { color:#eefcff; background
 html[data-theme="theme-t"] .item-modal .modal-header p { color:#a6c5d3; }
 html[data-theme="theme-t"] .item-modal .modal-close { border-color:rgba(141,226,246,.3); background:rgba(255,255,255,.07); }
 html[data-theme="theme-t"] .modal-tabs { background:#06111b; }
+
+/* Em telas móveis, filtros de desfoque em grandes superfícies custam muita GPU
+   durante rolagem e troca de abas. As cores e o contraste do tema são mantidos. */
+@media (max-width: 900px) {
+  html[data-theme] .topbar,
+  html[data-theme] .page-panel,
+  html[data-theme] .filter-panel,
+  html[data-theme] .global-filter-bar,
+  html[data-theme] .metric,
+  html[data-theme] .analytics-card,
+  html[data-theme] .item-card,
+  html[data-theme] .report-card,
+  html[data-theme] .need-summary article,
+  html[data-theme] .loading-panel,
+  html[data-theme] .theme-picker select,
+  html[data-theme] .density-toggle,
+  html[data-theme] .language-toggle,
+  html[data-theme] .icon-button {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .page-panel:not(.is-hidden) {
+    contain: layout paint style;
+  }
+}
 html[data-theme="theme-t"] .modal-tab { color:#9bb4c1; }
 html[data-theme="theme-t"] .modal-tab.is-active { color:#dffbff; border-color:#46d8f7; background:rgba(49,197,232,.13); }
 
