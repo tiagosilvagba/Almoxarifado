@@ -1,11 +1,19 @@
 "use strict";
 
-const CACHE_NAME = "almoxarifado-csv-v1";
+const CSV_CACHE_NAME = "almoxarifado-csv-v2";
+const APP_CACHE_NAME = "almoxarifado-app-v2";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
+const SCRIPT_PATTERN = /\/script\.js$/i;
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names
+      .filter((name) => name.startsWith("almoxarifado-") && ![CSV_CACHE_NAME, APP_CACHE_NAME].includes(name))
+      .map((name) => caches.delete(name)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (event) => {
@@ -13,13 +21,21 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || !CSV_PATTERN.test(url.pathname + url.search)) return;
+  if (url.origin !== self.location.origin) return;
 
-  event.respondWith(csvCacheFirst(request, event));
+  if (CSV_PATTERN.test(url.pathname + url.search)) {
+    event.respondWith(csvCacheFirst(request, event));
+    return;
+  }
+
+  /* Código da aplicação: rede primeiro para nunca ficar preso em versão antiga. */
+  if (SCRIPT_PATTERN.test(url.pathname) || request.mode === "navigate") {
+    event.respondWith(appNetworkFirst(request));
+  }
 });
 
 async function csvCacheFirst(request, event) {
-  const cache = await caches.open(CACHE_NAME);
+  const cache = await caches.open(CSV_CACHE_NAME);
   const cached = await cache.match(request.url);
 
   if (!cached) {
@@ -30,6 +46,19 @@ async function csvCacheFirst(request, event) {
 
   event.waitUntil(revalidateCsv(request, cached, cache));
   return cached;
+}
+
+async function appNetworkFirst(request) {
+  const cache = await caches.open(APP_CACHE_NAME);
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    if (response.ok) await cache.put(request.url, response.clone());
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request.url);
+    if (cached) return cached;
+    throw error;
+  }
 }
 
 async function revalidateCsv(request, cached, cache) {
@@ -49,9 +78,7 @@ async function revalidateCsv(request, cached, cache) {
       redirect: request.redirect,
     });
 
-    if (response.status === 304) return;
-    if (!response.ok) return;
-
+    if (response.status === 304 || !response.ok) return;
     if (await sameResponse(cached, response)) return;
 
     await cache.put(request.url, response.clone());
@@ -62,18 +89,14 @@ async function revalidateCsv(request, cached, cache) {
 }
 
 async function fetchFresh(request) {
-  try {
-    return await fetch(request.url, {
-      method: "GET",
-      headers: request.headers,
-      cache: "no-store",
-      credentials: request.credentials,
-      mode: request.mode,
-      redirect: request.redirect,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return fetch(request.url, {
+    method: "GET",
+    headers: request.headers,
+    cache: "no-store",
+    credentials: request.credentials,
+    mode: request.mode,
+    redirect: request.redirect,
+  });
 }
 
 async function sameResponse(cached, fresh) {
