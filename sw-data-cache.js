@@ -1,7 +1,7 @@
 "use strict";
 
-const CSV_CACHE_NAME = "almoxarifado-csv-v2";
-const APP_CACHE_NAME = "almoxarifado-app-v2";
+const CSV_CACHE_NAME = "almoxarifado-csv-v3";
+const APP_CACHE_NAME = "almoxarifado-app-v3";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
 const SCRIPT_PATTERN = /\/script\.js$/i;
 
@@ -13,6 +13,11 @@ self.addEventListener("activate", (event) => {
       .filter((name) => name.startsWith("almoxarifado-") && ![CSV_CACHE_NAME, APP_CACHE_NAME].includes(name))
       .map((name) => caches.delete(name)));
     await self.clients.claim();
+
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of clients) {
+      client.postMessage({ type: "almoxarifado-app-cache-refreshed" });
+    }
   })());
 });
 
@@ -28,7 +33,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  /* Código da aplicação: rede primeiro para nunca ficar preso em versão antiga. */
+  /* HTML e código da aplicação: rede primeiro para sempre receber a versão atual da main. */
   if (SCRIPT_PATTERN.test(url.pathname) || request.mode === "navigate") {
     event.respondWith(appNetworkFirst(request));
   }
