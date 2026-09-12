@@ -1,7 +1,7 @@
 "use strict";
 
-const CSV_CACHE_NAME = "almoxarifado-csv-v4";
-const APP_CACHE_NAME = "almoxarifado-app-v4";
+const CSV_CACHE_NAME = "almoxarifado-csv-v5";
+const APP_CACHE_NAME = "almoxarifado-app-v5";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
 const SCRIPT_PATTERN = /\/script\.js$/i;
 const STYLE_PATTERN = /\/style\.css$/i;
@@ -34,7 +34,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  /* HTML, JS e CSS: rede primeiro para sempre receber a versão atual da main. */
   if (SCRIPT_PATTERN.test(url.pathname) || STYLE_PATTERN.test(url.pathname) || request.mode === "navigate") {
     event.respondWith(appNetworkFirst(request));
   }
