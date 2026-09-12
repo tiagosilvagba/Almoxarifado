@@ -1,9 +1,10 @@
 "use strict";
 
-const CSV_CACHE_NAME = "almoxarifado-csv-v3";
-const APP_CACHE_NAME = "almoxarifado-app-v3";
+const CSV_CACHE_NAME = "almoxarifado-csv-v4";
+const APP_CACHE_NAME = "almoxarifado-app-v4";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
 const SCRIPT_PATTERN = /\/script\.js$/i;
+const STYLE_PATTERN = /\/style\.css$/i;
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
@@ -33,8 +34,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  /* HTML e código da aplicação: rede primeiro para sempre receber a versão atual da main. */
-  if (SCRIPT_PATTERN.test(url.pathname) || request.mode === "navigate") {
+  /* HTML, JS e CSS: rede primeiro para sempre receber a versão atual da main. */
+  if (SCRIPT_PATTERN.test(url.pathname) || STYLE_PATTERN.test(url.pathname) || request.mode === "navigate") {
     event.respondWith(appNetworkFirst(request));
   }
 });
