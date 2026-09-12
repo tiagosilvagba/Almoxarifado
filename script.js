@@ -3,7 +3,7 @@
 /*
  * Bootstrap de dados — 2026-09-11
  * Preserva a aplicação consolidada e adiciona cache inteligente dos CSVs,
- * correções dos filtros e sincronização da camada visual com os dados.
+ * correções dos filtros, sincronização visual e temas adicionais.
  */
 
 const ALMOX_APP_SOURCE = "https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@10730819db42aad163c4b3c335e60058b95e67ab/script.js";
@@ -13,6 +13,20 @@ const FILTER_IDS = [
   "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter",
   "itemCodeFilter", "stockStatusFilter", "scStatusFilter",
 ];
+const CUSTOM_THEMES = Object.freeze([
+  { id: "azul-corporativo", label: "Azul Corporativo · Confiança", meta: "#081b36" },
+  { id: "verde-industrial-2", label: "Verde Industrial · Resultado", meta: "#06251b" },
+  { id: "amber-tech", label: "Amber Tech · Energia", meta: "#201402" },
+  { id: "vermelho-impacto", label: "Vermelho Impacto · Atenção", meta: "#22070c" },
+  { id: "ciano-clean", label: "Ciano Clean · Leve", meta: "#041d25" },
+  { id: "rosa-premium", label: "Rosa Premium · Elegante", meta: "#21091d" },
+  { id: "night-minimal", label: "Night Minimal · Simples", meta: "#080b11" },
+  { id: "clean-light-2", label: "Clean Light · Claro", meta: "#eef5ff" },
+  { id: "areia-industrial", label: "Areia Industrial · Sofisticado", meta: "#efe1c5" },
+  { id: "galaxia", label: "Galáxia · Futurista", meta: "#09051f" },
+  { id: "palmeiras", label: "Palmeiras · Especial", meta: "#003b24" },
+]);
+const CUSTOM_THEME_IDS = new Set(CUSTOM_THEMES.map((theme) => theme.id));
 let csvRefreshTimer = null;
 let applicationInitialized = false;
 let filterRepairInitialized = false;
@@ -48,6 +62,49 @@ async function ensureCsvCacheWorker() {
   } catch (error) {
     console.warn("Cache inteligente de CSV indisponível; usando carregamento normal.", error);
   }
+}
+
+function initializeCustomThemes() {
+  const select = document.getElementById("themeSelect");
+  if (!select) return;
+
+  let group = select.querySelector('optgroup[data-custom-themes="true"]');
+  if (!group) {
+    group = document.createElement("optgroup");
+    group.label = "Temas especiais";
+    group.dataset.customThemes = "true";
+    for (const theme of CUSTOM_THEMES) {
+      const option = document.createElement("option");
+      option.value = theme.id;
+      option.textContent = theme.label;
+      group.appendChild(option);
+    }
+    select.appendChild(group);
+  }
+
+  const applyCustomTheme = (themeId, persist = true) => {
+    if (!CUSTOM_THEME_IDS.has(themeId)) return false;
+    document.documentElement.dataset.theme = themeId;
+    select.value = themeId;
+    const theme = CUSTOM_THEMES.find((entry) => entry.id === themeId);
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta && theme?.meta) themeMeta.content = theme.meta;
+    if (persist) {
+      try { localStorage.setItem("almoxarifado-theme", themeId); } catch { /* armazenamento indisponível */ }
+    }
+    return true;
+  };
+
+  select.addEventListener("change", () => {
+    if (!CUSTOM_THEME_IDS.has(select.value)) return;
+    const selectedTheme = select.value;
+    window.setTimeout(() => applyCustomTheme(selectedTheme, true), 0);
+  });
+
+  try {
+    const saved = localStorage.getItem("almoxarifado-theme");
+    if (CUSTOM_THEME_IDS.has(saved)) applyCustomTheme(saved, false);
+  } catch { /* usa o tema definido pela aplicação */ }
 }
 
 function normalizeFilterText(value) {
@@ -157,11 +214,9 @@ function initializeFilterRepairs() {
   const applyButton = document.getElementById("applyFiltersButton");
   const panel = document.getElementById("globalFiltersPanel");
 
-  /* X confiável também em Safari/iPhone. */
   closeButton?.addEventListener("pointerup", reliableCloseFilters, true);
   closeButton?.addEventListener("click", reliableCloseFilters, true);
 
-  /* Pesquisa delegada: continua funcionando mesmo se a lista for recriada. */
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || !target.classList.contains("excel-filter__search")) return;
@@ -173,7 +228,6 @@ function initializeFilterRepairs() {
     filterVisibleExcelOptions(target);
   }, true);
 
-  /* Depois de Concluir e fechar, sincroniza seleção + opções atualizadas. */
   applyButton?.addEventListener("click", () => {
     window.setTimeout(() => {
       refreshFilterOptionsAfterApply();
@@ -185,7 +239,6 @@ function initializeFilterRepairs() {
     }, 180);
   });
 
-  /* Qualquer mudança nas opções causada pelos dados/CSV atualiza a lista visual. */
   filterMutationObserver = new MutationObserver((mutations) => {
     const changedSelects = new Set();
     for (const mutation of mutations) {
@@ -244,6 +297,7 @@ async function initializeLoadedApplication() {
     await window.init();
   }
 
+  initializeCustomThemes();
   initializeFilterRepairs();
 }
 
