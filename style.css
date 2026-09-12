@@ -1,155 +1,455 @@
-@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@10730819db42aad163c4b3c335e60058b95e67ab/style.css");
+@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@8d9c28eec1f130924fdfffd3370095cb1c6c68f8/style.css");
 
-/* Logistica Neon — correção de contraste publicada em 2026-09-11.
- * Mantém a versão anterior integralmente via import imutável e corrige
- * textos herdados escuros em superfícies noturnas.
- */
-html[data-theme="logistica-neon"] {
-  --logistica-text-strong:#f8f7ff;
-  --logistica-text-body:#d7daf3;
-  --logistica-text-muted:#aeb4d7;
+/* =========================================================
+   Temas adicionais — dark, neon, clean e temáticos
+   ========================================================= */
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) {
+  --text:var(--theme-text,#f7f9ff);
+  --muted:var(--theme-muted,#aeb7cf);
+  --surface:var(--theme-surface,#0c1324);
+  --navy-950:var(--theme-bg,#050914);
+  --navy-900:var(--theme-surface,#0c1324);
+  --navy-800:var(--theme-surface-2,#121d33);
+  --navy-700:var(--theme-border,#243353);
+  --steel-700:var(--theme-text,#f7f9ff);
+  --steel-500:var(--theme-muted,#aeb7cf);
+  --steel-300:var(--theme-border,#243353);
+  --steel-200:var(--theme-border,#243353);
+  --steel-100:var(--theme-surface-2,#121d33);
+  --steel-50:var(--theme-surface,#0c1324);
+  --blue-600:var(--theme-accent,#6f7cff);
+  --blue-500:var(--theme-accent-2,#8f98ff);
+  --blue-100:var(--theme-accent-soft,rgba(111,124,255,.16));
+  --active-accent:var(--theme-accent,#6f7cff);
+  --focus-color:var(--theme-focus,rgba(111,124,255,.32));
+  color-scheme:dark;
 }
 
-html[data-theme="logistica-neon"] .section-heading h2,
-html[data-theme="logistica-neon"] .analytics-card__heading h3,
-html[data-theme="logistica-neon"] .metric strong,
-html[data-theme="logistica-neon"] .item-card h3,
-html[data-theme="logistica-neon"] .item-card__title,
-html[data-theme="logistica-neon"] .report-card__title,
-html[data-theme="logistica-neon"] .report-card__meta strong,
-html[data-theme="logistica-neon"] .need-summary strong,
-html[data-theme="logistica-neon"] .summary-cards strong,
-html[data-theme="logistica-neon"] .details-list dd,
-html[data-theme="logistica-neon"] .branch-balance-section > header strong,
-html[data-theme="logistica-neon"] .branch-balance-grid article > strong,
-html[data-theme="logistica-neon"] .purchase-min-max strong,
-html[data-theme="logistica-neon"] .purchase-details dd,
-html[data-theme="logistica-neon"] .operational-insights strong,
-html[data-theme="logistica-neon"] .process-stages strong,
-html[data-theme="logistica-neon"] .process-detail-group > header strong,
-html[data-theme="logistica-neon"] .process-detail-group dd,
-html[data-theme="logistica-neon"] .procurement-people strong,
-html[data-theme="logistica-neon"] .review-detail-grid h3,
-html[data-theme="logistica-neon"] .review-detail-grid dd,
-html[data-theme="logistica-neon"] .monthly-consumption-list strong,
-html[data-theme="logistica-neon"] .review-recommendation strong,
-html[data-theme="logistica-neon"] .of-generation-summary__bucket > strong,
-html[data-theme="logistica-neon"] .of-generation-path strong,
-html[data-theme="logistica-neon"] .of-generation-timeline article strong,
-html[data-theme="logistica-neon"] .of-period-slicer__heading strong,
-html[data-theme="logistica-neon"] .of-trend-card__heading h3,
-html[data-theme="logistica-neon"] .of-trend-chart__caption strong,
-html[data-theme="logistica-neon"] .instructions-index > strong,
-html[data-theme="logistica-neon"] .instruction-section h3,
-html[data-theme="logistica-neon"] .instruction-section h4,
-html[data-theme="logistica-neon"] .instruction-section li strong,
-html[data-theme="logistica-neon"] .instruction-section p strong,
-html[data-theme="logistica-neon"] .instruction-formulas code,
-html[data-theme="logistica-neon"] .instruction-table td:first-child,
-html[data-theme="logistica-neon"] .data-table td {
-  color:var(--logistica-text-strong);
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) body {
+  color:var(--theme-text);
+  background:
+    radial-gradient(circle at 84% 12%,var(--theme-glow-1),transparent 26rem),
+    radial-gradient(circle at 10% 78%,var(--theme-glow-2),transparent 30rem),
+    linear-gradient(145deg,var(--theme-bg),var(--theme-bg-2));
+  background-attachment:fixed;
 }
 
-html[data-theme="logistica-neon"] .section-description,
-html[data-theme="logistica-neon"] .section-heading p,
-html[data-theme="logistica-neon"] .report-card__meta,
-html[data-theme="logistica-neon"] .details-list dt,
-html[data-theme="logistica-neon"] .branch-balance-section > header small,
-html[data-theme="logistica-neon"] .branch-balance-grid article > span,
-html[data-theme="logistica-neon"] .branch-balance-grid article > small,
-html[data-theme="logistica-neon"] .purchase-details dt,
-html[data-theme="logistica-neon"] .operational-insights span,
-html[data-theme="logistica-neon"] .operational-insights small,
-html[data-theme="logistica-neon"] .process-stages span,
-html[data-theme="logistica-neon"] .process-stages small,
-html[data-theme="logistica-neon"] .process-detail-group dt,
-html[data-theme="logistica-neon"] .process-detail-group small,
-html[data-theme="logistica-neon"] .review-detail-grid dt,
-html[data-theme="logistica-neon"] .review-recommendation span,
-html[data-theme="logistica-neon"] .review-recommendation small,
-html[data-theme="logistica-neon"] .monthly-consumption-list small,
-html[data-theme="logistica-neon"] .of-generation-summary__bucket > span,
-html[data-theme="logistica-neon"] .of-generation-summary__bucket > small,
-html[data-theme="logistica-neon"] .of-generation-path small,
-html[data-theme="logistica-neon"] .of-generation-timeline article small,
-html[data-theme="logistica-neon"] .of-trend-card__heading p,
-html[data-theme="logistica-neon"] .of-trend-option > span,
-html[data-theme="logistica-neon"] .of-trend-chart__caption,
-html[data-theme="logistica-neon"] .instructions-index a,
-html[data-theme="logistica-neon"] .instruction-section p,
-html[data-theme="logistica-neon"] .instruction-section li,
-html[data-theme="logistica-neon"] .instruction-table td {
-  color:var(--logistica-text-body);
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) body::before {
+  opacity:.72;
+  background-image:
+    linear-gradient(var(--theme-grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--theme-grid) 1px,transparent 1px);
+  background-size:44px 44px;
 }
 
-html[data-theme="logistica-neon"] .data-table th,
-html[data-theme="logistica-neon"] .instruction-table th {
-  color:#f0edff;
-  background:#151b3f;
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) .topbar {
+  color:var(--theme-text);
+  border-bottom:1px solid var(--theme-border);
+  background:linear-gradient(120deg,var(--theme-topbar),var(--theme-topbar-2));
+  box-shadow:0 14px 38px rgba(0,0,0,.34);
 }
 
-html[data-theme="logistica-neon"] .branch-balance-section,
-html[data-theme="logistica-neon"] .branch-balance-section > header,
-html[data-theme="logistica-neon"] .branch-balance-grid article,
-html[data-theme="logistica-neon"] .purchase-min-max,
-html[data-theme="logistica-neon"] .review-detail-grid > section,
-html[data-theme="logistica-neon"] .instruction-section,
-html[data-theme="logistica-neon"] .instructions-index,
-html[data-theme="logistica-neon"] .of-generation-summary__bucket,
-html[data-theme="logistica-neon"] .of-trend-card {
-  border-color:rgba(105,117,224,.38);
-  background:linear-gradient(145deg,rgba(16,21,56,.96),rgba(8,11,31,.98));
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) .brand__mark {
+  color:var(--theme-mark-text,#fff);
+  background:linear-gradient(145deg,var(--theme-accent),var(--theme-accent-2));
+  box-shadow:0 0 24px var(--theme-glow-strong);
 }
 
-html[data-theme="logistica-neon"] .review-card__comparison > span,
-html[data-theme="logistica-neon"] .monthly-consumption-list span,
-html[data-theme="logistica-neon"] .of-generation-path,
-html[data-theme="logistica-neon"] .of-period-slicer__controls label,
-html[data-theme="logistica-neon"] .instruction-grid section {
-  border-color:#202752;
-  background:#0c1129;
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) :is(
+  .page-panel,.metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell
+) {
+  color:var(--theme-text);
+  border-color:var(--theme-border);
+  background:linear-gradient(145deg,var(--theme-surface),var(--theme-surface-2));
+  box-shadow:0 12px 28px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.035);
 }
 
-html[data-theme="logistica-neon"] .modal-shell,
-html[data-theme="logistica-neon"] .modal-content {
-  color:var(--logistica-text-strong);
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) :is(
+  .brand h1,.section-heading h2,.analytics-card__heading h3,.metric strong,.item-card h3,.item-card__title,
+  .report-card__title,.report-card__meta strong,.need-summary strong,.summary-cards strong,
+  .details-list dd,.branch-balance-section>header strong,.branch-balance-grid article>strong,
+  .purchase-min-max strong,.purchase-details dd,.operational-insights strong,.process-stages strong,
+  .process-detail-group>header strong,.process-detail-group dd,.procurement-people strong,
+  .review-detail-grid h3,.review-detail-grid dd,.monthly-consumption-list strong,.review-recommendation strong,
+  .of-generation-summary__bucket>strong,.of-generation-path strong,.of-generation-timeline article strong,
+  .of-period-slicer__heading strong,.of-trend-card__heading h3,.of-trend-chart__caption strong,
+  .instructions-index>strong,.instruction-section h3,.instruction-section h4,.instruction-section li strong,
+  .instruction-section p strong,.instruction-formulas code,.instruction-table td:first-child,.data-table td,
+  .modal-header h2,.modal-header strong
+) { color:var(--theme-text); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) :is(
+  .section-description,.section-heading p,.report-card__meta,.details-list dt,.branch-balance-section>header small,
+  .branch-balance-grid article>span,.branch-balance-grid article>small,.purchase-details dt,
+  .operational-insights span,.operational-insights small,.process-stages span,.process-stages small,
+  .process-detail-group dt,.process-detail-group small,.review-detail-grid dt,.review-recommendation span,
+  .review-recommendation small,.monthly-consumption-list small,.of-generation-summary__bucket>span,
+  .of-generation-summary__bucket>small,.of-generation-path small,.of-generation-timeline article small,
+  .of-trend-card__heading p,.of-trend-option>span,.of-trend-chart__caption,.instructions-index a,
+  .instruction-section p,.instruction-section li,.instruction-table td,.modal-header p,.modal-code,
+  .metric small,.metric__label,.field>span,.switch-field
+) { color:var(--theme-muted); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) :is(select,input,.excel-filter__trigger,.excel-filter__menu) {
+  color:var(--theme-text);
+  border-color:var(--theme-border);
+  background:var(--theme-input);
 }
 
-html[data-theme="logistica-neon"] .modal-header h2,
-html[data-theme="logistica-neon"] .modal-header strong {
-  color:#fff;
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) select option { color:var(--theme-text); background:var(--theme-input); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) :is(.excel-filter__label,.excel-filter__option,.excel-filter__search) { color:var(--theme-text); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) .excel-filter__option:hover { color:#fff; background:var(--theme-accent-soft); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) .app-nav__tab { color:var(--theme-muted); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) .app-nav__tab:hover { color:#fff; background:var(--theme-accent-soft); }
+
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) .app-nav__tab.is-active {
+  color:var(--theme-active-text,#fff);
+  background:linear-gradient(135deg,var(--theme-accent),var(--theme-accent-2));
+  box-shadow:0 0 22px var(--theme-glow-strong);
 }
 
-html[data-theme="logistica-neon"] .modal-header p,
-html[data-theme="logistica-neon"] .modal-code {
-  color:#c7cbea;
+:is(
+  html[data-theme="azul-corporativo"],
+  html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],
+  html[data-theme="vermelho-impacto"],
+  html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],
+  html[data-theme="night-minimal"],
+  html[data-theme="galaxia"],
+  html[data-theme="palmeiras"]
+) :is(.button--primary,.button--export) {
+  color:var(--theme-button-text,#fff);
+  border-color:var(--theme-accent-2);
+  background:linear-gradient(135deg,var(--theme-accent),var(--theme-accent-2));
+  box-shadow:0 0 18px var(--theme-glow-strong);
 }
 
-html[data-theme="logistica-neon"] .excel-filter__label,
-html[data-theme="logistica-neon"] .excel-filter__option,
-html[data-theme="logistica-neon"] .excel-filter__search {
-  color:#f7f4ff;
+/* 01 — Azul Corporativo */
+html[data-theme="azul-corporativo"] {
+  --theme-bg:#030b18;--theme-bg-2:#071a33;--theme-surface:#09172b;--theme-surface-2:#0d2340;
+  --theme-topbar:#061326;--theme-topbar-2:#0b2e58;--theme-input:#071526;--theme-border:#204b78;
+  --theme-text:#f5f9ff;--theme-muted:#a9bdd5;--theme-accent:#2878ff;--theme-accent-2:#19b9ff;
+  --theme-accent-soft:rgba(40,120,255,.2);--theme-focus:rgba(40,120,255,.38);--theme-glow-1:rgba(27,119,255,.22);
+  --theme-glow-2:rgba(25,185,255,.12);--theme-glow-strong:rgba(40,120,255,.34);--theme-grid:rgba(55,139,255,.055);
 }
 
-html[data-theme="logistica-neon"] .excel-filter__option {
-  border-bottom-color:#202752;
+/* 02 — Verde Industrial */
+html[data-theme="verde-industrial-2"] {
+  --theme-bg:#02100b;--theme-bg-2:#05271c;--theme-surface:#071a14;--theme-surface-2:#0a2a20;
+  --theme-topbar:#041610;--theme-topbar-2:#0a3426;--theme-input:#061a14;--theme-border:#176847;
+  --theme-text:#f1fff8;--theme-muted:#a9cab9;--theme-accent:#00b96b;--theme-accent-2:#35e88e;
+  --theme-accent-soft:rgba(0,185,107,.2);--theme-focus:rgba(0,185,107,.38);--theme-glow-1:rgba(0,185,107,.2);
+  --theme-glow-2:rgba(53,232,142,.1);--theme-glow-strong:rgba(0,185,107,.32);--theme-grid:rgba(40,190,120,.05);
 }
 
-html[data-theme="logistica-neon"] .excel-filter__option:hover {
-  color:#fff;
-  background:rgba(139,70,255,.24);
+/* 03 — Amber Tech */
+html[data-theme="amber-tech"] {
+  --theme-bg:#100a01;--theme-bg-2:#2a1902;--theme-surface:#1a1106;--theme-surface-2:#2c1b08;
+  --theme-topbar:#161005;--theme-topbar-2:#3a2104;--theme-input:#160f06;--theme-border:#755019;
+  --theme-text:#fff9ec;--theme-muted:#d4c2a0;--theme-accent:#f49a0a;--theme-accent-2:#ffc43d;
+  --theme-accent-soft:rgba(244,154,10,.2);--theme-focus:rgba(244,154,10,.38);--theme-glow-1:rgba(244,154,10,.2);
+  --theme-glow-2:rgba(255,196,61,.09);--theme-glow-strong:rgba(244,154,10,.34);--theme-grid:rgba(244,154,10,.05);
+  --theme-button-text:#211300;--theme-active-text:#211300;--theme-mark-text:#211300;
 }
 
-/* Elementos que possuem fundo claro próprio mantêm texto escuro por contraste. */
-html[data-theme="logistica-neon"] .status-pill--critical,
-html[data-theme="logistica-neon"] .status-pill--success,
-html[data-theme="logistica-neon"] .status-pill--warning,
-html[data-theme="logistica-neon"] .status-pill--info,
-html[data-theme="logistica-neon"] .status-pill--neutral,
-html[data-theme="logistica-neon"] .instruction-note,
-html[data-theme="logistica-neon"] .instruction-alert:not(.instruction-alert--info),
-html[data-theme="logistica-neon"] .report-card--need.is-cavaco-alert,
-html[data-theme="logistica-neon"] .cavaco-alert-note,
-html[data-theme="logistica-neon"] .cavaco-supplier-note {
-  color:initial;
+/* 04 — Vermelho Impacto */
+html[data-theme="vermelho-impacto"] {
+  --theme-bg:#100207;--theme-bg-2:#2b0710;--theme-surface:#19080d;--theme-surface-2:#2a0d15;
+  --theme-topbar:#15050a;--theme-topbar-2:#3b0b16;--theme-input:#17070c;--theme-border:#762235;
+  --theme-text:#fff5f7;--theme-muted:#d4acb6;--theme-accent:#f52c4c;--theme-accent-2:#ff6178;
+  --theme-accent-soft:rgba(245,44,76,.2);--theme-focus:rgba(245,44,76,.38);--theme-glow-1:rgba(245,44,76,.2);
+  --theme-glow-2:rgba(255,97,120,.1);--theme-glow-strong:rgba(245,44,76,.34);--theme-grid:rgba(245,44,76,.05);
 }
+
+/* 05 — Ciano Clean */
+html[data-theme="ciano-clean"] {
+  --theme-bg:#021115;--theme-bg-2:#062630;--theme-surface:#061a21;--theme-surface-2:#0a2832;
+  --theme-topbar:#05171d;--theme-topbar-2:#07333f;--theme-input:#061820;--theme-border:#16667a;
+  --theme-text:#f2fdff;--theme-muted:#abd2da;--theme-accent:#00cde8;--theme-accent-2:#59efff;
+  --theme-accent-soft:rgba(0,205,232,.18);--theme-focus:rgba(0,205,232,.35);--theme-glow-1:rgba(0,205,232,.2);
+  --theme-glow-2:rgba(89,239,255,.09);--theme-glow-strong:rgba(0,205,232,.32);--theme-grid:rgba(0,205,232,.045);
+  --theme-button-text:#001b20;--theme-active-text:#001b20;--theme-mark-text:#001b20;
+}
+
+/* 06 — Rosa Premium */
+html[data-theme="rosa-premium"] {
+  --theme-bg:#11040f;--theme-bg-2:#2b0925;--theme-surface:#1a0918;--theme-surface-2:#2a0e26;
+  --theme-topbar:#160713;--theme-topbar-2:#3a0b32;--theme-input:#180815;--theme-border:#74305f;
+  --theme-text:#fff6fc;--theme-muted:#d7b0cb;--theme-accent:#f5329c;--theme-accent-2:#ff74bf;
+  --theme-accent-soft:rgba(245,50,156,.18);--theme-focus:rgba(245,50,156,.35);--theme-glow-1:rgba(245,50,156,.2);
+  --theme-glow-2:rgba(255,116,191,.09);--theme-glow-strong:rgba(245,50,156,.32);--theme-grid:rgba(245,50,156,.045);
+}
+
+/* 07 — Night Minimal */
+html[data-theme="night-minimal"] {
+  --theme-bg:#05070a;--theme-bg-2:#0d1118;--theme-surface:#0b0f15;--theme-surface-2:#121821;
+  --theme-topbar:#080b10;--theme-topbar-2:#111722;--theme-input:#0a0e14;--theme-border:#29313e;
+  --theme-text:#f4f6f8;--theme-muted:#9ca7b7;--theme-accent:#7f8b9c;--theme-accent-2:#b8c2cf;
+  --theme-accent-soft:rgba(150,165,185,.14);--theme-focus:rgba(150,165,185,.28);--theme-glow-1:rgba(100,115,140,.12);
+  --theme-glow-2:rgba(160,175,195,.05);--theme-glow-strong:rgba(150,165,185,.2);--theme-grid:rgba(170,180,195,.025);
+  --theme-button-text:#0a0d12;--theme-active-text:#0a0d12;--theme-mark-text:#0a0d12;
+}
+
+/* 08 — Galáxia */
+html[data-theme="galaxia"] {
+  --theme-bg:#05020f;--theme-bg-2:#12072b;--theme-surface:#0d0820;--theme-surface-2:#1b0d39;
+  --theme-topbar:#0c061d;--theme-topbar-2:#251052;--theme-input:#0c071d;--theme-border:#51318e;
+  --theme-text:#faf7ff;--theme-muted:#c0b5d9;--theme-accent:#7b46f6;--theme-accent-2:#c13cff;
+  --theme-accent-soft:rgba(123,70,246,.2);--theme-focus:rgba(123,70,246,.38);--theme-glow-1:rgba(123,70,246,.24);
+  --theme-glow-2:rgba(193,60,255,.12);--theme-glow-strong:rgba(139,74,255,.36);--theme-grid:rgba(150,95,255,.05);
+}
+html[data-theme="galaxia"] body::after {
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.5;
+  background-image:radial-gradient(circle,#fff 0 1px,transparent 1.4px),radial-gradient(circle,#a98cff 0 1px,transparent 1.4px);
+  background-size:110px 110px,170px 170px;background-position:10px 20px,55px 80px;
+}
+
+/* =========================================================
+   Temas claros
+   ========================================================= */
+html[data-theme="clean-light-2"],html[data-theme="areia-industrial"] { color-scheme:light; }
+
+html[data-theme="clean-light-2"] {
+  --text:#10284b;--muted:#64748b;--surface:#fff;--navy-950:#eff5ff;--navy-900:#fff;--navy-800:#f7faff;
+  --navy-700:#c9d8ed;--blue-600:#2563eb;--blue-500:#3b82f6;--blue-100:#dbeafe;
+  --steel-700:#183153;--steel-500:#6b7f99;--steel-300:#cad7e8;--steel-200:#d9e4f1;--steel-100:#eef4fb;--steel-50:#f7faff;
+  --active-accent:#2563eb;--focus-color:rgba(37,99,235,.25);
+}
+html[data-theme="clean-light-2"] body {
+  color:#10284b;background:radial-gradient(circle at 85% 10%,rgba(59,130,246,.13),transparent 24rem),linear-gradient(145deg,#f8fbff,#edf4ff);background-attachment:fixed;
+}
+html[data-theme="clean-light-2"] body::before { background-image:linear-gradient(rgba(37,99,235,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.035) 1px,transparent 1px);background-size:44px 44px; }
+html[data-theme="clean-light-2"] .topbar { color:#fff;background:linear-gradient(115deg,#1546a0,#2878ea);border-bottom-color:#8cb9ff;box-shadow:0 12px 30px rgba(37,99,235,.18); }
+html[data-theme="clean-light-2"] .brand__mark { color:#fff;background:linear-gradient(145deg,#1f67e8,#4aa3ff);box-shadow:0 0 20px rgba(37,99,235,.3); }
+html[data-theme="clean-light-2"] :is(.page-panel,.metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,.need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,.purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,.of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell) { color:#10284b;border-color:#d7e4f4;background:rgba(255,255,255,.94);box-shadow:0 10px 24px rgba(30,70,120,.08); }
+html[data-theme="clean-light-2"] :is(.section-heading h2,.analytics-card__heading h3,.metric strong,.item-card h3,.item-card__title,.report-card__title,.need-summary strong,.summary-cards strong,.data-table td,.modal-header h2,.modal-header strong) { color:#10284b; }
+html[data-theme="clean-light-2"] :is(.section-description,.section-heading p,.metric small,.metric__label,.field>span,.switch-field,.details-list dt,.purchase-details dt,.instruction-section p,.instruction-section li) { color:#657991; }
+html[data-theme="clean-light-2"] :is(select,input,.excel-filter__trigger,.excel-filter__menu) { color:#173657;border-color:#c8d8eb;background:#fff; }
+html[data-theme="clean-light-2"] select option { color:#173657;background:#fff; }
+html[data-theme="clean-light-2"] .app-nav__tab.is-active { color:#fff;background:linear-gradient(135deg,#2466df,#49a4ff); }
+
+html[data-theme="areia-industrial"] {
+  --text:#3d321f;--muted:#7e6f58;--surface:#fff9ec;--navy-950:#eadbbc;--navy-900:#fff9ec;--navy-800:#f4e7ce;
+  --navy-700:#b59c70;--blue-600:#8c672d;--blue-500:#b8893e;--blue-100:#efe1c2;
+  --steel-700:#493a25;--steel-500:#7f705b;--steel-300:#cbb995;--steel-200:#ddccaa;--steel-100:#f0e5cf;--steel-50:#faf3e4;
+  --active-accent:#9f752f;--focus-color:rgba(159,117,47,.25);
+}
+html[data-theme="areia-industrial"] body {
+  color:#3d321f;background:radial-gradient(circle at 84% 10%,rgba(171,123,49,.13),transparent 25rem),linear-gradient(145deg,#f4ead7,#e8d8b8);background-attachment:fixed;
+}
+html[data-theme="areia-industrial"] body::before { background-image:linear-gradient(rgba(95,72,38,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(95,72,38,.04) 1px,transparent 1px);background-size:42px 42px; }
+html[data-theme="areia-industrial"] .topbar { color:#fff7e8;background:linear-gradient(115deg,#594326,#806039);border-bottom-color:#b89c71;box-shadow:0 12px 30px rgba(78,55,24,.2); }
+html[data-theme="areia-industrial"] .brand__mark { color:#fff7e8;background:linear-gradient(145deg,#8b642b,#be8f45);box-shadow:0 0 20px rgba(139,100,43,.3); }
+html[data-theme="areia-industrial"] :is(.page-panel,.metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,.need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,.purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,.of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell) { color:#3d321f;border-color:#d7c39c;background:rgba(255,249,236,.95);box-shadow:0 10px 24px rgba(88,64,29,.09); }
+html[data-theme="areia-industrial"] :is(.section-heading h2,.analytics-card__heading h3,.metric strong,.item-card h3,.item-card__title,.report-card__title,.need-summary strong,.summary-cards strong,.data-table td,.modal-header h2,.modal-header strong) { color:#3d321f; }
+html[data-theme="areia-industrial"] :is(.section-description,.section-heading p,.metric small,.metric__label,.field>span,.switch-field,.details-list dt,.purchase-details dt,.instruction-section p,.instruction-section li) { color:#7b6b52; }
+html[data-theme="areia-industrial"] :is(select,input,.excel-filter__trigger,.excel-filter__menu) { color:#493a25;border-color:#cab58c;background:#fffaf0; }
+html[data-theme="areia-industrial"] select option { color:#493a25;background:#fffaf0; }
+html[data-theme="areia-industrial"] .app-nav__tab.is-active { color:#fff7e8;background:linear-gradient(135deg,#8a632c,#ba8d49); }
+
+/* =========================================================
+   Palmeiras — tema especial com estádio e campo estilizados
+   ========================================================= */
+html[data-theme="palmeiras"] {
+  --theme-bg:#00110b;--theme-bg-2:#002a1a;--theme-surface:rgba(3,35,24,.94);--theme-surface-2:rgba(5,54,34,.94);
+  --theme-topbar:#002116;--theme-topbar-2:#005331;--theme-input:#03281c;--theme-border:#147849;
+  --theme-text:#f4fff8;--theme-muted:#b1d1bf;--theme-accent:#00a84f;--theme-accent-2:#39d675;
+  --theme-accent-soft:rgba(0,168,79,.22);--theme-focus:rgba(0,168,79,.4);--theme-glow-1:rgba(0,168,79,.28);
+  --theme-glow-2:rgba(214,175,55,.12);--theme-glow-strong:rgba(0,168,79,.38);--theme-grid:rgba(230,255,238,.035);
+  --theme-gold:#d6af37;
+}
+html[data-theme="palmeiras"] body {
+  background:
+    radial-gradient(ellipse at 50% -8%,rgba(255,255,255,.22) 0 1.5%,transparent 18%),
+    radial-gradient(ellipse at 18% 0%,rgba(255,255,255,.13),transparent 20%),
+    radial-gradient(ellipse at 82% 0%,rgba(255,255,255,.13),transparent 20%),
+    linear-gradient(90deg,transparent 49.7%,rgba(255,255,255,.055) 49.7% 50.3%,transparent 50.3%),
+    linear-gradient(0deg,rgba(0,99,54,.14),rgba(0,27,17,.82)),
+    repeating-linear-gradient(90deg,rgba(0,82,45,.25) 0 80px,rgba(0,54,33,.25) 80px 160px),
+    #00110b;
+  background-attachment:fixed;
+}
+html[data-theme="palmeiras"] body::before {
+  opacity:.9;
+  background-image:
+    radial-gradient(circle at 14% 5%,rgba(255,255,255,.95) 0 1px,rgba(255,255,255,.25) 2px,transparent 5px),
+    radial-gradient(circle at 23% 4%,rgba(255,255,255,.95) 0 1px,rgba(255,255,255,.25) 2px,transparent 5px),
+    radial-gradient(circle at 77% 4%,rgba(255,255,255,.95) 0 1px,rgba(255,255,255,.25) 2px,transparent 5px),
+    radial-gradient(circle at 86% 5%,rgba(255,255,255,.95) 0 1px,rgba(255,255,255,.25) 2px,transparent 5px),
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:auto,auto,auto,auto,48px 48px,48px 48px;
+}
+html[data-theme="palmeiras"] body::after {
+  content:"";position:fixed;left:50%;bottom:-22vh;transform:translateX(-50%);width:min(1120px,94vw);height:60vh;z-index:-1;pointer-events:none;opacity:.23;
+  border:2px solid rgba(255,255,255,.42);border-radius:48% 48% 0 0/18% 18% 0 0;
+  background:
+    linear-gradient(90deg,transparent 49.7%,rgba(255,255,255,.48) 49.7% 50.3%,transparent 50.3%),
+    radial-gradient(circle at 50% 50%,transparent 0 68px,rgba(255,255,255,.45) 69px 71px,transparent 72px),
+    linear-gradient(transparent 49.7%,rgba(255,255,255,.35) 49.7% 50.3%,transparent 50.3%);
+}
+html[data-theme="palmeiras"] .topbar { border-bottom:1px solid rgba(214,175,55,.55);box-shadow:0 12px 42px rgba(0,0,0,.46),inset 0 -1px 0 rgba(214,175,55,.22); }
+html[data-theme="palmeiras"] .brand__mark { border:1px solid rgba(214,175,55,.65);background:linear-gradient(145deg,#007a3d,#00b85b);box-shadow:0 0 22px rgba(0,184,91,.38); }
+html[data-theme="palmeiras"] .app-nav__tab.is-active { color:#fff;background:linear-gradient(135deg,#007a3d,#00b85b);box-shadow:0 0 22px rgba(0,184,91,.34); }
+html[data-theme="palmeiras"] .eyebrow { color:#e1bd54; }
+html[data-theme="palmeiras"] .metric { border-top-color:var(--theme-gold); }
+html[data-theme="palmeiras"] .button--ghost { color:#e8c85f;border-color:rgba(214,175,55,.55);background:rgba(214,175,55,.08); }
+html[data-theme="palmeiras"] .version-badge { color:#f8df82;border-color:rgba(214,175,55,.5);background:rgba(214,175,55,.1); }
