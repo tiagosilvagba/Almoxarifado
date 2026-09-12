@@ -1,126 +1,345 @@
-@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@4c20673c90c504052c07e78eeb2ee04b6be7ed6b/style.css");
+@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@661a1fe2cf5a7ca3ef83966457599a9991fbad4e/style.css");
 
-/* Navegação lateral — desktop/tablet. Mantém o HTML e toda a lógica das abas intactos. */
-@media (min-width: 901px) {
-  :root { --side-nav-width: 250px; }
+/* =========================================================
+   Layout responsivo dedicado
+   Desktop >= 1100px mantém o modelo atual com navegação lateral.
+   Mobile/compacto <= 1099px recebe interface própria para toque.
+   ========================================================= */
 
-  .app-nav-wrap {
-    position:fixed;
-    z-index:80;
-    left:0;
-    top:var(--topbar-height, 92px);
-    bottom:0;
-    width:var(--side-nav-width);
-    overflow-y:auto;
-    overflow-x:hidden;
-    border-right:1px solid var(--steel-200);
-    border-bottom:0;
-    background:var(--navy-900);
-    box-shadow:10px 0 30px rgba(0,0,0,.12);
-    -webkit-overflow-scrolling:touch;
-  }
-
-  .app-nav-wrap .app-nav {
-    width:100%;
-    max-width:none;
-    margin:0;
-    padding:18px 12px 28px;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    gap:7px;
-    overflow:visible;
-  }
-
-  .app-nav__tab {
-    width:100%;
-    min-height:46px;
-    padding:11px 14px;
-    display:flex;
-    align-items:center;
-    justify-content:flex-start;
-    white-space:normal;
-    line-height:1.25;
-    text-align:left;
-    border-radius:11px;
-  }
-
-  .app-nav__tab.is-active { transform:none; }
-
-  body > main.main-content {
-    width:auto;
-    max-width:none;
-    margin-left:var(--side-nav-width);
-    padding-left:clamp(18px,2.2vw,34px);
-    padding-right:clamp(18px,2.2vw,34px);
-  }
+@media (min-width:1100px) {
+  /* O desktop permanece exatamente como na versão anterior. */
 }
 
-/* Celular: menu lateral compacto à esquerda, liberando a largura do conteúdo. */
-@media (max-width: 900px) {
-  :root { --mobile-side-nav-width: 72px; }
-
-  .app-nav-wrap {
-    position:fixed;
-    z-index:85;
-    left:0;
-    top:var(--topbar-height, 120px);
-    bottom:0;
-    width:var(--mobile-side-nav-width);
-    overflow-y:auto;
-    overflow-x:hidden;
-    border-right:1px solid var(--steel-200);
-    border-bottom:0;
-    background:var(--navy-900);
-    box-shadow:8px 0 24px rgba(0,0,0,.16);
-    -webkit-overflow-scrolling:touch;
+@media (max-width:1099px) {
+  :root {
+    --mobile-nav-height:74px;
+    --mobile-page-gap:14px;
   }
 
-  .app-nav-wrap .app-nav {
-    width:100%;
-    max-width:none;
-    margin:0;
-    padding:10px 7px 22px;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
+  html { scroll-padding-bottom:calc(var(--mobile-nav-height) + 18px); }
+  body { padding-bottom:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 12px); }
+
+  /* Cabeçalho compacto, com foco no conteúdo. */
+  .topbar {
+    position:sticky;
+    top:0;
+    z-index:70;
+    padding-top:env(safe-area-inset-top);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+
+  .topbar__content {
+    min-height:70px;
+    padding:10px 12px;
+    gap:10px;
+  }
+
+  .brand { min-width:0; gap:9px; }
+  .brand__mark { width:42px; height:42px; flex:0 0 42px; border-radius:13px; }
+  .brand h1 { font-size:clamp(16px,4.6vw,21px); line-height:1.05; }
+  .brand p { display:none; }
+
+  .topbar__actions {
+    margin-left:auto;
     gap:7px;
-    overflow:visible;
+    flex-wrap:nowrap;
   }
 
-  .app-nav__tab {
-    width:100%;
+  .theme-picker { min-width:0; width:auto; }
+  .theme-picker > span { display:none; }
+  .theme-picker select {
+    width:116px;
     min-width:0;
-    min-height:52px;
-    padding:8px 5px;
-    display:flex;
+    height:42px;
+    padding:0 28px 0 10px;
+    font-size:12px;
+    border-radius:12px;
+  }
+
+  .language-toggle,
+  .density-toggle,
+  .icon-button {
+    min-width:42px;
+    width:42px;
+    height:42px;
+    padding:0;
+    border-radius:12px;
+  }
+
+  .language-toggle small,
+  .density-toggle { font-size:0; }
+  .density-toggle::after { content:"↕"; font-size:18px; }
+
+  /* Remove completamente o modelo lateral usado no desktop. */
+  .app-nav-wrap {
+    position:fixed !important;
+    z-index:95;
+    left:0 !important;
+    right:0;
+    top:auto !important;
+    bottom:0;
+    width:100% !important;
+    height:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+    overflow:hidden;
+    border:0;
+    border-top:1px solid var(--steel-200);
+    background:color-mix(in srgb,var(--navy-900) 94%,transparent);
+    box-shadow:0 -10px 30px rgba(0,0,0,.18);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+
+  .app-nav-wrap .app-nav {
+    width:100% !important;
+    max-width:none !important;
+    height:100%;
+    margin:0 !important;
+    padding:7px 8px calc(7px + env(safe-area-inset-bottom)) !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:stretch;
+    gap:6px;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    scrollbar-width:none;
+    scroll-snap-type:x proximity;
+  }
+  .app-nav::-webkit-scrollbar { display:none; }
+
+  .app-nav__tab {
+    flex:0 0 86px;
+    width:86px !important;
+    min-width:86px !important;
+    min-height:56px !important;
+    padding:7px 6px !important;
+    display:flex !important;
     align-items:center;
-    justify-content:center;
-    white-space:normal;
-    overflow-wrap:anywhere;
-    text-align:center;
-    font-size:10px;
-    line-height:1.15;
-    border-radius:10px;
+    justify-content:center !important;
+    white-space:normal !important;
+    text-align:center !important;
+    font-size:10.5px !important;
+    font-weight:700;
+    line-height:1.12 !important;
+    border-radius:12px !important;
+    scroll-snap-align:center;
   }
 
+  .app-nav__tab.is-active {
+    transform:none !important;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+  }
+
+  /* Conteúdo ocupa 100% da tela. */
   body > main.main-content {
-    width:auto;
-    max-width:none;
-    margin-left:var(--mobile-side-nav-width);
-    padding-left:12px;
-    padding-right:12px;
+    width:100% !important;
+    max-width:none !important;
+    margin-left:0 !important;
+    padding:var(--mobile-page-gap) 12px calc(var(--mobile-nav-height) + 18px) !important;
+  }
+
+  .page-panel {
+    padding:0;
+    border-radius:0;
+    background:transparent;
+    border:0;
+    box-shadow:none;
+  }
+
+  .section-heading {
+    align-items:flex-start;
+    gap:8px;
+    margin:8px 0 13px;
+  }
+  .section-heading h2 { font-size:clamp(21px,6vw,28px); line-height:1.08; }
+  .section-heading p,.section-description { font-size:13px; line-height:1.45; }
+
+  /* Barra de filtros permanece sempre acessível. */
+  .global-filter-bar {
+    position:sticky;
+    top:72px;
+    z-index:55;
+    margin:0 0 14px;
+    padding:8px;
+    gap:8px;
+    border-radius:15px;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .button--filter { min-height:44px; padding:9px 13px; border-radius:12px; }
+  .filter-summary {
+    min-width:0;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:12px;
+  }
+
+  /* Filtros em formato de bottom-sheet/tela móvel. */
+  .global-filters {
+    position:fixed !important;
+    z-index:120;
+    inset:max(10px,env(safe-area-inset-top)) 8px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 8px) 8px;
+    width:auto !important;
+    max-width:none !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:16px 13px 14px;
+    overflow-y:auto;
+    border-radius:22px;
+    box-shadow:0 24px 70px rgba(0,0,0,.42);
+    overscroll-behavior:contain;
+  }
+
+  .filter-panel__header {
+    position:sticky;
+    top:-16px;
+    z-index:4;
+    margin:-16px -13px 12px;
+    padding:15px 13px 11px;
+    background:inherit;
+    border-radius:22px 22px 0 0;
+  }
+
+  .filters-grid { grid-template-columns:1fr !important; gap:10px !important; }
+  .field,.switch-field { min-width:0; }
+  .field input,.field select,.excel-filter__trigger { min-height:48px; font-size:16px; }
+
+  .excel-filter__menu {
+    position:fixed !important;
+    z-index:145 !important;
+    left:12px !important;
+    right:12px !important;
+    top:auto !important;
+    bottom:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 12px) !important;
+    width:auto !important;
+    max-width:none !important;
+    max-height:min(62vh,540px) !important;
+    border-radius:18px !important;
+    overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.48) !important;
+  }
+
+  .excel-filter__search { min-height:50px; font-size:16px !important; }
+  .excel-filter__options { max-height:44vh !important; overflow-y:auto; }
+  .excel-filter__option { min-height:46px; padding:10px 12px !important; font-size:14px; }
+
+  .filter-actions {
+    position:sticky;
+    bottom:-14px;
+    z-index:5;
+    margin:14px -13px -14px;
+    padding:10px 13px calc(10px + env(safe-area-inset-bottom));
+    display:grid;
+    grid-template-columns:1fr 1.25fr;
+    gap:8px;
+    background:inherit;
+    border-radius:0 0 22px 22px;
+  }
+  .filter-actions .button { min-height:48px; }
+
+  /* KPIs em 2 colunas; conteúdo analítico em uma coluna. */
+  .metrics-grid,
+  .metrics-grid--primary,
+  .metrics-grid--secondary {
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:10px !important;
+  }
+
+  .metric {
+    min-width:0;
+    min-height:142px;
+    padding:15px 13px;
+    border-radius:17px;
+  }
+  .metric__label { font-size:12px; line-height:1.25; }
+  .metric strong { font-size:clamp(23px,7vw,32px); line-height:1; }
+  .metric small { font-size:11.5px; line-height:1.3; }
+
+  .analytics-grid,
+  .dashboard-grid,
+  .summary-grid,
+  .report-grid,
+  .cards-grid,
+  .procurement-grid,
+  .review-cards-grid,
+  .of-generation-grid,
+  .instruction-grid {
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+
+  .analytics-card,.item-card,.report-card,.review-card,.procurement-card {
+    border-radius:18px;
+    padding:14px;
+  }
+
+  /* Listagens e tabelas utilizáveis com gesto horizontal. */
+  .data-table-wrap,
+  .table-wrap,
+  #stockTableWrap,
+  #historyTableWrap,
+  #purchaseNeedTableWrap,
+  #pendingScTableWrap {
+    width:100%;
+    max-width:100%;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+    border-radius:15px;
+  }
+
+  .data-table { min-width:720px; font-size:12px; }
+  .data-table th,.data-table td { padding:10px 9px; white-space:nowrap; }
+
+  /* Modais se comportam como telas móveis. */
+  dialog,
+  .modal,
+  .modal-shell {
+    max-width:none !important;
+  }
+  .modal-shell {
+    width:calc(100vw - 16px) !important;
+    max-height:calc(100dvh - 20px) !important;
+    margin:10px auto !important;
+    border-radius:22px !important;
+  }
+  .modal-content { padding:14px !important; }
+  .modal-header { position:sticky; top:0; z-index:6; }
+
+  /* Botões: área mínima de toque. */
+  button,.button,.icon-button,.app-nav__tab { touch-action:manipulation; }
+  .button { min-height:44px; }
+}
+
+@media (max-width:520px) {
+  .theme-picker select { width:102px; }
+  .topbar__actions { gap:5px; }
+  .brand__mark { width:38px; height:38px; flex-basis:38px; }
+
+  .metrics-grid,
+  .metrics-grid--primary,
+  .metrics-grid--secondary { gap:8px !important; }
+
+  .metric { min-height:132px; padding:13px 11px; }
+  .metric strong { font-size:clamp(21px,7vw,28px); }
+
+  .app-nav__tab {
+    flex-basis:80px;
+    width:80px !important;
+    min-width:80px !important;
+    font-size:10px !important;
   }
 }
 
-/* A barra lateral acompanha automaticamente cada tema. */
-html[data-theme="palmeiras"] .app-nav-wrap {
-  background:linear-gradient(180deg,rgba(0,65,38,.98),rgba(0,31,20,.98));
-  border-right-color:rgba(255,255,255,.16);
-  box-shadow:10px 0 32px rgba(0,90,48,.22);
-}
+/* Integração visual da navegação móvel com temas especiais. */
+@media (max-width:1099px) {
+  html[data-theme="palmeiras"] .app-nav-wrap {
+    background:linear-gradient(180deg,rgba(0,77,43,.97),rgba(0,35,22,.98));
+    border-top-color:rgba(255,255,255,.16);
+  }
 
-html[data-theme="galaxia"] .app-nav-wrap,
-html[data-theme="logistica-neon"] .app-nav-wrap {
-  background:linear-gradient(180deg,#0c0b28,#080718 70%,#050510);
+  html[data-theme="galaxia"] .app-nav-wrap,
+  html[data-theme="logistica-neon"] .app-nav-wrap {
+    background:linear-gradient(180deg,rgba(14,12,43,.97),rgba(6,6,19,.99));
+  }
 }
