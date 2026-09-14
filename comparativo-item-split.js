@@ -1,6 +1,8 @@
 "use strict";
 
 (() => {
+  let scheduled = false;
+
   function splitItem(value) {
     const text = String(value ?? "").trim();
     if (!text) return null;
@@ -22,21 +24,30 @@
       || current === code;
   }
 
+  function setTextIfChanged(node, value) {
+    if (!node) return false;
+    const next = String(value ?? "");
+    if (node.textContent === next) return false;
+    node.textContent = next;
+    return true;
+  }
+
   function normalizeTable(table) {
     if (!table) return;
     const headers = table.querySelectorAll("thead th");
-    if (headers[0]) headers[0].textContent = "Código do Item";
-    if (headers[1]) headers[1].textContent = "Nome do Item";
+    setTextIfChanged(headers[0], "Código do Item");
+    setTextIfChanged(headers[1], "Nome do Item");
 
-    table.querySelectorAll("tbody tr").forEach((row) => {
+    table.querySelectorAll("tbody tr:not([data-item-split-checked='true'])").forEach((row) => {
+      row.dataset.itemSplitChecked = "true";
       const cells = row.querySelectorAll("td");
       if (cells.length < 2) return;
       const rawItem = cells[0].textContent.trim();
       const parsed = splitItem(rawItem);
       if (!parsed) return;
-      cells[0].textContent = parsed.code;
+      setTextIfChanged(cells[0], parsed.code);
       if (shouldReplaceName(cells[1].textContent, rawItem, parsed.code)) {
-        cells[1].textContent = parsed.name;
+        setTextIfChanged(cells[1], parsed.name);
       }
       row.dataset.itemSplit = "true";
     });
@@ -47,16 +58,29 @@
     document.querySelectorAll("#page-comparativo-mensal .month-target-table").forEach(normalizeTable);
   }
 
+  function scheduleNormalize() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      normalizeComparison();
+    });
+  }
+
   function install() {
-    normalizeComparison();
     const page = document.getElementById("page-comparativo-mensal");
     if (!page) {
       setTimeout(install, 250);
       return;
     }
-    const observer = new MutationObserver(() => normalizeComparison());
-    observer.observe(page, { childList:true, subtree:true, characterData:true });
-    [100,300,700,1400].forEach((delay) => setTimeout(normalizeComparison, delay));
+
+    normalizeComparison();
+    const observer = new MutationObserver((mutations) => {
+      if (!mutations.some((mutation) => mutation.type === "childList" && mutation.addedNodes.length)) return;
+      scheduleNormalize();
+    });
+    observer.observe(page, { childList:true, subtree:true });
+    [100,300,700,1400].forEach((delay) => setTimeout(scheduleNormalize, delay));
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once:true });
