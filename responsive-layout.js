@@ -8,12 +8,19 @@
 (() => {
   let raf = 0;
 
+  function ensureResponsiveStyles() {
+    if (document.getElementById("responsiveProjectStyles")) return;
+    const link = document.createElement("link");
+    link.id = "responsiveProjectStyles";
+    link.rel = "stylesheet";
+    link.href = "./responsive-project.css?v=20260914-1";
+    document.head.appendChild(link);
+  }
+
   function detectOS() {
     const ua = navigator.userAgent || "";
     const platform = navigator.userAgentData?.platform || navigator.platform || "";
     const touchPoints = navigator.maxTouchPoints || 0;
-
-    /* iPadOS moderno pode se apresentar como Macintosh. */
     if (/iPad|iPhone|iPod/i.test(ua) || (/Mac/i.test(platform) && touchPoints > 1)) return "ios";
     if (/Android/i.test(ua)) return "android";
     if (/Windows/i.test(platform) || /Windows/i.test(ua)) return "windows";
@@ -23,13 +30,13 @@
   }
 
   function classify() {
+    ensureResponsiveStyles();
     const root = document.documentElement;
     const vv = window.visualViewport;
     const width = Math.round(vv?.width || window.innerWidth || root.clientWidth || 0);
     const height = Math.round(vv?.height || window.innerHeight || root.clientHeight || 0);
     const coarse = matchMedia("(pointer:coarse)").matches;
     const fine = matchMedia("(pointer:fine)").matches;
-    const hover = matchMedia("(hover:hover)").matches;
     const touch = coarse || navigator.maxTouchPoints > 0;
     const os = detectOS();
 
@@ -70,6 +77,7 @@
     raf = requestAnimationFrame(classify);
   }
 
+  ensureResponsiveStyles();
   classify();
   addEventListener("resize", schedule, { passive:true });
   addEventListener("orientationchange", schedule, { passive:true });
