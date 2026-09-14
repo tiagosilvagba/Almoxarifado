@@ -11,17 +11,10 @@ const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2"
 const COMPARATIVO_META_VISUAL_MODULE = "./comparativo-meta-visual.js?v=20260914-2";
 const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-2";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
-const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-4";
+const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-5";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 3.4";
+const CURRENT_PUBLIC_VERSION = "Versão 3.5";
 
-/*
- * Descoberta resiliente das bases mensais.
- * 1) usa a API pública do GitHub quando disponível;
- * 2) se a API estiver bloqueada pela rede corporativa, procura os arquivos diretamente
- *    no próprio GitHub Pages pelo padrão 01 - Estoque_<Mês>_<Ano>.csv.
- * Isso evita depender de uma lista curta fixa de meses.
- */
 (function installMonthlyRepositoryFallback() {
   if (window.__almoxMonthlyFetchFallbackInstalled) return;
   window.__almoxMonthlyFetchFallbackInstalled = true;
@@ -49,20 +42,14 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.4";
     const currentYear = new Date().getFullYear();
     const years = [];
     for (let year = currentYear - 3; year <= currentYear + 1; year += 1) years.push(year);
-
     const candidates = [];
-    for (const year of years) {
-      for (const month of months) candidates.push(`01 - Estoque_${month}_${year}.csv`);
-    }
-
+    for (const year of years) for (const month of months) candidates.push(`01 - Estoque_${month}_${year}.csv`);
     const found = [];
     const batchSize = 8;
     for (let i = 0; i < candidates.length; i += batchSize) {
       const batch = candidates.slice(i, i + batchSize);
       const results = await Promise.all(batch.map(async (name) => ({ name, exists: await fileExists(name) })));
-      results.forEach(({ name, exists }) => {
-        if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" });
-      });
+      results.forEach(({ name, exists }) => { if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" }); });
     }
     return found;
   }
@@ -70,30 +57,21 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.4";
   window.fetch = async function almoxFetch(input, init) {
     const url = typeof input === "string" ? input : input?.url || "";
     if (!apiPattern.test(url)) return nativeFetch(input, init);
-
     try {
       const response = await nativeFetch(input, init);
       if (response.ok) {
         try {
           const entries = await response.clone().json();
-          const monthlyCount = Array.isArray(entries)
-            ? entries.filter((entry) => /^01\s*-\s*Estoque_[A-Za-zÀ-ÿ]{3}_\d{4}\.csv$/i.test(entry?.name || "")).length
-            : 0;
+          const monthlyCount = Array.isArray(entries) ? entries.filter((entry) => /^01\s*-\s*Estoque_[A-Za-zÀ-ÿ]{3}_\d{4}\.csv$/i.test(entry?.name || "")).length : 0;
           if (monthlyCount > 0) return response;
-        } catch {
-          return response;
-        }
+        } catch { return response; }
       }
     } catch (error) {
       console.warn("Comparativo mensal: API GitHub indisponível; iniciando descoberta pelo GitHub Pages.", error);
     }
-
     const manifest = await discoverMonthlyFilesLocally();
     console.info(`Comparativo mensal: ${manifest.length} base(s) mensal(is) localizada(s) pelo GitHub Pages.`);
-    return new Response(JSON.stringify(manifest), {
-      status:200,
-      headers:{"Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"same-origin-discovery"}
-    });
+    return new Response(JSON.stringify(manifest), { status:200, headers:{"Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"same-origin-discovery"} });
   };
 })();
 
@@ -117,9 +95,7 @@ function enforceCurrentPublicVersion() {
 (async function bootIncrementalAlmoxarifado() {
   try { await loadIncrementalScript(PREVIOUS_BOOTSTRAP); }
   catch { await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK); }
-
   enforceCurrentPublicVersion();
-
   for (const [src, message] of [
     [COMPARATIVO_META_MODULE, "mês meta e filtros dinâmicos"],
     [LAYOUT_FIX_MODULE, "correção estrutural do layout"],
@@ -129,13 +105,12 @@ function enforceCurrentPublicVersion() {
     [COMPARATIVO_META_VISUAL_MODULE, "cálculo visual comparado x mês meta"],
     [COMPARATIVO_INCLUSOES_MODULE, "inclusões e reduções de estoque zeradas"],
     [COMPARATIVO_CARDS_RESUMO_MODULE, "cards Top 10 do comparativo"],
-    [COMPARATIVO_MES_A_MES_MODULE, "card Meta vs mês comparado"],
+    [COMPARATIVO_MES_A_MES_MODULE, "cards Meta e Meta -10% vs mês comparado"],
     [COMPARATIVO_ESCALA_MIL_MODULE, "escala x1000 de saldo e consumo"]
   ]) {
     try { await loadIncrementalScript(src); }
     catch (error) { console.error(`Não foi possível carregar ${message}.`, error); }
   }
-
   enforceCurrentPublicVersion();
   [250, 800, 1800].forEach((delay) => window.setTimeout(enforceCurrentPublicVersion, delay));
 })();
