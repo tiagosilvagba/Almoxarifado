@@ -13,7 +13,7 @@ const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-2";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
 const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-5";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 3.6";
+const CURRENT_PUBLIC_VERSION = "Versão 3.7";
 
 /*
  * Fallback global seguro para a listagem do repositório.
