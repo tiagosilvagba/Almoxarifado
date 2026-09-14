@@ -41,6 +41,59 @@ function installDesktopNavigationHost() {
   nav.dataset.detachedNavigation = "true";
 }
 
+function installZeroWithoutScStockFilter() {
+  const select = document.getElementById("stockStatusFilter");
+  if (!select || typeof positionMatchesStatus !== "function") return;
+
+  if (!select.querySelector('option[value="zero-no-sc"]')) {
+    const option = document.createElement("option");
+    option.value = "zero-no-sc";
+    option.textContent = "Itens zerados sem SC";
+    const zeroOption = select.querySelector('option[value="zero"]');
+    if (zeroOption) zeroOption.insertAdjacentElement("afterend", option);
+    else select.appendChild(option);
+    select.size = Math.max(Number(select.size || 0), 5);
+  }
+
+  if (positionMatchesStatus.__zeroWithoutScPatched) return;
+
+  const originalPositionMatchesStatus = positionMatchesStatus;
+  let cachedItems = null;
+  const ownerByPosition = new WeakMap();
+
+  function refreshPositionOwners() {
+    if (cachedItems === state.items) return;
+    cachedItems = state.items;
+    for (const item of state.items || []) {
+      for (const position of item.positions || []) ownerByPosition.set(position, item);
+    }
+  }
+
+  function zeroPositionHasNoActiveSc(position) {
+    refreshPositionOwners();
+    const item = ownerByPosition.get(position);
+    if (!item) return false;
+    const branchCode = String(position.branchCode || "");
+
+    const hasActiveSc = (item.history || []).some((record) => {
+      const sc = record.sc;
+      if (!sc?.code) return false;
+      if (typeof isWarehouseSc === "function" && !isWarehouseSc(sc)) return false;
+      if (typeof isActiveScForPurchaseCoverage === "function" && !isActiveScForPurchaseCoverage(sc)) return false;
+      const recordBranch = String(record.branchCode || "");
+      return !branchCode || !recordBranch || recordBranch === branchCode;
+    });
+
+    return !hasActiveSc;
+  }
+
+  positionMatchesStatus = function patchedPositionMatchesStatus(position, status) {
+    if (status !== "zero-no-sc") return originalPositionMatchesStatus(position, status);
+    return originalPositionMatchesStatus(position, "zero") && zeroPositionHasNoActiveSc(position);
+  };
+  positionMatchesStatus.__zeroWithoutScPatched = true;
+}
+
 function installCustomThemes() {
   const select = document.getElementById("themeSelect");
   if (!select) return;
@@ -115,16 +168,8 @@ function installZeroWithoutScMetric() {
     try {
       const codes = new Set();
       for (const item of state.filteredItems || []) {
-        const positions = (currentScopedPositions(item) || []).filter((p) => positionMatchesStatus(p,"zero"));
-        if (!positions.length) continue;
-        const uncovered = positions.some((position) => !(item.history || []).some((record) => {
-          const sc = record.sc;
-          if (!sc?.code || !isWarehouseSc(sc) || !isActiveScForPurchaseCoverage(sc)) return false;
-          const a = String(position.branchCode || "");
-          const b = String(record.branchCode || "");
-          return !a || !b || a === b;
-        }));
-        if (uncovered) codes.add(item.code);
+        const positions = (currentScopedPositions(item) || []).filter((p) => positionMatchesStatus(p,"zero-no-sc"));
+        if (positions.length) codes.add(item.code);
       }
       const node = document.getElementById("metricZeroWithoutSc");
       if (node) node.textContent = new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0}).format(codes.size);
@@ -142,6 +187,8 @@ async function registerCacheLater() {
 (async function start() {
   try { await loadScript(ALMOX_BASE); }
   catch { await loadScript(ALMOX_BASE_FALLBACK); }
+
+  installZeroWithoutScStockFilter();
 
   try {
     if (document.readyState !== "loading" && typeof init === "function") await init();
