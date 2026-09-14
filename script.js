@@ -3,8 +3,8 @@
 /* Bootstrap 2.0 — preserva a aplicação estável, garante o menu e carrega o comparativo mensal. */
 const ALMOX_STABLE_APP = "https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@0eacb92e7f010bd56a1324d8730a407759925eff/script.js";
 const ALMOX_STABLE_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/0eacb92e7f010bd56a1324d8730a407759925eff/script.js";
-const MONTHLY_COMPARISON_MODULE = "./comparativo-mensal.js?v=20260914-3";
-const MONTHLY_COMPARISON_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/main/comparativo-mensal.js?v=20260914-3";
+const MONTHLY_COMPARISON_MODULE = "./comparativo-mensal.js?v=20260914-4";
+const MONTHLY_COMPARISON_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/main/comparativo-mensal.js?v=20260914-4";
 
 const NAV_ICONS = Object.freeze({
   dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>',
