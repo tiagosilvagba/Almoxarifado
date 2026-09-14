@@ -1,7 +1,7 @@
 "use strict";
 
-const CSV_CACHE_NAME = "almoxarifado-csv-v19";
-const APP_CACHE_NAME = "almoxarifado-app-v19";
+const CSV_CACHE_NAME = "almoxarifado-csv-v20";
+const APP_CACHE_NAME = "almoxarifado-app-v20";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
 const SCRIPT_PATTERN = /\/script\.js$/i;
 const STYLE_PATTERN = /\/style\.css$/i;
