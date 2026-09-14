@@ -4,7 +4,7 @@
 const ALMOX_BASE = "https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@10730819db42aad163c4b3c335e60058b95e67ab/script.js";
 const ALMOX_BASE_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/10730819db42aad163c4b3c335e60058b95e67ab/script.js";
 const CURRENT_VERSION_LABEL = "Versão 2.0";
-const CURRENT_ASSET_VERSION = "2-0-20260914-1";
+const CURRENT_ASSET_VERSION = "2-0-20260914-2";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],
@@ -209,6 +209,79 @@ function installZeroWithoutScStockFilter() {
   positionMatchesStatus.__zeroWithoutScPatched = true;
 }
 
+function referenceOneImage(item) {
+  if (!item || typeof normalizeCode !== "function") return null;
+  const code = normalizeCode(item.code);
+  const indexed = state.imageIndex?.get(code) || [];
+  const remote = indexed.find((image) => Number(image.order) === 1);
+  if (remote?.url) return remote.url;
+
+  const local = state.localPhotos?.get(code) || [];
+  const saved = local.find((photo) => Number(String(photo.id || "").split("::").pop()) === 1 || Number(photo.order) === 1);
+  return saved?.url || null;
+}
+
+function decoratePurchaseNeedCard(card) {
+  if (!card || card.dataset.itemAvatarReady === "true") return;
+  const key = card.dataset.purchaseNeedKey;
+  const row = state.purchaseNeedByKey?.get(key);
+  const item = row?.item;
+  const title = card.querySelector(":scope > .report-card__title");
+  const code = card.querySelector(":scope > .report-card__code");
+  if (!item || !title || !code) return;
+
+  const identity = document.createElement("span");
+  identity.className = "report-card__identity";
+
+  const avatar = document.createElement("span");
+  avatar.className = "report-card__avatar";
+  avatar.setAttribute("aria-hidden", "true");
+
+  const fallback = document.createElement("span");
+  fallback.className = "report-card__avatar-fallback";
+  fallback.textContent = String(item.code || "?").slice(-2);
+  avatar.appendChild(fallback);
+
+  const src = referenceOneImage(item);
+  if (src) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.addEventListener("load", () => avatar.classList.add("has-image"), { once:true });
+    img.addEventListener("error", () => img.remove(), { once:true });
+    avatar.prepend(img);
+  }
+
+  const text = document.createElement("span");
+  text.className = "report-card__identity-text";
+  title.before(identity);
+  identity.append(avatar, text);
+  text.append(title, code);
+  card.dataset.itemAvatarReady = "true";
+}
+
+function decoratePurchaseNeedCards(root = document) {
+  root.querySelectorAll?.(".report-card--need[data-purchase-need-key]").forEach(decoratePurchaseNeedCard);
+}
+
+function installPurchaseNeedAvatars() {
+  const container = document.getElementById("purchaseNeedTableWrap");
+  if (!container) return;
+  decoratePurchaseNeedCards(container);
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof Element)) continue;
+        if (node.matches?.(".report-card--need[data-purchase-need-key]")) decoratePurchaseNeedCard(node);
+        decoratePurchaseNeedCards(node);
+      }
+    }
+  });
+  observer.observe(container, { childList:true });
+}
+
 function installCustomThemes() {
   const select = document.getElementById("themeSelect");
   if (!select) return;
@@ -317,6 +390,9 @@ async function registerCacheLater() {
   installCustomThemes();
   repairFilters();
   installZeroWithoutScMetric();
+  installPurchaseNeedAvatars();
+  window.setTimeout(decoratePurchaseNeedCards,300);
+  window.setTimeout(decoratePurchaseNeedCards,1200);
   window.setTimeout(enforceVersion,500);
   window.setTimeout(enforceVersion,1500);
   registerCacheLater();
