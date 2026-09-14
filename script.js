@@ -52,7 +52,6 @@ function injectNavigationIconStyles() {
 function ensureMonthlyComparisonTab() {
   const nav = document.querySelector(".app-nav");
   if (!nav) return false;
-
   let tab = nav.querySelector('[data-page="comparativo-mensal"]');
   if (!tab) {
     tab = document.createElement("a");
@@ -73,7 +72,6 @@ function ensureMonthlyComparisonTab() {
 function decorateNavigationTabs() {
   const nav = document.querySelector(".app-nav");
   if (!nav) return false;
-
   nav.querySelectorAll(".app-nav__tab[data-page]").forEach((tab) => {
     const page = tab.dataset.page;
     const icon = NAV_ICONS[page];
@@ -92,10 +90,74 @@ function decorateNavigationTabs() {
   return true;
 }
 
+function synchronizeThemeChrome() {
+  const navWrap = document.querySelector(".app-nav-wrap");
+  const topbar = document.querySelector(".topbar");
+  [navWrap, topbar].forEach((node) => {
+    if (!node) return;
+    node.style.setProperty("background", "var(--app-chrome-background)", "important");
+    node.style.setProperty("border-color", "var(--app-chrome-border)", "important");
+    node.style.setProperty("color", "var(--app-chrome-text)", "important");
+  });
+  if (navWrap) {
+    if (window.matchMedia("(min-width:901px), (hover:hover) and (pointer:fine)").matches) {
+      navWrap.style.setProperty("border-right-color", "var(--app-chrome-border)", "important");
+      navWrap.style.setProperty("border-top-color", "transparent", "important");
+    } else {
+      navWrap.style.setProperty("border-top-color", "var(--app-chrome-border)", "important");
+    }
+  }
+}
+
+function patchResponsiveNavigationThemeSync() {
+  if (typeof forceResponsiveNavigation !== "function" || forceResponsiveNavigation.__themeChromeSynced) return;
+  const original = forceResponsiveNavigation;
+  forceResponsiveNavigation = function synchronizedResponsiveNavigation(...args) {
+    const result = original.apply(this, args);
+    synchronizeThemeChrome();
+    return result;
+  };
+  forceResponsiveNavigation.__themeChromeSynced = true;
+}
+
+function installThemeSynchronization() {
+  patchResponsiveNavigationThemeSync();
+  synchronizeThemeChrome();
+
+  const themeSelect = document.getElementById("themeSelect");
+  themeSelect?.addEventListener("change", () => {
+    requestAnimationFrame(() => {
+      synchronizeThemeChrome();
+      if (typeof forceResponsiveNavigation === "function") forceResponsiveNavigation();
+    });
+  }, true);
+
+  const observer = new MutationObserver((mutations) => {
+    if (!mutations.some((mutation) => mutation.type === "attributes" && mutation.attributeName === "data-theme")) return;
+    requestAnimationFrame(() => {
+      synchronizeThemeChrome();
+      if (typeof forceResponsiveNavigation === "function") forceResponsiveNavigation();
+    });
+  });
+  observer.observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(synchronizeThemeChrome, 90);
+  }, { passive:true });
+
+  [100,350,750,1100,2200].forEach((delay) => window.setTimeout(() => {
+    patchResponsiveNavigationThemeSync();
+    synchronizeThemeChrome();
+  }, delay));
+}
+
 function prepareNavigationShell() {
   injectNavigationIconStyles();
   if (!ensureMonthlyComparisonTab()) return false;
   decorateNavigationTabs();
+  synchronizeThemeChrome();
   return true;
 }
 
@@ -115,6 +177,7 @@ retryNavigationShell();
   catch { await loadAlmoxScript(ALMOX_STABLE_FALLBACK); }
 
   prepareNavigationShell();
+  installThemeSynchronization();
   window.setTimeout(prepareNavigationShell, 300);
   window.setTimeout(prepareNavigationShell, 1200);
 
@@ -126,5 +189,7 @@ retryNavigationShell();
   }
 
   prepareNavigationShell();
+  patchResponsiveNavigationThemeSync();
+  synchronizeThemeChrome();
   if (typeof forceResponsiveNavigation === "function") window.setTimeout(forceResponsiveNavigation, 50);
 })();
