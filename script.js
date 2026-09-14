@@ -14,8 +14,8 @@ const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=2026091
 const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-6";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
 const AREA_FILTER_ACTIVE_MODULE = "./area-filter-active.js?v=20260914-1";
-const GITHUB_PHOTO_UPLOAD_MODULE = "./github-photo-upload.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION = "Versão 3.9";
+const GITHUB_PHOTO_UPLOAD_MODULE = "./github-photo-upload.js?v=20260914-2";
+const CURRENT_PUBLIC_VERSION = "Versão 4.0";
 
 /*
  * Fallback global seguro para a listagem do repositório.
@@ -55,9 +55,7 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.9";
       "03 - Consumo.csv"
     ];
 
-    for (let part = 1; part <= 20; part += 1) {
-      candidates.push(`01 - Compras_Almox_Parte_${String(part).padStart(2,"0")}.CSV`);
-    }
+    for (let part = 1; part <= 20; part += 1) candidates.push(`01 - Compras_Almox_Parte_${String(part).padStart(2,"0")}.CSV`);
 
     const currentYear = new Date().getFullYear();
     for (let year = currentYear - 3; year <= currentYear + 1; year += 1) {
@@ -70,9 +68,7 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.9";
     for (let i = 0; i < unique.length; i += batchSize) {
       const batch = unique.slice(i, i + batchSize);
       const results = await Promise.all(batch.map(async (name) => ({ name, exists: await fileExists(name) })));
-      for (const { name, exists } of results) {
-        if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" });
-      }
+      for (const { name, exists } of results) if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" });
     }
     return found;
   }
@@ -93,10 +89,7 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.9";
     console.info(`Contingência: ${manifest.length} arquivo(s) de dados localizado(s) no GitHub Pages.`);
     return new Response(JSON.stringify(manifest), {
       status:200,
-      headers:{
-        "Content-Type":"application/json; charset=utf-8",
-        "X-Almoxarifado-Fallback":"same-origin-full-data-discovery"
-      }
+      headers:{ "Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"same-origin-full-data-discovery" }
     });
   };
 })();
@@ -124,7 +117,7 @@ function enforceCurrentPublicVersion() {
   enforceCurrentPublicVersion();
   for (const [src, message] of [
     [AREA_FILTER_ACTIVE_MODULE, "filtro ativo por área"],
-    [GITHUB_PHOTO_UPLOAD_MODULE, "upload direto de fotos ao GitHub"],
+    [GITHUB_PHOTO_UPLOAD_MODULE, "fila e upload direto de fotos ao GitHub"],
     [COMPARATIVO_META_MODULE, "mês meta e filtros dinâmicos"],
     [LAYOUT_FIX_MODULE, "correção estrutural do layout"],
     [COMPARATIVO_PERIODOS_MODULE, "rótulos de período do comparativo"],
