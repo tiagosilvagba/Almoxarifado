@@ -7,8 +7,8 @@
     <meta name="description" content="Catálogo para consulta de estoque, posições e histórico de compras do almoxarifado.">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
-    <link rel="stylesheet" href="style.css?v=3-3">
-    <script src="script.js?v=3-3" defer></script>
+    <link rel="stylesheet" href="style.css?v=1-7">
+    <script src="script.js?v=1-7" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -22,7 +22,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 3.3</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 1.8</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -44,42 +44,718 @@
               <option value="contrast">Alto Contraste · Acessível</option>
             </select>
           </label>
-          <button id="languageToggle" class="language-toggle" type="button" aria-label="Alterar idioma para inglês" title="Alterar idioma para inglês"><small>Idioma</small><strong>EN</strong></button>
+          <button id="languageToggle" class="language-toggle" type="button" aria-label="Alterar idioma para inglês" title="Alterar idioma para inglês">
+            <small>Idioma</small><strong>EN</strong>
+          </button>
           <button id="densityToggle" class="density-toggle" type="button" aria-pressed="false" title="Alternar modo compacto">Modo compacto</button>
-          <button id="refreshButton" class="icon-button" type="button" title="Recarregar os arquivos CSV" aria-label="Recarregar os arquivos CSV"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 1 0-2.3 6.7M20 4v7h-7"></path></svg></button>
+          <button id="refreshButton" class="icon-button" type="button" title="Recarregar os arquivos CSV" aria-label="Recarregar os arquivos CSV">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 11a8.1 8.1 0 1 0-2.3 6.7M20 4v7h-7"></path>
+            </svg>
+          </button>
         </div>
       </div>
-      <div class="app-nav-wrap"><nav class="shell app-nav" aria-label="Navegação principal" role="tablist">
-        <a class="app-nav__tab is-active" href="#dashboard" data-page="dashboard" role="tab" aria-selected="true" aria-controls="page-dashboard">Dashboard</a>
-        <a class="app-nav__tab" href="#catalogo" data-page="catalogo" role="tab" aria-selected="false" aria-controls="page-catalogo">Catálogo</a>
-        <a class="app-nav__tab" href="#necessidade-compra" data-page="necessidade-compra" role="tab" aria-selected="false" aria-controls="page-necessidade-compra">Necessidade de Compra</a>
-        <a class="app-nav__tab" href="#sc-pendente-of" data-page="sc-pendente-of" role="tab" aria-selected="false" aria-controls="page-sc-pendente-of">SC pendente de OF</a>
-        <a class="app-nav__tab" href="#consulta-sc-of" data-page="consulta-sc-of" role="tab" aria-selected="false" aria-controls="page-consulta-sc-of">Consulta SC e OF</a>
-        <a class="app-nav__tab" href="#tempo-geracao-of" data-page="tempo-geracao-of" role="tab" aria-selected="false" aria-controls="page-tempo-geracao-of">Tempo de geração de OF</a>
-        <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
-        <a class="app-nav__tab" href="#instrucoes" data-page="instrucoes" role="tab" aria-selected="false" aria-controls="page-instrucoes">Instruções</a>
-      </nav></div>
+      <div class="app-nav-wrap">
+        <nav class="shell app-nav" aria-label="Navegação principal" role="tablist">
+          <a class="app-nav__tab is-active" href="#dashboard" data-page="dashboard" role="tab" aria-selected="true" aria-controls="page-dashboard">Dashboard</a>
+          <a class="app-nav__tab" href="#catalogo" data-page="catalogo" role="tab" aria-selected="false" aria-controls="page-catalogo">Catálogo</a>
+          <a class="app-nav__tab" href="#necessidade-compra" data-page="necessidade-compra" role="tab" aria-selected="false" aria-controls="page-necessidade-compra">Necessidade de Compra</a>
+          <a class="app-nav__tab" href="#sc-pendente-of" data-page="sc-pendente-of" role="tab" aria-selected="false" aria-controls="page-sc-pendente-of">SC pendente de OF</a>
+          <a class="app-nav__tab" href="#consulta-sc-of" data-page="consulta-sc-of" role="tab" aria-selected="false" aria-controls="page-consulta-sc-of">Consulta SC e OF</a>
+          <a class="app-nav__tab" href="#tempo-geracao-of" data-page="tempo-geracao-of" role="tab" aria-selected="false" aria-controls="page-tempo-geracao-of">Tempo de geração de OF</a>
+          <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
+          <a class="app-nav__tab" href="#instrucoes" data-page="instrucoes" role="tab" aria-selected="false" aria-controls="page-instrucoes">Instruções</a>
+        </nav>
+      </div>
     </header>
+
     <main class="shell main-content">
-      <section id="loadingPanel" class="loading-panel" aria-live="polite" aria-busy="true"><div class="loading-panel__spinner" aria-hidden="true"></div><div><strong id="loadingTitle">Carregando dados do almoxarifado</strong><p id="loadingMessage">Lendo os arquivos de saldo e compras…</p><div class="loading-progress" role="progressbar" aria-label="Progresso do carregamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="loadingProgress"></span></div><small id="loadingProgressText" class="loading-progress__text">0% · processando…</small></div><button id="retryButton" class="button button--primary is-hidden" type="button">Tentar novamente</button></section>
+      <section id="loadingPanel" class="loading-panel" aria-live="polite" aria-busy="true">
+        <div class="loading-panel__spinner" aria-hidden="true"></div>
+        <div>
+          <strong id="loadingTitle">Carregando dados do almoxarifado</strong>
+          <p id="loadingMessage">Lendo os arquivos de saldo e compras…</p>
+          <div class="loading-progress" role="progressbar" aria-label="Progresso do carregamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="loadingProgress"></span></div>
+          <small id="loadingProgressText" class="loading-progress__text">0% · processando…</small>
+        </div>
+        <button id="retryButton" class="button button--primary is-hidden" type="button">Tentar novamente</button>
+      </section>
+
       <section id="catalogContent" class="catalog-content" aria-label="Gestão do almoxarifado">
-        <div class="global-filter-bar"><button id="filterToggleButton" class="button button--filter" type="button" aria-expanded="false" aria-controls="globalFiltersPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span>Filtros</span><span id="activeFilterCount" class="filter-count is-hidden">0</span></button><span id="filterSummary" class="filter-summary">Todas as filiais · todos os itens</span></div>
-        <section id="globalFiltersPanel" class="filter-panel global-filters is-hidden" aria-labelledby="globalFilterTitle"><div class="filter-panel__header"><div><span class="eyebrow">Consulta global</span><h2 id="globalFilterTitle">Filtrar itens</h2></div><button id="closeFiltersButton" class="icon-button icon-button--light" type="button" aria-label="Fechar filtros"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div><div class="filters-grid">
-          <label class="field field--search"><span>Código, descrição, SC, OF ou NF</span><span class="field__control"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg><input id="searchInput" type="search" autocomplete="off" placeholder="Busque item, SC, OF, NF ou fornecedor"></span></label><p class="multi-filter-hint">Cada filtro abre uma lista suspensa com caixas de seleção, como no Excel. Marque quantas opções precisar e use “Concluir e fechar” para aplicar.</p>
-          <label class="field"><span>Filial</span><select id="branchFilter" multiple size="3"><option value="">Todas as filiais</option></select></label><label class="field"><span>Local de estoque</span><select id="locationFilter" multiple size="3"><option value="">Todos os locais</option></select></label><label class="field"><span>Responsável pela reposição</span><select id="replenishmentResponsibleFilter" multiple size="3"><option value="">Todos os responsáveis</option></select></label><label class="field"><span>Categoria ou grupo</span><select id="categoryFilter" multiple size="3"><option value="">Todas as categorias</option></select></label><label class="field"><span>Unidade</span><select id="unitFilter" multiple size="3"><option value="">Todas as unidades</option></select></label><label class="field"><span>Fornecedor</span><select id="supplierFilter" multiple size="3"><option value="">Todos os fornecedores</option></select></label><label class="field"><span>Solicitante da SC</span><select id="requesterFilter" multiple size="3"><option value="">Todos os solicitantes</option></select></label>
-          <label class="field"><span>Classificação da compra</span><select id="ccuClassificationFilter" multiple size="3"><option value="">Todas as classificações</option><option value="warehouse">Entrada no almoxarifado · CCU 1500</option><option value="direct">Direto para a área · CCU diferente de 1500</option><option value="direct-with-stock">Compra direta de item de estoque do almoxarifado</option></select></label><label class="field"><span>Código do item em compra direta</span><select id="itemCodeFilter" multiple size="3"><option value="">Todos os códigos</option></select></label>
-          <label class="field"><span>Situação do estoque</span><select id="stockStatusFilter" multiple size="4"><option value="">Todas as situações</option><option value="zero">Itens zerados (mín. + máx. &gt; 0)</option><option value="below-min">Itens abaixo do mínimo</option><option value="above-max">Itens acima do máximo</option><option value="within-range">Itens dentro da faixa</option><option value="unconfigured">Com saldo sem mín. e máx.</option><option value="negative">Saldo negativo</option><option value="adjust-location">Ajustar local de estoque</option></select></label>
-          <label class="field"><span>Situação da SC e entrega</span><select id="scStatusFilter" multiple size="4"><option value="">Todas as situações</option><option value="awaiting-of">Aguardando OF</option><option value="partial">Entrega parcial</option><option value="awaiting-delivery">Aguardando entrega</option><option value="overdue">Atrasada</option></select></label><label class="switch-field"><input id="positiveBalanceFilter" type="checkbox"><span class="switch-field__track" aria-hidden="true"></span><span>Somente itens com saldo positivo</span></label></div><div class="filter-actions"><button id="clearFilters" class="button button--ghost" type="button">Limpar filtros</button><button id="applyFiltersButton" class="button button--primary" type="button">Concluir e fechar</button></div></section>
-        <section id="page-dashboard" class="page-panel" data-page-panel="dashboard" aria-labelledby="dashboardTitle"><div class="section-heading section-heading--compact"><div><span class="eyebrow">Visão geral</span><h2 id="dashboardTitle">Indicadores do estoque</h2></div><span id="metricsContext" class="context-label">Base completa</span></div><div class="metrics-grid metrics-grid--primary" aria-label="Indicadores principais"><button class="metric metric--blue" type="button" data-page-link="catalogo"><span class="metric__label">Códigos ativos de estoque</span><strong id="metricItems">—</strong><small>com saldo ou limites parametrizados</small></button><button class="metric metric--navy" type="button" data-sort-link="value"><span class="metric__label">Valor do estoque</span><strong id="metricValue">—</strong><small>valor atual consolidado</small></button><button class="metric metric--amber" type="button" data-page-link="necessidade-compra"><span class="metric__label">Valor estimado para reposição</span><strong id="metricPurchaseValue">—</strong><small>necessidade líquida após OFs abertas</small></button><button class="metric metric--red" type="button" data-filter-link="above-max"><span class="metric__label">Valor acima do máximo</span><strong id="metricExcessValue">—</strong><small>capital estimado em excesso</small></button><button class="metric metric--violet" type="button" data-page-link="consulta-sc-of"><span class="metric__label">Pendências documentais</span><strong id="metricActionProcesses">—</strong><small>SC sem OF ou OF com saldo pendente</small></button></div><div class="metrics-grid metrics-grid--secondary" aria-label="Indicadores de atenção e qualidade"><button class="metric metric--steel" type="button" data-page-link="catalogo"><span class="metric__label">Itens com saldo</span><strong id="metricQuantity">—</strong><small>saldo consolidado diferente de zero</small></button><button class="metric metric--cyan" type="button" data-filter-link="zero"><span class="metric__label">Zerados parametrizados</span><strong id="metricZero">—</strong><small>saldo zero com mín. + máx. positivos</small></button><button class="metric metric--amber" type="button" data-filter-link="below-min"><span class="metric__label">Abaixo do mínimo</span><strong id="metricBelowMin">—</strong><small>saldo positivo abaixo do mínimo</small></button><button class="metric metric--red" type="button" data-filter-link="above-max"><span class="metric__label">Acima do máximo</span><strong id="metricAboveMax">—</strong><small>com máximo parametrizado</small></button><button class="metric metric--cyan" type="button" data-filter-link="unconfigured"><span class="metric__label">Sem mín. e máx.</span><strong id="metricUnconfigured">—</strong><small>com saldo e sem parametrização</small></button><button class="metric metric--violet" type="button" data-page-link="consulta-sc-of"><span class="metric__label">SCs aguardando OF</span><strong id="metricPendingSc">—</strong><small>solicitações de compra sem ordem</small></button></div><div id="dashboardCharts" class="dashboard-charts"></div></section>
-        <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="catalogTitle"><div class="section-heading"><div><span class="eyebrow">Consulta operacional</span><h2 id="catalogTitle">Catálogo de itens</h2><p class="section-description">Pesquise saldo, limites, endereço, compras e fornecedores por item.</p></div><span id="resultCount" class="context-label">0 itens</span></div><div id="cardsGrid" class="cards-grid"></div><div id="emptyState" class="empty-state is-hidden"><strong>Nenhum item encontrado</strong><span>Revise os filtros ou tente outro código, descrição, SC, OF, NF ou fornecedor.</span></div></section>
-        <section id="page-necessidade-compra" class="page-panel is-hidden" data-page-panel="necessidade-compra" aria-labelledby="purchaseNeedTitle"><div class="section-heading"><div><span class="eyebrow">Planejamento de reposição</span><h2 id="purchaseNeedTitle">Necessidade de Compra</h2><p class="section-description">Itens abaixo do máximo, descontando ordens de fornecimento abertas para o almoxarifado.</p></div><div class="section-heading__actions"><span id="purchaseNeedCount" class="context-label">0 itens</span><button id="exportPurchaseNeed" class="button button--export" type="button">Baixar Excel</button></div></div><div id="purchaseNeedSummary" class="metrics-grid metrics-grid--purchase"></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Item</th><th>Descrição</th><th>Filial</th><th>Local</th><th>Saldo</th><th>Mín.</th><th>Máx.</th><th>OF aberta</th><th>Necessidade</th><th>Valor estimado</th><th>Responsável</th></tr></thead><tbody id="purchaseNeedBody"></tbody></table></div></section>
-        <section id="page-sc-pendente-of" class="page-panel is-hidden" data-page-panel="sc-pendente-of" aria-labelledby="pendingScTitle"><div class="section-heading"><div><span class="eyebrow">Fluxo de compras</span><h2 id="pendingScTitle">SC pendente de OF</h2><p class="section-description">Solicitações de compra do almoxarifado que ainda não possuem ordem de fornecimento.</p></div><div class="section-heading__actions"><span id="pendingScCount" class="context-label">0 SCs</span><button id="exportPendingSc" class="button button--export" type="button">Baixar Excel</button></div></div><div id="pendingScSummary" class="metrics-grid metrics-grid--purchase"></div><div class="table-wrap"><table class="data-table"><thead><tr><th>SC</th><th>Item</th><th>Descrição</th><th>Filial</th><th>Solicitante</th><th>Data SC</th><th>Dias</th><th>Quantidade</th><th>Valor</th></tr></thead><tbody id="pendingScBody"></tbody></table></div></section>
-        <section id="page-consulta-sc-of" class="page-panel is-hidden" data-page-panel="consulta-sc-of" aria-labelledby="processTitle"><div class="section-heading"><div><span class="eyebrow">Rastreabilidade de compras</span><h2 id="processTitle">Consulta SC e OF</h2><p class="section-description">Acompanhe solicitações, ordens, entregas, notas fiscais e fornecedores.</p></div><span id="processCount" class="context-label">0 processos</span></div><div id="processGrid" class="process-grid"></div></section>
-        <section id="page-tempo-geracao-of" class="page-panel is-hidden" data-page-panel="tempo-geracao-of" aria-labelledby="ofLeadTimeTitle"><div class="section-heading"><div><span class="eyebrow">Eficiência do processo</span><h2 id="ofLeadTimeTitle">Tempo de geração de OF</h2><p class="section-description">Tempo entre a criação da SC e a emissão da primeira ordem de fornecimento.</p></div><span id="ofLeadTimeCount" class="context-label">0 processos</span></div><div id="ofLeadTimeSummary" class="metrics-grid metrics-grid--purchase"></div><div class="table-wrap"><table class="data-table"><thead><tr><th>SC</th><th>Item</th><th>Filial</th><th>Solicitante</th><th>Data SC</th><th>Primeira OF</th><th>Dias</th><th>Situação</th></tr></thead><tbody id="ofLeadTimeBody"></tbody></table></div></section>
-        <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="minMaxTitle"><div class="section-heading"><div><span class="eyebrow">Parametrização de estoque</span><h2 id="minMaxTitle">Revisão de mínimo e máximo</h2><p class="section-description">Sugestões de parametrização com base no consumo e comportamento do estoque.</p></div><span id="minMaxCount" class="context-label">0 itens</span></div><div id="minMaxSummary" class="metrics-grid metrics-grid--purchase"></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Item</th><th>Descrição</th><th>Filial</th><th>Local</th><th>Mín. atual</th><th>Máx. atual</th><th>Consumo</th><th>Sugestão mín.</th><th>Sugestão máx.</th><th>Variação</th></tr></thead><tbody id="minMaxBody"></tbody></table></div></section>
-        <section id="page-instrucoes" class="page-panel is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle"><div class="section-heading"><div><span class="eyebrow">Guia rápido</span><h2 id="instructionsTitle">Como usar o catálogo</h2></div></div><div class="instructions-grid"><article><strong>1. Pesquise</strong><p>Use código, descrição, SC, OF, NF ou fornecedor.</p></article><article><strong>2. Filtre</strong><p>Combine filial, local, categoria, fornecedor e situação do estoque.</p></article><article><strong>3. Analise</strong><p>Abra os detalhes do item para consultar estoque, endereço e histórico de compras.</p></article><article><strong>4. Exporte</strong><p>Use os relatórios de necessidade e pendências para apoiar a rotina.</p></article></div></section>
+        <div class="global-filter-bar">
+          <button id="filterToggleButton" class="button button--filter" type="button" aria-expanded="false" aria-controls="globalFiltersPanel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+            <span>Filtros</span>
+            <span id="activeFilterCount" class="filter-count is-hidden">0</span>
+          </button>
+          <span id="filterSummary" class="filter-summary">Todas as filiais · todos os itens</span>
+        </div>
+
+        <section id="globalFiltersPanel" class="filter-panel global-filters is-hidden" aria-labelledby="globalFilterTitle">
+          <div class="filter-panel__header">
+            <div>
+              <span class="eyebrow">Consulta global</span>
+              <h2 id="globalFilterTitle">Filtrar itens</h2>
+            </div>
+            <button id="closeFiltersButton" class="icon-button icon-button--light" type="button" aria-label="Fechar filtros">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+            </button>
+          </div>
+
+          <div class="filters-grid">
+            <label class="field field--search">
+              <span>Código, descrição, SC, OF ou NF</span>
+              <span class="field__control">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+                <input id="searchInput" type="search" autocomplete="off" placeholder="Busque item, SC, OF, NF ou fornecedor">
+              </span>
+            </label>
+            <p class="multi-filter-hint">Cada filtro abre uma lista suspensa com caixas de seleção, como no Excel. Marque quantas opções precisar e use “Concluir e fechar” para aplicar.</p>
+            <label class="field"><span>Filial</span><select id="branchFilter" multiple size="3"><option value="">Todas as filiais</option></select></label>
+            <label class="field"><span>Local de estoque</span><select id="locationFilter" multiple size="3"><option value="">Todos os locais</option></select></label>
+            <label class="field"><span>Responsável pela reposição</span><select id="replenishmentResponsibleFilter" multiple size="3"><option value="">Todos os responsáveis</option></select></label>
+            <label class="field"><span>Categoria ou grupo</span><select id="categoryFilter" multiple size="3"><option value="">Todas as categorias</option></select></label>
+            <label class="field"><span>Unidade</span><select id="unitFilter" multiple size="3"><option value="">Todas as unidades</option></select></label>
+            <label class="field"><span>Fornecedor</span><select id="supplierFilter" multiple size="3"><option value="">Todos os fornecedores</option></select></label>
+            <label class="field"><span>Solicitante da SC</span><select id="requesterFilter" multiple size="3"><option value="">Todos os solicitantes</option></select></label>
+            <label class="field">
+              <span>Classificação da compra</span>
+              <select id="ccuClassificationFilter" multiple size="3">
+                <option value="">Todas as classificações</option>
+                <option value="warehouse">Entrada no almoxarifado · CCU 1500</option>
+                <option value="direct">Direto para a área · CCU diferente de 1500</option>
+                <option value="direct-with-stock">Compra direta de item de estoque do almoxarifado</option>
+              </select>
+            </label>
+            <label class="field"><span>Código do item em compra direta</span><select id="itemCodeFilter" multiple size="3"><option value="">Todos os códigos</option></select></label>
+            <label class="field">
+              <span>Situação do estoque</span>
+              <select id="stockStatusFilter" multiple size="4">
+                <option value="">Todas as situações</option>
+                <option value="zero">Itens zerados (mín. + máx. &gt; 0)</option>
+                <option value="below-min">Itens abaixo do mínimo</option>
+                <option value="above-max">Itens acima do máximo</option>
+                <option value="within-range">Itens dentro da faixa</option>
+                <option value="unconfigured">Com saldo sem mín. e máx.</option>
+                <option value="negative">Saldo negativo</option>
+                <option value="adjust-location">Ajustar local de estoque</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Situação da SC e entrega</span>
+              <select id="scStatusFilter" multiple size="4">
+                <option value="">Todas as situações</option>
+                <option value="awaiting-of">Aguardando OF</option>
+                <option value="partial">Entrega parcial</option>
+                <option value="awaiting-delivery">Aguardando entrega</option>
+                <option value="overdue">Atrasada</option>
+              </select>
+            </label>
+            <label class="switch-field">
+              <input id="positiveBalanceFilter" type="checkbox">
+              <span class="switch-field__track" aria-hidden="true"></span>
+              <span>Somente itens com saldo positivo</span>
+            </label>
+          </div>
+
+          <div class="filter-actions">
+            <button id="clearFilters" class="button button--ghost" type="button">Limpar filtros</button>
+            <button id="applyFiltersButton" class="button button--primary" type="button">Concluir e fechar</button>
+          </div>
+        </section>
+
+        <section id="page-dashboard" class="page-panel" data-page-panel="dashboard" aria-labelledby="dashboardTitle">
+          <div class="section-heading section-heading--compact">
+            <div>
+              <span class="eyebrow">Visão geral</span>
+              <h2 id="dashboardTitle">Indicadores do estoque</h2>
+            </div>
+            <span id="metricsContext" class="context-label">Base completa</span>
+          </div>
+
+          <div class="metrics-grid metrics-grid--primary" aria-label="Indicadores principais">
+            <button class="metric metric--blue" type="button" data-page-link="catalogo">
+              <span class="metric__label">Códigos ativos de estoque</span>
+              <strong id="metricItems">—</strong>
+              <small>com saldo ou limites parametrizados</small>
+            </button>
+            <button class="metric metric--navy" type="button" data-sort-link="value">
+              <span class="metric__label">Valor do estoque</span>
+              <strong id="metricValue">—</strong>
+              <small>valor atual consolidado</small>
+            </button>
+            <button class="metric metric--amber" type="button" data-page-link="necessidade-compra">
+              <span class="metric__label">Valor estimado para reposição</span>
+              <strong id="metricPurchaseValue">—</strong>
+              <small>necessidade líquida após OFs abertas</small>
+            </button>
+            <button class="metric metric--red" type="button" data-filter-link="above-max">
+              <span class="metric__label">Valor acima do máximo</span>
+              <strong id="metricExcessValue">—</strong>
+              <small>capital estimado em excesso</small>
+            </button>
+            <button class="metric metric--violet" type="button" data-page-link="consulta-sc-of">
+              <span class="metric__label">Pendências documentais</span>
+              <strong id="metricActionProcesses">—</strong>
+              <small>SC sem OF ou OF com saldo pendente</small>
+            </button>
+          </div>
+          <div class="metrics-grid metrics-grid--secondary" aria-label="Indicadores de atenção e qualidade">
+            <button class="metric metric--steel" type="button" data-page-link="catalogo"><span class="metric__label">Itens com saldo</span><strong id="metricQuantity">—</strong><small>saldo consolidado diferente de zero</small></button>
+            <button class="metric metric--cyan" type="button" data-filter-link="zero"><span class="metric__label">Zerados parametrizados</span><strong id="metricZero">—</strong><small>saldo zero com mín. + máx. positivos</small></button>
+            <button class="metric metric--amber" type="button" data-filter-link="below-min"><span class="metric__label">Abaixo do mínimo</span><strong id="metricBelowMin">—</strong><small>saldo positivo abaixo do mínimo</small></button>
+            <button class="metric metric--red" type="button" data-filter-link="above-max"><span class="metric__label">Acima do máximo</span><strong id="metricAboveMax">—</strong><small>com máximo parametrizado</small></button>
+            <button class="metric metric--cyan" type="button" data-filter-link="unconfigured"><span class="metric__label">Saldo sem mín. e máx.</span><strong id="metricUnconfigured">—</strong><small>saldo positivo sem limites</small></button>
+            <button class="metric metric--violet" type="button" data-page-link="sc-pendente-of"><span class="metric__label">SC sem OF</span><strong id="metricPendingSc">—</strong><small>confirmadas, aguardando aprovação ou em negociação</small></button>
+            <button class="metric metric--charcoal" type="button" data-filter-link="negative">
+              <span class="metric__label">Saldo negativo</span>
+              <strong id="metricNegative">—</strong>
+              <small>em ao menos uma posição</small>
+            </button>
+            <button class="metric metric--slate" type="button" data-page-link="consulta-sc-of"><span class="metric__label">OF com saldo pendente</span><strong id="metricOpenOf">—</strong><small>ordens ainda não totalmente atendidas</small></button>
+          </div>
+          <section class="analytics-grid" aria-label="Análises interativas do estoque">
+            <article class="analytics-card">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Distribuição</span><h3>Códigos por filial</h3></div><small>Clique para filtrar</small></div>
+              <div id="branchChart" class="bar-chart"></div>
+            </article>
+            <article class="analytics-card">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Alertas independentes</span><h3>Códigos por situação</h3></div><small>Um código pode ter posições distintas</small></div>
+              <div id="stockChart" class="status-chart"></div>
+            </article>
+            <article class="analytics-card analytics-card--wide">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Financeiro</span><h3>Valor do estoque por filial</h3></div><small>Valores consolidados</small></div>
+              <div id="valueChart" class="bar-chart bar-chart--value"></div>
+            </article>
+            <article class="analytics-card analytics-card--wide">
+              <div class="analytics-card__heading"><div><span class="eyebrow">Fluxo de compras</span><h3>SC → OF → Recebimento</h3></div><button class="text-action" type="button" data-page-link="consulta-sc-of">Abrir processos</button></div>
+              <div id="procurementFunnel" class="procurement-funnel"></div>
+            </article>
+          </section>
+          <section class="decision-grid" aria-label="Prioridades para decisão">
+            <article class="analytics-card"><div class="analytics-card__heading"><div><span class="eyebrow">Reposição</span><h3>Maiores necessidades estimadas</h3></div><button class="text-action" type="button" data-page-link="necessidade-compra">Ver todas</button></div><div id="dashboardPriorityList" class="decision-list"></div></article>
+            <article class="analytics-card"><div class="analytics-card__heading"><div><span class="eyebrow">Capital imobilizado</span><h3>Maiores excessos estimados</h3></div><button class="text-action" type="button" data-filter-link="above-max">Ver todos</button></div><div id="dashboardExcessList" class="decision-list"></div></article>
+          </section>
+          <p id="metricReconciliation" class="metric-reconciliation" aria-live="polite"></p>
+
+        </section>
+
+        <section id="page-catalogo" class="page-panel is-hidden" data-page-panel="catalogo" aria-labelledby="resultsTitle">
+          <section class="results" aria-labelledby="resultsTitle">
+          <div class="section-heading results__heading">
+            <div>
+              <span class="eyebrow">Catálogo</span>
+              <h2 id="resultsTitle">Itens encontrados</h2>
+            </div>
+            <div class="results__summary">
+              <strong id="resultCount">0 itens</strong>
+              <div class="catalog-controls"><label class="compact-select"><span>Visual</span><select id="catalogView"><option value="cards">Cards</option><option value="list">Lista compacta</option></select></label><label class="compact-select"><span>Ordenar</span><select id="catalogSort"><option value="code">Código</option><option value="description">Descrição</option><option value="balance">Maior saldo</option><option value="value">Maior valor</option><option value="critical">Maior criticidade</option></select></label></div>
+            </div>
+          </div>
+
+          <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+
+          <div id="emptyState" class="empty-state is-hidden">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 13h34v27H7zM7 13l8-7h18l8 7M17 24h14"></path></svg>
+            <h3>Nenhum item encontrado</h3>
+            <p>Altere os filtros ou limpe a busca para consultar outros itens.</p>
+          </div>
+
+          <div class="load-more-wrap">
+            <button id="loadMoreButton" class="button button--secondary is-hidden" type="button">Carregar mais</button>
+            <span id="visibleCount" class="visible-count"></span>
+          </div>
+          </section>
+        </section>
+
+        <section id="page-necessidade-compra" class="page-panel is-hidden" data-page-panel="necessidade-compra" aria-labelledby="purchaseNeedTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Reposição</span>
+              <h2 id="purchaseNeedTitle">Necessidade de compra</h2>
+              <p class="section-description">Posições com saldo abaixo do mínimo e alertas especiais quando a soma das OFs abertas de Cavaco por fornecedor fica abaixo de 200.</p>
+            </div>
+            <span class="context-label">Baseado no Saldo_Online</span>
+          </div>
+
+          <div class="need-summary" aria-label="Resumo da necessidade de compra">
+            <article><span>Itens para comprar</span><strong id="purchaseNeedItems">—</strong></article>
+            <article><span>Pendências de reposição</span><strong id="purchaseNeedPositions">—</strong></article>
+            <article><span>Rupturas</span><strong id="purchaseNeedRuptures">—</strong></article>
+            <article><span>Valor líquido estimado</span><strong id="purchaseNeedEstimated">—</strong></article>
+            <article><span>Sem máximo informado</span><strong id="purchaseNeedWithoutMax">—</strong></article>
+          </div>
+
+          <div class="table-heading purchase-table-heading report-heading">
+            <div>
+              <h3>Itens e OFs que precisam de reposição</h3>
+              <p id="purchaseNeedResultCount">0 pendências</p>
+            </div>
+            <div class="export-control">
+              <label><span>Formato</span><select id="purchaseNeedExportFormat" aria-label="Formato da exportação de necessidades"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+              <button id="exportPurchaseNeedButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+            </div>
+          </div>
+          <div id="purchaseNeedTableWrap" class="report-card-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="purchaseNeedLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais necessidades</button>
+            <span id="purchaseNeedVisibleCount" class="visible-count"></span>
+          </div>
+        </section>
+
+        <section id="page-sc-pendente-of" class="page-panel is-hidden" data-page-panel="sc-pendente-of" aria-labelledby="pendingScTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Compras pendentes</span>
+              <h2 id="pendingScTitle">SC pendente de OF</h2>
+              <p class="section-description">Solicitações confirmadas, aguardando aprovação ou em negociação, não canceladas e sem código de OF gerado.</p>
+            </div>
+            <span id="pendingScListCount" class="context-label">0 registros</span>
+          </div>
+          <div class="table-heading report-heading">
+            <div>
+              <h3>Solicitações encontradas</h3>
+              <p>Selecione um cartão para consultar todos os detalhes da solicitação.</p>
+            </div>
+            <div class="export-control">
+              <label><span>Formato</span><select id="pendingScExportFormat" aria-label="Formato da exportação de solicitações"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+              <button id="exportPendingScButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+            </div>
+          </div>
+          <div id="pendingScTableWrap" class="report-card-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="pendingScLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais solicitações</button>
+            <span id="pendingScVisibleCount" class="visible-count"></span>
+          </div>
+        </section>
+
+        <section id="page-consulta-sc-of" class="page-panel is-hidden" data-page-panel="consulta-sc-of" aria-labelledby="procurementTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Processos de compra</span>
+              <h2 id="procurementTitle">Consulta de SC e OF</h2>
+              <p class="section-description">Consulte solicitações, ordens de fornecimento e recebimentos vinculados aos itens filtrados.</p>
+            </div>
+            <div class="heading-actions"><span id="procurementCount" class="context-label">0 processos</span><div class="export-control"><label><span>Formato</span><select id="procurementExportFormat" aria-label="Formato da exportação de processos"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="exportProcurementButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div>
+          </div>
+          <div class="need-summary process-summary" aria-label="Resumo dos processos de compra">
+            <article><span>SC aguardando OF</span><strong id="procurementAwaiting">—</strong></article>
+            <article><span>OF com saldo pendente</span><strong id="procurementOpen">—</strong></article>
+            <article><span>OF com entrega parcial</span><strong id="procurementPartial">—</strong></article>
+            <article><span>Recebimentos localizados</span><strong id="procurementReceived">—</strong></article>
+          </div>
+          <div id="procurementGrid" class="report-card-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="procurementLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais processos</button>
+            <span id="procurementVisibleCount" class="visible-count"></span>
+          </div>
+        </section>
+
+        <section id="page-tempo-geracao-of" class="page-panel is-hidden" data-page-panel="tempo-geracao-of" aria-labelledby="ofGenerationTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Eficiência de compras</span>
+              <h2 id="ofGenerationTitle">Tempo de geração de OF</h2>
+              <p class="section-description">Intervalo entre a data de criação da SC e a data de emissão da OF, considerando cada processo uma única vez.</p>
+            </div>
+            <div class="heading-actions"><span id="ofGenerationCount" class="context-label">0 processos</span><div class="export-control"><label><span>Formato</span><select id="ofGenerationExportFormat" aria-label="Formato da exportação do tempo de geração de OF"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="exportOfGenerationButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div>
+          </div>
+          <div class="of-period-slicer" aria-label="Segmentação pela data de criação da SC">
+            <div class="of-period-slicer__heading"><div><span class="eyebrow">Período de análise</span><strong>Data de criação da SC</strong></div><button id="clearOfGenerationPeriod" class="button button--secondary is-hidden" type="button">Limpar período</button></div>
+            <div class="of-period-slicer__controls">
+              <label><span>Ano</span><select id="ofGenerationYearFilter"><option value="">Todos os anos</option></select></label>
+              <label><span>Mês</span><select id="ofGenerationMonthFilter"><option value="">Todos os meses</option></select></label>
+              <label><span>Semana</span><select id="ofGenerationWeekFilter"><option value="">Todas as semanas</option></select></label>
+              <label><span>Data</span><select id="ofGenerationDateFilter"><option value="">Todas as datas</option></select></label>
+            </div>
+          </div>
+          <div id="ofGenerationSummary" class="need-summary of-generation-summary" aria-label="Distribuição do tempo de geração de OF"></div>
+          <section class="of-trend-card" aria-labelledby="ofGenerationTrendTitle">
+            <div class="of-trend-card__heading">
+              <div><span class="eyebrow">Evolução</span><h3 id="ofGenerationTrendTitle">Quantidade de itens por período</h3><p id="ofGenerationTrendSubtitle">Evolução conforme a data de criação da SC.</p></div>
+              <div class="of-trend-card__controls">
+                <div class="of-trend-option"><span>Visualizar por</span><div id="ofGenerationChartGranularity" class="of-chart-granularity" aria-label="Periodicidade do gráfico"></div></div>
+                <div class="of-trend-option"><span>Faixa de dias</span><div id="ofGenerationChartBuckets" class="of-chart-buckets" aria-label="Faixa de dias exibida no gráfico"></div></div>
+              </div>
+            </div>
+            <div id="ofGenerationTrendChart" class="of-trend-chart" role="img" aria-label="Gráfico de evolução da quantidade de itens"></div>
+          </section>
+          <div class="table-heading report-heading">
+            <div><h3>Processos medidos</h3><p>Selecione uma faixa acima para detalhar somente os processos daquele intervalo.</p></div>
+            <button id="clearOfGenerationRange" class="button button--secondary is-hidden" type="button">Exibir todas as faixas</button>
+          </div>
+          <div id="ofGenerationGrid" class="report-card-grid of-generation-grid" aria-live="polite"></div>
+          <div class="load-more-wrap">
+            <button id="ofGenerationLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais processos</button>
+            <span id="ofGenerationVisibleCount" class="visible-count"></span>
+          </div>
+        </section>
+
+        <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="reviewTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Parametrização</span>
+              <h2 id="reviewTitle">Revisão de mín. e máx.</h2>
+              <p class="section-description">Consumo sem anomalias, lead time real e margem preventiva de 20% no mínimo sugerido.</p>
+            </div>
+            <span class="context-label">03 - Consumo.csv</span>
+          </div>
+
+          <div id="consumptionWaiting" class="construction-state">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40h32M13 40l3-23h16l3 23M14.5 28h19M18 12h12M24 12V6"></path></svg>
+            <span>Revisão de mín. e máx.</span>
+            <h3>Em construção — aguardando CSV</h3>
+            <p>Adicione o arquivo <strong>03 - Consumo.csv</strong> na raiz do repositório.</p>
+            <p class="construction-hint">Estrutura recomendada: código do item, filial, local, data ou competência, quantidade consumida e tipo de movimento. Com esses campos, o sistema poderá calcular cobertura, giro, estoque de segurança e sugestões de mín. e máx.</p>
+          </div>
+
+          <div id="consumptionAvailable" class="consumption-available is-hidden">
+            <div class="need-summary review-summary">
+              <article><span>Itens analisados</span><strong id="reviewItemCount">—</strong></article>
+              <article><span>Parâmetros ideais</span><strong id="reviewIdealCount">—</strong></article>
+              <article><span>Recomendação de ajuste</span><strong id="reviewAdjustCount">—</strong></article>
+              <article><span>Sem histórico suficiente</span><strong id="reviewInsufficientCount">—</strong></article>
+              <article><span>Lead time médio</span><strong id="reviewAverageLeadTime">—</strong></article>
+              <article class="review-summary__financial review-summary__increase"><span>Aumento total</span><strong id="reviewIncreaseValue">—</strong><small>Capital adicional recomendado</small></article>
+              <article class="review-summary__financial review-summary__reduction"><span>Redução total</span><strong id="reviewReductionValue">—</strong><small>Capital potencialmente liberado</small></article>
+              <article id="reviewNetImpactCard" class="review-summary__financial review-summary__net"><span>Impacto líquido</span><strong id="reviewNetImpactValue">—</strong><small>Aumentos menos reduções</small></article>
+            </div>
+            <div class="table-heading report-heading">
+              <div>
+                <h3>Análise por item e posição</h3>
+                <p>Consumo mensal, lead time real, parâmetros atuais e sugestão calculada para reposição.</p>
+              </div>
+              <div class="heading-actions">
+                <span id="reviewResultCount" class="context-label">—</span>
+                <div class="export-control">
+                  <label><span>Formato</span><select id="minMaxExportFormat" aria-label="Formato da exportação da revisão"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+                  <button id="exportMinMaxReviewButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+                </div>
+              </div>
+            </div>
+            <div id="reviewCardsGrid" class="report-card-grid review-card-grid" aria-live="polite"></div>
+            <div class="load-more-wrap">
+              <button id="reviewLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais análises</button>
+              <span id="reviewVisibleCount" class="visible-count"></span>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">
+          <header class="instructions-hero">
+            <div>
+              <span class="eyebrow">Manual operacional</span>
+              <h2 id="instructionsTitle">Como utilizar o Painel de Gestão de Almoxarifado</h2>
+              <p>Guia completo das bases, filtros, indicadores, cálculos, modais e exportações. Use o índice para ir diretamente à funcionalidade desejada.</p>
+            </div>
+            <span class="instructions-version">Regras vigentes · Versão 1.3</span>
+          </header>
+
+          <div class="instructions-layout">
+            <nav class="instructions-index" aria-label="Índice das instruções">
+              <strong>Índice rápido</strong>
+              <a href="#instr-primeiros-passos">1. Primeiros passos</a>
+              <a href="#instr-bases">2. Bases de dados</a>
+              <a href="#instr-filtros">3. Filtros globais</a>
+              <a href="#instr-dashboard">4. Dashboard</a>
+              <a href="#instr-catalogo">5. Catálogo e modais</a>
+              <a href="#instr-necessidade">6. Necessidade de compra</a>
+              <a href="#instr-sc">7. SC pendente de OF</a>
+              <a href="#instr-compras">8. Consulta de compras</a>
+              <a href="#instr-tempo-of">9. Tempo de geração de OF</a>
+              <a href="#instr-min-max">10. Revisão de mín. e máx.</a>
+              <a href="#instr-exportacoes">11. Exportações</a>
+              <a href="#instr-regras">12. Regras especiais</a>
+            </nav>
+
+            <div class="instructions-content">
+              <article id="instr-primeiros-passos" class="instruction-section">
+                <span class="instruction-section__number">01</span>
+                <div><h3>Primeiros passos e navegação</h3><p>Ao abrir o painel, aguarde a barra de progresso terminar. O sistema localiza os CSVs, processa os registros, cruza saldo, compras, consumo e responsáveis e somente depois libera as abas.</p>
+                <ul><li><strong>Atualizar:</strong> o botão circular no cabeçalho recarrega todos os arquivos sem alterar o código.</li><li><strong>Última atualização da base:</strong> o horário exibido ao lado da versão corresponde à atualização mais recente dos CSVs no GitHub.</li><li><strong>Tema:</strong> altera cores, superfícies e identidade visual; o tema Clean é o padrão.</li><li><strong>Idioma:</strong> alterna a interface entre português e inglês.</li><li><strong>Modo compacto:</strong> reduz espaçamentos para exibir mais informações na tela.</li><li><strong>Abas:</strong> Dashboard, Catálogo, Necessidade de Compra, SC Pendente de OF, Consulta SC e OF, Tempo de Geração de OF, Revisão de Mín. e Máx. e Instruções.</li></ul></div>
+              </article>
+
+              <article id="instr-bases" class="instruction-section">
+                <span class="instruction-section__number">02</span>
+                <div><h3>Bases de dados utilizadas</h3><div class="instruction-table-wrap"><table class="instruction-table"><thead><tr><th>Fonte</th><th>Finalidade</th><th>Regra de leitura</th></tr></thead><tbody>
+                  <tr><td><strong>00 - Saldo_Online.csv</strong></td><td>Saldo, custo, valor, mínimo, máximo, filial, local e endereço.</td><td>Itens sem saldo e sem mínimo/máximo são tratados como inativos; as demais posições permanecem disponíveis.</td></tr>
+                  <tr><td><strong>01 - Compras_Almox_Parte_XX.CSV</strong></td><td>SC, OF, fornecedores, solicitantes e recebimentos.</td><td>Todas as partes encontradas são combinadas. Se uma parte estiver ausente, as outras continuam sendo processadas.</td></tr>
+                  <tr><td><strong>01 - Compras_Almox.csv</strong></td><td>Arquivo alternativo de compras.</td><td>Utilizado como fonte de contingência quando necessário.</td></tr>
+                  <tr><td><strong>02 - Responsaveis_Reposição.CSV</strong></td><td>Responsável por executar a reposição.</td><td>Relacionamento por filial + código do local; zeros à esquerda não alteram o vínculo.</td></tr>
+                  <tr><td><strong>03 - Consumo.csv</strong></td><td>Consumo mensal por item, filial e local.</td><td>Alimenta consumo médio, anomalias e revisão de mínimo e máximo.</td></tr>
+                  <tr><td><strong>imagens/</strong></td><td>Fotos dos itens.</td><td>As imagens são relacionadas pelo código do item e exibidas na galeria.</td></tr>
+                </tbody></table></div><p class="instruction-note"><strong>Importante:</strong> compras, responsáveis, consumo e imagens são fontes complementares. A indisponibilidade de uma fonte opcional não deve impedir a leitura das demais.</p></div>
+              </article>
+
+              <article id="instr-filtros" class="instruction-section">
+                <span class="instruction-section__number">03</span>
+                <div><h3>Filtros globais</h3><p>Os filtros afetam todas as análises relacionadas e permitem selecionar várias opções no mesmo campo. Dentro do painel, as opções são dependentes e se ajustam dinamicamente às seleções realizadas. Os resultados da página só são recalculados ao clicar em <strong>Concluir e fechar</strong>, evitando lentidão.</p>
+                <div class="instruction-grid"><section><h4>Pesquisa</h4><p>Localiza código, descrição, SC, OF, nota fiscal, fornecedor, solicitante e informações relacionadas.</p></section><section><h4>Estrutura</h4><p>Filial, local de estoque, responsável pela reposição, categoria e unidade.</p></section><section><h4>Compras</h4><p>Fornecedor, solicitante da SC, situação da SC/entrega e classificação pelo CCU da etiqueta.</p></section><section><h4>Estoque</h4><p>Código do item em compra direta, situação do estoque e opção de saldo positivo.</p></section></div>
+                <ul><li><strong>CCU 1500:</strong> compra destinada à entrada no almoxarifado.</li><li><strong>CCU diferente de 1500:</strong> compra direta para o centro de custo da área.</li><li><strong>Compra direta de item de estoque:</strong> compra fora do CCU 1500 de item que possui saldo positivo ou mínimo/máximo cadastrado.</li><li><strong>Situações do estoque:</strong> zerado parametrizado, abaixo do mínimo, acima do máximo, dentro da faixa, saldo sem parâmetros, negativo ou local a ajustar.</li><li><strong>Fechar sem concluir:</strong> restaura o recorte anteriormente aplicado.</li></ul></div>
+              </article>
+
+              <article id="instr-dashboard" class="instruction-section">
+                <span class="instruction-section__number">04</span>
+                <div><h3>Dashboard e indicadores</h3><p>O Dashboard resume apenas o recorte dos filtros aplicados. Os cartões e gráficos são clicáveis e levam ao detalhamento correspondente.</p>
+                <div class="instruction-formulas"><div><span>Valor do estoque</span><code>Σ valor atual de cada posição filtrada</code></div><div><span>Valor acima do máximo</span><code>Σ (saldo − máximo) × custo unitário, quando saldo &gt; máximo</code></div><div><span>Pendências documentais</span><code>SCs sem OF + OFs abertas com saldo pendente</code></div></div>
+                <ul><li><strong>Códigos ativos:</strong> códigos com saldo ou limites parametrizados em pelo menos uma posição.</li><li><strong>Itens com saldo:</strong> códigos cujo saldo consolidado no recorte é diferente de zero.</li><li><strong>Zerados parametrizados:</strong> códigos com posição igual a zero e mínimo + máximo positivo.</li><li><strong>Alertas independentes:</strong> o mesmo código pode aparecer em mais de uma situação quando possui posições distintas.</li><li><strong>Fluxo de compras:</strong> conta SCs únicas, OFs únicas e recebimentos únicos por nota + série.</li><li><strong>Prioridades:</strong> exibe as maiores necessidades líquidas e os maiores excessos estimados.</li></ul></div>
+              </article>
+
+              <article id="instr-catalogo" class="instruction-section">
+                <span class="instruction-section__number">05</span>
+                <div><h3>Catálogo, cards e modais</h3><p>O Catálogo pode ser exibido em cards ou lista compacta e ordenado por código, descrição, saldo, valor ou criticidade.</p>
+                <ul><li>Os cards apresentam identificação, saldo, mínimo/máximo, endereço na ordem <strong>repartição, prateleira e divisão</strong> e responsável pela reposição.</li><li>Ao abrir um item, o modal mostra saldo separado por filial e respeita os filtros aplicados.</li><li>A galeria localiza as fotos existentes na pasta de imagens. O envio manual de foto fica salvo no navegador do dispositivo utilizado.</li><li>Os modais reúnem lead time, consumo médio, saldo atual e projeção da próxima compra, além dos históricos de SC, OF e recebimento.</li><li>A projeção é calculada individualmente por filial. Quando há mais de uma filial no recorte, o sistema solicita a escolha de uma filial.</li></ul>
+                <div class="instruction-formulas"><div><span>Dias até o ponto de reposição</span><code>máx(0; inteiro((saldo − mínimo sugerido) ÷ consumo diário))</code></div><div><span>Data projetada</span><code>data atual + dias até o ponto de reposição</code></div></div></div>
+              </article>
+
+              <article id="instr-necessidade" class="instruction-section instruction-section--accent">
+                <span class="instruction-section__number">06</span>
+                <div><h3>Necessidade de compra</h3><p>Uma posição entra como pendência quando possui mínimo positivo, o saldo está abaixo do mínimo e a necessidade líquida final é maior que zero.</p>
+                <div class="instruction-formulas"><div><span>Meta de reposição</span><code>máximo cadastrado; se não existir, mínimo cadastrado</code></div><div><span>Necessidade bruta</span><code>máx(meta − saldo atual; 0)</code></div><div><span>Cobertura existente</span><code>saldo de OF aberta no CCU 1500 + SC ativa sem OF no CCU 1500, inclusive aguardando aprovação</code></div><div><span>Compra líquida</span><code>máx(necessidade bruta − cobertura existente; 0)</code></div><div><span>Valor estimado</span><code>compra líquida × preço de referência</code></div></div>
+                <ul><li>Se a compra líquida for zero, o item não é exibido como pendência.</li><li>OF fechada não cobre a necessidade; ela permanece disponível somente para históricos e cálculo de lead time.</li><li>SC ou OF fora do CCU 1500 não reduz a compra do almoxarifado.</li><li>Quando há OF + SC, os documentos precisam ser processos distintos; os números de ambos são mantidos.</li><li>Dentro da mesma SC e do mesmo item, sequências diferentes são somadas. Se a <strong>SC - Seq.</strong> se repetir, a linha é considerada apenas uma vez.</li><li>O preço de referência usa primeiro o custo do estoque e, se indisponível, o preço de compra mais recente.</li><li>Os cards mostram saldo, mínimo e máximo cadastrados, consumo médio mensal sem anomalias, cobertura, compra líquida, endereço e responsável. O mesmo consumo integra a exportação completa.</li></ul>
+                <aside class="instruction-alert"><strong>Alerta especial de Cavaco</strong><span>As OFs abertas de Cavaco são consolidadas por fornecedor e filial. O card especial só é gerado quando a soma dos saldos fica abaixo de 200. Necessidade = 200 − saldo somado das OFs. O fornecedor e os números das OFs são exibidos.</span></aside></div>
+              </article>
+
+              <article id="instr-sc" class="instruction-section">
+                <span class="instruction-section__number">07</span>
+                <div><h3>SC pendente de OF</h3><p>Exibe solicitações com situação <strong>Compra confirmada</strong>, <strong>Aguardando aprovação</strong> ou <strong>Comprador negociando</strong>, não canceladas e ainda sem código de OF.</p>
+                <ul><li>O tempo pendente é contado em dias entre a criação da SC e a data atual.</li><li>Os cards informam solicitante, item, quantidade, entrega prevista, idade da SC, endereço e responsável pela reposição.</li><li>O modal organiza todos os campos da solicitação e apresenta o contexto operacional do item.</li><li>No PDF, somente SCs pendentes há mais de 7 dias são incluídas. O Excel mantém todo o conjunto filtrado.</li></ul></div>
+              </article>
+
+              <article id="instr-compras" class="instruction-section">
+                <span class="instruction-section__number">08</span>
+                <div><h3>Consulta de SC, OF e recebimentos</h3><p>Apresenta o fluxo completo de cada processo e relaciona solicitação, ordem e recebimento ao item.</p>
+                <div class="instruction-grid"><section><h4>SC aguardando OF</h4><p>SC encontrada sem código de OF.</p></section><section><h4>OF com saldo pendente</h4><p>OF não fechada com saldo maior que zero.</p></section><section><h4>Entrega parcial</h4><p>Quantidade entregue maior que zero e menor que a quantidade solicitada.</p></section><section><h4>Recebimentos</h4><p>Notas localizadas, identificadas de forma única pelo número da nota e série.</p></section></div>
+                <ul><li>O modal separa visualmente os blocos SC, OF e REC.</li><li>São mostrados solicitante, fornecedor, e-mail, quantidades, valores, datas, status e condições comerciais disponíveis.</li><li>Uma OF fechada continua no histórico e participa do lead time, mas não é tratada como compra aberta para cobrir necessidade.</li></ul></div>
+              </article>
+
+              <article id="instr-tempo-of" class="instruction-section">
+                <span class="instruction-section__number">09</span>
+                <div><h3>Tempo de geração de OF</h3><p>Mede a eficiência entre a criação da solicitação e a emissão da ordem. Cada combinação SC + OF é contabilizada uma única vez.</p>
+                <div class="instruction-formulas"><div><span>Tempo de geração</span><code>data de emissão da OF − SC - Data Criação</code></div><div><span>Média geral</span><code>Σ dias para geração ÷ quantidade de processos válidos</code></div></div>
+                <ul><li>Faixas: até 7; 8–15; 16–20; 21–25; 26–30; e acima de 30 dias.</li><li>Os segmentadores de ano, mês, semana e data usam sempre a coluna <strong>SC - Data Criação</strong>.</li><li>O gráfico pode ser agrupado em visão anual, mensal, semanal ou diária.</li><li>O valor apresentado em cada ponto é a quantidade de itens dos processos naquele período.</li><li>A seleção da faixa de dias do gráfico é independente da faixa aplicada à lista de cards.</li><li>Datas ausentes, inválidas ou em que a OF seja anterior à SC não entram no indicador.</li></ul></div>
+              </article>
+
+              <article id="instr-min-max" class="instruction-section instruction-section--accent">
+                <span class="instruction-section__number">10</span>
+                <div><h3>Revisão de mínimo e máximo</h3><p>A análise cruza consumo mensal sem anomalias, lead time real, saldo, parâmetros atuais e preço de referência por item, filial e local.</p>
+                <div class="instruction-formulas"><div><span>Consumo diário</span><code>consumo médio mensal sem anomalias ÷ 30</code></div><div><span>Mínimo-base</span><code>consumo diário × lead time</code></div><div><span>Mínimo sugerido</span><code>arredondar para cima(mínimo-base × 1,20)</code></div><div><span>Máximo sugerido</span><code>arredondar para cima(mínimo sugerido + 30 dias de consumo)</code></div><div><span>Impacto financeiro dos cards</span><code>(máximo sugerido − máximo atual) × preço de referência</code></div></div>
+                <ul><li><strong>Lead time real:</strong> mediana dos dias entre criação da SC e entrada do recebimento, por filial. Amostras negativas ou superiores a 730 dias são descartadas.</li><li><strong>Sem histórico:</strong> utiliza referência estimada de 30 dias, mas o resultado é classificado como histórico insuficiente.</li><li><strong>Anomalias:</strong> com três ou mais meses, aplica mediana e desvio absoluto mediano. Um mês é excluído quando o escore robusto ultrapassa 3,5. Se o desvio for zero, valores acima de 3 vezes ou abaixo de 1/3 da mediana são anômalos.</li><li><strong>Proteção:</strong> o mínimo sugerido recebe margem preventiva de 20% para reduzir risco de ruptura.</li><li><strong>Validação:</strong> mínimo e máximo atuais são considerados ideais quando ficam dentro de ±20% da recomendação, com tolerância mínima de uma unidade.</li><li><strong>Histórico suficiente:</strong> exige pelo menos dois meses considerados, consumo positivo e amostra real de lead time.</li><li><strong>Impacto total:</strong> os cards consolidam aumentos, reduções e o líquido, calculado como aumentos menos reduções.</li></ul></div>
+              </article>
+
+              <article id="instr-exportacoes" class="instruction-section">
+                <span class="instruction-section__number">11</span>
+                <div><h3>Exportações para Excel e PDF</h3><p>Escolha o formato na própria aba e clique em Exportar. A exportação respeita os filtros aplicados, mas não depende da quantidade de cards carregados na tela.</p>
+                <ul><li><strong>Conteúdo completo:</strong> todas as linhas do recorte filtrado são exportadas, inclusive as ainda não exibidas pela paginação.</li><li><strong>Excel:</strong> linhas padronizadas, cabeçalhos consistentes e nenhuma linha ou coluna congelada.</li><li><strong>PDF:</strong> organiza as informações para leitura e impressão; na SC pendente de OF aplica a regra superior a 7 dias.</li><li><strong>Em lote:</strong> quando a funcionalidade estiver disponível no ponto consultado, o formato escolhido é aplicado ao conjunto completo.</li><li>As exportações incluem códigos de documentos, responsáveis pela reposição, fornecedores e campos operacionais disponíveis em cada relatório.</li></ul></div>
+              </article>
+
+              <article id="instr-regras" class="instruction-section">
+                <span class="instruction-section__number">12</span>
+                <div><h3>Regras especiais e interpretação</h3>
+                <ul><li><strong>Filial 704:</strong> local 101 ou código de local superior a 599 é identificado como ROLANDIA - ALM. PREPARADOS.</li><li><strong>Filial 704 + local 299:</strong> repartições AP, 99, SS ou com apenas uma letra também são identificadas como ROLANDIA - ALM. PREPARADOS.</li><li><strong>Endereço:</strong> sempre apresentado na ordem repartição, prateleira e divisão.</li><li><strong>Saldos por filial:</strong> o modal do catálogo não soma filiais diferentes; apresenta cada filial separadamente e respeita o filtro ativo.</li><li><strong>Valores nulos:</strong> “Não informado”, “Não disponível” ou travessão significam que a fonte não forneceu dado válido; não representam necessariamente zero.</li><li><strong>Carregar mais:</strong> altera apenas o volume renderizado na tela, nunca o universo usado nos cards, cálculos ou exportações.</li><li><strong>Precisão:</strong> valores monetários usam preço de referência disponível; quando não há preço, o impacto financeiro não é estimado.</li></ul>
+                <aside class="instruction-alert instruction-alert--info"><strong>Boa prática</strong><span>Antes de tomar uma decisão, confirme filial, local, unidade, status da compra e data de atualização da base. Abra o modal para validar os documentos que compõem o cálculo.</span></aside></div>
+              </article>
+            </div>
+          </div>
+        </section>
       </section>
     </main>
-    <div id="itemModal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal__backdrop" data-close-modal></div><div class="modal__panel"><button id="modalClose" class="modal__close" type="button" aria-label="Fechar detalhes">×</button><div id="modalContent"></div></div></div>
+
+    <dialog id="purchaseNeedModal" class="item-modal purchase-need-modal" aria-labelledby="purchaseModalTitle">
+      <div class="modal-shell modal-shell--purchase">
+        <header class="modal-header modal-header--purchase">
+          <div>
+            <span id="purchaseModalCode" class="modal-code"></span>
+            <h2 id="purchaseModalTitle">Necessidade de Compra</h2>
+            <p id="purchaseModalSubtitle"></p>
+          </div>
+          <button id="purchaseModalClose" class="modal-close" type="button" aria-label="Fechar necessidade de compra">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content">
+          <div id="purchaseModalSummary" class="summary-cards purchase-summary-cards"></div>
+          <div id="purchaseModalOperational" class="operational-insights"></div>
+          <dl id="purchaseModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions">
+            <button id="purchaseModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="pendingScModal" class="item-modal purchase-need-modal" aria-labelledby="pendingScModalTitle">
+      <div class="modal-shell modal-shell--purchase modal-shell--pending">
+        <header class="modal-header modal-header--pending">
+          <div>
+            <span id="pendingScModalCode" class="modal-code"></span>
+            <h2 id="pendingScModalTitle">Detalhes da solicitação</h2>
+            <p id="pendingScModalSubtitle"></p>
+          </div>
+          <button id="pendingScModalClose" class="modal-close" type="button" aria-label="Fechar detalhes da solicitação">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content">
+          <div id="pendingScSubject" class="pending-sc-subject"></div>
+          <div id="pendingScModalSummary" class="summary-cards pending-sc-summary"></div>
+          <div id="pendingScModalOperational" class="operational-insights"></div>
+          <dl id="pendingScModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions">
+            <button id="pendingScModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="procurementModal" class="item-modal purchase-need-modal" aria-labelledby="procurementModalTitle">
+      <div class="modal-shell modal-shell--purchase modal-shell--procurement">
+        <header class="modal-header modal-header--procurement">
+          <div>
+            <span id="procurementModalCode" class="modal-code"></span>
+            <h2 id="procurementModalTitle">Processo de compra</h2>
+            <p id="procurementModalSubtitle"></p>
+          </div>
+          <button id="procurementModalClose" class="modal-close" type="button" aria-label="Fechar processo de compra">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content">
+          <div id="procurementModalStages" class="process-stages"></div>
+          <div id="procurementModalOperational" class="operational-insights"></div>
+          <div id="procurementModalDetails" class="process-detail-groups"></div>
+          <div class="purchase-modal-actions"><button id="procurementModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="ofGenerationModal" class="item-modal purchase-need-modal of-generation-modal" aria-labelledby="ofGenerationModalTitle">
+      <div class="modal-shell modal-shell--purchase modal-shell--of-generation">
+        <header class="modal-header modal-header--procurement">
+          <div>
+            <span id="ofGenerationModalCode" class="modal-code"></span>
+            <h2 id="ofGenerationModalTitle">Tempo de geração da OF</h2>
+            <p id="ofGenerationModalSubtitle"></p>
+          </div>
+          <button id="ofGenerationModalClose" class="modal-close" type="button" aria-label="Fechar análise do tempo de geração">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content purchase-modal-content of-generation-modal-content">
+          <div id="ofGenerationModalTimeline" class="of-generation-timeline"></div>
+          <div id="ofGenerationModalSummary" class="summary-cards purchase-summary-cards"></div>
+          <dl id="ofGenerationModalDetails" class="details-list purchase-details"></dl>
+          <div class="purchase-modal-actions"><button id="ofGenerationModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="reviewModal" class="item-modal review-modal" aria-labelledby="reviewModalTitle">
+      <div class="modal-shell modal-shell--review">
+        <header class="modal-header modal-header--review">
+          <div>
+            <span id="reviewModalCode" class="modal-code"></span>
+            <h2 id="reviewModalTitle">Revisão de mín. e máx.</h2>
+            <p id="reviewModalSubtitle"></p>
+          </div>
+          <button id="reviewModalClose" class="modal-close" type="button" aria-label="Fechar revisão do item">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+        <div class="modal-content review-modal-content">
+          <div id="reviewModalSummary" class="summary-cards review-modal-summary"></div>
+          <div id="reviewModalRecommendation" class="review-recommendation"></div>
+          <div id="reviewModalDetails" class="review-detail-grid"></div>
+          <div class="purchase-modal-actions">
+            <button id="reviewModalOpenItem" class="button button--secondary" type="button">Abrir cadastro completo do item</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="itemModal" class="item-modal" aria-labelledby="modalTitle">
+      <div class="modal-shell">
+        <header class="modal-header">
+          <div>
+            <span id="modalCode" class="modal-code"></span>
+            <h2 id="modalTitle">Detalhes do item</h2>
+            <p id="modalSubtitle"></p>
+          </div>
+          <div class="modal-nav-actions">
+            <button id="modalPrevious" class="modal-close" type="button" aria-label="Item anterior" title="Item anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+            <button id="modalNext" class="modal-close" type="button" aria-label="Próximo item" title="Próximo item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+            <button id="modalClose" class="modal-close" type="button" aria-label="Fechar detalhes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button>
+          </div>
+        </header>
+
+        <div id="modalBadges" class="modal-badges"></div>
+
+        <nav class="modal-tabs" aria-label="Seções do item" role="tablist">
+          <button class="modal-tab is-active" id="tab-summary" type="button" role="tab" aria-selected="true" aria-controls="panel-summary" data-tab="summary">Resumo e fotos</button>
+          <button class="modal-tab" id="tab-stock" type="button" role="tab" aria-selected="false" aria-controls="panel-stock" data-tab="stock">Posições de estoque</button>
+          <button class="modal-tab" id="tab-history" type="button" role="tab" aria-selected="false" aria-controls="panel-history" data-tab="history">SC, OF e REC</button>
+        </nav>
+
+        <div class="modal-content">
+          <section id="panel-summary" class="tab-panel" role="tabpanel" aria-labelledby="tab-summary">
+            <div class="summary-layout">
+              <div class="gallery-panel">
+                <div id="modalGallery" class="gallery"></div>
+                <div class="photo-upload-actions">
+                  <input id="photoInput" class="visually-hidden" type="file" accept="image/*" capture="environment" multiple>
+                  <button id="photoUploadButton" class="button button--primary" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4l2-3h4l2 3h4v11H4z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+                    Adicionar foto
+                  </button>
+                  <small id="photoUploadStatus">Até 6 fotos salvas neste aparelho</small>
+                </div>
+              </div>
+              <div class="item-summary">
+                <section class="branch-balance-section" aria-labelledby="branchBalanceTitle">
+                  <header><div><span class="branch-balance-section__icon" aria-hidden="true">Σ</span><div><strong id="branchBalanceTitle">Saldo por filial</strong><small>Valores individuais conforme os filtros ativos</small></div></div></header>
+                  <div id="modalBranchBalances" class="branch-balance-grid"></div>
+                </section>
+                <div class="summary-cards summary-cards--catalog-meta">
+                  <article><span>Valor filtrado</span><strong id="modalStockValue">—</strong></article>
+                  <article><span>Posições exibidas</span><strong id="modalPositionCount">—</strong></article>
+                  <article><span>Registros exibidos</span><strong id="modalHistoryCount">—</strong></article>
+                </div>
+                <div id="modalOperationalInsights" class="operational-insights"></div>
+                <section id="modalAddressBlock" class="storage-address-block" aria-label="Endereço de armazenagem"></section>
+                <dl id="modalDetails" class="details-list"></dl>
+              </div>
+            </div>
+          </section>
+
+          <section id="panel-stock" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="tab-stock">
+            <div class="table-heading">
+              <div>
+                <h3>Distribuição por filial e local</h3>
+                <p>Limites e saldos são avaliados individualmente em cada posição.</p>
+              </div>
+            </div>
+            <div id="stockTableWrap" class="table-wrap"></div>
+          </section>
+
+          <section id="panel-history" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="tab-history">
+            <div class="table-heading">
+              <div>
+                <h3>Processo completo de compras</h3>
+                <p>Solicitação de compra, ordem de fornecimento e recebimento/nota fiscal.</p>
+              </div>
+              <span id="historySummary" class="context-label"></span>
+            </div>
+            <div id="historyTableWrap" class="table-wrap"></div>
+            <div class="history-more-wrap">
+              <button id="historyLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais 20 registros</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
+    <noscript>
+      <div class="noscript">Ative o JavaScript para consultar o catálogo do almoxarifado.</div>
+    </noscript>
   </body>
 </html>
