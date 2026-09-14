@@ -11,9 +11,10 @@ const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2"
 const COMPARATIVO_META_VISUAL_MODULE = "./comparativo-meta-visual.js?v=20260914-2";
 const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-2";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
-const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-5";
+const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-6";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 3.7";
+const AREA_FILTER_ACTIVE_MODULE = "./area-filter-active.js?v=20260914-1";
+const CURRENT_PUBLIC_VERSION = "Versão 3.8";
 
 /*
  * Fallback global seguro para a listagem do repositório.
@@ -121,6 +122,7 @@ function enforceCurrentPublicVersion() {
   catch { await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK); }
   enforceCurrentPublicVersion();
   for (const [src, message] of [
+    [AREA_FILTER_ACTIVE_MODULE, "filtro ativo por área"],
     [COMPARATIVO_META_MODULE, "mês meta e filtros dinâmicos"],
     [LAYOUT_FIX_MODULE, "correção estrutural do layout"],
     [COMPARATIVO_PERIODOS_MODULE, "rótulos de período do comparativo"],
@@ -129,7 +131,7 @@ function enforceCurrentPublicVersion() {
     [COMPARATIVO_META_VISUAL_MODULE, "cálculo visual comparado x mês meta"],
     [COMPARATIVO_INCLUSOES_MODULE, "inclusões e reduções de estoque zeradas"],
     [COMPARATIVO_CARDS_RESUMO_MODULE, "cards Top 10 do comparativo"],
-    [COMPARATIVO_MES_A_MES_MODULE, "cards Meta e Meta -10% vs mês comparado"],
+    [COMPARATIVO_MES_A_MES_MODULE, "cards Meta e Meta linear vs mês comparado"],
     [COMPARATIVO_ESCALA_MIL_MODULE, "escala x1000 de saldo e consumo"]
   ]) {
     try { await loadIncrementalScript(src); }
