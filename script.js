@@ -34,6 +34,13 @@ function enforceVersion() {
   if (badge) badge.textContent = CURRENT_VERSION_LABEL;
 }
 
+function installDesktopNavigationHost() {
+  const nav = document.querySelector(".app-nav-wrap");
+  if (!nav) return;
+  if (nav.parentElement !== document.body) document.body.appendChild(nav);
+  nav.dataset.detachedNavigation = "true";
+}
+
 function installCustomThemes() {
   const select = document.getElementById("themeSelect");
   if (!select) return;
@@ -142,10 +149,13 @@ async function registerCacheLater() {
     console.error("Falha ao iniciar aplicação",e);
   }
 
+  installDesktopNavigationHost();
   enforceVersion();
   installCustomThemes();
   repairFilters();
   installZeroWithoutScMetric();
+  window.setTimeout(installDesktopNavigationHost,300);
+  window.setTimeout(installDesktopNavigationHost,1200);
   window.setTimeout(enforceVersion,500);
   window.setTimeout(enforceVersion,1500);
   registerCacheLater();
