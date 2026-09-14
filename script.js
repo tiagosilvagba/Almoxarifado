@@ -31,6 +31,7 @@ let csvRefreshTimer = null;
 let applicationInitialized = false;
 let filterRepairInitialized = false;
 let filterMutationObserver = null;
+let zeroWithoutScMetricInstalled = false;
 
 function loadApplicationScript(source) {
   return new Promise((resolve, reject) => {
@@ -266,6 +267,72 @@ function initializeFilterRepairs() {
   syncAllExcelFilters();
 }
 
+function countZeroItemsWithoutSc() {
+  const codes = new Set();
+  for (const item of state.filteredItems || []) {
+    const positions = currentScopedPositions(item) || [];
+    const zeroPositions = positions.filter((position) => positionMatchesStatus(position, "zero"));
+    if (!zeroPositions.length) continue;
+
+    const hasUncoveredZeroPosition = zeroPositions.some((position) => {
+      const branchCode = String(position.branchCode || "");
+      return !(item.history || []).some((record) => {
+        const sc = record.sc;
+        if (!sc?.code) return false;
+        if (!isWarehouseSc(sc) || !isActiveScForPurchaseCoverage(sc)) return false;
+        const recordBranch = String(record.branchCode || "");
+        return !branchCode || !recordBranch || recordBranch === branchCode;
+      });
+    });
+
+    if (hasUncoveredZeroPosition) codes.add(item.code);
+  }
+  return codes.size;
+}
+
+function ensureZeroWithoutScCard() {
+  if (document.getElementById("metricZeroWithoutSc")) return document.getElementById("metricZeroWithoutSc");
+  const grid = document.querySelector("#page-dashboard .metrics-grid--secondary");
+  if (!grid) return null;
+
+  const card = document.createElement("button");
+  card.className = "metric metric--red metric--zero-without-sc";
+  card.type = "button";
+  card.setAttribute("aria-label", "Itens zerados sem SC");
+  card.innerHTML = '<span class="metric__label">Itens zerados sem SC</span><strong id="metricZeroWithoutSc">—</strong><small>zerados parametrizados sem SC ativa na filial</small>';
+  card.addEventListener("click", () => {
+    if (typeof navigateToPage === "function") navigateToPage("necessidade-compra");
+  });
+  grid.appendChild(card);
+  return card.querySelector("#metricZeroWithoutSc");
+}
+
+function refreshZeroWithoutScMetric() {
+  const valueNode = ensureZeroWithoutScCard();
+  if (!valueNode) return;
+  try {
+    const count = countZeroItemsWithoutSc();
+    valueNode.textContent = integerFormatter.format(count);
+    valueNode.title = `${integerFormatter.format(count)} item(ns) zerado(s) sem SC ativa no recorte atual`;
+  } catch (error) {
+    valueNode.textContent = "—";
+    console.warn("Não foi possível calcular itens zerados sem SC.", error);
+  }
+}
+
+function installZeroWithoutScMetric() {
+  if (zeroWithoutScMetricInstalled || typeof updateDashboardMetrics !== "function") return;
+  zeroWithoutScMetricInstalled = true;
+  const originalUpdateDashboardMetrics = updateDashboardMetrics;
+  updateDashboardMetrics = function patchedUpdateDashboardMetrics(...args) {
+    const result = originalUpdateDashboardMetrics.apply(this, args);
+    refreshZeroWithoutScMetric();
+    return result;
+  };
+  ensureZeroWithoutScCard();
+  refreshZeroWithoutScMetric();
+}
+
 function bindCsvUpdateListener() {
   if (!("serviceWorker" in navigator)) return;
 
@@ -279,6 +346,7 @@ function bindCsvUpdateListener() {
           await window.loadCatalog();
           window.setTimeout(refreshFilterOptionsAfterApply, 0);
           window.setTimeout(refreshFilterOptionsAfterApply, 250);
+          window.setTimeout(refreshZeroWithoutScMetric, 260);
         } catch (error) {
           console.warn("Falha ao atualizar catálogo após alteração dos CSVs.", error);
         }
@@ -299,6 +367,7 @@ async function initializeLoadedApplication() {
 
   initializeCustomThemes();
   initializeFilterRepairs();
+  installZeroWithoutScMetric();
 }
 
 (async function startAlmoxarifado() {
