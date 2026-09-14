@@ -8,7 +8,8 @@ const LAYOUT_FIX_MODULE = "./layout-fix.js?v=20260914-2";
 const COMPARATIVO_PERIODOS_MODULE = "./comparativo-periodos.js?v=20260914-1";
 const COMPARATIVO_EXCEL_MODULE = "./comparativo-excel-padrao.js?v=20260914-1";
 const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 2.1";
+const COMPARATIVO_META_VISUAL_MODULE = "./comparativo-meta-visual.js?v=20260914-1";
+const CURRENT_PUBLIC_VERSION = "Versão 2.2";
 
 function loadIncrementalScript(src) {
   return new Promise((resolve, reject) => {
@@ -64,6 +65,12 @@ function enforceCurrentPublicVersion() {
     await loadIncrementalScript(COMPARATIVO_ITEM_SPLIT_MODULE);
   } catch (error) {
     console.error("Não foi possível separar código e nome do item no comparativo.", error);
+  }
+
+  try {
+    await loadIncrementalScript(COMPARATIVO_META_VISUAL_MODULE);
+  } catch (error) {
+    console.error("Não foi possível carregar a visualização comparado x mês meta.", error);
   }
 
   enforceCurrentPublicVersion();
