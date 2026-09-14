@@ -7,6 +7,8 @@ const COMPARATIVO_META_MODULE = "./comparativo-meta.js?v=20260914-1";
 const LAYOUT_FIX_MODULE = "./layout-fix.js?v=20260914-2";
 const COMPARATIVO_PERIODOS_MODULE = "./comparativo-periodos.js?v=20260914-1";
 const COMPARATIVO_EXCEL_MODULE = "./comparativo-excel-padrao.js?v=20260914-1";
+const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-1";
+const CURRENT_PUBLIC_VERSION = "Versão 2.1";
 
 function loadIncrementalScript(src) {
   return new Promise((resolve, reject) => {
@@ -19,12 +21,20 @@ function loadIncrementalScript(src) {
   });
 }
 
+function enforceCurrentPublicVersion() {
+  const badge = document.getElementById("versionBadge");
+  if (badge) badge.textContent = CURRENT_PUBLIC_VERSION;
+  document.documentElement.dataset.appVersion = CURRENT_PUBLIC_VERSION.replace(/^Versão\s*/i, "");
+}
+
 (async function bootIncrementalAlmoxarifado() {
   try {
     await loadIncrementalScript(PREVIOUS_BOOTSTRAP);
   } catch {
     await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK);
   }
+
+  enforceCurrentPublicVersion();
 
   try {
     await loadIncrementalScript(COMPARATIVO_META_MODULE);
@@ -49,4 +59,13 @@ function loadIncrementalScript(src) {
   } catch (error) {
     console.error("Não foi possível carregar a exportação Excel padronizada do comparativo.", error);
   }
+
+  try {
+    await loadIncrementalScript(COMPARATIVO_ITEM_SPLIT_MODULE);
+  } catch (error) {
+    console.error("Não foi possível separar código e nome do item no comparativo.", error);
+  }
+
+  enforceCurrentPublicVersion();
+  [250, 800, 1800].forEach((delay) => window.setTimeout(enforceCurrentPublicVersion, delay));
 })();
