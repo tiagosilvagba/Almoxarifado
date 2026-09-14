@@ -2,7 +2,7 @@
 
 (() => {
   const SCALE = 1000;
-  const nf = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+  const nf = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   let scheduled = false;
 
   function parsePt(value) {
@@ -37,9 +37,7 @@
     const metrics = [...page.querySelectorAll("#monthlyCompareMetrics .month-compare-metric")];
     [0,1,2,3].forEach(i => scaleNode(metrics[i]?.querySelector("strong")));
 
-    const metaCards = [...page.querySelectorAll("#monthlyTargetBlock .month-target-metric")];
-    [0,1,2].forEach(i => scaleNode(metaCards[i]?.querySelector("strong")));
-
+    /* O card Meta Vs mês comparado aplica a própria escala e formatação fixa. */
     page.querySelectorAll(".month-consideration__total > strong").forEach(scaleNode);
     page.querySelectorAll(".month-consideration li > strong:last-child").forEach(scaleNode);
     page.querySelectorAll(".month-stock-inclusions__total strong, .month-stock-inclusions li > strong:last-child").forEach(scaleNode);
