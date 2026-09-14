@@ -36,12 +36,15 @@
     return Number.isFinite(n) ? (negative ? -n : n) : null;
   }
 
-  function scaled(value, signed = false) {
+  function scaledNumber(value) {
     const n = parsePt(value);
-    if (n == null) return "—";
-    const result = n * SCALE;
-    const sign = signed ? (result > 0 ? "+" : result < 0 ? "−" : "") : "";
-    return `${sign}${nf2.format(Math.abs(result))}`;
+    return n == null ? null : n * SCALE;
+  }
+
+  function formatScaled(value, signed = false) {
+    if (value == null || !Number.isFinite(value)) return "—";
+    const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
+    return `${sign}${nf2.format(Math.abs(value))}`;
   }
 
   function readVisualData() {
@@ -68,6 +71,17 @@
     visual.setAttribute("aria-hidden", "true");
   }
 
+  function ensureTenPercentBlock(block) {
+    let ten = document.getElementById("monthlyTargetMinusTenBlock");
+    if (!ten) {
+      ten = document.createElement("section");
+      ten.id = "monthlyTargetMinusTenBlock";
+      ten.className = "month-target-block is-hidden";
+      block.insertAdjacentElement("afterend", ten);
+    }
+    return ten;
+  }
+
   function render() {
     const block = document.getElementById("monthlyTargetBlock");
     const targetSelect = document.getElementById("monthlyTargetSelect");
@@ -75,12 +89,15 @@
     if (!block || !targetSelect || !currentSelect) return;
 
     hideOldVisual();
+    const tenBlock = ensureTenPercentBlock(block);
 
     const targetName = targetSelect.value;
     const currentName = currentSelect.value;
     if (!targetName || !currentName) {
       block.classList.add("is-hidden");
+      tenBlock.classList.add("is-hidden");
       if (block.innerHTML) block.innerHTML = "";
+      tenBlock.innerHTML = "";
       lastSignature = "";
       return;
     }
@@ -94,18 +111,31 @@
       if (loadingSignature !== lastSignature) {
         lastSignature = loadingSignature;
         block.classList.remove("is-hidden");
-        block.innerHTML = `
-          <div class="month-target-block__head"><div><h3>Meta Vs ${currentLabel}</h3><small>${metaLabel} × ${currentLabel}</small></div></div>
-          <div class="month-compare-message">Atualizando comparação entre a meta e ${currentLabel}…</div>`;
+        block.innerHTML = `<div class="month-target-block__head"><div><h3>Meta Vs ${currentLabel}</h3><small>${metaLabel} × ${currentLabel}</small></div></div><div class="month-compare-message">Atualizando comparação entre a meta e ${currentLabel}…</div>`;
+        tenBlock.classList.add("is-hidden");
+        tenBlock.innerHTML = "";
       }
       schedule(150);
       return;
     }
 
-    const metaScaled = scaled(data.meta);
-    const comparedScaled = scaled(data.compared);
-    const differenceScaled = scaled(data.difference, true);
-    const signature = [targetName,currentName,metaLabel,currentLabel,metaScaled,comparedScaled,differenceScaled,data.percent,data.above,data.below,data.equal].join("|");
+    const metaScaled = scaledNumber(data.meta);
+    const comparedScaled = scaledNumber(data.compared);
+    const differenceScaled = scaledNumber(data.difference);
+    const metaMinusTen = metaScaled == null ? null : metaScaled * 0.9;
+    const deltaToMinusTen = (comparedScaled == null || metaMinusTen == null) ? null : comparedScaled - metaMinusTen;
+    const pctToMinusTen = (metaMinusTen == null || Math.abs(metaMinusTen) < 0.000001 || comparedScaled == null)
+      ? null
+      : ((comparedScaled - metaMinusTen) / Math.abs(metaMinusTen)) * 100;
+
+    const metaScaledText = formatScaled(metaScaled);
+    const comparedScaledText = formatScaled(comparedScaled);
+    const differenceScaledText = formatScaled(differenceScaled, true);
+    const minusTenText = formatScaled(metaMinusTen);
+    const deltaMinusTenText = formatScaled(deltaToMinusTen, true);
+    const pctMinusTenText = pctToMinusTen == null ? "—" : `${pctToMinusTen > 0 ? "+" : pctToMinusTen < 0 ? "−" : ""}${nf2.format(Math.abs(pctToMinusTen))}%`;
+
+    const signature = [targetName,currentName,metaLabel,currentLabel,metaScaledText,comparedScaledText,differenceScaledText,data.percent,data.above,data.below,data.equal,minusTenText,deltaMinusTenText,pctMinusTenText].join("|");
     if (signature === lastSignature) return;
     lastSignature = signature;
 
@@ -114,14 +144,28 @@
         <div><h3>Meta Vs ${currentLabel}</h3><small>${metaLabel} × ${currentLabel}</small></div>
       </div>
       <div class="month-target-grid">
-        <article class="month-target-metric"><span>Saldo meta</span><strong data-scale-mil="1">${metaScaled}</strong><small>${metaLabel}</small></article>
-        <article class="month-target-metric"><span>Saldo comparado</span><strong data-scale-mil="1">${comparedScaled}</strong><small>${currentLabel}</small></article>
-        <article class="month-target-metric"><span>Diferença para a meta</span><strong data-scale-mil="1">${differenceScaled}</strong><small>${currentLabel} − ${metaLabel}</small></article>
+        <article class="month-target-metric"><span>Saldo meta</span><strong data-scale-mil="1">${metaScaledText}</strong><small>${metaLabel}</small></article>
+        <article class="month-target-metric"><span>Saldo comparado</span><strong data-scale-mil="1">${comparedScaledText}</strong><small>${currentLabel}</small></article>
+        <article class="month-target-metric"><span>Diferença para a meta</span><strong data-scale-mil="1">${differenceScaledText}</strong><small>${currentLabel} − ${metaLabel}</small></article>
         <article class="month-target-metric"><span>Variação percentual</span><strong>${data.percent}</strong><small>comparado em relação à meta</small></article>
         <article class="month-target-metric"><span>Itens acima / abaixo / iguais</span><strong>${data.above} / ${data.below} / ${data.equal}</strong><small>comparação item a item</small></article>
       </div>`;
     block.classList.remove("is-hidden");
     block.dataset.comparisonMode = "meta-vs-current";
+
+    tenBlock.innerHTML = `
+      <div class="month-target-block__head">
+        <div><h3>Meta -10% Vs ${currentLabel}</h3><small>90% do saldo de ${metaLabel} × ${currentLabel}</small></div>
+      </div>
+      <div class="month-target-grid">
+        <article class="month-target-metric"><span>Meta reduzida em 10%</span><strong data-scale-mil="1">${minusTenText}</strong><small>${metaLabel} × 90%</small></article>
+        <article class="month-target-metric"><span>Saldo comparado</span><strong data-scale-mil="1">${comparedScaledText}</strong><small>${currentLabel}</small></article>
+        <article class="month-target-metric"><span>Diferença para Meta -10%</span><strong data-scale-mil="1">${deltaMinusTenText}</strong><small>${currentLabel} − Meta -10%</small></article>
+        <article class="month-target-metric"><span>Variação percentual</span><strong>${pctMinusTenText}</strong><small>comparado em relação à Meta -10%</small></article>
+        <article class="month-target-metric"><span>Objetivo de redução</span><strong>10,00%</strong><small>sobre o saldo do mês meta</small></article>
+      </div>`;
+    tenBlock.classList.remove("is-hidden");
+    tenBlock.dataset.comparisonMode = "meta-minus-ten-vs-current";
   }
 
   function install() {
