@@ -1,7 +1,8 @@
 "use strict";
 
 (() => {
-  const AREA_FILE = "./02 - Responsaveis_Reposição.CSV?inclusoes=20260914-1";
+  const AREA_FILE = "./02 - Responsaveis_Reposição.CSV?inclusoes=20260914-2";
+  const VALUE_MULTIPLIER = 1000;
   const areaMap = new Map();
   const cache = new Map();
   let renderToken = 0;
@@ -93,7 +94,7 @@
         set.add(a); areaMap.set(key, set);
       });
     } catch (error) {
-      console.warn("Comparativo inclusões: áreas indisponíveis", error);
+      console.warn("Comparativo inclusões/reduções: áreas indisponíveis", error);
     }
   }
 
@@ -165,43 +166,56 @@
     const style = document.createElement("style");
     style.id = "monthlyStockInclusionStyles";
     style.textContent = `
-      .month-stock-inclusions{margin:0 0 18px;padding:16px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}
+      .month-stock-inclusions,.month-stock-zero-reductions{margin:0 0 18px;padding:16px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}
       .month-stock-inclusions__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.month-stock-inclusions__head h3{margin:0 0 4px}.month-stock-inclusions__head p{margin:0;color:var(--muted)}
       .month-stock-inclusions__total{min-width:150px;padding:10px 12px;border:1px solid var(--steel-200);border-radius:12px;text-align:right}.month-stock-inclusions__total span{display:block;font-size:12px;color:var(--muted);font-weight:800}.month-stock-inclusions__total strong{font-size:21px}
       .month-stock-inclusions__list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
       .month-stock-inclusions__list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--steel-200);border-radius:12px;background:var(--steel-50,#fff)}
-      .month-stock-inclusions__identity{min-width:0}.month-stock-inclusions__identity strong{display:block}.month-stock-inclusions__identity small{display:block;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}.month-stock-inclusions__value{font-variant-numeric:tabular-nums;font-weight:900;color:#169b62;white-space:nowrap}
+      .month-stock-inclusions__identity{min-width:0}.month-stock-inclusions__identity strong{display:block}.month-stock-inclusions__identity small{display:block;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}
+      .month-stock-inclusions__value{font-variant-numeric:tabular-nums;font-weight:900;color:#169b62;white-space:nowrap}.month-stock-zero-reductions .month-stock-inclusions__value{color:#d64545}
       .month-stock-inclusions__empty{padding:14px;border:1px dashed var(--steel-200);border-radius:12px;color:var(--muted)}
       @media(max-width:900px){.month-stock-inclusions__head{display:grid}.month-stock-inclusions__total{text-align:left}.month-stock-inclusions__list{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
   }
 
-  function ensureContainer() {
+  function ensureContainers() {
     const anchor = document.getElementById("monthlyComparedMetaVisual") || document.getElementById("monthlyTargetBlock");
-    if (!anchor) return null;
-    let node = document.getElementById("monthlyStockInclusions");
-    if (!node) {
-      node = document.createElement("section");
-      node.id = "monthlyStockInclusions";
-      node.className = "month-stock-inclusions is-hidden";
-      anchor.insertAdjacentElement("afterend", node);
+    if (!anchor) return {};
+    let inclusionsNode = document.getElementById("monthlyStockInclusions");
+    if (!inclusionsNode) {
+      inclusionsNode = document.createElement("section");
+      inclusionsNode.id = "monthlyStockInclusions";
+      inclusionsNode.className = "month-stock-inclusions is-hidden";
+      anchor.insertAdjacentElement("afterend", inclusionsNode);
     }
-    return node;
+    let reductionsNode = document.getElementById("monthlyStockZeroReductions");
+    if (!reductionsNode) {
+      reductionsNode = document.createElement("section");
+      reductionsNode.id = "monthlyStockZeroReductions";
+      reductionsNode.className = "month-stock-zero-reductions is-hidden";
+      inclusionsNode.insertAdjacentElement("afterend", reductionsNode);
+    }
+    return { inclusionsNode, reductionsNode };
+  }
+
+  function renderRankList(items, valueSelector) {
+    return items.length
+      ? `<ol class="month-stock-inclusions__list">${items.map((item, index) => `<li><div class="month-stock-inclusions__identity"><strong>${index + 1}. ${esc(item.code)}</strong><small>${esc(item.name || "Item sem nome")}</small></div><span class="month-stock-inclusions__value">${nf.format(valueSelector(item) * VALUE_MULTIPLIER)}</span></li>`).join("")}</ol>`
+      : '<div class="month-stock-inclusions__empty">Nenhum item identificado neste recorte.</div>';
   }
 
   async function render() {
     const token = ++renderToken;
     ensureStyles();
-    const node = ensureContainer();
-    if (!node) return;
+    const { inclusionsNode, reductionsNode } = ensureContainers();
+    if (!inclusionsNode || !reductionsNode) return;
     const currentSelect = document.getElementById("monthlyCurrentSelect");
     const targetSelect = document.getElementById("monthlyTargetSelect");
     const currentName = currentSelect?.value;
     const targetName = targetSelect?.value;
     if (!currentName || !targetName) {
-      node.classList.add("is-hidden");
-      node.innerHTML = "";
+      [inclusionsNode, reductionsNode].forEach((node) => { node.classList.add("is-hidden"); node.innerHTML = ""; });
       return;
     }
 
@@ -215,26 +229,39 @@
       const inclusions = [...currentMap.values()]
         .filter((item) => !targetMap.has(item.code))
         .sort((a, b) => b.balance - a.balance);
-      const top = inclusions.slice(0, 10);
-      const totalBalance = inclusions.reduce((sum, item) => sum + item.balance, 0);
+      const zeroReductions = [...targetMap.values()]
+        .filter((item) => item.balance > 0 && currentMap.has(item.code) && Math.abs(currentMap.get(item.code).balance) < 0.000001)
+        .map((item) => ({ ...item, currentBalance: currentMap.get(item.code).balance }))
+        .sort((a, b) => b.balance - a.balance);
+
+      const topInclusions = inclusions.slice(0, 10);
+      const topReductions = zeroReductions.slice(0, 10);
+      const totalInclusions = inclusions.reduce((sum, item) => sum + item.balance, 0);
+      const totalReductions = zeroReductions.reduce((sum, item) => sum + item.balance, 0);
       const currentLabel = currentSelect.selectedOptions?.[0]?.textContent?.trim() || "Mês comparado";
       const targetLabel = targetSelect.selectedOptions?.[0]?.textContent?.trim() || "Mês meta";
 
-      const list = top.length
-        ? `<ol class="month-stock-inclusions__list">${top.map((item, index) => `<li><div class="month-stock-inclusions__identity"><strong>${index + 1}. ${esc(item.code)}</strong><small>${esc(item.name || "Item sem nome")}</small></div><span class="month-stock-inclusions__value">${nf.format(item.balance)}</span></li>`).join("")}</ol>`
-        : '<div class="month-stock-inclusions__empty">Nenhuma inclusão de estoque identificada neste recorte.</div>';
-
-      node.innerHTML = `
+      inclusionsNode.innerHTML = `
         <div class="month-stock-inclusions__head">
           <div><h3>Inclusões de estoque · Top 10</h3><p>Itens existentes em ${esc(currentLabel)} que não existiam em ${esc(targetLabel)} no mesmo recorte filtrado.</p></div>
-          <div class="month-stock-inclusions__total"><span>Total de inclusões</span><strong>${inclusions.length}</strong><small>${nf.format(totalBalance)} de saldo incluído</small></div>
+          <div class="month-stock-inclusions__total"><span>Total de inclusões</span><strong>${inclusions.length}</strong><small>${nf.format(totalInclusions * VALUE_MULTIPLIER)} de saldo incluído</small></div>
         </div>
-        ${list}`;
-      node.classList.remove("is-hidden");
+        ${topInclusions.length ? renderRankList(topInclusions, (item) => item.balance) : '<div class="month-stock-inclusions__empty">Nenhuma inclusão de estoque identificada neste recorte.</div>'}`;
+      inclusionsNode.classList.remove("is-hidden");
+
+      reductionsNode.innerHTML = `
+        <div class="month-stock-inclusions__head">
+          <div><h3>Reduções de estoque · Top 10 zerados</h3><p>Itens que tinham saldo em ${esc(targetLabel)} e estão com saldo zero em ${esc(currentLabel)}.</p></div>
+          <div class="month-stock-inclusions__total"><span>Total de itens zerados</span><strong>${zeroReductions.length}</strong><small>−${nf.format(totalReductions * VALUE_MULTIPLIER)} de saldo reduzido</small></div>
+        </div>
+        ${topReductions.length ? renderRankList(topReductions, (item) => item.balance) : '<div class="month-stock-inclusions__empty">Nenhum item com saldo anterior e saldo atual zerado neste recorte.</div>'}`;
+      reductionsNode.classList.remove("is-hidden");
     } catch (error) {
       if (token !== renderToken) return;
-      node.classList.remove("is-hidden");
-      node.innerHTML = `<div class="month-stock-inclusions__empty">Não foi possível calcular as inclusões de estoque: ${esc(error?.message || error)}</div>`;
+      inclusionsNode.classList.remove("is-hidden");
+      inclusionsNode.innerHTML = `<div class="month-stock-inclusions__empty">Não foi possível calcular as inclusões de estoque: ${esc(error?.message || error)}</div>`;
+      reductionsNode.classList.add("is-hidden");
+      reductionsNode.innerHTML = "";
     }
   }
 
@@ -242,7 +269,7 @@
 
   function install() {
     ensureStyles();
-    ensureContainer();
+    ensureContainers();
     schedule(150);
     ["monthlyCurrentSelect", "monthlyTargetSelect", "monthlyBranchFilter", "monthlyLocalFilter", "monthlyUsageFilter", "monthlyAreaFilter"].forEach((id) => {
       document.getElementById(id)?.addEventListener("change", () => schedule());
