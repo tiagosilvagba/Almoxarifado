@@ -17,14 +17,34 @@ const COMPARATIVO_MES_A_MES_MODULE="./comparativo-mes-a-mes.js?v=20260914-6";
 const COMPARATIVO_ESCALA_MIL_MODULE="./comparativo-escala-mil.js?v=20260914-2";
 const AREA_FILTER_ACTIVE_MODULE="./area-filter-active.js?v=20260914-1";
 const GITHUB_PHOTO_UPLOAD_MODULE="./github-photo-upload-v2.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION="Versão 5.3";
+const CURRENT_PUBLIC_VERSION="Versão 5.4";
 
-/*
- * A aplicação-base processa os CSVs em um Web Worker. O fetch sobrescrito na janela
- * não existe dentro do Worker, portanto a descoberta das partes de Compras não pode
- * depender da API do GitHub. Interceptamos somente a mensagem de inicialização do
- * worker de inventário e entregamos um manifesto com URLs do próprio GitHub Pages.
- */
+/* Alguns bootstraps antigos usam raw.githubusercontent.com como fallback de script.
+ * O conteúdo bruto pode ser recusado pelo navegador por MIME. Reescrevemos somente
+ * esses fallbacks do próprio projeto para o endpoint alternativo do jsDelivr. */
+(function installSafeRawScriptFallback(){
+  if(window.__almoxSafeRawScriptFallbackInstalled)return;
+  window.__almoxSafeRawScriptFallbackInstalled=true;
+  const originalAppendChild=document.head.appendChild.bind(document.head);
+  const rawPattern=/^https:\/\/raw\.githubusercontent\.com\/tiagosilvagba\/Almoxarifado\/([^/]+)\/(.+)$/i;
+  document.head.appendChild=function(node){
+    try{
+      if(node?.tagName==="SCRIPT"&&node.src){
+        const match=node.src.match(rawPattern);
+        if(match){
+          const ref=match[1];
+          const path=match[2].split("?")[0];
+          node.src=`https://fastly.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@${ref}/${path}`;
+        }
+      }
+    }catch{}
+    return originalAppendChild(node);
+  };
+})();
+
+/* A aplicação-base processa os CSVs em um Web Worker. O fetch sobrescrito na janela
+ * não existe dentro do Worker; por isso Compras recebe um manifesto local e deixa de
+ * depender da API do GitHub para descobrir as partes 01–04. */
 (function installWorkerDataTransport(){
   if(window.__almoxWorkerDataTransportInstalled || typeof Worker!=="function")return;
   window.__almoxWorkerDataTransportInstalled=true;
@@ -39,11 +59,7 @@ const CURRENT_PUBLIC_VERSION="Versão 5.3";
     let next=message;
     try{
       if(message && typeof message==="object" && message.saldoUrl && message.comprasApiUrl && message.replenishmentUrl){
-        const entries=purchaseParts.map((name)=>({
-          name,
-          type:"file",
-          download_url:new URL(name,document.baseURI).href
-        }));
+        const entries=purchaseParts.map((name)=>({name,type:"file",download_url:new URL(name,document.baseURI).href}));
         const manifest=`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(entries))}`;
         next={...message,comprasApiUrl:manifest,commitsApiUrl:""};
       }
