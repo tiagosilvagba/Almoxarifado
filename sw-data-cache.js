@@ -1,6 +1,6 @@
 "use strict";
-const CSV_CACHE_NAME="almoxarifado-csv-v47";
-const APP_CACHE_NAME="almoxarifado-app-v47";
+const CSV_CACHE_NAME="almoxarifado-csv-v48";
+const APP_CACHE_NAME="almoxarifado-app-v48";
 const CSV_PATTERN=/\.csv(?:$|\?)/i;
 const SCRIPT_PATTERN=/\/(?:script|responsive-layout|github-commit-queue|github-photo-upload-v2|page-snapshot-pdf|saldo-update-time|area-filter-active|layout-fix|comparativo-[a-z0-9-]+)\.js$/i;
 const STYLE_PATTERN=/\/(?:style|responsive-project)\.css$/i;
