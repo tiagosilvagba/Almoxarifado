@@ -13,11 +13,18 @@ const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-2";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
 const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-5";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 3.5";
+const CURRENT_PUBLIC_VERSION = "Versão 3.6";
 
-(function installMonthlyRepositoryFallback() {
-  if (window.__almoxMonthlyFetchFallbackInstalled) return;
-  window.__almoxMonthlyFetchFallbackInstalled = true;
+/*
+ * Fallback global seguro para a listagem do repositório.
+ * Importante: esta camada NÃO pode devolver apenas os arquivos mensais, porque a mesma
+ * consulta é usada pelo carregador principal para localizar Saldo, Compras, Consumo e
+ * Responsáveis. Quando a API responde normalmente, a resposta original é preservada.
+ * O fallback só entra em ação quando a consulta realmente falha.
+ */
+(function installRepositoryFallback() {
+  if (window.__almoxRepositoryFallbackInstalled) return;
+  window.__almoxRepositoryFallbackInstalled = true;
 
   const nativeFetch = window.fetch.bind(window);
   const apiPattern = /^https:\/\/api\.github\.com\/repos\/tiagosilvagba\/Almoxarifado\/contents(?:\?ref=main)?$/i;
@@ -38,18 +45,32 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.5";
     }
   }
 
-  async function discoverMonthlyFilesLocally() {
+  async function discoverKnownRepositoryFilesLocally() {
+    const candidates = [
+      "00 - Saldo_Online.csv",
+      "01 - Compras_Almox.csv",
+      "02 - Responsaveis_Reposição.CSV",
+      "03 - Consumo.csv"
+    ];
+
+    for (let part = 1; part <= 20; part += 1) {
+      candidates.push(`01 - Compras_Almox_Parte_${String(part).padStart(2,"0")}.CSV`);
+    }
+
     const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let year = currentYear - 3; year <= currentYear + 1; year += 1) years.push(year);
-    const candidates = [];
-    for (const year of years) for (const month of months) candidates.push(`01 - Estoque_${month}_${year}.csv`);
+    for (let year = currentYear - 3; year <= currentYear + 1; year += 1) {
+      for (const month of months) candidates.push(`01 - Estoque_${month}_${year}.csv`);
+    }
+
+    const unique = [...new Set(candidates)];
     const found = [];
     const batchSize = 8;
-    for (let i = 0; i < candidates.length; i += batchSize) {
-      const batch = candidates.slice(i, i + batchSize);
+    for (let i = 0; i < unique.length; i += batchSize) {
+      const batch = unique.slice(i, i + batchSize);
       const results = await Promise.all(batch.map(async (name) => ({ name, exists: await fileExists(name) })));
-      results.forEach(({ name, exists }) => { if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" }); });
+      for (const { name, exists } of results) {
+        if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" });
+      }
     }
     return found;
   }
@@ -57,21 +78,24 @@ const CURRENT_PUBLIC_VERSION = "Versão 3.5";
   window.fetch = async function almoxFetch(input, init) {
     const url = typeof input === "string" ? input : input?.url || "";
     if (!apiPattern.test(url)) return nativeFetch(input, init);
+
     try {
       const response = await nativeFetch(input, init);
-      if (response.ok) {
-        try {
-          const entries = await response.clone().json();
-          const monthlyCount = Array.isArray(entries) ? entries.filter((entry) => /^01\s*-\s*Estoque_[A-Za-zÀ-ÿ]{3}_\d{4}\.csv$/i.test(entry?.name || "")).length : 0;
-          if (monthlyCount > 0) return response;
-        } catch { return response; }
-      }
+      if (response.ok) return response;
+      console.warn(`Listagem do repositório respondeu ${response.status}; usando descoberta local de contingência.`);
     } catch (error) {
-      console.warn("Comparativo mensal: API GitHub indisponível; iniciando descoberta pelo GitHub Pages.", error);
+      console.warn("Listagem do repositório indisponível; usando descoberta local de contingência.", error);
     }
-    const manifest = await discoverMonthlyFilesLocally();
-    console.info(`Comparativo mensal: ${manifest.length} base(s) mensal(is) localizada(s) pelo GitHub Pages.`);
-    return new Response(JSON.stringify(manifest), { status:200, headers:{"Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"same-origin-discovery"} });
+
+    const manifest = await discoverKnownRepositoryFilesLocally();
+    console.info(`Contingência: ${manifest.length} arquivo(s) de dados localizado(s) no GitHub Pages.`);
+    return new Response(JSON.stringify(manifest), {
+      status:200,
+      headers:{
+        "Content-Type":"application/json; charset=utf-8",
+        "X-Almoxarifado-Fallback":"same-origin-full-data-discovery"
+      }
+    });
   };
 })();
 
