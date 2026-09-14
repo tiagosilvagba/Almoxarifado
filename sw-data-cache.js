@@ -1,9 +1,9 @@
 "use strict";
 
-const CSV_CACHE_NAME = "almoxarifado-csv-v39";
-const APP_CACHE_NAME = "almoxarifado-app-v39";
+const CSV_CACHE_NAME = "almoxarifado-csv-v40";
+const APP_CACHE_NAME = "almoxarifado-app-v40";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
-const SCRIPT_PATTERN = /\/(?:script|responsive-layout|github-commit-queue|github-photo-upload-v2)\.js$/i;
+const SCRIPT_PATTERN = /\/(?:script|responsive-layout|github-commit-queue|github-photo-upload-v2|page-snapshot-pdf)\.js$/i;
 const STYLE_PATTERN = /\/(?:style|responsive-project)\.css$/i;
 self.addEventListener("install",()=>self.skipWaiting());
 self.addEventListener("activate",event=>{event.waitUntil((async()=>{const names=await caches.keys();await Promise.all(names.filter(name=>name.startsWith("almoxarifado-")&&![CSV_CACHE_NAME,APP_CACHE_NAME].includes(name)).map(name=>caches.delete(name)));await self.clients.claim();const clients=await self.clients.matchAll({type:"window",includeUncontrolled:true});for(const client of clients)client.postMessage({type:"almoxarifado-app-cache-refreshed"})})())});
