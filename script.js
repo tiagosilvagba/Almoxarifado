@@ -6,6 +6,7 @@ const PREVIOUS_BOOTSTRAP_FALLBACK = "https://raw.githubusercontent.com/tiagosilv
 const COMPARATIVO_META_MODULE = "./comparativo-meta.js?v=20260914-1";
 const LAYOUT_FIX_MODULE = "./layout-fix.js?v=20260914-2";
 const COMPARATIVO_PERIODOS_MODULE = "./comparativo-periodos.js?v=20260914-1";
+const COMPARATIVO_EXCEL_MODULE = "./comparativo-excel-padrao.js?v=20260914-1";
 
 function loadIncrementalScript(src) {
   return new Promise((resolve, reject) => {
@@ -41,5 +42,11 @@ function loadIncrementalScript(src) {
     await loadIncrementalScript(COMPARATIVO_PERIODOS_MODULE);
   } catch (error) {
     console.error("Não foi possível carregar os rótulos de período do comparativo.", error);
+  }
+
+  try {
+    await loadIncrementalScript(COMPARATIVO_EXCEL_MODULE);
+  } catch (error) {
+    console.error("Não foi possível carregar a exportação Excel padronizada do comparativo.", error);
   }
 })();
