@@ -2,14 +2,17 @@
 
 (() => {
   const REPO_CONTENTS_API = "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents?ref=main";
+  const RESPONSIBILITY_FILE = "./02 - Responsaveis_Reposição.CSV?area=20260914-1";
   const FILE_RE = /^01\s*-\s*Estoque_([A-Za-zÀ-ÿ]{3})_(\d{4})\.csv$/i;
   const MONTH_ORDER = { jan:1, fev:2, mar:3, abr:4, mai:5, jun:6, jul:7, ago:8, set:9, out:10, nov:11, dez:12 };
   const MONTH_LABEL = { jan:"Janeiro", fev:"Fevereiro", mar:"Março", abr:"Abril", mai:"Maio", jun:"Junho", jul:"Julho", ago:"Agosto", set:"Setembro", out:"Outubro", nov:"Novembro", dez:"Dezembro" };
   const snapshotCache = new Map();
+  const areaByPosition = new Map();
   let availableFiles = [];
   let currentRows = [];
   let lastBaseSnapshot = null;
   let lastCurrentSnapshot = null;
+  let responsibilityLoaded = false;
 
   const nf0 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits:0 });
   const nf2 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits:2 });
@@ -18,8 +21,22 @@
     return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   }
 
+  function normalizeKeyPart(value) {
+    const text = String(value ?? "").trim();
+    if (/^0*\d+$/.test(text)) return String(Number(text));
+    return normalize(text);
+  }
+
+  function positionKey(branch, local) {
+    return `${normalizeKeyPart(branch)}::${normalizeKeyPart(local)}`;
+  }
+
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+  }
+
+  function escapeXml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[char]));
   }
 
   function parseNumber(value) {
@@ -91,6 +108,44 @@
     return -1;
   }
 
+  async function fetchText(url, cache = "default") {
+    const response = await fetch(encodeURI(url), { cache });
+    if (!response.ok) throw new Error(`Não foi possível ler ${url}.`);
+    const buffer = await response.arrayBuffer();
+    let text = new TextDecoder("utf-8").decode(buffer);
+    if (text.includes("�")) {
+      try { text = new TextDecoder("windows-1252").decode(buffer); } catch {}
+    }
+    return text;
+  }
+
+  async function loadResponsibilityAreas() {
+    if (responsibilityLoaded) return;
+    const parsed = parseCsv(await fetchText(RESPONSIBILITY_FILE, "no-store"));
+    const branchIndex = findColumn(parsed.headers, ["FILIAL","CD FILIAL","Cd Filial"], ["filial"]);
+    const localIndex = findColumn(parsed.headers, ["CD LOCAL","Cd Local","Local"], ["cd local"]);
+    const areaIndex = findColumn(parsed.headers, ["Área","Area","ÁREA","AREA"], ["area"]);
+    if (branchIndex < 0 || localIndex < 0 || areaIndex < 0) {
+      responsibilityLoaded = true;
+      return;
+    }
+    for (const row of parsed.rows) {
+      const branch = String(row[branchIndex] ?? "").trim();
+      const local = String(row[localIndex] ?? "").trim();
+      const area = String(row[areaIndex] ?? "").trim();
+      if (!branch || !local || !area) continue;
+      const key = positionKey(branch, local);
+      const values = areaByPosition.get(key) || new Set();
+      values.add(area);
+      areaByPosition.set(key, values);
+    }
+    responsibilityLoaded = true;
+  }
+
+  function areasForPosition(branch, local) {
+    return [...(areaByPosition.get(positionKey(branch, local)) || [])];
+  }
+
   function aggregateRecords(file, headers, records) {
     const byCode = new Map();
     for (const record of records) {
@@ -112,32 +167,47 @@
 
   function buildSnapshot(file, parsed) {
     const { headers, rows } = parsed;
-    const codeIndex = findColumn(headers,["Código","Codigo","Código item","Codigo item","Cd Item","CD_ITEM","Material"],["codigo item","cd item"]);
-    const nameIndex = findColumn(headers,["Nome Item","NM Item","Nm Item","NM_ITEM","Nome do Item","Nome do item"],["nome item","nm item"]);
-    const balanceIndex = findColumn(headers,["Saldo Real"],["saldo real"]);
-    const consumptionIndex = findColumn(headers,["Consumo real","Consumo Real"],["consumo real"]);
-    const branchIndex = findColumn(headers,["CD Filial","Cd Filial","Código Filial","Codigo Filial","Filial"],["cd filial","codigo filial"]);
-    const localIndex = findColumn(headers,["Local de estoque","Local Estoque","CD Local","Cd Local","Local"],["local de estoque","local estoque","cd local"]);
-    const usageIndex = findColumn(headers,["Nome utilização","Nome utilizacao","NM Utilização","NM Utilizacao","Utilização","Utilizacao"],["nome utilizacao","nm utilizacao"]);
+    const codeIndex = findColumn(headers,
+      ["Item","ITEM","Código","Codigo","Código item","Codigo item","Cd Item","CD_ITEM","Material"],
+      ["codigo item","cd item"]);
+    const nameIndex = findColumn(headers,
+      ["Nome Item","NM Item","Nm Item","NM_ITEM","Nome do Item","Descrição","Descricao","Descrição Item","Descricao Item","Descrição do Item","Descricao do Item","Nome Material","Descrição Material","Descricao Material"],
+      ["nome item","nm item","descricao item","descricao material"]);
+    const balanceIndex = findColumn(headers, ["Saldo Real"], ["saldo real"]);
+    const consumptionIndex = findColumn(headers, ["Consumo real","Consumo Real"], ["consumo real"]);
+    const branchIndex = findColumn(headers, ["CD Filial","Cd Filial","Código Filial","Codigo Filial","Filial"], ["cd filial","codigo filial"]);
+    const localIndex = findColumn(headers, ["Local de estoque","Local Estoque","CD Local","Cd Local","Local"], ["local de estoque","local estoque","cd local"]);
+    const usageIndex = findColumn(headers, ["Nome utilização","Nome utilizacao","NM Utilização","NM Utilizacao","Utilização","Utilizacao"], ["nome utilizacao","nm utilizacao"]);
 
+    if (codeIndex < 0) throw new Error(`O arquivo ${file.name} precisa conter a coluna “Item” ou um código de item equivalente.`);
     if (balanceIndex < 0 || consumptionIndex < 0) throw new Error(`O arquivo ${file.name} precisa conter as colunas “Saldo Real” e “Consumo real”.`);
 
     const records = [];
-    rows.forEach((row,rowIndex) => {
-      const code = String(codeIndex >= 0 ? row[codeIndex] : rowIndex + 1).trim();
+    rows.forEach((row) => {
+      const code = String(row[codeIndex] ?? "").trim();
       if (!code) return;
+      const branch = branchIndex >= 0 ? String(row[branchIndex] ?? "").trim() : "";
+      const local = localIndex >= 0 ? String(row[localIndex] ?? "").trim() : "";
       records.push({
         code,
         name:nameIndex >= 0 ? String(row[nameIndex] ?? "").trim() : "",
         balance:parseNumber(row[balanceIndex]),
         consumption:parseNumber(row[consumptionIndex]),
-        branch:branchIndex >= 0 ? String(row[branchIndex] ?? "").trim() : "",
-        local:localIndex >= 0 ? String(row[localIndex] ?? "").trim() : "",
+        branch,
+        local,
         usage:usageIndex >= 0 ? String(row[usageIndex] ?? "").trim() : "",
+        areas:areasForPosition(branch, local),
       });
     });
     const snapshot = aggregateRecords(file, headers, records);
-    snapshot.filterColumns = { branch:branchIndex >= 0, local:localIndex >= 0, usage:usageIndex >= 0 };
+    snapshot.filterColumns = {
+      branch:branchIndex >= 0,
+      local:localIndex >= 0,
+      usage:usageIndex >= 0,
+      area:areaByPosition.size > 0,
+      name:nameIndex >= 0,
+      code:codeIndex >= 0,
+    };
     return snapshot;
   }
 
@@ -146,6 +216,7 @@
       branch:document.getElementById("monthlyBranchFilter")?.value || "all",
       local:document.getElementById("monthlyLocalFilter")?.value || "all",
       usage:document.getElementById("monthlyUsageFilter")?.value || "all",
+      area:document.getElementById("monthlyAreaFilter")?.value || "all",
     };
   }
 
@@ -156,6 +227,7 @@
       if (filters.branch !== "all" && record.branch !== filters.branch) return false;
       if (filters.local !== "all" && record.local !== filters.local) return false;
       if (filters.usage !== "all" && record.usage !== filters.usage) return false;
+      if (filters.area !== "all" && !(record.areas || []).includes(filters.area)) return false;
       return true;
     });
     const filtered = aggregateRecords(snapshot.file, snapshot.headers, filteredRecords);
@@ -165,14 +237,7 @@
 
   async function fetchSnapshot(file) {
     if (snapshotCache.has(file.name)) return snapshotCache.get(file.name);
-    const promise = (async () => {
-      const response = await fetch(encodeURI(`./${file.name}`), { cache:"default" });
-      if (!response.ok) throw new Error(`Não foi possível ler ${file.name}.`);
-      const buffer = await response.arrayBuffer();
-      let text = new TextDecoder("utf-8").decode(buffer);
-      if (text.includes("�")) { try { text = new TextDecoder("windows-1252").decode(buffer); } catch {} }
-      return buildSnapshot(file, parseCsv(text));
-    })();
+    const promise = (async () => buildSnapshot(file, parseCsv(await fetchText(`./${file.name}`))))();
     snapshotCache.set(file.name, promise);
     try { return await promise; } catch (error) { snapshotCache.delete(file.name); throw error; }
   }
@@ -231,7 +296,11 @@
 
   function uniqueValues(snapshots,key) {
     const values = new Set();
-    snapshots.filter(Boolean).forEach((snapshot) => snapshot.records.forEach((record) => { if (record[key]) values.add(record[key]); }));
+    snapshots.filter(Boolean).forEach((snapshot) => snapshot.records.forEach((record) => {
+      const current = record[key];
+      if (Array.isArray(current)) current.forEach((value) => value && values.add(value));
+      else if (current) values.add(current);
+    }));
     return [...values].sort((a,b) => a.localeCompare(b,"pt-BR",{numeric:true,sensitivity:"base"}));
   }
 
@@ -249,6 +318,7 @@
     fillFilterSelect("monthlyBranchFilter",uniqueValues(snapshots,"branch"),"CD Filial");
     fillFilterSelect("monthlyLocalFilter",uniqueValues(snapshots,"local"),"Local de estoque");
     fillFilterSelect("monthlyUsageFilter",uniqueValues(snapshots,"usage"),"Nome utilização");
+    fillFilterSelect("monthlyAreaFilter",uniqueValues(snapshots,"areas"),"Área");
   }
 
   function setGlobalFilterVisibility(isMonthlyPage) {
@@ -270,11 +340,12 @@
       #page-comparativo-mensal{display:block}.is-hidden#page-comparativo-mensal{display:none!important}
       html.monthly-comparison-active #globalFiltersPanel,html.monthly-comparison-active #filterToggleButton,html.monthly-comparison-active .global-filter-bar{display:none!important}
       .month-compare-controls{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto;gap:12px;align-items:end;margin:18px 0;padding:16px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}
+      .month-compare-actions{display:flex;gap:8px;align-items:center}.month-compare-actions .button{min-height:44px}
       .month-page-filters{margin:0 0 18px;padding:16px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}
       .month-page-filters__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.month-page-filters__head strong{font-size:14px}.month-page-filters__head small{color:var(--muted)}
-      .month-page-filters__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:12px;align-items:end}.month-page-filters label,.month-compare-controls label{display:grid;gap:7px;font-weight:700}
+      .month-page-filters__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.month-page-filters label,.month-compare-controls label{display:grid;gap:7px;font-weight:700}
       .month-page-filters select,.month-compare-controls select,.month-compare-controls input{min-height:44px;width:100%;border:1px solid var(--steel-300);border-radius:10px;padding:0 12px;background:var(--steel-50,#fff);color:var(--text)}
-      .month-page-filters__actions{display:flex;gap:8px}.month-page-filters__actions .button{min-height:44px}
+      .month-page-filters__actions{display:flex;gap:8px;grid-column:1/-1;justify-content:flex-end}.month-page-filters__actions .button{min-height:44px}
       .month-filter-summary{margin-top:10px;color:var(--muted);font-size:12px}
       .month-compare-message{margin:14px 0;padding:14px 16px;border-radius:12px;background:var(--steel-50);color:var(--muted);border:1px solid var(--steel-200)}
       .month-compare-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:16px 0}.month-compare-metric{padding:16px;border-radius:14px;border:1px solid var(--steel-200);background:var(--surface,#fff);display:grid;gap:7px}.month-compare-metric span{font-size:12px;color:var(--muted);font-weight:800}.month-compare-metric strong{font-size:24px;color:var(--text)}.month-compare-metric small{color:var(--muted)}
@@ -282,7 +353,8 @@
       .month-compare-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:18px 0 10px}.month-compare-toolbar input{max-width:420px;min-height:42px;border:1px solid var(--steel-300);border-radius:10px;padding:0 12px;background:var(--surface,#fff);color:var(--text)}.month-compare-toolbar select{min-height:42px;border:1px solid var(--steel-300);border-radius:10px;padding:0 12px;background:var(--surface,#fff);color:var(--text)}
       .month-compare-table-wrap{overflow:auto;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}.month-compare-table{width:100%;border-collapse:collapse;min-width:980px}.month-compare-table th,.month-compare-table td{padding:11px 12px;border-bottom:1px solid var(--steel-200);text-align:right}.month-compare-table th:first-child,.month-compare-table td:first-child,.month-compare-table th:nth-child(2),.month-compare-table td:nth-child(2){text-align:left}.month-compare-table th{position:sticky;top:0;z-index:1;background:var(--steel-100);color:var(--text)}.month-status{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.month-status--increase{background:rgba(22,155,98,.14);color:#169b62}.month-status--decrease{background:rgba(214,69,69,.14);color:#d64545}.month-status--stable{background:var(--steel-100);color:var(--muted)}
       html[data-theme="palmeiras"] .month-compare-metric,html[data-theme="palmeiras"] .month-consideration,html[data-theme="palmeiras"] .month-compare-controls,html[data-theme="palmeiras"] .month-compare-table-wrap,html[data-theme="palmeiras"] .month-page-filters{box-shadow:0 0 18px rgba(0,255,128,.08)}
-      @media(max-width:900px){.month-compare-controls{grid-template-columns:1fr}.month-page-filters__grid{grid-template-columns:1fr}.month-page-filters__actions{width:100%}.month-page-filters__actions .button{flex:1}.month-compare-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.month-considerations{grid-template-columns:1fr}.month-compare-toolbar{align-items:stretch;flex-direction:column}.month-compare-toolbar input{max-width:none}.month-compare-metric strong{font-size:20px}}
+      @media(max-width:1100px){.month-page-filters__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:900px){.month-compare-controls{grid-template-columns:1fr}.month-compare-actions{width:100%}.month-compare-actions .button{flex:1}.month-page-filters__grid{grid-template-columns:1fr}.month-page-filters__actions{width:100%}.month-page-filters__actions .button{flex:1}.month-compare-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.month-considerations{grid-template-columns:1fr}.month-compare-toolbar{align-items:stretch;flex-direction:column}.month-compare-toolbar input{max-width:none}.month-compare-metric strong{font-size:20px}}
     `;
     document.head.appendChild(style);
   }
@@ -294,7 +366,7 @@
         <div class="month-compare-controls">
           <label>Mês base<select id="monthlyBaseSelect"></select></label>
           <label>Mês comparado<select id="monthlyCurrentSelect"></select></label>
-          <button id="monthlyCompareButton" class="button button--primary" type="button">Comparar meses</button>
+          <div class="month-compare-actions"><button id="monthlyCompareButton" class="button button--primary" type="button">Comparar meses</button><button id="monthlyExportExcel" class="button button--export" type="button">Baixar Excel</button></div>
         </div>
         <section class="month-page-filters" aria-label="Filtros exclusivos do comparativo mensal">
           <div class="month-page-filters__head"><div><strong>Filtros do comparativo mensal</strong><br><small>Aplicados somente nesta página</small></div></div>
@@ -302,6 +374,7 @@
             <label>CD Filial<select id="monthlyBranchFilter"><option value="all">Todos</option></select></label>
             <label>Local de estoque<select id="monthlyLocalFilter"><option value="all">Todos</option></select></label>
             <label>Nome utilização<select id="monthlyUsageFilter"><option value="all">Todos</option></select></label>
+            <label>Área<select id="monthlyAreaFilter"><option value="all">Todos</option></select></label>
             <div class="month-page-filters__actions"><button id="monthlyApplyFilters" class="button button--primary" type="button">Aplicar</button><button id="monthlyClearFilters" class="button" type="button">Limpar</button></div>
           </div>
           <div id="monthlyFilterSummary" class="month-filter-summary">Todos os registros selecionados.</div>
@@ -310,8 +383,8 @@
         <div id="monthlyCompareMetrics" class="month-compare-metrics"></div>
         <div id="monthlyConsiderations" class="month-considerations"></div>
         <div id="monthlyCompareDetails" class="is-hidden">
-          <div class="month-compare-toolbar"><input id="monthlySearch" type="search" placeholder="Buscar código ou nome do item"><select id="monthlyStatusFilter"><option value="all">Todas as alterações</option><option value="increase">Somente aumentos</option><option value="decrease">Somente reduções</option><option value="stable">Sem alteração</option></select></div>
-          <div class="month-compare-table-wrap"><table class="month-compare-table"><thead><tr><th>Código</th><th>Nome Item</th><th>Saldo base</th><th>Saldo comparado</th><th>Variação saldo</th><th>Consumo base</th><th>Consumo comparado</th><th>Variação consumo</th><th>Situação</th></tr></thead><tbody id="monthlyCompareTbody"></tbody></table></div>
+          <div class="month-compare-toolbar"><input id="monthlySearch" type="search" placeholder="Buscar item ou nome do item"><select id="monthlyStatusFilter"><option value="all">Todas as alterações</option><option value="increase">Somente aumentos</option><option value="decrease">Somente reduções</option><option value="stable">Sem alteração</option></select></div>
+          <div class="month-compare-table-wrap"><table class="month-compare-table"><thead><tr><th>Item</th><th>Nome Item</th><th>Saldo base</th><th>Saldo comparado</th><th>Variação saldo</th><th>Consumo base</th><th>Consumo comparado</th><th>Variação consumo</th><th>Situação</th></tr></thead><tbody id="monthlyCompareTbody"></tbody></table></div>
         </div>
       </section>`;
   }
@@ -369,6 +442,7 @@
     if (filters.branch !== "all") parts.push(`Filial ${filters.branch}`);
     if (filters.local !== "all") parts.push(`Local ${filters.local}`);
     if (filters.usage !== "all") parts.push(filters.usage);
+    if (filters.area !== "all") parts.push(`Área ${filters.area}`);
     const node = document.getElementById("monthlyFilterSummary");
     if (node) node.textContent = parts.length ? `Filtro aplicado: ${parts.join(" · ")}` : "Todos os registros selecionados.";
   }
@@ -386,10 +460,12 @@
       current.value = availableFiles[availableFiles.length - 1].name;
       current.disabled = false;
       document.getElementById("monthlyCompareButton").disabled = false;
+      document.getElementById("monthlyExportExcel").disabled = false;
     } else if (availableFiles.length === 1) {
       base.value = current.value = availableFiles[0].name;
       current.disabled = true;
       document.getElementById("monthlyCompareButton").disabled = true;
+      document.getElementById("monthlyExportExcel").disabled = true;
     }
     if (count) count.textContent = `${availableFiles.length} ${availableFiles.length === 1 ? "base encontrada" : "bases encontradas"}`;
   }
@@ -398,7 +474,7 @@
     const node = document.getElementById("monthlyCompareMetrics");
     if (!node) return;
     if (!current) {
-      node.innerHTML = `<article class="month-compare-metric"><span>Saldo Real total</span><strong>${nf2.format(base.totalBalance)}</strong><small>${escapeHtml(base.file.label)}</small></article><article class="month-compare-metric"><span>Consumo real total</span><strong>${nf2.format(base.totalConsumption)}</strong><small>${escapeHtml(base.file.label)}</small></article><article class="month-compare-metric"><span>Itens na base</span><strong>${nf0.format(base.itemCount)}</strong><small>códigos consolidados</small></article>`;
+      node.innerHTML = `<article class="month-compare-metric"><span>Saldo Real total</span><strong>${nf2.format(base.totalBalance)}</strong><small>${escapeHtml(base.file.label)}</small></article><article class="month-compare-metric"><span>Consumo real total</span><strong>${nf2.format(base.totalConsumption)}</strong><small>${escapeHtml(base.file.label)}</small></article><article class="month-compare-metric"><span>Itens na base</span><strong>${nf0.format(base.itemCount)}</strong><small>itens consolidados</small></article>`;
       return;
     }
     const delta = current.totalBalance - base.totalBalance;
@@ -416,7 +492,7 @@
     const upTotal = up.reduce((sum,row) => sum + row.deltaBalance,0);
     const downTotal = down.reduce((sum,row) => sum + Math.abs(row.deltaBalance),0);
     const list = (items,sign) => items.slice(0,8).map((row) => `<li><span><strong>${escapeHtml(row.code)}</strong> · ${escapeHtml(row.name)}</span><strong class="${sign === "+" ? "month-delta--up" : "month-delta--down"}">${formatSigned(row.deltaBalance)}</strong></li>`).join("") || "<li><span>Nenhum item nesta condição.</span></li>";
-    node.innerHTML = `<article class="month-consideration month-consideration--up"><h3>Itens que aumentaram</h3><p>${nf0.format(up.length)} códigos tiveram aumento no Saldo Real.</p><div class="month-consideration__total"><span>Aumento acumulado</span><strong>+${nf2.format(upTotal)}</strong></div><ul>${list(up,"+")}</ul></article><article class="month-consideration month-consideration--down"><h3>Itens que reduziram</h3><p>${nf0.format(down.length)} códigos tiveram redução no Saldo Real.</p><div class="month-consideration__total"><span>Redução acumulada</span><strong>−${nf2.format(downTotal)}</strong></div><ul>${list(down,"-")}</ul></article>`;
+    node.innerHTML = `<article class="month-consideration month-consideration--up"><h3>Itens que aumentaram</h3><p>${nf0.format(up.length)} itens tiveram aumento no Saldo Real.</p><div class="month-consideration__total"><span>Aumento acumulado</span><strong>+${nf2.format(upTotal)}</strong></div><ul>${list(up,"+")}</ul></article><article class="month-consideration month-consideration--down"><h3>Itens que reduziram</h3><p>${nf0.format(down.length)} itens tiveram redução no Saldo Real.</p><div class="month-consideration__total"><span>Redução acumulada</span><strong>−${nf2.format(downTotal)}</strong></div><ul>${list(down,"-")}</ul></article>`;
   }
 
   function renderTable() {
@@ -426,6 +502,90 @@
     const status = document.getElementById("monthlyStatusFilter")?.value || "all";
     const visible = currentRows.filter((row) => (status === "all" || row.status === status) && (!query || normalize(`${row.code} ${row.name}`).includes(query)));
     tbody.innerHTML = visible.slice(0,1000).map((row) => `<tr><td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.name)}</td><td>${nf2.format(row.baseBalance)}</td><td>${nf2.format(row.currentBalance)}</td><td class="${row.deltaBalance > 0 ? "month-delta--up" : row.deltaBalance < 0 ? "month-delta--down" : ""}">${formatSigned(row.deltaBalance)}${row.pctBalance == null ? "" : ` (${nf2.format(row.pctBalance)}%)`}</td><td>${nf2.format(row.baseConsumption)}</td><td>${nf2.format(row.currentConsumption)}</td><td>${formatSigned(row.deltaConsumption)}</td><td><span class="month-status month-status--${row.status}">${row.status === "increase" ? "Aumentou" : row.status === "decrease" ? "Reduziu" : "Estável"}</span></td></tr>`).join("");
+  }
+
+  function statusLabel(status) {
+    return status === "increase" ? "Aumentou" : status === "decrease" ? "Reduziu" : "Estável";
+  }
+
+  function xmlCell(value, type = "String", style = "") {
+    const styleAttr = style ? ` ss:StyleID="${style}"` : "";
+    const safe = type === "Number" ? (Number.isFinite(Number(value)) ? Number(value) : 0) : escapeXml(value);
+    return `<Cell${styleAttr}><Data ss:Type="${type}">${safe}</Data></Cell>`;
+  }
+
+  function exportComparisonExcel() {
+    if (!lastBaseSnapshot || !lastCurrentSnapshot || !currentRows.length) {
+      setMessage("Faça uma comparação entre dois meses antes de baixar o Excel.", "warning");
+      return;
+    }
+    const base = applySnapshotFilters(lastBaseSnapshot);
+    const current = applySnapshotFilters(lastCurrentSnapshot);
+    const rows = compareSnapshots(base,current);
+    const filters = selectedFilters();
+    const filterText = [
+      filters.branch !== "all" ? `Filial: ${filters.branch}` : "",
+      filters.local !== "all" ? `Local: ${filters.local}` : "",
+      filters.usage !== "all" ? `Nome utilização: ${filters.usage}` : "",
+      filters.area !== "all" ? `Área: ${filters.area}` : "",
+    ].filter(Boolean).join(" | ") || "Sem filtros específicos";
+    const increased = rows.filter((row) => row.status === "increase").length;
+    const decreased = rows.filter((row) => row.status === "decrease").length;
+
+    const summaryRows = [
+      ["Mês base", base.file.label],
+      ["Mês comparado", current.file.label],
+      ["Filtros", filterText],
+      ["Saldo base", base.totalBalance],
+      ["Saldo comparado", current.totalBalance],
+      ["Variação saldo", current.totalBalance - base.totalBalance],
+      ["Consumo base", base.totalConsumption],
+      ["Consumo comparado", current.totalConsumption],
+      ["Variação consumo", current.totalConsumption - base.totalConsumption],
+      ["Itens que aumentaram", increased],
+      ["Itens que reduziram", decreased],
+      ["Itens comparados", rows.length],
+    ];
+
+    const summaryXml = summaryRows.map(([label,value]) =>
+      `<Row>${xmlCell(label,"String","Header")}${xmlCell(value, typeof value === "number" ? "Number" : "String")}</Row>`).join("");
+    const header = ["Item","Nome Item","Saldo base","Saldo comparado","Variação saldo","Variação %","Consumo base","Consumo comparado","Variação consumo","Situação"];
+    const detailXml = `<Row>${header.map((value) => xmlCell(value,"String","Header")).join("")}</Row>` + rows.map((row) =>
+      `<Row>${[
+        xmlCell(row.code),
+        xmlCell(row.name),
+        xmlCell(row.baseBalance,"Number"),
+        xmlCell(row.currentBalance,"Number"),
+        xmlCell(row.deltaBalance,"Number"),
+        xmlCell(row.pctBalance == null ? "" : row.pctBalance, row.pctBalance == null ? "String" : "Number"),
+        xmlCell(row.baseConsumption,"Number"),
+        xmlCell(row.currentConsumption,"Number"),
+        xmlCell(row.deltaConsumption,"Number"),
+        xmlCell(statusLabel(row.status)),
+      ].join("")}</Row>`).join("");
+
+    const workbook = `<?xml version="1.0"?>
+      <?mso-application progid="Excel.Sheet"?>
+      <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+        xmlns:o="urn:schemas-microsoft-com:office:office"
+        xmlns:x="urn:schemas-microsoft-com:office:excel"
+        xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+        <Styles>
+          <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Bottom"/><Font ss:FontName="Calibri" ss:Size="11"/></Style>
+          <Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#D9EAF7" ss:Pattern="Solid"/></Style>
+        </Styles>
+        <Worksheet ss:Name="Resumo"><Table>${summaryXml}</Table></Worksheet>
+        <Worksheet ss:Name="Comparativo"><Table>${detailXml}</Table></Worksheet>
+      </Workbook>`;
+    const blob = new Blob(["\uFEFF",workbook], { type:"application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `Comparativo_Estoque_${base.file.monthKey}_${base.file.year}_x_${current.file.monthKey}_${current.file.year}.xls`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   async function showSingleSnapshot(file) {
@@ -463,7 +623,7 @@
       document.getElementById("monthlyCompareDetails")?.classList.remove("is-hidden");
       renderTable();
       updateFilterSummary();
-      setMessage(`Comparação concluída: ${baseFile.label} → ${currentFile.label}. Filtros aplicados antes da consolidação por código.`);
+      setMessage(`Comparação concluída: ${baseFile.label} → ${currentFile.label}. Item e Nome Item foram lidos da própria base mensal.`);
     } catch (error) { setMessage(error?.message || "Falha ao comparar os meses.","error"); }
   }
 
@@ -485,6 +645,7 @@
   async function refreshFiles() {
     try {
       setMessage("Consultando os arquivos mensais do repositório…");
+      await loadResponsibilityAreas();
       await discoverFiles();
       fillSelectors();
       if (!availableFiles.length) { setMessage("Nenhum arquivo mensal encontrado. Use o padrão “01 - Estoque_Set_2026.csv”."); return; }
@@ -494,12 +655,16 @@
   }
 
   function clearPageFilters() {
-    ["monthlyBranchFilter","monthlyLocalFilter","monthlyUsageFilter"].forEach((id) => { const select = document.getElementById(id); if (select) select.value = "all"; });
+    ["monthlyBranchFilter","monthlyLocalFilter","monthlyUsageFilter","monthlyAreaFilter"].forEach((id) => {
+      const select = document.getElementById(id);
+      if (select) select.value = "all";
+    });
     reapplyCurrentView();
   }
 
   function bindUi() {
     document.getElementById("monthlyCompareButton")?.addEventListener("click",runComparison);
+    document.getElementById("monthlyExportExcel")?.addEventListener("click",exportComparisonExcel);
     document.getElementById("monthlyApplyFilters")?.addEventListener("click",reapplyCurrentView);
     document.getElementById("monthlyClearFilters")?.addEventListener("click",clearPageFilters);
     document.getElementById("monthlySearch")?.addEventListener("input",renderTable);
