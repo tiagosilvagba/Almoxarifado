@@ -166,6 +166,57 @@ html[data-theme="palmeiras"] {
 }
 
 /* =========================================================
+   Fundo dos temas — cobertura integral da viewport
+   O fundo nunca termina antes do conteúdo ou da altura da tela.
+   ========================================================= */
+html,
+body {
+  min-height:100%;
+  min-height:100vh;
+  min-height:100dvh;
+}
+
+body {
+  position:relative;
+  background-size:cover !important;
+  background-position:center top !important;
+  background-repeat:no-repeat !important;
+  background-attachment:fixed !important;
+}
+
+/* Alguns temas desenham o cenário no próprio elemento html ou em pseudo-elementos. */
+html[data-theme] {
+  background-size:cover !important;
+  background-position:center top !important;
+  background-repeat:no-repeat !important;
+  background-attachment:fixed !important;
+}
+
+html[data-theme] body::before,
+html[data-theme] body::after {
+  background-size:cover !important;
+  background-position:center center !important;
+  background-repeat:no-repeat !important;
+}
+
+/* A área de aplicação sempre ocupa pelo menos toda a tela disponível. */
+main.main-content,
+#catalogContent {
+  min-height:100vh;
+  min-height:100dvh;
+}
+
+/* Em temas com cenário visual, não permitir que wrappers sólidos cortem o fundo. */
+:is(
+  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
+) body {
+  min-height:100vh !important;
+  min-height:100dvh !important;
+}
+
+/* =========================================================
    Desktop
    ========================================================= */
 @media (min-width:901px), (hover:hover) and (pointer:fine) {
@@ -188,6 +239,11 @@ html[data-theme="palmeiras"] {
 @media (max-width:900px) {
   body {
     overflow-x:hidden;
+    background-attachment:scroll !important;
+    background-position:center top !important;
+  }
+  html[data-theme] {
+    background-attachment:scroll !important;
   }
   .topbar {
     backdrop-filter:none !important;
