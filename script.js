@@ -4,7 +4,7 @@
 const PREVIOUS_BOOTSTRAP = "https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js";
 const PREVIOUS_BOOTSTRAP_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js";
 const COMPARATIVO_META_MODULE = "./comparativo-meta.js?v=20260914-1";
-const LAYOUT_FIX_MODULE = "./layout-fix.js?v=20260914-2";
+const LAYOUT_FIX_MODULE = "./layout-fix.js?v=20260914-3";
 const COMPARATIVO_PERIODOS_MODULE = "./comparativo-periodos.js?v=20260914-1";
 const COMPARATIVO_EXCEL_MODULE = "./comparativo-excel-padrao.js?v=20260914-3";
 const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2";
@@ -15,7 +15,7 @@ const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-6";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
 const AREA_FILTER_ACTIVE_MODULE = "./area-filter-active.js?v=20260914-1";
 const GITHUB_PHOTO_UPLOAD_MODULE = "./github-photo-upload.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 4.0";
+const CURRENT_PUBLIC_VERSION = "Versão 4.1";
 
 /*
  * Fallback global seguro para a listagem do repositório.
