@@ -5,12 +5,37 @@
   const SIDE_WIDTH = 250;
   let resizeTimer = null;
   let topbarObserver = null;
+  let structureObserver = null;
 
   function isDesktop(){ return window.innerWidth >= DESKTOP_MIN; }
   function setImportant(node,prop,value){ if(node) node.style.setProperty(prop,value,"important"); }
   function clear(node,props){ if(!node)return; props.forEach(p=>node.style.removeProperty(p)); }
 
+  /*
+   * O comparativo mensal era criado no final do <main>, fora de #catalogContent.
+   * Como #catalogContent ocupa no mínimo uma viewport, isso reservava uma tela vazia
+   * antes do comparativo. Todas as páginas da aplicação devem ser filhas do mesmo
+   * container de conteúdo. Esta rotina garante essa estrutura mesmo se o módulo do
+   * comparativo for carregado depois deste arquivo.
+   */
+  function normalizeMonthlyPagePlacement(){
+    const catalog=document.getElementById('catalogContent');
+    const page=document.getElementById('page-comparativo-mensal');
+    if(!catalog||!page)return false;
+
+    if(page.parentElement!==catalog){
+      catalog.appendChild(page);
+    }
+
+    page.style.removeProperty('margin-top');
+    page.style.removeProperty('top');
+    page.style.removeProperty('transform');
+    page.style.removeProperty('position');
+    return true;
+  }
+
   function alignDesktopChrome(){
+    normalizeMonthlyPagePlacement();
     const topbar=document.querySelector('.topbar');
     const topbarContent=document.querySelector('.topbar__content');
     const navWrap=document.querySelector('.app-nav-wrap');
@@ -64,11 +89,14 @@
   }
 
   function wrapLegacyNavigation(){
-    if(typeof forceResponsiveNavigation!=='function'||forceResponsiveNavigation.__layoutGeometrySynced)return false;
+    if(typeof forceResponsiveNavigation!=="function"||forceResponsiveNavigation.__layoutGeometrySynced)return false;
     const original=forceResponsiveNavigation;
     forceResponsiveNavigation=function(...args){
       const result=original.apply(this,args);
-      requestAnimationFrame(alignDesktopChrome);
+      requestAnimationFrame(()=>{
+        normalizeMonthlyPagePlacement();
+        alignDesktopChrome();
+      });
       return result;
     };
     forceResponsiveNavigation.__layoutGeometrySynced=true;
@@ -80,6 +108,23 @@
     const style=document.createElement('style');
     style.id='desktop-layout-sync-style';
     style.textContent=`
+      /* Estrutura única para todas as páginas do catálogo. */
+      #catalogContent>#page-comparativo-mensal{
+        position:static!important;
+        inset:auto!important;
+        transform:none!important;
+        margin-top:0!important;
+        top:auto!important;
+        align-self:stretch!important;
+      }
+      html.monthly-comparison-active #catalogContent{
+        align-content:start!important;
+        justify-content:start!important;
+      }
+      html.monthly-comparison-active #page-comparativo-mensal:not(.is-hidden){
+        display:block!important;
+      }
+
       @media(min-width:901px){
         html.desktop-layout-synced .topbar{width:100%!important;max-width:none!important}
         html.desktop-layout-synced .topbar__content{box-sizing:border-box!important}
@@ -90,30 +135,57 @@
       }
       @media(max-width:900px){
         html.desktop-layout-synced .topbar__content{margin-left:0!important;width:auto!important}
+        #catalogContent>#page-comparativo-mensal{margin-top:0!important;padding-top:0!important}
       }
     `;
     document.head.appendChild(style);
   }
 
+  function observeStructure(){
+    if(structureObserver)return;
+    const main=document.querySelector('main.main-content');
+    if(!main)return;
+    structureObserver=new MutationObserver((mutations)=>{
+      if(!mutations.some((mutation)=>mutation.type==='childList'))return;
+      requestAnimationFrame(()=>{
+        normalizeMonthlyPagePlacement();
+        alignDesktopChrome();
+      });
+    });
+    structureObserver.observe(main,{childList:true,subtree:true});
+  }
+
   function install(){
     installStyles();
+    normalizeMonthlyPagePlacement();
+    observeStructure();
     wrapLegacyNavigation();
     alignDesktopChrome();
 
     let attempts=0;
     const readinessTimer=setInterval(()=>{
       attempts+=1;
+      normalizeMonthlyPagePlacement();
       const wrapped=wrapLegacyNavigation();
       const aligned=alignDesktopChrome();
-      if((wrapped||typeof forceResponsiveNavigation==='function')&&aligned) clearInterval(readinessTimer);
+      const monthlyReady=!!document.getElementById('page-comparativo-mensal');
+      if((wrapped||typeof forceResponsiveNavigation==='function')&&aligned&&monthlyReady) clearInterval(readinessTimer);
       else if(attempts>=80) clearInterval(readinessTimer);
     },150);
 
-    [80,250,600,1200,2200,4000].forEach(ms=>setTimeout(()=>{wrapLegacyNavigation();alignDesktopChrome();},ms));
+    [80,250,600,1200,2200,4000].forEach(ms=>setTimeout(()=>{
+      normalizeMonthlyPagePlacement();
+      wrapLegacyNavigation();
+      alignDesktopChrome();
+    },ms));
 
     window.addEventListener('resize',()=>{
       clearTimeout(resizeTimer);
-      resizeTimer=setTimeout(()=>{wrapLegacyNavigation();alignDesktopChrome();},80);
+      resizeTimer=setTimeout(()=>{
+        normalizeMonthlyPagePlacement();
+        wrapLegacyNavigation();
+        alignDesktopChrome();
+      },80);
     },{passive:true});
 
     window.addEventListener('scroll',()=>{if(isDesktop())alignDesktopChrome();},{passive:true});
@@ -128,7 +200,10 @@
       }
     },150);
 
-    const themeObserver=new MutationObserver(()=>requestAnimationFrame(alignDesktopChrome));
+    const themeObserver=new MutationObserver(()=>requestAnimationFrame(()=>{
+      normalizeMonthlyPagePlacement();
+      alignDesktopChrome();
+    }));
     themeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','class']});
   }
 
