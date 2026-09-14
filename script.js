@@ -1,6 +1,6 @@
 "use strict";
 const PREVIOUS_BOOTSTRAP="https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js";
-const PREVIOUS_BOOTSTRAP_FALLBACK="https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js";
+const PREVIOUS_BOOTSTRAP_FALLBACK="https://fastly.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js";
 const RESPONSIVE_LAYOUT_MODULE="./responsive-layout.js?v=20260914-2";
 const GITHUB_COMMIT_QUEUE_MODULE="./github-commit-queue.js?v=20260914-1";
 const PAGE_SNAPSHOT_PDF_MODULE="./page-snapshot-pdf.js?v=20260914-1";
@@ -17,27 +17,44 @@ const COMPARATIVO_MES_A_MES_MODULE="./comparativo-mes-a-mes.js?v=20260914-6";
 const COMPARATIVO_ESCALA_MIL_MODULE="./comparativo-escala-mil.js?v=20260914-2";
 const AREA_FILTER_ACTIVE_MODULE="./area-filter-active.js?v=20260914-1";
 const GITHUB_PHOTO_UPLOAD_MODULE="./github-photo-upload-v2.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION="Versão 5.2";
+const CURRENT_PUBLIC_VERSION="Versão 5.3";
 
-(function installImmutableScriptTransport(){
-  if(window.__almoxImmutableTransportInstalled)return;
-  window.__almoxImmutableTransportInstalled=true;
-  const originalAppendChild=document.head.appendChild.bind(document.head);
-  const cdnPattern=/^https:\/\/cdn\.jsdelivr\.net\/gh\/tiagosilvagba\/Almoxarifado@([^/]+)\/(.+)$/i;
-  document.head.appendChild=function(node){
+/*
+ * A aplicação-base processa os CSVs em um Web Worker. O fetch sobrescrito na janela
+ * não existe dentro do Worker, portanto a descoberta das partes de Compras não pode
+ * depender da API do GitHub. Interceptamos somente a mensagem de inicialização do
+ * worker de inventário e entregamos um manifesto com URLs do próprio GitHub Pages.
+ */
+(function installWorkerDataTransport(){
+  if(window.__almoxWorkerDataTransportInstalled || typeof Worker!=="function")return;
+  window.__almoxWorkerDataTransportInstalled=true;
+  const originalPostMessage=Worker.prototype.postMessage;
+  const purchaseParts=[
+    "01 - Compras_Almox_Parte_01.CSV",
+    "01 - Compras_Almox_Parte_02.CSV",
+    "01 - Compras_Almox_Parte_03.CSV",
+    "01 - Compras_Almox_Parte_04.CSV"
+  ];
+  Worker.prototype.postMessage=function(message,...rest){
+    let next=message;
     try{
-      if(node?.tagName==="SCRIPT"&&node.src){
-        const match=node.src.match(cdnPattern);
-        if(match){
-          const ref=match[1],path=match[2].split("?")[0];
-          node.src=`https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/${ref}/${path}`;
-        }
+      if(message && typeof message==="object" && message.saldoUrl && message.comprasApiUrl && message.replenishmentUrl){
+        const entries=purchaseParts.map((name)=>({
+          name,
+          type:"file",
+          download_url:new URL(name,document.baseURI).href
+        }));
+        const manifest=`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(entries))}`;
+        next={...message,comprasApiUrl:manifest,commitsApiUrl:""};
       }
-    }catch{}
-    return originalAppendChild(node);
+    }catch(error){
+      console.warn("Não foi possível preparar o manifesto local de Compras.",error);
+    }
+    return originalPostMessage.call(this,next,...rest);
   };
 })();
 
+/* Fallback usado pelos módulos executados na janela. Não interfere no Web Worker. */
 (function installRepositoryFallback(){
   if(window.__almoxRepositoryFallbackInstalled)return;
   window.__almoxRepositoryFallbackInstalled=true;
@@ -57,7 +74,7 @@ const CURRENT_PUBLIC_VERSION="Versão 5.2";
     const u=[...new Set(c)],f=[];
     for(let i=0;i<u.length;i+=8){
       const r=await Promise.all(u.slice(i,i+8).map(async name=>({name,exists:await fileExists(name)})));
-      for(const x of r)if(x.exists)f.push({name:x.name,path:x.name,type:"file",sha:"same-origin-discovery"});
+      for(const x of r)if(x.exists)f.push({name:x.name,path:x.name,type:"file",sha:"same-origin-discovery",download_url:new URL(x.name,document.baseURI).href});
     }
     return f;
   }
@@ -69,7 +86,7 @@ const CURRENT_PUBLIC_VERSION="Versão 5.2";
   };
 })();
 
-function loadIncrementalScript(src,timeoutMs=10000){
+function loadIncrementalScript(src,timeoutMs=12000){
   return new Promise((resolve,reject)=>{
     const s=document.createElement("script");
     let settled=false;
@@ -95,17 +112,17 @@ function enforceCurrentPublicVersion(){
 }
 
 async function loadOptional(src,msg){
-  try{await loadIncrementalScript(src,10000);}
+  try{await loadIncrementalScript(src,12000);}
   catch(e){console.error(`Não foi possível carregar ${msg}.`,e);}
 }
 
 (async function boot(){
   await loadOptional(RESPONSIVE_LAYOUT_MODULE,"camada responsiva");
   await loadOptional(GITHUB_COMMIT_QUEUE_MODULE,"fila global de commits");
-  try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP,8000);}
+  try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP,12000);}
   catch(primaryError){
-    console.warn("Bootstrap principal indisponível; usando fallback.",primaryError);
-    try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK,10000);}
+    console.warn("Bootstrap principal indisponível no CDN primário; usando CDN alternativo.",primaryError);
+    try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK,12000);}
     catch(fallbackError){console.error("Falha ao carregar o bootstrap principal.",fallbackError);}
   }
   enforceCurrentPublicVersion();
