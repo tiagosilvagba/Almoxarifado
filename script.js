@@ -17,7 +17,26 @@ const COMPARATIVO_MES_A_MES_MODULE="./comparativo-mes-a-mes.js?v=20260914-6";
 const COMPARATIVO_ESCALA_MIL_MODULE="./comparativo-escala-mil.js?v=20260914-2";
 const AREA_FILTER_ACTIVE_MODULE="./area-filter-active.js?v=20260914-1";
 const GITHUB_PHOTO_UPLOAD_MODULE="./github-photo-upload-v2.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION="Versão 5.1";
+const CURRENT_PUBLIC_VERSION="Versão 5.2";
+
+(function installImmutableScriptTransport(){
+  if(window.__almoxImmutableTransportInstalled)return;
+  window.__almoxImmutableTransportInstalled=true;
+  const originalAppendChild=document.head.appendChild.bind(document.head);
+  const cdnPattern=/^https:\/\/cdn\.jsdelivr\.net\/gh\/tiagosilvagba\/Almoxarifado@([^/]+)\/(.+)$/i;
+  document.head.appendChild=function(node){
+    try{
+      if(node?.tagName==="SCRIPT"&&node.src){
+        const match=node.src.match(cdnPattern);
+        if(match){
+          const ref=match[1],path=match[2].split("?")[0];
+          node.src=`https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/${ref}/${path}`;
+        }
+      }
+    }catch{}
+    return originalAppendChild(node);
+  };
+})();
 
 (function installRepositoryFallback(){
   if(window.__almoxRepositoryFallbackInstalled)return;
@@ -85,7 +104,7 @@ async function loadOptional(src,msg){
   await loadOptional(GITHUB_COMMIT_QUEUE_MODULE,"fila global de commits");
   try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP,8000);}
   catch(primaryError){
-    console.warn("Bootstrap CDN indisponível; usando fallback.",primaryError);
+    console.warn("Bootstrap principal indisponível; usando fallback.",primaryError);
     try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK,10000);}
     catch(fallbackError){console.error("Falha ao carregar o bootstrap principal.",fallbackError);}
   }
