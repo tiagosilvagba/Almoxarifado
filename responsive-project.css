@@ -1,0 +1,67 @@
+/* =========================================================
+   Layout responsivo global — mobile, tablet e desktop
+   Aplicado por classes geradas em responsive-layout.js.
+   ========================================================= */
+
+/* Base segura para qualquer modo. */
+html[data-viewport-mode] *,html[data-viewport-mode] *::before,html[data-viewport-mode] *::after{box-sizing:border-box}
+html[data-viewport-mode] body{max-width:100vw;overflow-x:hidden}
+html[data-viewport-mode] :is(.page-panel,.section-heading,.analytics-card,.metric,.item-card,.report-card,.filter-panel,.global-filter-bar,.need-summary,.summary-cards,.branch-balance-section,.month-compare-controls,.month-page-filters,.month-compare-metrics,.month-considerations,.of-period-slicer,.of-trend-card,.instruction-section,.instructions-layout,.instructions-content,.review-detail-grid,.process-detail-groups){min-width:0;max-width:100%}
+html[data-viewport-mode] :is(img,svg,canvas,video){max-width:100%}
+html[data-viewport-mode] :is(h1,h2,h3,h4,p,span,strong,small,dt,dd,li,label){overflow-wrap:anywhere}
+
+/* MOBILE ================================================== */
+html.viewport-mobile{--adaptive-gap:10px;--adaptive-nav-height:74px;--adaptive-card-radius:16px}
+html.viewport-mobile body{padding-bottom:calc(var(--adaptive-nav-height) + env(safe-area-inset-bottom) + 10px)!important;background-attachment:scroll!important}
+html.viewport-mobile .topbar{position:sticky!important;top:0!important;z-index:70!important}
+html.viewport-mobile .topbar__content{width:100%!important;max-width:none!important;margin:0!important;padding:8px 10px!important;gap:7px!important}
+html.viewport-mobile .brand{min-width:0!important;gap:7px!important}.viewport-mobile .brand__mark{width:36px!important;height:36px!important;flex:0 0 36px!important}.viewport-mobile .brand h1{font-size:clamp(14px,4.7vw,19px)!important;line-height:1.05!important}.viewport-mobile .brand p{display:none!important}
+html.viewport-mobile .topbar__actions{margin-left:auto!important;gap:5px!important;min-width:0!important}.viewport-mobile .theme-picker>span{display:none!important}.viewport-mobile .theme-picker select{width:92px!important;min-height:38px!important;font-size:11px!important}.viewport-mobile .density-toggle{display:none!important}.viewport-mobile .language-toggle,.viewport-mobile .icon-button{width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important}
+html.viewport-mobile .app-nav-wrap{position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;width:100%!important;height:calc(var(--adaptive-nav-height) + env(safe-area-inset-bottom))!important;z-index:100!important;overflow:hidden!important;border-right:0!important;border-top:1px solid var(--app-chrome-border)!important}
+html.viewport-mobile .app-nav-wrap .app-nav{display:flex!important;flex-direction:row!important;width:100%!important;max-width:none!important;height:100%!important;margin:0!important;padding:6px 6px calc(6px + env(safe-area-inset-bottom))!important;gap:5px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x proximity!important;scrollbar-width:none}.viewport-mobile .app-nav::-webkit-scrollbar{display:none}
+html.viewport-mobile .app-nav__tab{flex:0 0 78px!important;width:78px!important;min-width:78px!important;min-height:56px!important;padding:6px 5px!important;justify-content:center!important;text-align:center!important;font-size:10px!important;line-height:1.12!important;border-radius:11px!important;scroll-snap-align:center!important}
+html.viewport-mobile main.main-content{width:100%!important;max-width:none!important;margin-left:0!important;padding:10px 8px calc(var(--adaptive-nav-height) + 16px)!important}
+html.viewport-mobile #catalogContent{width:100%!important;max-width:none!important;min-width:0!important}
+html.viewport-mobile .global-filter-bar{position:sticky!important;top:58px!important;z-index:58!important;margin:0 0 10px!important;padding:7px!important;gap:7px!important;border-radius:13px!important}.viewport-mobile .filter-summary{font-size:11px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.viewport-mobile .button--filter{min-height:42px!important;padding:8px 11px!important}
+html.viewport-mobile .page-panel{padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}.viewport-mobile .section-heading{display:flex!important;align-items:flex-start!important;gap:7px!important;margin:8px 0 12px!important}.viewport-mobile .section-heading h2{font-size:clamp(20px,6vw,27px)!important;line-height:1.08!important}.viewport-mobile .section-description{font-size:12.5px!important;line-height:1.4!important}
+html.viewport-mobile :is(.metrics-grid,.metrics-grid--primary,.metrics-grid--secondary,.analytics-grid,.decision-grid,.summary-cards,.need-summary,.branch-balance-grid,.operational-insights,.review-detail-grid,.month-compare-metrics,.month-considerations,.instruction-grid){grid-template-columns:1fr!important;gap:9px!important}
+html.viewport-mobile :is(.metric,.analytics-card,.item-card,.report-card,.need-summary article,.summary-cards article,.branch-balance-section,.storage-address-block,.month-compare-metric,.month-consideration,.of-trend-card){border-radius:var(--adaptive-card-radius)!important;padding:12px!important}
+html.viewport-mobile .cards-grid,html.viewport-mobile .report-card-grid,html.viewport-mobile .review-card-grid,html.viewport-mobile .procurement-grid,html.viewport-mobile .of-generation-grid{grid-template-columns:1fr!important;gap:10px!important}
+html.viewport-mobile :is(.table-wrap,.data-table-wrap,.month-compare-table-wrap,#stockTableWrap,#historyTableWrap,#purchaseNeedTableWrap,#pendingScTableWrap){width:100%!important;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important}
+html.viewport-mobile :is(.data-table,.month-compare-table){min-width:680px!important;font-size:12px!important}
+html.viewport-mobile .month-compare-controls{grid-template-columns:1fr!important;gap:9px!important;padding:12px!important}.viewport-mobile .month-compare-actions{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}.viewport-mobile .month-page-filters{padding:12px!important}.viewport-mobile .month-page-filters__grid{grid-template-columns:1fr!important}
+html.viewport-mobile .instructions-layout{display:block!important}.viewport-mobile .instructions-index{position:static!important;width:100%!important;max-width:none!important;margin-bottom:12px!important}.viewport-mobile .instruction-section{grid-template-columns:1fr!important}.viewport-mobile .instruction-table-wrap{overflow-x:auto!important}.viewport-mobile .instruction-table{min-width:680px!important}
+html.viewport-mobile :is(.of-period-slicer__controls,.of-trend-card__controls,.process-stages){grid-template-columns:1fr!important}.viewport-mobile .heading-actions,.viewport-mobile .report-heading{align-items:stretch!important;flex-direction:column!important}.viewport-mobile .export-control{width:100%!important;display:grid!important;grid-template-columns:1fr!important;gap:7px!important}.viewport-mobile .export-control .button{width:100%!important}
+html.viewport-mobile dialog.item-modal .modal-shell{width:calc(100vw - 8px)!important;max-width:none!important;max-height:calc(100dvh - 8px)!important;margin:4px auto!important;border-radius:16px!important;overflow:hidden!important}.viewport-mobile .item-modal .modal-header{padding:10px 11px!important}.viewport-mobile .item-modal .modal-tabs{display:flex!important;overflow-x:auto!important;white-space:nowrap!important}.viewport-mobile .item-modal .modal-tab{flex:0 0 auto!important;min-width:135px!important;padding:10px 8px!important}.viewport-mobile .item-modal .modal-content{padding:10px!important;max-height:calc(100dvh - 170px)!important;overflow-y:auto!important;overflow-x:hidden!important}.viewport-mobile #panel-summary .summary-layout,.viewport-mobile #panel-summary .gallery-panel{grid-template-columns:1fr!important;gap:10px!important}.viewport-mobile #modalGallery{max-width:none!important;min-height:170px!important}.viewport-mobile .photo-upload-actions{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}.viewport-mobile .photo-upload-actions .button{width:100%!important}
+
+/* TABLET ================================================== */
+html.viewport-tablet{--adaptive-gap:14px;--adaptive-nav-height:76px;--adaptive-card-radius:18px}
+html.viewport-tablet body{padding-bottom:calc(var(--adaptive-nav-height) + env(safe-area-inset-bottom) + 12px)!important;background-attachment:scroll!important}
+html.viewport-tablet .global-filter-bar{position:sticky!important;top:64px!important;z-index:58!important}
+html.viewport-tablet :is(.metrics-grid,.metrics-grid--primary,.metrics-grid--secondary){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+html.viewport-tablet :is(.analytics-grid,.decision-grid,.cards-grid,.report-card-grid,.review-card-grid,.procurement-grid,.of-generation-grid){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+html.viewport-tablet .analytics-card--wide{grid-column:1/-1!important}
+html.viewport-tablet .need-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.viewport-tablet .summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important}.viewport-tablet .month-compare-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.viewport-tablet .month-considerations{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html.viewport-tablet .month-compare-controls{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.viewport-tablet .month-compare-actions{grid-column:1/-1!important;display:flex!important;justify-content:flex-end!important}.viewport-tablet .month-page-filters__grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html.viewport-tablet .instructions-layout{grid-template-columns:minmax(190px,240px) minmax(0,1fr)!important;gap:14px!important}.viewport-tablet .instructions-index{position:sticky!important;top:88px!important;align-self:start!important}.viewport-tablet .instruction-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html.viewport-tablet :is(.table-wrap,.data-table-wrap,.month-compare-table-wrap,#stockTableWrap,#historyTableWrap,#purchaseNeedTableWrap,#pendingScTableWrap){overflow-x:auto!important;-webkit-overflow-scrolling:touch!important}.viewport-tablet :is(.data-table,.month-compare-table){min-width:760px!important}
+html.viewport-tablet .of-period-slicer__controls{grid-template-columns:repeat(2,minmax(0,1fr))!important}.viewport-tablet .of-trend-card__controls{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}.viewport-tablet .heading-actions{flex-wrap:wrap!important}
+
+/* Tablets em retrato ou mais estreitos: reduz colunas automaticamente. */
+html.viewport-tablet.viewport-portrait :is(.analytics-grid,.decision-grid,.cards-grid,.report-card-grid,.review-card-grid,.procurement-grid,.of-generation-grid){grid-template-columns:1fr!important}.viewport-tablet.viewport-portrait .summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}.viewport-tablet.viewport-portrait .instructions-layout{grid-template-columns:1fr!important}.viewport-tablet.viewport-portrait .instructions-index{position:static!important}
+
+/* DESKTOP ================================================= */
+html.viewport-desktop .page-panel{min-width:0!important}.viewport-desktop :is(.table-wrap,.data-table-wrap,.month-compare-table-wrap){max-width:100%!important}.viewport-desktop .app-nav-wrap{display:block!important}.viewport-desktop main.main-content{box-sizing:border-box!important}
+
+/* Ajustes por SO: só refinam a experiência, não decidem o layout. */
+html.os-ios.viewport-mobile .app-nav-wrap,html.os-ios.viewport-tablet .app-nav-wrap{padding-bottom:env(safe-area-inset-bottom)!important}
+html.os-ios.viewport-mobile .modal-shell,html.os-ios.viewport-tablet .modal-shell{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px)!important}
+html.os-ios :is(input,select,textarea){font-size:max(16px,1em)!important}
+html.os-android.viewport-mobile .app-nav-wrap,html.os-android.viewport-tablet .app-nav-wrap{overscroll-behavior:contain!important}
+html.os-android :is(.modal-content,.global-filters,.excel-filter__options){overscroll-behavior:contain!important}
+
+/* Toque: alvos maiores sem alterar o desktop de mouse. */
+html.viewport-touch :is(button,.button,.icon-button,.app-nav__tab,.modal-tab,.excel-filter__trigger){touch-action:manipulation}
+html.viewport-touch :is(button,.button,.excel-filter__trigger){min-height:44px}
+
+@media (prefers-reduced-motion:reduce){html[data-viewport-mode] *,html[data-viewport-mode] *::before,html[data-viewport-mode] *::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
