@@ -7,7 +7,7 @@ const COMPARATIVO_META_MODULE = "./comparativo-meta.js?v=20260914-1";
 const LAYOUT_FIX_MODULE = "./layout-fix.js?v=20260914-2";
 const COMPARATIVO_PERIODOS_MODULE = "./comparativo-periodos.js?v=20260914-1";
 const COMPARATIVO_EXCEL_MODULE = "./comparativo-excel-padrao.js?v=20260914-1";
-const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-1";
+const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2";
 const CURRENT_PUBLIC_VERSION = "Versão 2.1";
 
 function loadIncrementalScript(src) {
