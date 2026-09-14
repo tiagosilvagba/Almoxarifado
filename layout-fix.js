@@ -64,7 +64,7 @@
   }
 
   function wrapLegacyNavigation(){
-    if(typeof forceResponsiveNavigation!=='function'||forceResponsiveNavigation.__layoutGeometrySynced)return;
+    if(typeof forceResponsiveNavigation!=='function'||forceResponsiveNavigation.__layoutGeometrySynced)return false;
     const original=forceResponsiveNavigation;
     forceResponsiveNavigation=function(...args){
       const result=original.apply(this,args);
@@ -72,6 +72,7 @@
       return result;
     };
     forceResponsiveNavigation.__layoutGeometrySynced=true;
+    return true;
   }
 
   function installStyles(){
@@ -98,7 +99,17 @@
     installStyles();
     wrapLegacyNavigation();
     alignDesktopChrome();
-    [80,250,600,1200,2200].forEach(ms=>setTimeout(()=>{wrapLegacyNavigation();alignDesktopChrome();},ms));
+
+    let attempts=0;
+    const readinessTimer=setInterval(()=>{
+      attempts+=1;
+      const wrapped=wrapLegacyNavigation();
+      const aligned=alignDesktopChrome();
+      if((wrapped||typeof forceResponsiveNavigation==='function')&&aligned) clearInterval(readinessTimer);
+      else if(attempts>=80) clearInterval(readinessTimer);
+    },150);
+
+    [80,250,600,1200,2200,4000].forEach(ms=>setTimeout(()=>{wrapLegacyNavigation();alignDesktopChrome();},ms));
 
     window.addEventListener('resize',()=>{
       clearTimeout(resizeTimer);
@@ -107,11 +118,15 @@
 
     window.addEventListener('scroll',()=>{if(isDesktop())alignDesktopChrome();},{passive:true});
 
-    const topbar=document.querySelector('.topbar');
-    if(topbar&&typeof ResizeObserver==='function'){
-      topbarObserver=new ResizeObserver(()=>alignDesktopChrome());
-      topbarObserver.observe(topbar);
-    }
+    const waitTopbar=setInterval(()=>{
+      const topbar=document.querySelector('.topbar');
+      if(!topbar)return;
+      clearInterval(waitTopbar);
+      if(typeof ResizeObserver==='function'){
+        topbarObserver=new ResizeObserver(()=>alignDesktopChrome());
+        topbarObserver.observe(topbar);
+      }
+    },150);
 
     const themeObserver=new MutationObserver(()=>requestAnimationFrame(alignDesktopChrome));
     themeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','class']});
