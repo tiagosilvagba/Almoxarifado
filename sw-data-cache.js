@@ -1,7 +1,7 @@
 "use strict";
 
-const CSV_CACHE_NAME = "almoxarifado-csv-v15";
-const APP_CACHE_NAME = "almoxarifado-app-v15";
+const CSV_CACHE_NAME = "almoxarifado-csv-v16";
+const APP_CACHE_NAME = "almoxarifado-app-v16";
 const CSV_PATTERN = /\.csv(?:$|\?)/i;
 const SCRIPT_PATTERN = /\/script\.js$/i;
 const STYLE_PATTERN = /\/style\.css$/i;
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (CSV_PATTERN.test(url.pathname + url.search)) {
-    event.respondWith(csvCacheFirst(request, event));
+    event.respondWith(csvCacheFirst(request,event));
     return;
   }
   if (SCRIPT_PATTERN.test(url.pathname) || STYLE_PATTERN.test(url.pathname) || request.mode === "navigate") {
