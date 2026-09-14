@@ -1,51 +1,258 @@
-@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@f70fe813650cbe091f0ee29a08233bdae64bc6ea/style.css");
+@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@3590c3a0365923f7936819f78dd00b33e577169c/style.css");
 
-/* Contraste contextual dos temas escuros:
-   - fundo escuro: texto branco (regra herdada da versão anterior);
-   - fundo claro: texto assume a cor característica do tema. */
+/* =========================================================
+   Revisão visual 2026-09 — legibilidade + chrome sincronizado
+   Um único conjunto de tokens governa cabeçalho e navegação.
+   ========================================================= */
+:root {
+  --app-chrome-bg-1:var(--theme-topbar,var(--navy-900,#0b1730));
+  --app-chrome-bg-2:var(--theme-topbar-2,var(--navy-800,#12233f));
+  --app-chrome-background:linear-gradient(120deg,var(--app-chrome-bg-1),var(--app-chrome-bg-2));
+  --app-chrome-border:var(--theme-border,var(--steel-200,rgba(148,163,184,.25)));
+  --app-chrome-text:#fff;
+  --app-surface-text:var(--text,#142033);
+  --app-muted-text:var(--muted,#64748b);
+  --app-focus-ring:var(--focus-color,rgba(71,119,255,.32));
+}
 
-html[data-theme="logistica-neon"] { --theme-on-light:#6424c9; --theme-on-light-soft:#4d2d82; }
-html[data-theme="azul-corporativo"] { --theme-on-light:#145fc8; --theme-on-light-soft:#254f7f; }
-html[data-theme="verde-industrial-2"] { --theme-on-light:#087847; --theme-on-light-soft:#285f49; }
-html[data-theme="amber-tech"] { --theme-on-light:#9a5b00; --theme-on-light-soft:#74511c; }
-html[data-theme="vermelho-impacto"] { --theme-on-light:#bd1734; --theme-on-light-soft:#7d3040; }
-html[data-theme="ciano-clean"] { --theme-on-light:#007f94; --theme-on-light-soft:#27636d; }
-html[data-theme="rosa-premium"] { --theme-on-light:#b51b70; --theme-on-light-soft:#79345d; }
-html[data-theme="night-minimal"] { --theme-on-light:#354153; --theme-on-light-soft:#566274; }
-html[data-theme="galaxia"] { --theme-on-light:#6330bf; --theme-on-light-soft:#533a79; }
-html[data-theme="palmeiras"] { --theme-on-light:#006b3c; --theme-on-light-soft:#275c45; }
+/* Temas claros também usam um chrome escuro coerente para contraste. */
+html[data-theme="clean-light-2"] {
+  --app-chrome-bg-1:#1546a0;
+  --app-chrome-bg-2:#2878ea;
+  --app-chrome-border:#8cb9ff;
+}
+html[data-theme="areia-industrial"] {
+  --app-chrome-bg-1:#594326;
+  --app-chrome-bg-2:#806039;
+  --app-chrome-border:#b89c71;
+}
+html[data-theme="palmeiras"] {
+  --app-chrome-bg-1:#002f1c;
+  --app-chrome-bg-2:#00120b;
+  --app-chrome-border:rgba(56,255,139,.35);
+}
 
-/* Componentes explicitamente claros: títulos e valores usam a cor principal do tema. */
+/* Cabeçalho e navegação sempre conversam entre si. */
+.topbar,
+.app-nav-wrap {
+  color:var(--app-chrome-text) !important;
+  border-color:var(--app-chrome-border) !important;
+  background:var(--app-chrome-background) !important;
+}
+
+.topbar :is(h1,h2,h3,p,span,strong,small,label,a,button),
+.app-nav-wrap :is(.app-nav__tab,.app-nav__label,.app-nav__icon) {
+  color:var(--app-chrome-text) !important;
+}
+
+.app-nav__tab:not(.is-active) {
+  opacity:.82;
+}
+.app-nav__tab:not(.is-active):hover,
+.app-nav__tab:not(.is-active):focus-visible {
+  opacity:1;
+  background:rgba(255,255,255,.10) !important;
+}
+.app-nav__tab.is-active {
+  opacity:1;
+}
+
+/* Controles do cabeçalho precisam continuar legíveis independentemente do tema. */
+.topbar :is(select,input,button,.button,.theme-control,.theme-select) {
+  color:#fff !important;
+  border-color:rgba(255,255,255,.28) !important;
+}
+.topbar :is(select,input) {
+  background:rgba(0,0,0,.18) !important;
+}
+.topbar select option {
+  color:#172033 !important;
+  background:#fff !important;
+}
+
+/* =========================================================
+   Superfícies e tipografia — contraste consistente
+   ========================================================= */
 :is(
-  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
-) :is(
-  .instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert,
-  .status-pill--critical,.status-pill--success,.status-pill--warning,.status-pill--info,.status-pill--neutral
+  .page-panel,.metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.month-compare-table-wrap,
+  .month-local-filter,.month-compare-message
 ) {
-  color:var(--theme-on-light) !important;
+  border-color:var(--steel-200,var(--app-chrome-border));
 }
 
 :is(
+  .page-panel,.metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.month-compare-table-wrap,
+  .month-local-filter,.month-compare-message
+) :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount) {
+  color:var(--app-surface-text);
+}
+
+:is(
+  .page-panel,.metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.month-compare-table-wrap,
+  .month-local-filter,.month-compare-message
+) :is(p,small,dt,.muted,.helper-text,.section-description) {
+  color:var(--app-muted-text);
+}
+
+/* Temas escuros: superfícies escuras mantêm todos os textos em branco. */
+:is(
   html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
   html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
   html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
-) :is(
-  .instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert
-) :is(h1,h2,h3,h4,h5,h6,strong,b,a,span,p,small,dt,dd,li,code) {
+) {
+  --app-surface-text:#fff;
+  --app-muted-text:rgba(255,255,255,.82);
+}
+
+/* Fundos claros especiais em temas escuros seguem a cor do próprio tema. */
+:is(
+  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
+) :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) {
+  color:var(--theme-on-light,#26364d) !important;
+}
+:is(
+  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
+) :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert)
+:is(h1,h2,h3,h4,strong,b,a,span,p,small,dt,dd,li,code) {
   color:inherit !important;
 }
 
-/* Variação secundária para textos auxiliares dentro de superfícies claras. */
-:is(
-  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
-) :is(
-  .instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert
-) :is(small,.muted,.helper-text) {
-  color:var(--theme-on-light-soft) !important;
+/* Inputs, filtros e tabelas. */
+:is(input,select,textarea,.excel-filter__trigger,.excel-filter__search) {
+  min-height:42px;
+  font-size:max(14px,1em);
+  line-height:1.25;
+}
+:is(input,select,textarea,.excel-filter__trigger):focus-visible {
+  outline:2px solid var(--active-accent,#4777ff);
+  outline-offset:2px;
+  box-shadow:0 0 0 4px var(--app-focus-ring);
+}
+.data-table th,.data-table td,.month-compare-table th,.month-compare-table td {
+  line-height:1.35;
+  vertical-align:middle;
+}
+.data-table th,.month-compare-table th {
+  font-weight:800;
 }
 
-/* Os dois temas claros continuam usando suas próprias paletas originais. */
+/* Badges sempre possuem contraste próprio. */
+:is(.status-pill,.month-status,.badge,.version-badge,.context-label) {
+  font-weight:800;
+}
+
+/* Gráficos SVG/canvas: rótulos SVG herdam texto do tema quando possível. */
+:is(.analytics-card,.of-trend-card,.chart-card) svg text {
+  fill:var(--app-muted-text) !important;
+}
+:is(.analytics-card,.of-trend-card,.chart-card) svg :is(.axis-label,.chart-title) {
+  fill:var(--app-surface-text) !important;
+}
+
+/* =========================================================
+   Desktop
+   ========================================================= */
+@media (min-width:901px), (hover:hover) and (pointer:fine) {
+  .app-nav-wrap {
+    background:var(--app-chrome-background) !important;
+    border-right:1px solid var(--app-chrome-border) !important;
+    box-shadow:10px 0 30px rgba(0,0,0,.18) !important;
+  }
+  .app-nav__tab {
+    min-height:46px !important;
+  }
+  .app-nav__label {
+    overflow-wrap:anywhere;
+  }
+}
+
+/* =========================================================
+   Mobile/tablet — navegação inferior e áreas tocáveis
+   ========================================================= */
+@media (max-width:900px) {
+  body {
+    overflow-x:hidden;
+  }
+  .topbar {
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  .app-nav-wrap {
+    background:var(--app-chrome-background) !important;
+    border-top:1px solid var(--app-chrome-border) !important;
+    box-shadow:0 -8px 28px rgba(0,0,0,.22) !important;
+  }
+  .app-nav__tab {
+    min-height:58px !important;
+    min-width:64px !important;
+    padding:7px 5px !important;
+  }
+  .app-nav__label {
+    font-size:11px !important;
+    line-height:1.12 !important;
+    max-width:78px;
+    overflow-wrap:anywhere;
+  }
+  .app-nav__icon,.app-nav__icon svg {
+    width:20px !important;
+    height:20px !important;
+  }
+  .page-panel {
+    min-width:0;
+  }
+  :is(.metric,.analytics-card,.item-card,.report-card,.month-compare-metric,.month-consideration) {
+    min-width:0;
+  }
+  :is(input,select,textarea,button,.button,.excel-filter__trigger) {
+    min-height:44px;
+  }
+  .section-heading h2 {
+    line-height:1.18;
+    overflow-wrap:anywhere;
+  }
+  .section-description {
+    line-height:1.45;
+  }
+  .month-compare-table-wrap,.table-responsive,.data-table-wrap {
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+  }
+}
+
+/* iPhone estreito: evita textos e controles espremidos. */
+@media (max-width:430px) {
+  .metrics-grid,.metrics-grid--secondary,.summary-cards,.month-compare-metrics {
+    grid-template-columns:1fr !important;
+  }
+  .month-considerations {
+    grid-template-columns:1fr !important;
+  }
+  .topbar__content {
+    gap:8px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    scroll-behavior:auto !important;
+    transition-duration:.01ms !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+  }
+}
