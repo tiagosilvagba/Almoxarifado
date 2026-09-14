@@ -11,7 +11,8 @@ const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2"
 const COMPARATIVO_META_VISUAL_MODULE = "./comparativo-meta-visual.js?v=20260914-2";
 const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-1";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION = "Versão 2.6";
+const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-1";
+const CURRENT_PUBLIC_VERSION = "Versão 2.7";
 
 function loadIncrementalScript(src) {
   return new Promise((resolve, reject) => {
@@ -44,7 +45,8 @@ function enforceCurrentPublicVersion() {
     [COMPARATIVO_ITEM_SPLIT_MODULE, "separação de código e nome do item"],
     [COMPARATIVO_META_VISUAL_MODULE, "visualização comparado x mês meta"],
     [COMPARATIVO_INCLUSOES_MODULE, "inclusões de estoque"],
-    [COMPARATIVO_CARDS_RESUMO_MODULE, "cards Top 10 do comparativo"]
+    [COMPARATIVO_CARDS_RESUMO_MODULE, "cards Top 10 do comparativo"],
+    [COMPARATIVO_MES_A_MES_MODULE, "card de comparação mês a mês"]
   ]) {
     try { await loadIncrementalScript(src); }
     catch (error) { console.error(`Não foi possível carregar ${message}.`, error); }
