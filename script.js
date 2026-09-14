@@ -10,7 +10,8 @@ const COMPARATIVO_EXCEL_MODULE = "./comparativo-excel-padrao.js?v=20260914-1";
 const COMPARATIVO_ITEM_SPLIT_MODULE = "./comparativo-item-split.js?v=20260914-2";
 const COMPARATIVO_META_VISUAL_MODULE = "./comparativo-meta-visual.js?v=20260914-1";
 const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION = "Versão 2.3";
+const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
+const CURRENT_PUBLIC_VERSION = "Versão 2.4";
 
 function loadIncrementalScript(src) {
   return new Promise((resolve, reject) => {
@@ -30,54 +31,23 @@ function enforceCurrentPublicVersion() {
 }
 
 (async function bootIncrementalAlmoxarifado() {
-  try {
-    await loadIncrementalScript(PREVIOUS_BOOTSTRAP);
-  } catch {
-    await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK);
-  }
+  try { await loadIncrementalScript(PREVIOUS_BOOTSTRAP); }
+  catch { await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK); }
 
   enforceCurrentPublicVersion();
 
-  try {
-    await loadIncrementalScript(COMPARATIVO_META_MODULE);
-  } catch (error) {
-    console.error("Não foi possível carregar o módulo de mês meta e filtros dinâmicos.", error);
-  }
-
-  try {
-    await loadIncrementalScript(LAYOUT_FIX_MODULE);
-  } catch (error) {
-    console.error("Não foi possível carregar a correção estrutural do layout.", error);
-  }
-
-  try {
-    await loadIncrementalScript(COMPARATIVO_PERIODOS_MODULE);
-  } catch (error) {
-    console.error("Não foi possível carregar os rótulos de período do comparativo.", error);
-  }
-
-  try {
-    await loadIncrementalScript(COMPARATIVO_EXCEL_MODULE);
-  } catch (error) {
-    console.error("Não foi possível carregar a exportação Excel padronizada do comparativo.", error);
-  }
-
-  try {
-    await loadIncrementalScript(COMPARATIVO_ITEM_SPLIT_MODULE);
-  } catch (error) {
-    console.error("Não foi possível separar código e nome do item no comparativo.", error);
-  }
-
-  try {
-    await loadIncrementalScript(COMPARATIVO_META_VISUAL_MODULE);
-  } catch (error) {
-    console.error("Não foi possível carregar a visualização comparado x mês meta.", error);
-  }
-
-  try {
-    await loadIncrementalScript(COMPARATIVO_INCLUSOES_MODULE);
-  } catch (error) {
-    console.error("Não foi possível carregar as inclusões de estoque do comparativo.", error);
+  for (const [src, message] of [
+    [COMPARATIVO_META_MODULE, "mês meta e filtros dinâmicos"],
+    [LAYOUT_FIX_MODULE, "correção estrutural do layout"],
+    [COMPARATIVO_PERIODOS_MODULE, "rótulos de período do comparativo"],
+    [COMPARATIVO_EXCEL_MODULE, "exportação Excel padronizada"],
+    [COMPARATIVO_ITEM_SPLIT_MODULE, "separação de código e nome do item"],
+    [COMPARATIVO_META_VISUAL_MODULE, "visualização comparado x mês meta"],
+    [COMPARATIVO_INCLUSOES_MODULE, "inclusões de estoque"],
+    [COMPARATIVO_CARDS_RESUMO_MODULE, "cards Top 10 do comparativo"]
+  ]) {
+    try { await loadIncrementalScript(src); }
+    catch (error) { console.error(`Não foi possível carregar ${message}.`, error); }
   }
 
   enforceCurrentPublicVersion();
