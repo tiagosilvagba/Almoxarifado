@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const AREA_FILE = "./02 - Responsaveis_Reposição.CSV?excel=20260914-2";
+  const AREA_FILE = "./02 - Responsaveis_Reposição.CSV?excel=20260914-3";
   const areaMap = new Map();
   const monthLabel = {jan:"Janeiro",fev:"Fevereiro",mar:"Março",abr:"Abril",mai:"Maio",jun:"Junho",jul:"Julho",ago:"Agosto",set:"Setembro",out:"Outubro",nov:"Novembro",dez:"Dezembro"};
   const norm = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
@@ -80,21 +80,45 @@
     const ni=col(h,["Nome Item","NM Item","Nm Item","NM_ITEM","Nome do Item","Descrição","Descricao","Descrição Item","Descricao Item","Descrição do Item","Descricao do Item","Nome Material","Descrição Material","Descricao Material"],["nome item","nm item","descricao item","descricao material"]);
     const si=col(h,["Saldo Real"],["saldo real"]),coi=col(h,["Consumo real","Consumo Real"],["consumo real"]);
     const bi=col(h,["CD Filial","Cd Filial","Código Filial","Codigo Filial","Filial"],["cd filial","codigo filial"]);
+    const bni=col(h,["Nome Filial","NM Filial","NOME FILIAL","Nome da Filial"],["nome filial","nm filial"]);
     const li=col(h,["Local de estoque","Local Estoque","CD Local","Cd Local","Local"],["local de estoque","local estoque","cd local"]);
+    const lni=col(h,["Nome Local","NM Local","NOME LOCAL","Nome do Local","Nome local de estoque"],["nome local","nm local"]);
     const ui=col(h,["Nome utilização","Nome utilizacao","NM Utilização","NM Utilizacao","Utilização","Utilizacao"],["nome utilizacao","nm utilizacao"]);
     if(ci<0||si<0||coi<0)throw new Error(`${fileName}: colunas Item, Saldo Real ou Consumo real não encontradas.`);
     const records=[];
     for(const r of p.rows){
       const parsed=splitItem(r[ci],ni>=0?r[ni]:""); if(!parsed.code)continue;
       const branch=bi>=0?String(r[bi]??"").trim():"",local=li>=0?String(r[li]??"").trim():"";
-      records.push({code:parsed.code,name:parsed.name,balance:parseNumber(r[si]),consumption:parseNumber(r[coi]),branch,local,usage:ui>=0?String(r[ui]??"").trim():"",areas:[...(areaMap.get(positionKey(branch,local))||[])]});
+      records.push({
+        code:parsed.code,
+        name:parsed.name,
+        balance:parseNumber(r[si]),
+        consumption:parseNumber(r[coi]),
+        branch,
+        branchName:bni>=0?String(r[bni]??"").trim():"",
+        local,
+        localName:lni>=0?String(r[lni]??"").trim():"",
+        usage:ui>=0?String(r[ui]??"").trim():"",
+        areas:[...(areaMap.get(positionKey(branch,local))||[])]
+      });
     }
     return{file:fileMeta(fileName),records};
   }
 
   function currentFilters(){return{branch:document.getElementById("monthlyBranchFilter")?.value||"all",local:document.getElementById("monthlyLocalFilter")?.value||"all",usage:document.getElementById("monthlyUsageFilter")?.value||"all",area:document.getElementById("monthlyAreaFilter")?.value||"all"};}
   function filtered(snapshot,f){return(snapshot?.records||[]).filter(r=>(f.branch==="all"||r.branch===f.branch)&&(f.local==="all"||r.local===f.local)&&(f.usage==="all"||r.usage===f.usage)&&(f.area==="all"||r.areas.includes(f.area)));}
-  function aggregate(records){const m=new Map();for(const r of records){const x=m.get(r.code)||{code:r.code,name:r.name,balance:0,consumption:0};if(!x.name&&r.name)x.name=r.name;x.balance+=r.balance;x.consumption+=r.consumption;m.set(r.code,x);}return m;}
+  function aggregate(records){
+    const m=new Map();
+    for(const r of records){
+      const x=m.get(r.code)||{code:r.code,name:r.name,balance:0,consumption:0,branches:new Set(),branchNames:new Set(),locals:new Set(),localNames:new Set(),usages:new Set()};
+      if(!x.name&&r.name)x.name=r.name;
+      x.balance+=r.balance;x.consumption+=r.consumption;
+      if(r.branch)x.branches.add(r.branch);if(r.branchName)x.branchNames.add(r.branchName);if(r.local)x.locals.add(r.local);if(r.localName)x.localNames.add(r.localName);if(r.usage)x.usages.add(r.usage);
+      m.set(r.code,x);
+    }
+    return m;
+  }
+  const joinSet=(set)=>set&&set.size?[...set].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR",{numeric:true,sensitivity:"base"})).join(" / "):"";
   function percent(oldValue,newValue){return oldValue?((newValue-oldValue)/Math.abs(oldValue))*100:(newValue?null:0);}
   function status(delta){return delta>0.000001?"Aumentou":delta<-0.000001?"Reduziu":"Estável";}
   function cell(value,type="String",style=""){const attr=style?` ss:StyleID="${style}"`:"";const content=type==="Number"?(Number.isFinite(Number(value))?Number(value):0):xml(value);return`<Cell${attr}><Data ss:Type="${type}">${content}</Data></Cell>`;}
@@ -104,30 +128,41 @@
     const bm=aggregate(filtered(base,filters)),cm=aggregate(filtered(current,filters)),tm=target?aggregate(filtered(target,filters)):new Map();
     const hasTarget=Boolean(target),codes=new Set([...tm.keys(),...bm.keys(),...cm.keys()]);
     const rows=[...codes].map(code=>{
-      const t=tm.get(code)||{code,name:"",balance:0,consumption:0},b=bm.get(code)||{code,name:t.name,balance:0,consumption:0},c=cm.get(code)||{code,name:b.name||t.name,balance:0,consumption:0};
+      const t=tm.get(code)||{code,name:"",balance:0,consumption:0,branches:new Set(),branchNames:new Set(),locals:new Set(),localNames:new Set(),usages:new Set()};
+      const b=bm.get(code)||{code,name:t.name,balance:0,consumption:0,branches:new Set(),branchNames:new Set(),locals:new Set(),localNames:new Set(),usages:new Set()};
+      const c=cm.get(code)||{code,name:b.name||t.name,balance:0,consumption:0,branches:new Set(),branchNames:new Set(),locals:new Set(),localNames:new Set(),usages:new Set()};
+      const source=cm.has(code)?c:bm.has(code)?b:t;
       const baseVsMeta=b.balance-t.balance,currentVsMeta=c.balance-t.balance,deltaBalance=c.balance-b.balance,deltaConsumption=c.consumption-b.consumption;
-      return{code,name:c.name||b.name||t.name||"Item sem nome",targetBalance:t.balance,targetConsumption:t.consumption,baseBalance:b.balance,baseConsumption:b.consumption,currentBalance:c.balance,currentConsumption:c.consumption,baseVsMeta,currentVsMeta,deltaBalance,pct:percent(b.balance,c.balance),deltaConsumption,state:status(deltaBalance),inclusion:hasTarget&&!tm.has(code)&&cm.has(code)};
+      const inclusion=!bm.has(code)&&cm.has(code);
+      const state=inclusion?"Inclusão de estoque":status(deltaBalance);
+      return{
+        code,
+        name:c.name||b.name||t.name||"Item sem nome",
+        branch:joinSet(source.branches),branchName:joinSet(source.branchNames),local:joinSet(source.locals),localName:joinSet(source.localNames),usage:joinSet(source.usages),
+        targetBalance:t.balance,targetConsumption:t.consumption,baseBalance:b.balance,baseConsumption:b.consumption,currentBalance:c.balance,currentConsumption:c.consumption,
+        baseVsMeta,currentVsMeta,deltaBalance,pct:percent(b.balance,c.balance),deltaConsumption,state,inclusion
+      };
     }).sort((a,b)=>Math.abs(b.deltaBalance)-Math.abs(a.deltaBalance));
 
-    const headers=["Código do Item","Nome do Item"];
+    const headers=["Código do Item","Nome do Item","CD Filial","Nome da Filial","Local de estoque","Nome do Local","Nome utilização"];
     if(hasTarget)headers.push(`Saldo meta · ${target.file.label}`,`Consumo meta · ${target.file.label}`);
     headers.push(`Saldo base · ${base.file.label}`,`Consumo base · ${base.file.label}`,`Saldo comparado · ${current.file.label}`,`Consumo comparado · ${current.file.label}`);
     if(hasTarget)headers.push(`Base x meta · ${base.file.label} x ${target.file.label}`,`Comparado x meta · ${current.file.label} x ${target.file.label}`);
-    headers.push(`Base x comparado · ${base.file.label} x ${current.file.label}`,"Variação % base x comparado","Variação consumo base x comparado","Situação","Classificação");
+    headers.push(`Base x comparado · ${base.file.label} x ${current.file.label}`,"Variação % base x comparado","Variação consumo base x comparado","Classificação");
     const columns=headers.length,tableStart=8,tableEnd=tableStart+rows.length;
 
     const dataRows=rows.map(r=>{
-      const style=r.state==="Aumentou"?"Increase":r.state==="Reduziu"?"Decrease":"Stable";
-      const v=[cell(r.code),cell(r.name)];
+      const style=r.state==="Inclusão de estoque"||r.state==="Aumentou"?"Increase":r.state==="Reduziu"?"Decrease":"Stable";
+      const v=[cell(r.code),cell(r.name),cell(r.branch),cell(r.branchName),cell(r.local),cell(r.localName),cell(r.usage)];
       if(hasTarget)v.push(cell(r.targetBalance,"Number","Number"),cell(r.targetConsumption,"Number","Number"));
       v.push(cell(r.baseBalance,"Number","Number"),cell(r.baseConsumption,"Number","Number"),cell(r.currentBalance,"Number","Number"),cell(r.currentConsumption,"Number","Number"));
       if(hasTarget)v.push(cell(r.baseVsMeta,"Number",r.baseVsMeta>0?"Increase":r.baseVsMeta<0?"Decrease":"Stable"),cell(r.currentVsMeta,"Number",r.currentVsMeta>0?"Increase":r.currentVsMeta<0?"Decrease":"Stable"));
-      v.push(cell(r.deltaBalance,"Number",style),r.pct==null?cell("—"):cell(r.pct/100,"Number","Percent"),cell(r.deltaConsumption,"Number","Number"),cell(r.state,"String",style),cell(r.inclusion?"Inclusão de estoque":r.state));
+      v.push(cell(r.deltaBalance,"Number",style),r.pct==null?cell("—"):cell(r.pct/100,"Number","Percent"),cell(r.deltaConsumption,"Number","Number"),cell(r.state,"String",style));
       return`<Row>${v.join("")}</Row>`;
     }).join("");
 
     const filterText=[filters.branch!=="all"?`Filial: ${filters.branch}`:"Todas as filiais",filters.local!=="all"?`Local: ${filters.local}`:"Todos os locais",filters.usage!=="all"?`Nome utilização: ${filters.usage}`:"Todas as utilizações",filters.area!=="all"?`Área: ${filters.area}`:"Todas as áreas"].join(" | ");
-    const widths=headers.map((_,i)=>i===0?85:i===1?300:110),cols=widths.map(w=>`<Column ss:AutoFitWidth="0" ss:Width="${w}"/>`).join("");
+    const widths=headers.map((_,i)=>i===0?85:i===1?300:[3,5,6].includes(i)?180:110),cols=widths.map(w=>`<Column ss:AutoFitWidth="0" ss:Width="${w}"/>`).join("");
     const workbook=`<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="10"/></Style><Style ss:ID="Title"><Alignment ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#17365D" ss:Pattern="Solid"/></Style><Style ss:ID="MetaLabel"><Font ss:Bold="1" ss:Color="#17365D"/><Interior ss:Color="#D9EAF7" ss:Pattern="Solid"/></Style><Style ss:ID="MetaValue"><Font ss:Color="#1F2937"/></Style><Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#2F75B5" ss:Pattern="Solid"/></Style><Style ss:ID="Number"><NumberFormat ss:Format="#,##0.00"/></Style><Style ss:ID="Percent"><NumberFormat ss:Format="0.00%"/></Style><Style ss:ID="Increase"><Font ss:Color="#006100" ss:Bold="1"/><Interior ss:Color="#C6EFCE" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style><Style ss:ID="Decrease"><Font ss:Color="#9C0006" ss:Bold="1"/><Interior ss:Color="#FFC7CE" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style><Style ss:ID="Stable"><Font ss:Color="#595959"/><Interior ss:Color="#E7E6E6" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style></Styles><Worksheet ss:Name="Comparativo mensal"><Table>${cols}<Row ss:Height="28">${cell("GESTÃO DE ALMOXARIFADO · COMPARATIVO MENSAL","String","Title")}<Cell ss:MergeAcross="${columns-2}"/></Row>${textRow("Mês meta",hasTarget?target.file.label:"Não selecionado",columns)}${textRow("Mês base",base.file.label,columns)}${textRow("Mês comparado",current.file.label,columns)}${textRow("Filtros aplicados",filterText,columns)}${textRow("Itens no relatório",String(rows.length),columns)}<Row>${headers.map(h=>cell(h,"String","Header")).join("")}</Row>${dataRows}</Table><AutoFilter x:Range="R${tableStart}C1:R${Math.max(tableEnd,tableStart)}C${columns}" xmlns="urn:schemas-microsoft-com:office:excel"/><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>7</SplitHorizontal><TopRowBottomPane>7</TopRowBottomPane><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet></Workbook>`;
     return{workbook,rows,hasTarget};
   }
