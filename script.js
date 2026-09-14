@@ -3,8 +3,8 @@
 /* Bootstrap 2.0 — preserva a aplicação estável, garante o menu e carrega o comparativo mensal. */
 const ALMOX_STABLE_APP = "https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@0eacb92e7f010bd56a1324d8730a407759925eff/script.js";
 const ALMOX_STABLE_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/0eacb92e7f010bd56a1324d8730a407759925eff/script.js";
-const MONTHLY_COMPARISON_MODULE = "./comparativo-mensal.js?v=20260914-2";
-const MONTHLY_COMPARISON_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/main/comparativo-mensal.js?v=20260914-2";
+const MONTHLY_COMPARISON_MODULE = "./comparativo-mensal.js?v=20260914-3";
+const MONTHLY_COMPARISON_FALLBACK = "https://raw.githubusercontent.com/tiagosilvagba/Almoxarifado/main/comparativo-mensal.js?v=20260914-3";
 
 const NAV_ICONS = Object.freeze({
   dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>',
@@ -108,17 +108,12 @@ function retryNavigationShell() {
   }, 150);
 }
 
-/* O script é deferido no HTML; na maioria dos casos o menu já existe neste ponto. */
 retryNavigationShell();
 
 (async function bootAlmoxarifado() {
-  try {
-    await loadAlmoxScript(ALMOX_STABLE_APP);
-  } catch {
-    await loadAlmoxScript(ALMOX_STABLE_FALLBACK);
-  }
+  try { await loadAlmoxScript(ALMOX_STABLE_APP); }
+  catch { await loadAlmoxScript(ALMOX_STABLE_FALLBACK); }
 
-  /* A aplicação estável pode reposicionar o menu; garantimos a aba e os ícones novamente. */
   prepareNavigationShell();
   window.setTimeout(prepareNavigationShell, 300);
   window.setTimeout(prepareNavigationShell, 1200);
@@ -126,11 +121,8 @@ retryNavigationShell();
   try {
     await loadAlmoxScript(MONTHLY_COMPARISON_MODULE);
   } catch (error) {
-    try {
-      await loadAlmoxScript(MONTHLY_COMPARISON_FALLBACK);
-    } catch (fallbackError) {
-      console.error("Não foi possível carregar o comparativo mensal.", fallbackError || error);
-    }
+    try { await loadAlmoxScript(MONTHLY_COMPARISON_FALLBACK); }
+    catch (fallbackError) { console.error("Não foi possível carregar o comparativo mensal.", fallbackError || error); }
   }
 
   prepareNavigationShell();
