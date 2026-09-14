@@ -113,7 +113,7 @@
   function buildSnapshot(file, parsed) {
     const { headers, rows } = parsed;
     const codeIndex = findColumn(headers,["Código","Codigo","Código item","Codigo item","Cd Item","CD_ITEM","Material"],["codigo item","cd item"]);
-    const nameIndex = findColumn(headers,["Descrição","Descricao","Descrição item","Descricao item","Nm Item","NM_ITEM","Nome Item"],["descricao item","nm item","nome item"]);
+    const nameIndex = findColumn(headers,["Nome Item","NM Item","Nm Item","NM_ITEM","Nome do Item","Nome do item"],["nome item","nm item"]);
     const balanceIndex = findColumn(headers,["Saldo Real"],["saldo real"]);
     const consumptionIndex = findColumn(headers,["Consumo real","Consumo Real"],["consumo real"]);
     const branchIndex = findColumn(headers,["CD Filial","Cd Filial","Código Filial","Codigo Filial","Filial"],["cd filial","codigo filial"]);
@@ -215,7 +215,7 @@
       const deltaConsumption = b.consumption - a.consumption;
       rows.push({
         code,
-        name:b.name || a.name || "Item sem descrição",
+        name:b.name || a.name || "Item sem nome",
         baseBalance:a.balance,
         currentBalance:b.balance,
         deltaBalance,
@@ -310,8 +310,8 @@
         <div id="monthlyCompareMetrics" class="month-compare-metrics"></div>
         <div id="monthlyConsiderations" class="month-considerations"></div>
         <div id="monthlyCompareDetails" class="is-hidden">
-          <div class="month-compare-toolbar"><input id="monthlySearch" type="search" placeholder="Buscar código ou descrição"><select id="monthlyStatusFilter"><option value="all">Todas as alterações</option><option value="increase">Somente aumentos</option><option value="decrease">Somente reduções</option><option value="stable">Sem alteração</option></select></div>
-          <div class="month-compare-table-wrap"><table class="month-compare-table"><thead><tr><th>Código</th><th>Item</th><th>Saldo base</th><th>Saldo comparado</th><th>Variação saldo</th><th>Consumo base</th><th>Consumo comparado</th><th>Variação consumo</th><th>Situação</th></tr></thead><tbody id="monthlyCompareTbody"></tbody></table></div>
+          <div class="month-compare-toolbar"><input id="monthlySearch" type="search" placeholder="Buscar código ou nome do item"><select id="monthlyStatusFilter"><option value="all">Todas as alterações</option><option value="increase">Somente aumentos</option><option value="decrease">Somente reduções</option><option value="stable">Sem alteração</option></select></div>
+          <div class="month-compare-table-wrap"><table class="month-compare-table"><thead><tr><th>Código</th><th>Nome Item</th><th>Saldo base</th><th>Saldo comparado</th><th>Variação saldo</th><th>Consumo base</th><th>Consumo comparado</th><th>Variação consumo</th><th>Situação</th></tr></thead><tbody id="monthlyCompareTbody"></tbody></table></div>
         </div>
       </section>`;
   }
