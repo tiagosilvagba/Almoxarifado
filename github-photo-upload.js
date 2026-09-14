@@ -8,7 +8,10 @@
   const TOKEN_KEY = "almoxarifado-github-photo-token";
   const MAX_SIDE = 1800;
   const JPEG_QUALITY = 0.84;
+  const MAX_PENDING = 6;
   let uploading = false;
+  let pendingCode = "";
+  let pendingFiles = [];
 
   const apiBase = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
@@ -19,14 +22,8 @@
   function token() {
     try { return localStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; }
   }
-
-  function saveToken(value) {
-    try { localStorage.setItem(TOKEN_KEY, value); } catch {}
-  }
-
-  function clearToken() {
-    try { localStorage.removeItem(TOKEN_KEY); } catch {}
-  }
+  function saveToken(value) { try { localStorage.setItem(TOKEN_KEY, value); } catch {} }
+  function clearToken() { try { localStorage.removeItem(TOKEN_KEY); } catch {} }
 
   async function api(path, options = {}) {
     const currentToken = token();
@@ -102,10 +99,7 @@
     });
   }
 
-  async function ensureToken() {
-    if (token()) return true;
-    return askForToken();
-  }
+  async function ensureToken() { return token() ? true : askForToken(); }
 
   async function listImageEntries() {
     const response = await api(`/contents/${IMAGE_DIR}?ref=${BRANCH}`);
@@ -180,7 +174,7 @@
       throw new Error(`Falha ao enviar ${fileName}${detail ? `: ${detail}` : ""}`);
     }
     const body = await response.json();
-    return { fileName, sequence, url:body?.content?.download_url || `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${IMAGE_DIR}/${encodeURIComponent(fileName).replace(/%20/g,"%20")}` };
+    return { fileName, sequence, url:body?.content?.download_url || `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${IMAGE_DIR}/${encodeURIComponent(fileName)}` };
   }
 
   function addToRuntimeIndex(rawCode, uploaded) {
@@ -194,31 +188,116 @@
     } catch {}
   }
 
-  async function processSelectedFiles(input) {
-    if (uploading) return;
+  function clearPending() {
+    for (const entry of pendingFiles) if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+    pendingFiles = [];
+    pendingCode = "";
+    renderPending();
+  }
+
+  function ensurePendingUi() {
+    const actions = document.querySelector(".photo-upload-actions");
+    if (!actions) return null;
+    let wrap = document.getElementById("githubPhotoPendingWrap");
+    if (wrap) return wrap;
+    wrap = document.createElement("div");
+    wrap.id = "githubPhotoPendingWrap";
+    wrap.style.cssText = "width:100%;margin-top:12px";
+    wrap.innerHTML = `
+      <div id="githubPhotoPendingGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px"></div>
+      <div id="githubPhotoPendingActions" style="display:none;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <small id="githubPhotoPendingCount"></small>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="githubPhotoClearPending" class="button button--ghost" type="button">Limpar seleção</button>
+          <button id="githubPhotoCommitButton" class="button button--primary" type="button">Upload</button>
+        </div>
+      </div>`;
+    actions.appendChild(wrap);
+    wrap.querySelector("#githubPhotoClearPending").addEventListener("click", clearPending);
+    wrap.querySelector("#githubPhotoCommitButton").addEventListener("click", uploadPending);
+    wrap.querySelector("#githubPhotoPendingGrid").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-remove-pending]");
+      if (!button) return;
+      const index = Number(button.dataset.removePending);
+      const [removed] = pendingFiles.splice(index,1);
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      if (!pendingFiles.length) pendingCode = "";
+      renderPending();
+    });
+    return wrap;
+  }
+
+  function renderPending() {
+    const wrap = ensurePendingUi();
+    if (!wrap) return;
+    const grid = wrap.querySelector("#githubPhotoPendingGrid");
+    const actions = wrap.querySelector("#githubPhotoPendingActions");
+    const count = wrap.querySelector("#githubPhotoPendingCount");
+    const upload = wrap.querySelector("#githubPhotoCommitButton");
+    const clear = wrap.querySelector("#githubPhotoClearPending");
+    grid.innerHTML = pendingFiles.map((entry,index) => `
+      <article style="position:relative;border:1px solid var(--steel-200,rgba(148,163,184,.3));border-radius:12px;overflow:hidden;background:rgba(255,255,255,.06)">
+        <img src="${entry.previewUrl}" alt="Foto ${index + 1} aguardando upload" style="display:block;width:100%;aspect-ratio:1/1;object-fit:cover">
+        <button type="button" data-remove-pending="${index}" aria-label="Remover foto" title="Remover" style="position:absolute;top:5px;right:5px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:18px;cursor:pointer">×</button>
+        <small style="display:block;padding:6px 7px;text-align:center">Aguardando envio</small>
+      </article>`).join("");
+    actions.style.display = pendingFiles.length ? "flex" : "none";
+    count.textContent = `${pendingFiles.length} de ${MAX_PENDING} foto${pendingFiles.length === 1 ? "" : "s"} aguardando envio`;
+    upload.disabled = uploading || !pendingFiles.length;
+    clear.disabled = uploading;
+  }
+
+  function stageSelectedFiles(input) {
     const files = [...(input.files || [])].filter((file) => file.type.startsWith("image/"));
     input.value = "";
-    if (!files.length) return;
+    if (!files.length || uploading) return;
     const item = typeof state !== "undefined" ? state.activeItem : null;
     if (!item?.code) { alert("Abra um item antes de adicionar a foto."); return; }
+    const code = String(item.code).trim();
+    if (pendingCode && pendingCode !== code) clearPending();
+    pendingCode = code;
+    const available = Math.max(0, MAX_PENDING - pendingFiles.length);
+    const accepted = files.slice(0, available);
+    for (const file of accepted) pendingFiles.push({ file, previewUrl:URL.createObjectURL(file) });
+    const status = document.getElementById("photoUploadStatus");
+    if (status) {
+      if (files.length > available) status.textContent = `Limite de ${MAX_PENDING} fotos por envio. ${accepted.length} adicionada(s) à fila.`;
+      else status.textContent = `${pendingFiles.length} foto${pendingFiles.length === 1 ? "" : "s"} aguardando envio. Clique em Upload quando finalizar.`;
+    }
+    renderPending();
+  }
+
+  async function uploadPending() {
+    if (uploading || !pendingFiles.length) return;
+    const item = typeof state !== "undefined" ? state.activeItem : null;
+    if (!item?.code || String(item.code).trim() !== pendingCode) {
+      alert("Abra novamente o item das fotos antes de enviar.");
+      return;
+    }
     if (!(await ensureToken())) return;
 
     const status = document.getElementById("photoUploadStatus");
-    const button = document.getElementById("photoUploadButton");
+    const selectButton = document.getElementById("photoUploadButton");
+    const commitButton = document.getElementById("githubPhotoCommitButton");
     uploading = true;
-    if (button) button.disabled = true;
+    if (selectButton) selectButton.disabled = true;
+    if (commitButton) commitButton.disabled = true;
+    renderPending();
     try {
       let entries = await listImageEntries();
       let sequence = nextSequence(entries, item.code);
-      for (let i = 0; i < files.length; i += 1) {
+      const batch = pendingFiles.map((entry) => entry.file);
+      for (let i = 0; i < batch.length; i += 1) {
         if (sequence > 99) throw new Error("O item atingiu o limite de 99 fotos.");
-        if (status) status.textContent = `Enviando foto ${i + 1} de ${files.length}…`;
-        const uploaded = await uploadOne(item.code, sequence, files[i]);
+        if (status) status.textContent = `Enviando foto ${i + 1} de ${batch.length}…`;
+        const uploaded = await uploadOne(item.code, sequence, batch[i]);
         addToRuntimeIndex(item.code, uploaded);
         entries.push({ name:uploaded.fileName });
         sequence += 1;
       }
-      if (status) status.textContent = `${files.length === 1 ? "Foto enviada" : `${files.length} fotos enviadas`} ao GitHub com sucesso.`;
+      const sent = batch.length;
+      clearPending();
+      if (status) status.textContent = sent === 1 ? "Foto enviada ao GitHub com sucesso." : `${sent} fotos enviadas ao GitHub com sucesso.`;
     } catch (error) {
       if (error.message === "TOKEN_INVALID" || error.message === "TOKEN_REQUIRED") {
         clearToken();
@@ -226,7 +305,8 @@
       } else if (status) status.textContent = error.message;
     } finally {
       uploading = false;
-      if (button) button.disabled = false;
+      if (selectButton) selectButton.disabled = false;
+      renderPending();
     }
   }
 
@@ -255,16 +335,22 @@
 
   function install() {
     patchImageIndexLoader();
+    ensurePendingUi();
     document.addEventListener("change", (event) => {
       const input = event.target;
       if (!(input instanceof HTMLInputElement) || input.id !== "photoInput") return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      processSelectedFiles(input);
+      stageSelectedFiles(input);
     }, true);
 
+    const modal = document.getElementById("itemModal");
+    modal?.addEventListener("close", () => {
+      if (!uploading) clearPending();
+    });
+
     const status = document.getElementById("photoUploadStatus");
-    if (status) status.textContent = token() ? "Fotos serão enviadas diretamente para o GitHub" : "Ao adicionar a primeira foto, configure a chave do GitHub neste aparelho";
+    if (status) status.textContent = token() ? "Selecione até 6 fotos e depois clique em Upload" : "Selecione até 6 fotos; a chave será solicitada somente no momento do Upload";
 
     window.almoxarifadoPhotoAuth = Object.freeze({
       forget: () => { clearToken(); return true; },
