@@ -13,41 +13,86 @@ const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-2";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
 const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-4";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 3.3";
+const CURRENT_PUBLIC_VERSION = "Versão 3.4";
 
 /*
- * O comparativo usava a API pública do GitHub para descobrir os CSVs mensais.
- * Em rede corporativa/rate limit essa chamada pode falhar mesmo com os CSVs acessíveis
- * pelo próprio GitHub Pages. Mantemos a descoberta online e fornecemos um manifesto
- * local somente quando a API não responder corretamente.
+ * Descoberta resiliente das bases mensais.
+ * 1) usa a API pública do GitHub quando disponível;
+ * 2) se a API estiver bloqueada pela rede corporativa, procura os arquivos diretamente
+ *    no próprio GitHub Pages pelo padrão 01 - Estoque_<Mês>_<Ano>.csv.
+ * Isso evita depender de uma lista curta fixa de meses.
  */
 (function installMonthlyRepositoryFallback() {
   if (window.__almoxMonthlyFetchFallbackInstalled) return;
   window.__almoxMonthlyFetchFallbackInstalled = true;
+
   const nativeFetch = window.fetch.bind(window);
   const apiPattern = /^https:\/\/api\.github\.com\/repos\/tiagosilvagba\/Almoxarifado\/contents(?:\?ref=main)?$/i;
-  const monthlyFiles = [
-    "01 - Estoque_Dez_2025.csv",
-    "01 - Estoque_Abr_2026.csv",
-    "01 - Estoque_Jul_2026.csv",
-    "01 - Estoque_Ago_2026.csv",
-    "01 - Estoque_Set_2026.csv"
-  ];
-  const manifest = monthlyFiles.map((name) => ({ name, path:name, type:"file", sha:"fallback" }));
+  const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+  async function fileExists(name) {
+    const url = `./${encodeURIComponent(name).replace(/%2F/gi, "/")}`;
+    try {
+      const head = await nativeFetch(url, { method:"HEAD", cache:"no-store" });
+      if (head.ok) return true;
+      if (![405,501].includes(head.status)) return false;
+    } catch {}
+    try {
+      const get = await nativeFetch(url, { method:"GET", cache:"no-store", headers:{ Range:"bytes=0-0" } });
+      return get.ok || get.status === 206;
+    } catch {
+      return false;
+    }
+  }
+
+  async function discoverMonthlyFilesLocally() {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear - 3; year <= currentYear + 1; year += 1) years.push(year);
+
+    const candidates = [];
+    for (const year of years) {
+      for (const month of months) candidates.push(`01 - Estoque_${month}_${year}.csv`);
+    }
+
+    const found = [];
+    const batchSize = 8;
+    for (let i = 0; i < candidates.length; i += batchSize) {
+      const batch = candidates.slice(i, i + batchSize);
+      const results = await Promise.all(batch.map(async (name) => ({ name, exists: await fileExists(name) })));
+      results.forEach(({ name, exists }) => {
+        if (exists) found.push({ name, path:name, type:"file", sha:"same-origin-discovery" });
+      });
+    }
+    return found;
+  }
 
   window.fetch = async function almoxFetch(input, init) {
     const url = typeof input === "string" ? input : input?.url || "";
     if (!apiPattern.test(url)) return nativeFetch(input, init);
+
     try {
       const response = await nativeFetch(input, init);
-      if (response.ok) return response;
-      console.warn(`Comparativo mensal: API GitHub respondeu ${response.status}; usando manifesto local.`);
+      if (response.ok) {
+        try {
+          const entries = await response.clone().json();
+          const monthlyCount = Array.isArray(entries)
+            ? entries.filter((entry) => /^01\s*-\s*Estoque_[A-Za-zÀ-ÿ]{3}_\d{4}\.csv$/i.test(entry?.name || "")).length
+            : 0;
+          if (monthlyCount > 0) return response;
+        } catch {
+          return response;
+        }
+      }
     } catch (error) {
-      console.warn("Comparativo mensal: API GitHub indisponível; usando manifesto local.", error);
+      console.warn("Comparativo mensal: API GitHub indisponível; iniciando descoberta pelo GitHub Pages.", error);
     }
+
+    const manifest = await discoverMonthlyFilesLocally();
+    console.info(`Comparativo mensal: ${manifest.length} base(s) mensal(is) localizada(s) pelo GitHub Pages.`);
     return new Response(JSON.stringify(manifest), {
       status:200,
-      headers:{"Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"monthly-manifest"}
+      headers:{"Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"same-origin-discovery"}
     });
   };
 })();
