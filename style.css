@@ -61,3 +61,99 @@
     max-width:none !important;
   }
 }
+
+/* Foto do item — referência 01 em formato de avatar, estilo WhatsApp. */
+.report-card__identity {
+  display:grid;
+  grid-template-columns:56px minmax(0,1fr);
+  gap:12px;
+  align-items:center;
+  width:100%;
+  margin:4px 0 10px;
+  text-align:left;
+}
+
+.report-card__identity-text {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  gap:3px;
+}
+
+.report-card__identity .report-card__title,
+.report-card__identity .report-card__code {
+  margin:0;
+  min-width:0;
+}
+
+.report-card__avatar {
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:54px;
+  height:54px;
+  flex:0 0 54px;
+  overflow:hidden;
+  border-radius:50%;
+  border:2px solid color-mix(in srgb,var(--blue-500,#4777ff) 68%,white 12%);
+  background:linear-gradient(145deg,var(--steel-100,#e8edf5),var(--steel-200,#d7deea));
+  box-shadow:0 5px 16px rgba(0,0,0,.18),0 0 0 3px color-mix(in srgb,var(--blue-500,#4777ff) 10%,transparent);
+}
+
+.report-card__avatar img {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  border-radius:inherit;
+  z-index:2;
+}
+
+.report-card__avatar-fallback {
+  position:relative;
+  z-index:1;
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.04em;
+  color:var(--muted,#64748b);
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.18),transparent 45%);
+}
+
+.report-card__avatar.has-image .report-card__avatar-fallback {
+  visibility:hidden;
+}
+
+html[data-theme="palmeiras"] .report-card__avatar {
+  border-color:#39ff88;
+  box-shadow:0 0 12px rgba(57,255,136,.65),0 0 24px rgba(0,184,98,.32);
+}
+
+html[data-theme="logistica-neon"] .report-card__avatar,
+html[data-theme="galaxia"] .report-card__avatar {
+  box-shadow:0 0 12px rgba(169,87,255,.55),0 0 24px rgba(169,87,255,.2);
+}
+
+@media (max-width:900px) {
+  .report-card__identity {
+    grid-template-columns:48px minmax(0,1fr);
+    gap:10px;
+    margin-top:2px;
+  }
+
+  .report-card__avatar {
+    width:46px;
+    height:46px;
+    flex-basis:46px;
+  }
+
+  .report-card__identity .report-card__title {
+    font-size:1rem;
+    line-height:1.25;
+  }
+}
