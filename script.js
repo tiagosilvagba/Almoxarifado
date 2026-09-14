@@ -13,7 +13,44 @@ const COMPARATIVO_INCLUSOES_MODULE = "./comparativo-inclusoes.js?v=20260914-2";
 const COMPARATIVO_CARDS_RESUMO_MODULE = "./comparativo-cards-resumo.js?v=20260914-1";
 const COMPARATIVO_MES_A_MES_MODULE = "./comparativo-mes-a-mes.js?v=20260914-4";
 const COMPARATIVO_ESCALA_MIL_MODULE = "./comparativo-escala-mil.js?v=20260914-2";
-const CURRENT_PUBLIC_VERSION = "Versão 3.2";
+const CURRENT_PUBLIC_VERSION = "Versão 3.3";
+
+/*
+ * O comparativo usava a API pública do GitHub para descobrir os CSVs mensais.
+ * Em rede corporativa/rate limit essa chamada pode falhar mesmo com os CSVs acessíveis
+ * pelo próprio GitHub Pages. Mantemos a descoberta online e fornecemos um manifesto
+ * local somente quando a API não responder corretamente.
+ */
+(function installMonthlyRepositoryFallback() {
+  if (window.__almoxMonthlyFetchFallbackInstalled) return;
+  window.__almoxMonthlyFetchFallbackInstalled = true;
+  const nativeFetch = window.fetch.bind(window);
+  const apiPattern = /^https:\/\/api\.github\.com\/repos\/tiagosilvagba\/Almoxarifado\/contents(?:\?ref=main)?$/i;
+  const monthlyFiles = [
+    "01 - Estoque_Dez_2025.csv",
+    "01 - Estoque_Abr_2026.csv",
+    "01 - Estoque_Jul_2026.csv",
+    "01 - Estoque_Ago_2026.csv",
+    "01 - Estoque_Set_2026.csv"
+  ];
+  const manifest = monthlyFiles.map((name) => ({ name, path:name, type:"file", sha:"fallback" }));
+
+  window.fetch = async function almoxFetch(input, init) {
+    const url = typeof input === "string" ? input : input?.url || "";
+    if (!apiPattern.test(url)) return nativeFetch(input, init);
+    try {
+      const response = await nativeFetch(input, init);
+      if (response.ok) return response;
+      console.warn(`Comparativo mensal: API GitHub respondeu ${response.status}; usando manifesto local.`);
+    } catch (error) {
+      console.warn("Comparativo mensal: API GitHub indisponível; usando manifesto local.", error);
+    }
+    return new Response(JSON.stringify(manifest), {
+      status:200,
+      headers:{"Content-Type":"application/json; charset=utf-8", "X-Almoxarifado-Fallback":"monthly-manifest"}
+    });
+  };
+})();
 
 function loadIncrementalScript(src) {
   return new Promise((resolve, reject) => {
