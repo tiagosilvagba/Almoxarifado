@@ -1,127 +1,51 @@
-@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@bf250ea397c39aecdb26fb505f20af0dc5b9e862/style.css");
+@import url("https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@f70fe813650cbe091f0ee29a08233bdae64bc6ea/style.css");
 
-/* Contraste global — temas escuros.
-   Todo texto que vive em superfícies escuras passa a branco; cores semânticas
-   continuam reservadas a badges, alertas e botões com fundo próprio. */
-:is(
-  html[data-theme="logistica-neon"],
-  html[data-theme="azul-corporativo"],
-  html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],
-  html[data-theme="vermelho-impacto"],
-  html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],
-  html[data-theme="night-minimal"],
-  html[data-theme="galaxia"],
-  html[data-theme="palmeiras"]
-) {
-  --text:#fff;
-  --muted:#fff;
-  --theme-text:#fff;
-  --theme-muted:#fff;
-  --steel-700:#fff;
-  --steel-500:#fff;
-  --topbar-text:#fff;
-}
+/* Contraste contextual dos temas escuros:
+   - fundo escuro: texto branco (regra herdada da versão anterior);
+   - fundo claro: texto assume a cor característica do tema. */
 
+html[data-theme="logistica-neon"] { --theme-on-light:#6424c9; --theme-on-light-soft:#4d2d82; }
+html[data-theme="azul-corporativo"] { --theme-on-light:#145fc8; --theme-on-light-soft:#254f7f; }
+html[data-theme="verde-industrial-2"] { --theme-on-light:#087847; --theme-on-light-soft:#285f49; }
+html[data-theme="amber-tech"] { --theme-on-light:#9a5b00; --theme-on-light-soft:#74511c; }
+html[data-theme="vermelho-impacto"] { --theme-on-light:#bd1734; --theme-on-light-soft:#7d3040; }
+html[data-theme="ciano-clean"] { --theme-on-light:#007f94; --theme-on-light-soft:#27636d; }
+html[data-theme="rosa-premium"] { --theme-on-light:#b51b70; --theme-on-light-soft:#79345d; }
+html[data-theme="night-minimal"] { --theme-on-light:#354153; --theme-on-light-soft:#566274; }
+html[data-theme="galaxia"] { --theme-on-light:#6330bf; --theme-on-light-soft:#533a79; }
+html[data-theme="palmeiras"] { --theme-on-light:#006b3c; --theme-on-light-soft:#275c45; }
+
+/* Componentes explicitamente claros: títulos e valores usam a cor principal do tema. */
 :is(
-  html[data-theme="logistica-neon"],
-  html[data-theme="azul-corporativo"],
-  html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],
-  html[data-theme="vermelho-impacto"],
-  html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],
-  html[data-theme="night-minimal"],
-  html[data-theme="galaxia"],
-  html[data-theme="palmeiras"]
+  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
 ) :is(
-  body,.topbar,.app-nav-wrap,.app-nav,.app-nav__tab:not(.is-active),
-  .page-panel,.section-heading,.section-heading h2,.section-heading p,.section-description,.eyebrow,.context-label,
-  .metric,.metric__label,.metric strong,.metric small,
-  .analytics-card,.analytics-card__heading,.analytics-card__heading h3,.analytics-card__heading p,.analytics-card__heading small,
-  .filter-panel,.global-filter-bar,.field,.field>span,.switch-field,.filter-summary,
-  .item-card,.item-card h3,.item-card__title,.item-card p,.item-card span,.item-card small,.item-card strong,
-  .report-card,.report-card__title,.report-card__code,.report-card__meta,.report-card__meta strong,.report-card p,.report-card small,
-  .report-card__identity,.report-card__identity-text,.report-card__avatar-fallback,
-  .need-summary,.need-summary article,.need-summary span,.need-summary strong,.need-summary small,
-  .summary-cards,.summary-cards article,.summary-cards span,.summary-cards strong,.summary-cards small,
-  .details-list,.details-list dt,.details-list dd,
-  .branch-balance-section,.branch-balance-section>header,.branch-balance-section>header strong,.branch-balance-section>header small,
-  .branch-balance-grid article,.branch-balance-grid article>span,.branch-balance-grid article>strong,.branch-balance-grid article>small,
-  .purchase-min-max,.purchase-min-max strong,.purchase-details,.purchase-details dt,.purchase-details dd,
-  .operational-insights,.operational-insights span,.operational-insights strong,.operational-insights small,
-  .process-stages,.process-stages span,.process-stages strong,.process-stages small,
-  .process-detail-group,.process-detail-group dt,.process-detail-group dd,.process-detail-group small,.process-detail-group>header strong,
-  .procurement-people,.procurement-people strong,
-  .review-detail-grid,.review-detail-grid h3,.review-detail-grid dt,.review-detail-grid dd,
-  .review-recommendation,.review-recommendation span,.review-recommendation strong,.review-recommendation small,
-  .monthly-consumption-list,.monthly-consumption-list span,.monthly-consumption-list strong,.monthly-consumption-list small,
-  .of-generation-summary__bucket,.of-generation-summary__bucket>span,.of-generation-summary__bucket>strong,.of-generation-summary__bucket>small,
-  .of-generation-path,.of-generation-path strong,.of-generation-path small,
-  .of-generation-timeline article,.of-generation-timeline article strong,.of-generation-timeline article small,
-  .of-period-slicer__heading,.of-period-slicer__heading strong,.of-period-slicer__controls label,
-  .of-trend-card,.of-trend-card__heading h3,.of-trend-card__heading p,.of-trend-option>span,.of-trend-chart__caption,.of-trend-chart__caption strong,
-  .instructions-index,.instructions-index>strong,.instructions-index a,
-  .instruction-section,.instruction-section h3,.instruction-section h4,.instruction-section p,.instruction-section li,.instruction-section li strong,.instruction-section p strong,
-  .instruction-formulas code,.instruction-table td,.instruction-table td:first-child,
-  .data-table td,.data-table th,
-  .modal-shell,.modal-content,.modal-header,.modal-header h2,.modal-header strong,.modal-header p,.modal-code,
-  .excel-filter__menu,.excel-filter__label,.excel-filter__option,.excel-filter__search,.excel-filter__trigger,
-  .month-compare-controls,.month-compare-controls label,.month-compare-message,
-  .month-compare-metric,.month-compare-metric span,.month-compare-metric strong,.month-compare-metric small,
-  .month-consideration,.month-consideration p,.month-consideration span,.month-consideration strong,.month-consideration li,
-  .month-compare-toolbar,.month-compare-table-wrap,.month-compare-table td,.month-compare-table th
+  .instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert,
+  .status-pill--critical,.status-pill--success,.status-pill--warning,.status-pill--info,.status-pill--neutral
 ) {
-  color:#fff !important;
-}
-
-/* Campos sobre superfícies escuras também precisam manter texto e placeholder legíveis. */
-:is(
-  html[data-theme="logistica-neon"],
-  html[data-theme="azul-corporativo"],
-  html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],
-  html[data-theme="vermelho-impacto"],
-  html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],
-  html[data-theme="night-minimal"],
-  html[data-theme="galaxia"],
-  html[data-theme="palmeiras"]
-) :is(input,select,textarea,option) {
-  color:#fff !important;
+  color:var(--theme-on-light) !important;
 }
 
 :is(
-  html[data-theme="logistica-neon"],
-  html[data-theme="azul-corporativo"],
-  html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],
-  html[data-theme="vermelho-impacto"],
-  html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],
-  html[data-theme="night-minimal"],
-  html[data-theme="galaxia"],
-  html[data-theme="palmeiras"]
-) :is(input,textarea)::placeholder {
-  color:rgba(255,255,255,.72) !important;
-  opacity:1;
+  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
+) :is(
+  .instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert
+) :is(h1,h2,h3,h4,h5,h6,strong,b,a,span,p,small,dt,dd,li,code) {
+  color:inherit !important;
 }
 
-/* Elementos com fundo claro próprio preservam texto escuro para contraste. */
+/* Variação secundária para textos auxiliares dentro de superfícies claras. */
 :is(
-  html[data-theme="logistica-neon"],
-  html[data-theme="azul-corporativo"],
-  html[data-theme="verde-industrial-2"],
-  html[data-theme="amber-tech"],
-  html[data-theme="vermelho-impacto"],
-  html[data-theme="ciano-clean"],
-  html[data-theme="rosa-premium"],
-  html[data-theme="night-minimal"],
-  html[data-theme="galaxia"],
-  html[data-theme="palmeiras"]
-) :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) {
-  color:#24170b !important;
+  html[data-theme="logistica-neon"],html[data-theme="azul-corporativo"],html[data-theme="verde-industrial-2"],
+  html[data-theme="amber-tech"],html[data-theme="vermelho-impacto"],html[data-theme="ciano-clean"],
+  html[data-theme="rosa-premium"],html[data-theme="night-minimal"],html[data-theme="galaxia"],html[data-theme="palmeiras"]
+) :is(
+  .instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert
+) :is(small,.muted,.helper-text) {
+  color:var(--theme-on-light-soft) !important;
 }
 
-/* Temas claros permanecem intocados: clean-light-2 e areia-industrial. */
+/* Os dois temas claros continuam usando suas próprias paletas originais. */
