@@ -1,0 +1,39 @@
+name: Validate dashboard data v2
+on:
+  push:
+    branches: [arquitetura-v2]
+    paths:
+      - '01 - Compras_Almox_Parte_*.CSV'
+      - '00 - Saldo_Online.csv'
+      - '02 - Responsaveis_Reposição.CSV'
+      - '03 - Consumo.csv'
+      - '03 - Itens_Sem_Giro.csv'
+      - 'processor/**'
+      - '.github/workflows/build-dashboard-data.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and validate compact data
+        run: python processor/build_data.py
+      - name: Validate generated JSON
+        run: |
+          python -m json.tool data/manifest.json >/dev/null
+          python -m json.tool data/validation-report.json >/dev/null
+          python -m json.tool data/sc-of.json >/dev/null
+          python -m json.tool data/follow-up.json >/dev/null
+      - name: Commit validated generated data
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/
+          git diff --cached --quiet || git commit -m "Atualiza dados v2 validados [skip ci]"
+          git push
