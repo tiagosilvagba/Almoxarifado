@@ -12,87 +12,62 @@ const COMPARATIVO_EXCEL_MODULE="./comparativo-excel-padrao.js?v=20260914-3";
 const COMPARATIVO_ITEM_SPLIT_MODULE="./comparativo-item-split.js?v=20260914-2";
 const COMPARATIVO_META_VISUAL_MODULE="./comparativo-meta-visual.js?v=20260914-2";
 const COMPARATIVO_INCLUSOES_MODULE="./comparativo-inclusoes.js?v=20260914-3";
-const COMPARATIVO_CARDS_RESUMO_MODULE="./comparativo-cards-resumo.js?v=20260914-2";
+const COMPARATIVO_CARDS_RESUMO_MODULE="./comparativo-cards-resumo.js?v=20260914-3";
 const COMPARATIVO_MES_A_MES_MODULE="./comparativo-mes-a-mes.js?v=20260914-6";
-const COMPARATIVO_ESCALA_MIL_MODULE="./comparativo-escala-mil.js?v=20260914-2";
+const COMPARATIVO_ESCALA_MIL_MODULE="./comparativo-escala-mil.js?v=20260914-3";
 const AREA_FILTER_ACTIVE_MODULE="./area-filter-active.js?v=20260914-1";
 const GITHUB_PHOTO_UPLOAD_MODULE="./github-photo-upload-v2.js?v=20260914-1";
-const CURRENT_PUBLIC_VERSION="Versão 5.4";
+const CURRENT_PUBLIC_VERSION="Versão 5.5";
 
-/* Alguns bootstraps antigos usam raw.githubusercontent.com como fallback de script.
- * O conteúdo bruto pode ser recusado pelo navegador por MIME. Reescrevemos somente
- * esses fallbacks do próprio projeto para o endpoint alternativo do jsDelivr. */
 (function installSafeRawScriptFallback(){
   if(window.__almoxSafeRawScriptFallbackInstalled)return;
   window.__almoxSafeRawScriptFallbackInstalled=true;
   const originalAppendChild=document.head.appendChild.bind(document.head);
   const rawPattern=/^https:\/\/raw\.githubusercontent\.com\/tiagosilvagba\/Almoxarifado\/([^/]+)\/(.+)$/i;
   document.head.appendChild=function(node){
-    try{
-      if(node?.tagName==="SCRIPT"&&node.src){
-        const match=node.src.match(rawPattern);
-        if(match){
-          const ref=match[1];
-          const path=match[2].split("?")[0];
-          node.src=`https://fastly.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@${ref}/${path}`;
-        }
-      }
-    }catch{}
+    try{if(node?.tagName==="SCRIPT"&&node.src){const match=node.src.match(rawPattern);if(match){const ref=match[1],path=match[2].split("?")[0];node.src=`https://fastly.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@${ref}/${path}`;}}}catch{}
     return originalAppendChild(node);
   };
 })();
 
-/* A aplicação-base processa os CSVs em um Web Worker. O fetch sobrescrito na janela
- * não existe dentro do Worker; por isso Compras recebe um manifesto local e deixa de
- * depender da API do GitHub para descobrir as partes 01–04. */
 (function installWorkerDataTransport(){
-  if(window.__almoxWorkerDataTransportInstalled || typeof Worker!=="function")return;
+  if(window.__almoxWorkerDataTransportInstalled||typeof Worker!=="function")return;
   window.__almoxWorkerDataTransportInstalled=true;
   const originalPostMessage=Worker.prototype.postMessage;
-  const purchaseParts=[
-    "01 - Compras_Almox_Parte_01.CSV",
-    "01 - Compras_Almox_Parte_02.CSV",
-    "01 - Compras_Almox_Parte_03.CSV",
-    "01 - Compras_Almox_Parte_04.CSV"
-  ];
+  const purchaseParts=["01 - Compras_Almox_Parte_01.CSV","01 - Compras_Almox_Parte_02.CSV","01 - Compras_Almox_Parte_03.CSV","01 - Compras_Almox_Parte_04.CSV"];
+  const entries=purchaseParts.map(name=>({name,type:"file",download_url:new URL(name,document.baseURI).href}));
+  const manifest=`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(entries))}`;
   Worker.prototype.postMessage=function(message,...rest){
     let next=message;
-    try{
-      if(message && typeof message==="object" && message.saldoUrl && message.comprasApiUrl && message.replenishmentUrl){
-        const entries=purchaseParts.map((name)=>({name,type:"file",download_url:new URL(name,document.baseURI).href}));
-        const manifest=`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(entries))}`;
-        next={...message,comprasApiUrl:manifest,commitsApiUrl:""};
-      }
-    }catch(error){
-      console.warn("Não foi possível preparar o manifesto local de Compras.",error);
-    }
+    try{if(message&&typeof message==="object"&&message.saldoUrl&&message.comprasApiUrl&&message.replenishmentUrl)next={...message,comprasApiUrl:manifest,commitsApiUrl:""};}
+    catch(error){console.warn("Não foi possível preparar o manifesto local de Compras.",error);}
     return originalPostMessage.call(this,next,...rest);
   };
 })();
 
-/* Fallback usado pelos módulos executados na janela. Não interfere no Web Worker. */
 (function installRepositoryFallback(){
   if(window.__almoxRepositoryFallbackInstalled)return;
   window.__almoxRepositoryFallbackInstalled=true;
   const nativeFetch=window.fetch.bind(window);
   const apiPattern=/^https:\/\/api\.github\.com\/repos\/tiagosilvagba\/Almoxarifado\/contents(?:\?ref=main)?$/i;
   const months=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  let discoveryPromise=null;
   async function fileExists(name){
     const url=`./${encodeURIComponent(name).replace(/%2F/gi,"/")}`;
     try{const h=await nativeFetch(url,{method:"HEAD",cache:"no-store"});if(h.ok)return true;if(![405,501].includes(h.status))return false}catch{}
     try{const g=await nativeFetch(url,{method:"GET",cache:"no-store",headers:{Range:"bytes=0-0"}});return g.ok||g.status===206}catch{return false}
   }
   async function discover(){
-    const c=["00 - Saldo_Online.csv","01 - Compras_Almox.csv","02 - Responsaveis_Reposição.CSV","03 - Consumo.csv"];
-    for(let p=1;p<=20;p++)c.push(`01 - Compras_Almox_Parte_${String(p).padStart(2,"0")}.CSV`);
-    const y=new Date().getFullYear();
-    for(let yr=y-3;yr<=y+1;yr++)for(const m of months)c.push(`01 - Estoque_${m}_${yr}.csv`);
-    const u=[...new Set(c)],f=[];
-    for(let i=0;i<u.length;i+=8){
-      const r=await Promise.all(u.slice(i,i+8).map(async name=>({name,exists:await fileExists(name)})));
-      for(const x of r)if(x.exists)f.push({name:x.name,path:x.name,type:"file",sha:"same-origin-discovery",download_url:new URL(x.name,document.baseURI).href});
-    }
-    return f;
+    if(discoveryPromise)return discoveryPromise;
+    discoveryPromise=(async()=>{
+      const c=["00 - Saldo_Online.csv","01 - Compras_Almox.csv","02 - Responsaveis_Reposição.CSV","03 - Consumo.csv"];
+      for(let p=1;p<=20;p++)c.push(`01 - Compras_Almox_Parte_${String(p).padStart(2,"0")}.CSV`);
+      const y=new Date().getFullYear();for(let yr=y-3;yr<=y+1;yr++)for(const m of months)c.push(`01 - Estoque_${m}_${yr}.csv`);
+      const u=[...new Set(c)],f=[];
+      for(let i=0;i<u.length;i+=12){const r=await Promise.all(u.slice(i,i+12).map(async name=>({name,exists:await fileExists(name)})));for(const x of r)if(x.exists)f.push({name:x.name,path:x.name,type:"file",sha:"same-origin-discovery",download_url:new URL(x.name,document.baseURI).href});}
+      return f;
+    })();
+    try{return await discoveryPromise}finally{setTimeout(()=>{discoveryPromise=null},30000)}
   }
   window.fetch=async function(input,init){
     const url=typeof input==="string"?input:input?.url||"";
@@ -104,61 +79,33 @@ const CURRENT_PUBLIC_VERSION="Versão 5.4";
 
 function loadIncrementalScript(src,timeoutMs=12000){
   return new Promise((resolve,reject)=>{
-    const s=document.createElement("script");
-    let settled=false;
-    const finish=(ok,error)=>{
-      if(settled)return;
-      settled=true;
-      clearTimeout(timer);
-      s.onload=null;s.onerror=null;
-      if(!ok)s.remove();
-      ok?resolve():reject(error||new Error(`Falha ao carregar ${src}`));
-    };
+    const s=document.createElement("script");let settled=false;
+    const finish=(ok,error)=>{if(settled)return;settled=true;clearTimeout(timer);s.onload=null;s.onerror=null;if(!ok)s.remove();ok?resolve():reject(error||new Error(`Falha ao carregar ${src}`));};
     const timer=setTimeout(()=>finish(false,new Error(`Tempo esgotado ao carregar ${src}`)),timeoutMs);
-    s.src=src;s.async=false;s.onload=()=>finish(true);s.onerror=()=>finish(false,new Error(`Falha ao carregar ${src}`));
-    document.head.appendChild(s);
+    s.src=src;s.async=false;s.onload=()=>finish(true);s.onerror=()=>finish(false,new Error(`Falha ao carregar ${src}`));document.head.appendChild(s);
   });
 }
-
-function enforceCurrentPublicVersion(){
-  const b=document.getElementById("versionBadge");
-  if(b&&b.textContent!==CURRENT_PUBLIC_VERSION)b.textContent=CURRENT_PUBLIC_VERSION;
-  const version=CURRENT_PUBLIC_VERSION.replace(/^Versão\s*/i,"");
-  if(document.documentElement.dataset.appVersion!==version)document.documentElement.dataset.appVersion=version;
-}
-
-async function loadOptional(src,msg){
-  try{await loadIncrementalScript(src,12000);}
-  catch(e){console.error(`Não foi possível carregar ${msg}.`,e);}
-}
+function enforceCurrentPublicVersion(){const b=document.getElementById("versionBadge");if(b&&b.textContent!==CURRENT_PUBLIC_VERSION)b.textContent=CURRENT_PUBLIC_VERSION;const version=CURRENT_PUBLIC_VERSION.replace(/^Versão\s*/i,"");if(document.documentElement.dataset.appVersion!==version)document.documentElement.dataset.appVersion=version;}
+async function loadOptional(src,msg){try{await loadIncrementalScript(src,12000);return true}catch(e){console.error(`Não foi possível carregar ${msg}.`,e);return false}}
 
 (async function boot(){
-  await loadOptional(RESPONSIVE_LAYOUT_MODULE,"camada responsiva");
-  await loadOptional(GITHUB_COMMIT_QUEUE_MODULE,"fila global de commits");
-  try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP,12000);}
-  catch(primaryError){
-    console.warn("Bootstrap principal indisponível no CDN primário; usando CDN alternativo.",primaryError);
-    try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK,12000);}
-    catch(fallbackError){console.error("Falha ao carregar o bootstrap principal.",fallbackError);}
-  }
+  /* Camadas independentes iniciam em paralelo; o bootstrap principal continua protegido. */
+  await Promise.all([loadOptional(RESPONSIVE_LAYOUT_MODULE,"camada responsiva"),loadOptional(GITHUB_COMMIT_QUEUE_MODULE,"fila global de commits")]);
+  try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP,12000)}catch(primaryError){console.warn("Bootstrap principal indisponível no CDN primário; usando CDN alternativo.",primaryError);try{await loadIncrementalScript(PREVIOUS_BOOTSTRAP_FALLBACK,12000)}catch(fallbackError){console.error("Falha ao carregar o bootstrap principal.",fallbackError)}}
   enforceCurrentPublicVersion();
-  const modules=[
-    [SALDO_UPDATE_TIME_MODULE,"horário oficial da atualização do Saldo Online"],
-    [PAGE_SNAPSHOT_PDF_MODULE,"PDF visual da página atual"],
-    [AREA_FILTER_ACTIVE_MODULE,"filtro ativo por área"],
-    [GITHUB_PHOTO_UPLOAD_MODULE,"fila imutável de fotos por item"],
-    [COMPARATIVO_META_MODULE,"mês meta e filtros dinâmicos"],
-    [LAYOUT_FIX_MODULE,"correção estrutural do layout"],
-    [COMPARATIVO_PERIODOS_MODULE,"rótulos de período do comparativo"],
-    [COMPARATIVO_EXCEL_MODULE,"exportação Excel padronizada"],
-    [COMPARATIVO_ITEM_SPLIT_MODULE,"separação de código e nome do item"],
-    [COMPARATIVO_META_VISUAL_MODULE,"cálculo visual comparado x mês meta"],
-    [COMPARATIVO_INCLUSOES_MODULE,"inclusões e reduções unificadas pelo mês base"],
-    [COMPARATIVO_CARDS_RESUMO_MODULE,"cards Top 10 revisados do comparativo"],
-    [COMPARATIVO_MES_A_MES_MODULE,"cards Meta e Meta linear vs mês comparado"],
-    [COMPARATIVO_ESCALA_MIL_MODULE,"escala x1000 de saldo e consumo"]
+
+  /* Recursos independentes não precisam bloquear uns aos outros. */
+  await Promise.all([
+    loadOptional(SALDO_UPDATE_TIME_MODULE,"horário oficial da atualização do Saldo Online"),
+    loadOptional(PAGE_SNAPSHOT_PDF_MODULE,"PDF visual da página atual"),
+    loadOptional(AREA_FILTER_ACTIVE_MODULE,"filtro ativo por área"),
+    loadOptional(GITHUB_PHOTO_UPLOAD_MODULE,"fila imutável de fotos por item")
+  ]);
+
+  /* Comparativo permanece ordenado para preservar todas as dependências de DOM existentes. */
+  const comparativo=[
+    [COMPARATIVO_META_MODULE,"mês meta e filtros dinâmicos"],[LAYOUT_FIX_MODULE,"correção estrutural do layout"],[COMPARATIVO_PERIODOS_MODULE,"rótulos de período do comparativo"],[COMPARATIVO_EXCEL_MODULE,"exportação Excel padronizada"],[COMPARATIVO_ITEM_SPLIT_MODULE,"separação de código e nome do item"],[COMPARATIVO_META_VISUAL_MODULE,"cálculo visual comparado x mês meta"],[COMPARATIVO_INCLUSOES_MODULE,"inclusões e reduções unificadas pelo mês base"],[COMPARATIVO_CARDS_RESUMO_MODULE,"cards Top 10 revisados do comparativo"],[COMPARATIVO_MES_A_MES_MODULE,"cards Meta e Meta linear vs mês comparado"],[COMPARATIVO_ESCALA_MIL_MODULE,"escala x1000 de saldo e consumo"]
   ];
-  for(const [src,msg] of modules)await loadOptional(src,msg);
-  enforceCurrentPublicVersion();
-  [250,800,1800].forEach(d=>setTimeout(enforceCurrentPublicVersion,d));
+  for(const [src,msg] of comparativo)await loadOptional(src,msg);
+  enforceCurrentPublicVersion();[250,800,1800].forEach(d=>setTimeout(enforceCurrentPublicVersion,d));
 })();
