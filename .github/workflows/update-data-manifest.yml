@@ -9,6 +9,7 @@ on:
       - "tools/build_manifest.py"
       - "tools/build_catalog.mjs"
       - "app/core/catalog-app.js"
+      - ".github/workflows/update-data-manifest.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,7 +36,7 @@ jobs:
         run: node tools/build_catalog.mjs
       - name: Publicar bases atualizadas
         run: |
-          if git diff --quiet -- data-manifest.json data/catalog.json.gz data/catalog-meta.json; then
+          if [ -z "$(git status --porcelain -- data-manifest.json data/catalog.json.gz data/catalog-meta.json)" ]; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
