@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 7.0: todos os componentes são servidos pelo próprio projeto. */
-const APP_VERSION = "7.0";
+const BOOTSTRAP_VERSION = "7.0";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
@@ -58,8 +58,8 @@ async function optional(src, name) {
 
 function setVersion() {
   const badge = document.getElementById("versionBadge");
-  if (badge) badge.textContent = `Versão ${APP_VERSION}`;
-  document.documentElement.dataset.appVersion = APP_VERSION;
+  if (badge) badge.textContent = `Versão ${BOOTSTRAP_VERSION}`;
+  document.documentElement.dataset.appVersion = BOOTSTRAP_VERSION;
 }
 
 function yieldToBrowser() {
