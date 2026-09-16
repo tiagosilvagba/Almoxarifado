@@ -1,7 +1,7 @@
 "use strict";
 
-/** Bootstrap 7.0: todos os componentes são servidos pelo próprio projeto. */
-const BOOTSTRAP_VERSION = "7.1";
+/** Bootstrap 7.2: todos os componentes são servidos pelo próprio projeto. */
+const BOOTSTRAP_VERSION = "7.2";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
@@ -13,7 +13,7 @@ const MODULES = Object.freeze({
   area: "./app/modules/area-filter-active.js?v=7.0",
   noTurn: "./app/modules/itens-sem-giro.js?v=7.0",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
-  followUp: "./app/modules/follow-up.js?v=7.0",
+  followUp: "./app/modules/follow-up.js?v=7.2",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=7.0",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
