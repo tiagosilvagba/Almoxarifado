@@ -1,0 +1,106 @@
+[
+  {
+    "name": "00 - Saldo_Online.csv",
+    "path": "00 - Saldo_Online.csv",
+    "type": "file",
+    "size": 2935891,
+    "sha": "eba7215ab3ed42cd",
+    "download_url": "./00%20-%20Saldo_Online.csv"
+  },
+  {
+    "name": "01 - Compras_Almox_Parte_01.CSV",
+    "path": "01 - Compras_Almox_Parte_01.CSV",
+    "type": "file",
+    "size": 22919528,
+    "sha": "138fd21c4a670df5",
+    "download_url": "./01%20-%20Compras_Almox_Parte_01.CSV"
+  },
+  {
+    "name": "01 - Compras_Almox_Parte_02.CSV",
+    "path": "01 - Compras_Almox_Parte_02.CSV",
+    "type": "file",
+    "size": 24272223,
+    "sha": "46823715773c178f",
+    "download_url": "./01%20-%20Compras_Almox_Parte_02.CSV"
+  },
+  {
+    "name": "01 - Compras_Almox_Parte_03.CSV",
+    "path": "01 - Compras_Almox_Parte_03.CSV",
+    "type": "file",
+    "size": 9717337,
+    "sha": "c3244a3d07c39a5c",
+    "download_url": "./01%20-%20Compras_Almox_Parte_03.CSV"
+  },
+  {
+    "name": "01 - Compras_Almox_Parte_04.CSV",
+    "path": "01 - Compras_Almox_Parte_04.CSV",
+    "type": "file",
+    "size": 22937282,
+    "sha": "b6c44fdbee8c4b2e",
+    "download_url": "./01%20-%20Compras_Almox_Parte_04.CSV"
+  },
+  {
+    "name": "01 - Estoque_Abr_2026.csv",
+    "path": "01 - Estoque_Abr_2026.csv",
+    "type": "file",
+    "size": 2710038,
+    "sha": "58f6772b187bfe78",
+    "download_url": "./01%20-%20Estoque_Abr_2026.csv"
+  },
+  {
+    "name": "01 - Estoque_Ago_2026.csv",
+    "path": "01 - Estoque_Ago_2026.csv",
+    "type": "file",
+    "size": 2665676,
+    "sha": "9397bcc2a014fa7b",
+    "download_url": "./01%20-%20Estoque_Ago_2026.csv"
+  },
+  {
+    "name": "01 - Estoque_Dez_2025.csv",
+    "path": "01 - Estoque_Dez_2025.csv",
+    "type": "file",
+    "size": 2808919,
+    "sha": "99743ccfc6bd6bbb",
+    "download_url": "./01%20-%20Estoque_Dez_2025.csv"
+  },
+  {
+    "name": "01 - Estoque_Jul_2026.csv",
+    "path": "01 - Estoque_Jul_2026.csv",
+    "type": "file",
+    "size": 2665676,
+    "sha": "9397bcc2a014fa7b",
+    "download_url": "./01%20-%20Estoque_Jul_2026.csv"
+  },
+  {
+    "name": "01 - Estoque_Set_2026.csv",
+    "path": "01 - Estoque_Set_2026.csv",
+    "type": "file",
+    "size": 2688530,
+    "sha": "f7eeed0346148e41",
+    "download_url": "./01%20-%20Estoque_Set_2026.csv"
+  },
+  {
+    "name": "02 - Responsaveis_Reposição.CSV",
+    "path": "02 - Responsaveis_Reposição.CSV",
+    "type": "file",
+    "size": 3031,
+    "sha": "d393bc4574308a10",
+    "download_url": "./02%20-%20Responsaveis_Reposi%C3%A7%C3%A3o.CSV"
+  },
+  {
+    "name": "03 - Consumo.csv",
+    "path": "03 - Consumo.csv",
+    "type": "file",
+    "size": 3355752,
+    "sha": "df6502daf462566e",
+    "download_url": "./03%20-%20Consumo.csv"
+  },
+  {
+    "name": "03 - Itens_Sem_Giro.csv",
+    "path": "03 - Itens_Sem_Giro.csv",
+    "type": "file",
+    "size": 218208,
+    "sha": "53bbb86ef30cd89d",
+    "download_url": "./03%20-%20Itens_Sem_Giro.csv"
+  }
+]

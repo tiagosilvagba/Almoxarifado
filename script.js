@@ -1,11 +1,121 @@
 "use strict";
-const PREVIOUS_BOOTSTRAP="https://cdn.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js",PREVIOUS_BOOTSTRAP_FALLBACK="https://fastly.jsdelivr.net/gh/tiagosilvagba/Almoxarifado@bb6ede30b8e351bf50734aa84a3ed28e12b5bb1c/script.js";
-const RESPONSIVE_LAYOUT_MODULE="./responsive-layout.js?v=20260915-3",GITHUB_COMMIT_QUEUE_MODULE="./github-commit-queue.js?v=20260914-1",PAGE_SNAPSHOT_PDF_MODULE="./page-snapshot-pdf.js?v=20260914-1",SALDO_UPDATE_TIME_MODULE="./saldo-update-time.js?v=20260914-2",COMPARATIVO_META_MODULE="./comparativo-meta.js?v=20260914-1",LAYOUT_FIX_MODULE="./layout-fix.js?v=20260914-3",COMPARATIVO_PERIODOS_MODULE="./comparativo-periodos.js?v=20260914-2",COMPARATIVO_EXCEL_MODULE="./comparativo-excel-padrao.js?v=20260914-3",COMPARATIVO_ITEM_SPLIT_MODULE="./comparativo-item-split.js?v=20260914-2",COMPARATIVO_META_VISUAL_MODULE="./comparativo-meta-visual.js?v=20260914-2",COMPARATIVO_INCLUSOES_MODULE="./comparativo-inclusoes.js?v=20260914-3",COMPARATIVO_CARDS_RESUMO_MODULE="./comparativo-cards-resumo.js?v=20260914-3",COMPARATIVO_MES_A_MES_MODULE="./comparativo-mes-a-mes.js?v=20260914-6",COMPARATIVO_ESCALA_MIL_MODULE="./comparativo-escala-mil.js?v=20260914-3",AREA_FILTER_ACTIVE_MODULE="./area-filter-active.js?v=20260914-1",GITHUB_PHOTO_UPLOAD_MODULE="./github-photo-upload-v2.js?v=20260914-1",ITENS_SEM_GIRO_MODULE="./itens-sem-giro.js?v=20260915-2",ITENS_SEM_GIRO_CROSS_MODULE="./itens-sem-giro-cruzamento.js?v=20260915-2",FOLLOW_UP_MODULE="./follow-up.js?v=20260915-3",PURCHASE_NEED_LEAD_TIME_MODULE="./purchase-need-lead-time.js?v=20260915-1";const CURRENT_PUBLIC_VERSION="Versão 6.7",IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-try{localStorage.removeItem("almoxarifado-layout-mode")}catch{}document.documentElement.removeAttribute("data-layout-mode");
-(()=>{if(window.__almoxWorkerDataTransportInstalled||typeof Worker!=="function")return;window.__almoxWorkerDataTransportInstalled=true;const p=Worker.prototype.postMessage,files=[1,2,3,4].map(n=>`01 - Compras_Almox_Parte_0${n}.CSV`).map(name=>({name,type:"file",download_url:new URL(name,document.baseURI).href})),manifest=`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(files))}`;Worker.prototype.postMessage=function(m,...r){let n=m;try{if(m&&typeof m==="object"&&m.saldoUrl&&m.comprasApiUrl&&m.replenishmentUrl)n={...m,comprasApiUrl:manifest,commitsApiUrl:""}}catch{}return p.call(this,n,...r)}})();
-(()=>{if(window.__almoxRepositoryFallbackInstalled)return;window.__almoxRepositoryFallbackInstalled=true;const nf=window.fetch.bind(window),re=/^https:\/\/api\.github\.com\/repos\/tiagosilvagba\/Almoxarifado\/contents(?:\?ref=main)?$/i;window.fetch=async function(i,o){const u=typeof i==="string"?i:i?.url||"";if(!re.test(u))return nf(i,o);try{const r=await nf(i,o);if(r.ok)return r}catch{}const core=["00 - Saldo_Online.csv","02 - Responsaveis_Reposição.CSV","03 - Consumo.csv","03 - Itens_Sem_Giro.csv",...Array.from({length:4},(_,i)=>`01 - Compras_Almox_Parte_0${i+1}.CSV`)];return new Response(JSON.stringify(core.map(name=>({name,path:name,type:"file",sha:"same-origin",download_url:new URL(name,document.baseURI).href}))),{status:200,headers:{"Content-Type":"application/json; charset=utf-8"}})}})();
-function load(src,t=20000){return new Promise((ok,bad)=>{const s=document.createElement("script");let done=false;const finish=(yes,e)=>{if(done)return;done=true;clearTimeout(tm);s.onload=s.onerror=null;if(!yes)s.remove();yes?ok():bad(e||Error(src))},tm=setTimeout(()=>finish(false,Error(`Tempo esgotado ${src}`)),t);s.src=src;s.async=true;s.onload=()=>finish(true);s.onerror=()=>finish(false);document.head.appendChild(s)})}async function opt(src,name){try{await load(src);return true}catch(e){console.error(`Falha em ${name}`,e);return false}}function ver(){const b=document.getElementById("versionBadge");if(b)b.textContent=CURRENT_PUBLIC_VERSION;document.documentElement.dataset.appVersion="6.7"}const idle=(fn,timeout=3000)=>window.requestIdleCallback?requestIdleCallback(fn,{timeout}):setTimeout(fn,IS_IOS?1800:600);function yieldUI(){return new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))}
-(async()=>{ver();opt(RESPONSIVE_LAYOUT_MODULE,"responsivo");opt(GITHUB_COMMIT_QUEUE_MODULE,"fila commits");await yieldUI();let base=false;try{await load(PREVIOUS_BOOTSTRAP,30000);base=true}catch{try{await load(PREVIOUS_BOOTSTRAP_FALLBACK,30000);base=true}catch(e){console.error("Bootstrap",e)}}ver();if(!base)return;await yieldUI();try{if(typeof state!=="undefined"){window.__almoxState=state}}catch(e){console.warn("State bridge",e)}for(const group of [[SALDO_UPDATE_TIME_MODULE,"horário saldo"],[AREA_FILTER_ACTIVE_MODULE,"área"],[ITENS_SEM_GIRO_MODULE,"itens sem giro"],[FOLLOW_UP_MODULE,"Follow up"],[PURCHASE_NEED_LEAD_TIME_MODULE,"lead time reposição"]]){opt(...group);await yieldUI()}
-idle(async()=>{await opt(PAGE_SNAPSHOT_PDF_MODULE,"PDF");await yieldUI();await opt(GITHUB_PHOTO_UPLOAD_MODULE,"fotos")},IS_IOS?9000:4500);
-if(!IS_IOS)setTimeout(()=>idle(()=>opt(ITENS_SEM_GIRO_CROSS_MODULE,"cruzamento itens sem giro"),6000),3500);
-const mods=[[COMPARATIVO_META_MODULE,"meta"],[LAYOUT_FIX_MODULE,"layout"],[COMPARATIVO_PERIODOS_MODULE,"períodos"],[COMPARATIVO_EXCEL_MODULE,"Excel"],[COMPARATIVO_ITEM_SPLIT_MODULE,"itens"],[COMPARATIVO_META_VISUAL_MODULE,"meta visual"],[COMPARATIVO_INCLUSOES_MODULE,"inclusões"],[COMPARATIVO_CARDS_RESUMO_MODULE,"Top 10"],[COMPARATIVO_MES_A_MES_MODULE,"mês a mês"],[COMPARATIVO_ESCALA_MIL_MODULE,"escala"]];idle(async()=>{for(const x of mods){await opt(...x);await yieldUI()}},IS_IOS?12000:5000);[250,1000,2500].forEach(d=>setTimeout(ver,d))})();
+
+/** Bootstrap 7.0: todos os componentes são servidos pelo próprio projeto. */
+const APP_VERSION = "7.0";
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+const MODULES = Object.freeze({
+  base: "./app/layers/features.js?v=7.0",
+  responsive: "./app/modules/responsive-layout.js?v=7.0",
+  commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
+  balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
+  area: "./app/modules/area-filter-active.js?v=7.0",
+  noTurn: "./app/modules/itens-sem-giro.js?v=7.0",
+  noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
+  followUp: "./app/modules/follow-up.js?v=7.0",
+  purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=7.0",
+  pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
+  photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
+  comparison: [
+    ["./app/modules/comparativo-meta.js?v=7.0", "metas"],
+    ["./app/modules/layout-fix.js?v=7.0", "layout"],
+    ["./app/modules/comparativo-periodos.js?v=7.0", "períodos"],
+    ["./app/modules/comparativo-excel-padrao.js?v=7.0", "Excel"],
+    ["./app/modules/comparativo-item-split.js?v=7.0", "itens"],
+    ["./app/modules/comparativo-meta-visual.js?v=7.0", "meta visual"],
+    ["./app/modules/comparativo-inclusoes.js?v=7.0", "inclusões"],
+    ["./app/modules/comparativo-cards-resumo.js?v=7.0", "resumos"],
+    ["./app/modules/comparativo-mes-a-mes.js?v=7.0", "mês a mês"],
+    ["./app/modules/comparativo-escala-mil.js?v=7.0", "escala"],
+  ],
+});
+
+function loadScript(src, timeout = 30000) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      script.remove();
+      reject(new Error(`Tempo esgotado ao carregar ${src}`));
+    }, timeout);
+    script.src = src;
+    script.async = false;
+    script.onload = () => { clearTimeout(timer); resolve(); };
+    script.onerror = () => { clearTimeout(timer); reject(new Error(`Falha ao carregar ${src}`)); };
+    document.head.appendChild(script);
+  });
+}
+
+async function optional(src, name) {
+  try {
+    await loadScript(src);
+    return true;
+  } catch (error) {
+    console.error(`Módulo indisponível: ${name}`, error);
+    return false;
+  }
+}
+
+function setVersion() {
+  const badge = document.getElementById("versionBadge");
+  if (badge) badge.textContent = `Versão ${APP_VERSION}`;
+  document.documentElement.dataset.appVersion = APP_VERSION;
+}
+
+function yieldToBrowser() {
+  return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+}
+
+function whenIdle(callback, timeout = 4000) {
+  if ("requestIdleCallback" in window) requestIdleCallback(callback, { timeout });
+  else setTimeout(callback, IS_IOS ? 1800 : 600);
+}
+
+(async () => {
+  setVersion();
+  optional(MODULES.responsive, "responsividade");
+  optional(MODULES.commitQueue, "fila de atualizações");
+  await loadScript(MODULES.base, 45000);
+  setVersion();
+  await yieldToBrowser();
+
+  try {
+    if (typeof state !== "undefined") window.__almoxState = state;
+  } catch (error) {
+    console.warn("Estado global indisponível", error);
+  }
+
+  for (const [src, name] of [
+    [MODULES.balanceTime, "horário do saldo"],
+    [MODULES.area, "filtro de área"],
+    [MODULES.noTurn, "itens sem giro"],
+    [MODULES.followUp, "follow up"],
+    [MODULES.purchaseLeadTime, "lead time de reposição"],
+  ]) {
+    await optional(src, name);
+    await yieldToBrowser();
+  }
+
+  whenIdle(async () => {
+    await optional(MODULES.pdf, "exportação PDF");
+    await yieldToBrowser();
+    await optional(MODULES.photos, "fotos");
+  }, IS_IOS ? 9000 : 4500);
+
+  if (!IS_IOS) {
+    setTimeout(() => whenIdle(() => optional(MODULES.noTurnCross, "cruzamento sem giro"), 6000), 3500);
+  }
+
+  whenIdle(async () => {
+    for (const [src, name] of MODULES.comparison) {
+      await optional(src, name);
+      await yieldToBrowser();
+    }
+  }, IS_IOS ? 12000 : 5000);
+
+  [250, 1000, 2500].forEach((delay) => setTimeout(setVersion, delay));
+})().catch((error) => {
+  console.error("Falha ao iniciar a aplicação", error);
+  const status = document.getElementById("statusLine");
+  if (status) status.textContent = "Não foi possível iniciar a aplicação.";
+});

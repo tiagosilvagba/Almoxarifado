@@ -13,7 +13,7 @@
     const link = document.createElement("link");
     link.id = "responsiveProjectStyles";
     link.rel = "stylesheet";
-    link.href = "./responsive-project.css?v=20260914-1";
+    link.href = "./app/styles/responsive.css?v=7.0";
     document.head.appendChild(link);
   }
 
