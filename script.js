@@ -1,12 +1,12 @@
 "use strict";
 
 /** Bootstrap 7.0: todos os componentes são servidos pelo próprio projeto. */
-const BOOTSTRAP_VERSION = "7.0";
+const BOOTSTRAP_VERSION = "7.1";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=7.0",
+  base: "./app/layers/features.js?v=7.1",
   responsive: "./app/modules/responsive-layout.js?v=7.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",

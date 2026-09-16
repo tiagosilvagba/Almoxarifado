@@ -25,3 +25,5 @@ Arquivos de compras são reconhecidos pelo padrão `01 - Compras_Almox_Parte_NN.
 ## Desempenho
 
 Os arquivos de compras são processados sequencialmente dentro de um Web Worker. Apenas uma parte permanece como texto na memória durante a consolidação, evitando o pico provocado pelo carregamento simultâneo de todas as bases.
+
+O fluxo `Preparar bases de dados` também transforma os CSVs em `data/catalog.json.gz`. O navegador prioriza essa base compactada e usa os CSVs originais apenas como recuperação. A base otimizada é armazenada no cache do aplicativo e atualizada em segundo plano.

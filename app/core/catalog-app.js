@@ -7,6 +7,7 @@ const CONFIG = Object.freeze({
   commitsApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/commits?per_page=20",
   replenishmentFile: "02 - Responsaveis_Reposição.CSV",
   consumoFile: "03 - Consumo.csv",
+  optimizedDataFile: "data/catalog.json.gz",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
   maxImages: 6,
@@ -15,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 7.0";
+const APP_VERSION = "Versão 7.1";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -1411,6 +1412,7 @@ async function loadCatalog() {
     });
 
     worker.postMessage({
+      optimizedDataUrl: new URL(CONFIG.optimizedDataFile, document.baseURI).href,
       saldoUrl: new URL(CONFIG.saldoFile, document.baseURI).href,
       comprasApiUrl: new URL(CONFIG.comprasApi, document.baseURI).href,
       commitsApiUrl: CONFIG.commitsApi,
@@ -4864,7 +4866,17 @@ function inventoryWorker() {
 
   self.onmessage = async (event) => {
     try {
-      const { saldoUrl, comprasApiUrl, commitsApiUrl, comprasFallbackUrl, replenishmentUrl, consumoUrl } = event.data;
+      const { optimizedDataUrl, saldoUrl, comprasApiUrl, commitsApiUrl, comprasFallbackUrl, replenishmentUrl, consumoUrl } = event.data;
+      if (optimizedDataUrl) {
+        progress("Carregando a base otimizada…", 12);
+        const optimizedPayload = await fetchOptimizedPayload(optimizedDataUrl);
+        if (optimizedPayload) {
+          progress("Base otimizada pronta. Preparando os indicadores…", 92);
+          self.postMessage({ type: "complete", payload: optimizedPayload });
+          return;
+        }
+        progress("Base otimizada indisponível. Usando os CSVs originais…", 6);
+      }
       progress("Baixando os arquivos de saldo, compras e responsáveis…", 8);
       const [saldoText, comprasSources, replenishmentText, consumoText, baseUpdatedAt] = await Promise.all([
         fetchText(saldoUrl, "Saldo_Online"),
@@ -5179,6 +5191,25 @@ function inventoryWorker() {
       return decoder.decode(await new Response(stream).arrayBuffer());
     }
     return decoder.decode(buffer);
+  }
+
+  async function fetchOptimizedPayload(url) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) return null;
+      const buffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let jsonBuffer = buffer;
+      if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        if (typeof DecompressionStream === "undefined") return null;
+        const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
+        jsonBuffer = await new Response(stream).arrayBuffer();
+      }
+      const payload = JSON.parse(new TextDecoder("utf-8").decode(jsonBuffer));
+      return Array.isArray(payload?.items) ? payload : null;
+    } catch {
+      return null;
+    }
   }
 
   async function fetchOptionalText(url) {
