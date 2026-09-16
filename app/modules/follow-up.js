@@ -191,7 +191,8 @@
 
     function refresh() {
       const status = document.getElementById("fuStatus");
-      const items = windowObject.__almoxState?.items;
+      const fallbackState = typeof state !== "undefined" ? state : null;
+      const items = windowObject.__almoxState?.items || fallbackState?.items;
       if (!Array.isArray(items)) {
         if (status) status.textContent = "Dashboard ainda processando dados…";
         windowObject.setTimeout(() => { if (windowObject.location.hash === "#follow-up") refresh(); }, 800);
