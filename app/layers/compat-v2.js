@@ -3,7 +3,7 @@
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
 const ALMOX_BASE = "./app/core/catalog-app.js?v=8.3";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
-const CURRENT_VERSION_LABEL = "Versão 8.3";
+const CURRENT_VERSION_LABEL = "Versão 8.4";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],
@@ -188,7 +188,17 @@ function installZeroWithoutScStockFilter() {
 }
 
 function referenceOneImage(item) {
-  if (!item || typeof normalizeCode !== "function") return null;
+  if (!item) return null;
+
+  // Use a mesma resolução de imagens do modal. Além das fotos já indexadas,
+  // ela tenta o arquivo padrão "<código> - 01.jpg", permitindo que uma foto
+  // recém-publicada apareça no card sem depender de recarregar o índice.
+  if (typeof imagesForItem === "function") {
+    const primary = imagesForItem(item, false)?.[0];
+    if (primary?.url) return primary.url;
+  }
+
+  if (typeof normalizeCode !== "function") return null;
   const code = normalizeCode(item.code);
   const indexed = state.imageIndex?.get(code) || [];
   const remote = indexed.find((image) => Number(image.order) === 1);
