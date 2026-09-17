@@ -4293,3 +4293,73 @@ html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,
 /* Elementos semânticos mantêm sua própria combinação de alto contraste. */
 html[data-theme] :is(.status-pill,.badge,.button,.context-label,.month-status){text-shadow:none}
 
+
+
+/* =========================================================
+   Sistema visual modular — benchmark de 30 grandes marcas
+   Inspiração funcional, sem reprodução de identidade de marca.
+   ========================================================= */
+html[data-theme]{--visual-radius:18px;--visual-depth:0 12px 30px color-mix(in srgb,#000 12%,transparent);--visual-border:color-mix(in srgb,var(--readable-field-text) 15%,transparent);--visual-accent:var(--active-accent,var(--blue-600));--visual-accent-soft:color-mix(in srgb,var(--visual-accent) 12%,transparent);--visual-sheen:linear-gradient(135deg,color-mix(in srgb,var(--visual-accent) 9%,transparent),transparent 46%);--visual-card-motion:translateY(-2px)}
+html:is([data-theme="aurora"],[data-theme="corporate"],[data-theme="galaxia"]){--visual-radius:26px;--visual-depth:0 18px 46px color-mix(in srgb,var(--visual-accent) 16%,transparent);--visual-sheen:linear-gradient(145deg,color-mix(in srgb,var(--visual-accent) 17%,transparent),transparent 55%)}
+html:is([data-theme="polar"],[data-theme="ocean"],[data-theme="ciano-clean"]){--visual-radius:24px;--visual-depth:0 16px 38px color-mix(in srgb,var(--visual-accent) 13%,transparent);--visual-sheen:linear-gradient(160deg,color-mix(in srgb,var(--visual-accent) 14%,transparent),transparent 62%)}
+html:is([data-theme="rubi"],[data-theme="logistics"],[data-theme="amber-tech"]){--visual-radius:14px;--visual-depth:0 14px 34px rgba(75,42,5,.18);--visual-sheen:linear-gradient(125deg,color-mix(in srgb,var(--visual-accent) 16%,transparent),transparent 48%)}
+html:is([data-theme="industrial"],[data-theme="graphite"],[data-theme="night-minimal"]){--visual-radius:8px;--visual-depth:0 8px 20px rgba(0,0,0,.20);--visual-border:color-mix(in srgb,var(--readable-field-text) 24%,transparent);--visual-sheen:linear-gradient(90deg,color-mix(in srgb,var(--visual-accent) 9%,transparent),transparent 38%)}
+html:is([data-theme="operations"],[data-theme="verde-industrial-2"],[data-theme="palmeiras"]){--visual-radius:16px;--visual-depth:0 14px 34px color-mix(in srgb,var(--visual-accent) 14%,transparent);--visual-sheen:linear-gradient(145deg,color-mix(in srgb,var(--visual-accent) 15%,transparent),transparent 58%)}
+html:is([data-theme="theme-t"],[data-theme="logistica-neon"]){--visual-radius:20px;--visual-depth:0 0 0 1px color-mix(in srgb,var(--visual-accent) 38%,transparent),0 18px 48px rgba(0,0,0,.34);--visual-sheen:linear-gradient(135deg,color-mix(in srgb,var(--visual-accent) 21%,transparent),transparent 48%)}
+html:is([data-theme="clean-light-2"],[data-theme="neutral"]){--visual-radius:20px;--visual-depth:0 10px 26px rgba(31,55,85,.09);--visual-sheen:linear-gradient(145deg,color-mix(in srgb,var(--visual-accent) 8%,transparent),transparent 52%)}
+html[data-theme="areia-industrial"]{--visual-radius:18px;--visual-depth:0 13px 30px rgba(88,64,29,.13);--visual-sheen:linear-gradient(145deg,rgba(159,117,47,.12),transparent 56%)}
+html[data-theme="contrast"]{--visual-radius:2px;--visual-depth:0 0 0 2px #000;--visual-border:#000;--visual-sheen:none;--visual-card-motion:none}
+
+html[data-theme] .page-panel>.section-heading{position:relative;padding:clamp(14px,1.6vw,22px) clamp(16px,2vw,26px);overflow:hidden;border:1px solid var(--visual-border);border-radius:var(--visual-radius);background:var(--visual-sheen),var(--surface);box-shadow:var(--visual-depth)}
+html[data-theme] .page-panel>.section-heading::after{content:"";position:absolute;inset:auto 0 0;height:3px;background:linear-gradient(90deg,var(--visual-accent),transparent 72%)}
+html[data-theme] .page-panel>.section-heading h2{font-size:clamp(1.45rem,2.5vw,2.2rem);letter-spacing:-.035em}
+html[data-theme] .page-panel>.section-heading .eyebrow{letter-spacing:.08em}
+
+/* Dashboard — leitura executiva em blocos. */
+html[data-theme] #page-dashboard :is(.metric,.analytics-card){border:1px solid var(--visual-border)!important;border-radius:var(--visual-radius)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-dashboard .metric{position:relative;overflow:hidden;border-top:4px solid var(--visual-accent)!important;background:var(--visual-sheen),var(--surface)!important}
+html[data-theme] #page-dashboard .metrics-grid .metric:nth-child(3n+2){border-top-color:color-mix(in srgb,var(--visual-accent) 72%,#38bdf8)!important}
+html[data-theme] #page-dashboard .metrics-grid .metric:nth-child(3n){border-top-color:color-mix(in srgb,var(--visual-accent) 68%,#22c55e)!important}
+html[data-theme] #page-dashboard .metric strong{font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+
+/* Catálogo — produto em primeiro plano. */
+html[data-theme] #page-catalogo .item-card{overflow:hidden;border:1px solid var(--visual-border)!important;border-radius:calc(var(--visual-radius) + 2px)!important;background:var(--surface)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-catalogo .item-card__image{background:var(--visual-sheen),color-mix(in srgb,var(--readable-field-bg) 94%,var(--visual-accent) 6%)!important}
+html[data-theme] #page-catalogo .item-card__body{border-top:1px solid var(--visual-border)}
+html[data-theme] #page-catalogo .item-card__code{color:var(--visual-accent)!important;font-weight:800}
+
+/* Necessidade de compra — fila de decisão. */
+html[data-theme] #page-necessidade-compra .report-card--need{border:1px solid var(--visual-border)!important;border-left:5px solid var(--visual-accent)!important;border-radius:var(--visual-radius)!important;background:var(--visual-sheen),var(--surface)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-necessidade-compra .need-summary article{border-bottom:3px solid color-mix(in srgb,var(--visual-accent) 75%,transparent)!important;border-radius:var(--visual-radius)!important}
+
+/* SC pendente de OF — fila de trabalho. */
+html[data-theme] #page-sc-pendente-of .report-card{border:1px solid var(--visual-border)!important;border-radius:var(--visual-radius)!important;background:var(--surface)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-sc-pendente-of .report-card::before{content:"";display:block;width:clamp(42px,18%,92px);height:4px;margin:-1px 0 12px;border-radius:999px;background:var(--visual-accent)}
+
+/* Consulta SC e OF — busca central e resultado em etapas. */
+html[data-theme] #page-consulta-sc-of :is(.filter-panel,.process-detail-group,.process-stages article){border:1px solid var(--visual-border)!important;border-radius:var(--visual-radius)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-consulta-sc-of .filter-panel{background:var(--visual-sheen),var(--surface)!important}
+html[data-theme] #page-consulta-sc-of .process-stages article{border-top:4px solid var(--visual-accent)!important}
+
+/* Tempo de geração de OF — painel de instrumentos. */
+html[data-theme] #page-tempo-geracao-of .of-generation-summary__bucket{position:relative;overflow:hidden;border:1px solid var(--visual-border)!important;border-radius:var(--visual-radius)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-tempo-geracao-of .of-generation-summary__bucket::after{content:"";position:absolute;right:-18px;bottom:-24px;width:78px;height:78px;border:12px solid color-mix(in srgb,var(--visual-accent) 16%,transparent);border-radius:50%}
+html[data-theme] #page-tempo-geracao-of :is(.of-trend-card,.of-generation-path){border-radius:var(--visual-radius)!important;border-color:var(--visual-border)!important}
+
+/* Revisão de mínimo e máximo — análise técnica. */
+html[data-theme] #page-revisao-min-max :is(.review-card,.report-card,.review-detail-grid>section){border:1px solid var(--visual-border)!important;border-radius:var(--visual-radius)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-revisao-min-max :is(.review-card,.report-card){background:linear-gradient(90deg,var(--visual-accent-soft),transparent 22%),var(--surface)!important}
+html[data-theme] #page-revisao-min-max .review-card__comparison{border-left:3px solid var(--visual-accent);padding-left:10px}
+
+/* Instruções — leitura editorial. */
+html[data-theme] #page-instrucoes :is(.instructions-index,.instruction-section){border:1px solid var(--visual-border)!important;border-radius:var(--visual-radius)!important;box-shadow:var(--visual-depth)!important}
+html[data-theme] #page-instrucoes .instruction-section{background:linear-gradient(180deg,var(--visual-accent-soft),transparent 100px),var(--surface)!important}
+html[data-theme] #page-instrucoes .instruction-section h3{padding-bottom:10px;border-bottom:2px solid color-mix(in srgb,var(--visual-accent) 45%,transparent)}
+html[data-theme] #page-instrucoes .instructions-index a{border-radius:999px}
+
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+html[data-theme] :is(#page-dashboard .metric,#page-dashboard .analytics-card,#page-catalogo .item-card,#page-necessidade-compra .report-card--need,#page-sc-pendente-of .report-card,#page-consulta-sc-of .process-detail-group,#page-tempo-geracao-of .of-generation-summary__bucket,#page-revisao-min-max .review-card,#page-instrucoes .instruction-section){transition:transform 240ms cubic-bezier(.22,1,.36,1),box-shadow 240ms ease,border-color 240ms ease}
+html[data-theme] :is(#page-dashboard .metric,#page-dashboard .analytics-card,#page-catalogo .item-card,#page-necessidade-compra .report-card--need,#page-sc-pendente-of .report-card,#page-consulta-sc-of .process-detail-group,#page-tempo-geracao-of .of-generation-summary__bucket,#page-revisao-min-max .review-card,#page-instrucoes .instruction-section):hover{transform:var(--visual-card-motion);border-color:color-mix(in srgb,var(--visual-accent) 42%,var(--visual-border))!important}}
+@media (max-width:700px){html[data-theme] .page-panel>.section-heading{padding:13px 14px;border-radius:calc(var(--visual-radius) * .8)}html[data-theme] .page-panel>.section-heading h2{font-size:1.38rem}html[data-theme] #page-sc-pendente-of .report-card::before{margin-bottom:8px}}
+@media (prefers-reduced-motion:reduce){html[data-theme] :is(.metric,.analytics-card,.item-card,.report-card,.instruction-section){transform:none!important;transition:none!important}}
+

@@ -1204,3 +1204,9 @@ html.os-ios[data-theme] :is(.data-table,.month-compare-table) th{color:var(--rea
 html.os-ios[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount){color:#24170b!important}
 html.os-ios[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) :is(p,small,dt,label,.muted,.helper-text){color:#6f5335!important}
 
+
+/* O acabamento modular também respeita a camada Apple do iOS. */
+html.os-ios[data-theme] .page-panel>.section-heading,
+html.os-ios[data-theme] :is(#page-dashboard .metric,#page-dashboard .analytics-card,#page-catalogo .item-card,#page-necessidade-compra .report-card--need,#page-sc-pendente-of .report-card,#page-consulta-sc-of .process-detail-group,#page-tempo-geracao-of .of-generation-summary__bucket,#page-revisao-min-max .review-card,#page-instrucoes .instruction-section){border-radius:var(--visual-radius)!important}
+html.os-ios[data-theme] #page-catalogo .item-card,
+html.os-ios[data-theme] #page-sc-pendente-of .report-card{background:color-mix(in srgb,var(--ios-surface-solid) 90%,transparent)!important}

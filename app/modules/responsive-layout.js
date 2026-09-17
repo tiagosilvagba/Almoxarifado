@@ -24,7 +24,7 @@
         const link = document.createElement("link");
         link.id = "iosProjectStyles";
         link.rel = "stylesheet";
-        link.href = "./app/styles/ios.css?v=8.7";
+        link.href = "./app/styles/ios.css?v=8.8";
         document.head.appendChild(link);
       }
     } else if (existing) {
