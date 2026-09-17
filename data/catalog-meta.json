@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-17T12:31:23.726Z",
+  "generatedAt": "2026-09-17T12:39:22.180Z",
   "items": 20013,
   "saldoRows": 10432,
   "comprasRows": 84788,
@@ -10,6 +10,6 @@
     "01 - Compras_Almox_Parte_04.CSV"
   ],
   "consumptionRows": 19149,
-  "uncompressedBytes": 199935682,
-  "compressedBytes": 9418076
+  "uncompressedBytes": 200239995,
+  "compressedBytes": 9438349
 }
