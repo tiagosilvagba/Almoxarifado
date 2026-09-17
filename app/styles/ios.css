@@ -1181,3 +1181,26 @@ html.os-ios[data-theme="ciano-clean"] :is(.button--primary,.button--export){colo
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Contraste final no iOS: prevalece sobre os acabamentos translúcidos. */
+html.os-ios[data-theme] :is(
+  .metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.process-detail-group
+) :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount,.report-card__title,.item-card__title){color:var(--readable-strong)!important}
+html.os-ios[data-theme] :is(
+  .metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.process-detail-group
+) :is(p,small,dt,label,.muted,.helper-text,.section-description,.metric__label){color:var(--readable-muted)!important}
+html.os-ios[data-theme] :is(input,select,textarea,.excel-filter__trigger,.excel-filter__search,.excel-filter__menu){color:var(--readable-field-text)!important;background:var(--readable-field-bg)!important}
+html.os-ios[data-theme] :is(.data-table,.month-compare-table) td{color:var(--readable-strong)!important;background:var(--readable-table-bg)!important}
+html.os-ios[data-theme] :is(.data-table,.month-compare-table) th{color:var(--readable-body)!important}
+html.os-ios[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount){color:#24170b!important}
+html.os-ios[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) :is(p,small,dt,label,.muted,.helper-text){color:#6f5335!important}
+

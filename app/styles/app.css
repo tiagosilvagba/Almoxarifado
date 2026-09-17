@@ -4186,3 +4186,110 @@ html.viewport-tablet .item-summary{width:100%!important;min-width:0!important}.v
 @media (max-width:1099px){body{overflow-x:hidden;background-attachment:scroll!important;background-position:center top!important}html[data-theme]{background-attachment:scroll!important}.page-panel{min-width:0}:is(.metric,.analytics-card,.item-card,.report-card,.month-compare-metric,.month-consideration){min-width:0}:is(input,select,textarea,button,.button,.excel-filter__trigger){min-height:44px}.month-compare-table-wrap,.table-responsive,.data-table-wrap{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}}
 @media (max-width:430px){.metrics-grid,.metrics-grid--secondary,.summary-cards,.month-compare-metrics{grid-template-columns:1fr!important}.month-considerations{grid-template-columns:1fr!important}.topbar__content{gap:8px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+
+/* =========================================================
+   Contraste universal por tema — versão 8.7
+   Separa texto de superfície, texto auxiliar, campos e chrome.
+   ========================================================= */
+html[data-theme]{
+  --readable-strong:#172033;
+  --readable-body:#26364a;
+  --readable-muted:#64748b;
+  --readable-field-bg:#fff;
+  --readable-field-text:#172033;
+  --readable-table-bg:#fff;
+  --readable-chrome:#fff;
+  --readable-accent-text:#fff;
+}
+html[data-theme="theme-t"]{--readable-strong:#0d2030;--readable-body:#294359;--readable-muted:#617789;--readable-field-bg:#f8fcff;--readable-field-text:#0d2030;--readable-table-bg:#fbfdff;--readable-accent-text:#021019}
+html[data-theme="aurora"]{--readable-strong:#17213d;--readable-body:#33415f;--readable-muted:#65718b;--readable-field-bg:#fff;--readable-field-text:#17213d;--readable-table-bg:#fff}
+html[data-theme="polar"]{--readable-strong:#102b40;--readable-body:#29495f;--readable-muted:#58758b;--readable-field-bg:#fff;--readable-field-text:#102b40;--readable-table-bg:#fff}
+html[data-theme="rubi"]{--readable-strong:#2e210d;--readable-body:#51452e;--readable-muted:#71664f;--readable-field-bg:#fffdf7;--readable-field-text:#2e210d;--readable-table-bg:#fffdf8;--readable-accent-text:#2a1b00}
+html[data-theme="industrial"]{--readable-strong:#302a22;--readable-body:#50483e;--readable-muted:#746b5f;--readable-field-bg:#fff;--readable-field-text:#302a22;--readable-table-bg:#fff}
+html[data-theme="graphite"]{--readable-strong:#1d252b;--readable-body:#3c4851;--readable-muted:#65717a;--readable-field-bg:#fff;--readable-field-text:#1d252b;--readable-table-bg:#fff}
+html[data-theme="operations"]{--readable-strong:#17352c;--readable-body:#34564b;--readable-muted:#5e776f;--readable-field-bg:#fff;--readable-field-text:#17352c;--readable-table-bg:#fff}
+html[data-theme="logistics"]{--readable-strong:#352819;--readable-body:#594a37;--readable-muted:#766955;--readable-field-bg:#fffdf9;--readable-field-text:#352819;--readable-table-bg:#fffdf9;--readable-accent-text:#281700}
+html[data-theme="corporate"]{--readable-strong:#2b223b;--readable-body:#504761;--readable-muted:#70677e;--readable-field-bg:#fff;--readable-field-text:#2b223b;--readable-table-bg:#fff}
+html[data-theme="ocean"]{--readable-strong:#17353b;--readable-body:#36585e;--readable-muted:#5e7a80;--readable-field-bg:#fff;--readable-field-text:#17353b;--readable-table-bg:#fff}
+html[data-theme="neutral"]{--readable-strong:#252a2f;--readable-body:#444c53;--readable-muted:#6b747c;--readable-field-bg:#fff;--readable-field-text:#252a2f;--readable-table-bg:#fff}
+html[data-theme="contrast"]{--readable-strong:#000;--readable-body:#111;--readable-muted:#333;--readable-field-bg:#fff;--readable-field-text:#000;--readable-table-bg:#fff;--readable-accent-text:#000}
+html[data-theme="clean-light-2"]{--readable-strong:#10284b;--readable-body:#334d70;--readable-muted:#64748b;--readable-field-bg:#fff;--readable-field-text:#173657;--readable-table-bg:#fff}
+html[data-theme="areia-industrial"]{--readable-strong:#3d321f;--readable-body:#5f513c;--readable-muted:#7e6f58;--readable-field-bg:#fffaf0;--readable-field-text:#493a25;--readable-table-bg:#fffaf0;--readable-accent-text:#fff7e8}
+
+html:is([data-theme="logistica-neon"],[data-theme="azul-corporativo"],[data-theme="verde-industrial-2"],[data-theme="amber-tech"],[data-theme="vermelho-impacto"],[data-theme="ciano-clean"],[data-theme="rosa-premium"],[data-theme="night-minimal"],[data-theme="galaxia"],[data-theme="palmeiras"]){
+  --readable-strong:var(--theme-text,#f8fafc);
+  --readable-body:var(--theme-text,#e5edf7);
+  --readable-muted:var(--theme-muted,#b5c1d1);
+  --readable-field-bg:var(--theme-input,#101827);
+  --readable-field-text:var(--theme-text,#f8fafc);
+  --readable-table-bg:var(--theme-surface,#101827);
+}
+html[data-theme="logistica-neon"]{--readable-strong:#f8f7ff;--readable-body:#d7daf3;--readable-muted:#aeb4d7;--readable-field-bg:#0c1129;--readable-field-text:#f7f4ff;--readable-table-bg:#0b1026;--readable-accent-text:#171300}
+html[data-theme="amber-tech"],html[data-theme="ciano-clean"]{--readable-accent-text:#111}
+html[data-theme="palmeiras"]{--readable-accent-text:#00170e}
+
+/* Superfícies comuns: títulos e valores nunca herdam a cor do fundo por acaso. */
+html[data-theme] :is(
+  .metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.month-compare-table-wrap,
+  .month-local-filter,.month-compare-message,.process-detail-group,.process-stages article
+){color:var(--readable-body)!important}
+
+html[data-theme] :is(
+  .metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.month-compare-table-wrap,
+  .month-local-filter,.month-compare-message,.process-detail-group,.process-stages article
+) :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount,.report-card__title,.item-card__title){
+  color:var(--readable-strong)!important;
+}
+
+html[data-theme] :is(
+  .metric,.analytics-card,.filter-panel,.global-filter-bar,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.branch-balance-grid article,
+  .purchase-min-max,.review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.modal-content,.modal-shell,
+  .month-compare-controls,.month-compare-metric,.month-consideration,.month-compare-table-wrap,
+  .month-local-filter,.month-compare-message,.process-detail-group,.process-stages article
+) :is(p,small,dt,label,.muted,.helper-text,.section-description,.metric__label){
+  color:var(--readable-muted)!important;
+}
+
+/* Campos, menus e tabelas recebem pares explícitos de fundo/texto. */
+html[data-theme] :is(input,select,textarea,.excel-filter__trigger,.excel-filter__search,.excel-filter__menu){
+  color:var(--readable-field-text)!important;
+  background-color:var(--readable-field-bg)!important;
+  border-color:color-mix(in srgb,var(--readable-field-text) 18%,transparent)!important;
+}
+html[data-theme] :is(input,textarea)::placeholder{color:var(--readable-muted)!important;opacity:1}
+html[data-theme] select option{color:var(--readable-field-text)!important;background:var(--readable-field-bg)!important}
+html[data-theme] :is(.data-table,.month-compare-table) td{color:var(--readable-strong)!important;background:var(--readable-table-bg)!important}
+html[data-theme] :is(.data-table,.month-compare-table) th{color:var(--readable-body)!important;background:color-mix(in srgb,var(--readable-table-bg) 82%,var(--readable-field-text) 8%)!important}
+html[data-theme] :is(.data-table,.month-compare-table) td,
+html[data-theme] :is(.data-table,.month-compare-table) th{border-color:color-mix(in srgb,var(--readable-field-text) 15%,transparent)!important}
+
+/* Chrome sempre legível, independentemente do tom escolhido. */
+html[data-theme] :is(.topbar,.app-nav-wrap){color:var(--readable-chrome)!important}
+html[data-theme] :is(.topbar,.app-nav-wrap) :is(h1,h2,h3,p,span,strong,small,label,a,.app-nav__tab,.app-nav__label,.app-nav__icon){color:inherit!important}
+html[data-theme] :is(.topbar,.app-nav-wrap) :is(input,select){color:var(--readable-chrome)!important;background:rgba(0,0,0,.20)!important}
+html[data-theme] :is(.button--primary,.button--export){color:var(--readable-accent-text)!important}
+
+/* Alertas de fundo claro usam contraste escuro mesmo dentro dos temas escuros. */
+html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert){
+  --readable-strong:#24170b;
+  --readable-body:#3d2a17;
+  --readable-muted:#6f5335;
+  color:var(--readable-body)!important;
+}
+html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount){color:var(--readable-strong)!important}
+html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert) :is(p,small,dt,label,.muted,.helper-text){color:var(--readable-muted)!important}
+
+/* Elementos semânticos mantêm sua própria combinação de alto contraste. */
+html[data-theme] :is(.status-pill,.badge,.button,.context-label,.month-status){text-shadow:none}
+
