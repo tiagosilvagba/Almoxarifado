@@ -22,7 +22,7 @@
       #modalGallery .gallery__main img{cursor:zoom-in}
       #modalGallery .gallery__main{position:relative}
       #modalGallery .gallery__main::after{content:"Ampliar";position:absolute;right:9px;bottom:9px;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.68);color:#fff;font-size:11px;font-weight:800;pointer-events:none}
-      dialog.almox-image-viewer{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#050912;color:#fff;overflow:hidden;contain:layout paint style}
+      dialog.almox-image-viewer{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#050912;color:#fff;overflow:hidden;contain:layout paint style;box-sizing:border-box}
       dialog.almox-image-viewer::backdrop{background:transparent}
       dialog.almox-image-viewer[open]{display:grid;grid-template-rows:52px minmax(0,1fr) 42px}
       .almox-image-viewer__top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 12px;background:#050912}
@@ -31,8 +31,8 @@
       .almox-image-viewer__identity small{font-size:11px;opacity:.68}
       .almox-image-viewer__close,.almox-image-viewer__nav{display:grid;place-items:center;border:1px solid rgba(255,255,255,.18);background:#171c25;color:#fff;cursor:pointer}
       .almox-image-viewer__close{width:38px;height:38px;border-radius:50%;font-size:23px;line-height:1}
-      .almox-image-viewer__stage{position:relative;min-height:0;display:grid;place-items:center;padding:6px 62px;overflow:hidden;touch-action:pan-y;background:#050912}
-      .almox-image-viewer__image{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;user-select:none;-webkit-user-drag:none}
+      .almox-image-viewer__stage{position:relative;min-width:0;min-height:0;width:100%;height:100%;display:grid;place-items:center;padding:6px 62px;overflow:hidden;touch-action:pan-y;background:#050912;box-sizing:border-box}
+      .almox-image-viewer__image{display:block;width:100%;height:100%;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;object-position:center;user-select:none;-webkit-user-drag:none}
       .almox-image-viewer__nav{position:absolute;top:50%;width:42px;height:52px;border-radius:10px;transform:translateY(-50%);font-size:28px;z-index:2}
       .almox-image-viewer__nav--prev{left:9px}.almox-image-viewer__nav--next{right:9px}
       .almox-image-viewer__nav[hidden]{display:none}
