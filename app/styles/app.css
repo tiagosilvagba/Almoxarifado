@@ -4363,3 +4363,38 @@ html[data-theme] :is(#page-dashboard .metric,#page-dashboard .analytics-card,#pa
 @media (max-width:700px){html[data-theme] .page-panel>.section-heading{padding:13px 14px;border-radius:calc(var(--visual-radius) * .8)}html[data-theme] .page-panel>.section-heading h2{font-size:1.38rem}html[data-theme] #page-sc-pendente-of .report-card::before{margin-bottom:8px}}
 @media (prefers-reduced-motion:reduce){html[data-theme] :is(.metric,.analytics-card,.item-card,.report-card,.instruction-section){transform:none!important;transition:none!important}}
 
+
+
+/* =========================================================
+   Desempenho de navegação móvel — versão 8.9
+   Mantém conteúdo e regras; reduz apenas custo de composição e pintura.
+   ========================================================= */
+@media (max-width:900px), (pointer:coarse){
+  html :is(.item-card,.report-card,.metric,.analytics-card,.instruction-section,.of-generation-summary__bucket,.process-detail-group,.review-card){
+    content-visibility:auto;
+    contain:layout paint style;
+    contain-intrinsic-size:auto 260px;
+  }
+  html .page-panel>.section-heading,
+  html :is(.metric,.analytics-card,.item-card,.report-card,.instruction-section,.of-generation-summary__bucket,.process-detail-group,.review-card){
+    box-shadow:0 4px 14px rgba(0,0,0,.10)!important;
+  }
+  html :is(.page-panel,.metric,.analytics-card,.item-card,.report-card,.instruction-section,.modal-shell){
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+  }
+  html.mobile-page-switching *,
+  html.mobile-page-switching *::before,
+  html.mobile-page-switching *::after{
+    animation:none!important;
+    transition:none!important;
+    scroll-behavior:auto!important;
+  }
+  html.mobile-page-switching :is(.topbar,.app-nav-wrap,.page-panel,.metric,.analytics-card,.item-card,.report-card){
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
+  }
+  [data-page-panel][aria-hidden="true"]{pointer-events:none}
+}
+

@@ -1210,3 +1210,13 @@ html.os-ios[data-theme] .page-panel>.section-heading,
 html.os-ios[data-theme] :is(#page-dashboard .metric,#page-dashboard .analytics-card,#page-catalogo .item-card,#page-necessidade-compra .report-card--need,#page-sc-pendente-of .report-card,#page-consulta-sc-of .process-detail-group,#page-tempo-geracao-of .of-generation-summary__bucket,#page-revisao-min-max .review-card,#page-instrucoes .instruction-section){border-radius:var(--visual-radius)!important}
 html.os-ios[data-theme] #page-catalogo .item-card,
 html.os-ios[data-theme] #page-sc-pendente-of .report-card{background:color-mix(in srgb,var(--ios-surface-solid) 90%,transparent)!important}
+
+/* Safari móvel: evita recomposição cara do painel inteiro na troca de abas. */
+@media (max-width:900px), (pointer:coarse){
+  html.os-ios .page-panel:not(.is-hidden){animation:none!important}
+  html.os-ios.mobile-page-switching :is(.topbar,.app-nav-wrap,.page-panel,.item-card,.report-card,.metric,.analytics-card){
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
+  }
+}

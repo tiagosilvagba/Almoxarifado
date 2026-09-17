@@ -115,6 +115,7 @@ const state = {
   filterRevision: 0,
   pageRenderRevision: new Map(),
   pageRenderToken: 0,
+  mobileWarmupHandle: null,
   filterDraftSnapshot: null,
   filterDraftDirty: false,
   filterOptionSignatures: new WeakMap(),
@@ -1078,10 +1079,68 @@ function pageFromHash() {
     : "dashboard";
 }
 
+const FILTERED_PAGE_IDS = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max"];
+
+function isMobilePerformanceMode() {
+  return document.documentElement.classList.contains("viewport-mobile")
+    || document.documentElement.classList.contains("viewport-tablet")
+    || window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+}
+
+function cancelMobilePageWarmup() {
+  if (state.mobileWarmupHandle == null) return;
+  const pending = state.mobileWarmupHandle;
+  if (pending.type === "idle" && "cancelIdleCallback" in window) window.cancelIdleCallback(pending.id);
+  else window.clearTimeout(pending.id);
+  state.mobileWarmupHandle = null;
+}
+
+function scheduleMobilePageWarmup() {
+  cancelMobilePageWarmup();
+  if (!isMobilePerformanceMode() || !state.items.length || document.hidden) return;
+
+  const activePage = pageFromHash();
+  const queue = FILTERED_PAGE_IDS.filter((page) =>
+    page !== activePage && state.pageRenderRevision.get(page) !== state.filterRevision
+  );
+  if (!queue.length) return;
+
+  const scheduleNext = () => {
+    const run = (deadline) => {
+      state.mobileWarmupHandle = null;
+      if (document.hidden || navigator.scheduling?.isInputPending?.()) {
+        scheduleNext();
+        return;
+      }
+      const page = queue.shift();
+      if (page && state.pageRenderRevision.get(page) !== state.filterRevision) renderFilteredPage(page, false);
+      if (queue.length) scheduleNext();
+    };
+    if ("requestIdleCallback" in window) {
+      state.mobileWarmupHandle = { type: "idle", id: window.requestIdleCallback(run, { timeout: 3500 }) };
+    } else {
+      state.mobileWarmupHandle = { type: "timeout", id: window.setTimeout(() => run(null), 180) };
+    }
+  };
+  scheduleNext();
+}
+
 function navigateToPage(page, updateHash) {
-  const validPage = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max", "instrucoes"].includes(page)
-    ? page
-    : "dashboard";
+  const validPage = [...FILTERED_PAGE_IDS, "instrucoes"].includes(page) ? page : "dashboard";
+  const root = document.documentElement;
+  const previousPage = root.dataset.activePage || "";
+
+  if (previousPage === validPage && (!updateHash || window.location.hash === `#${validPage}`)) {
+    if (state.items.length) scheduleMobilePageWarmup();
+    return;
+  }
+
+  cancelMobilePageWarmup();
+  if (isMobilePerformanceMode()) {
+    root.classList.add("mobile-page-switching");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => root.classList.remove("mobile-page-switching")));
+  }
+  root.dataset.activePage = validPage;
 
   for (const tab of ui.pageTabs) {
     const active = tab.dataset.page === validPage;
@@ -1092,7 +1151,10 @@ function navigateToPage(page, updateHash) {
   }
 
   for (const panel of ui.pagePanels) {
-    panel.classList.toggle("is-hidden", panel.dataset.pagePanel !== validPage);
+    const active = panel.dataset.pagePanel === validPage;
+    panel.classList.toggle("is-hidden", !active);
+    panel.setAttribute("aria-hidden", String(!active));
+    panel.inert = !active;
   }
 
   if (updateHash && window.location.hash !== `#${validPage}`) {
@@ -1101,6 +1163,7 @@ function navigateToPage(page, updateHash) {
 
   document.title = `${translateUiText(pageTitle(validPage))} · ${translateUiText("Gestão de Almoxarifado")}`;
   if (state.items.length && !ui.catalogContent.classList.contains("is-hidden")) scheduleFilteredPage(validPage);
+  window.setTimeout(scheduleMobilePageWarmup, 160);
 }
 
 function handlePageTabKeydown(event) {
@@ -1369,6 +1432,7 @@ function scheduleFilteredPage(page, force = false) {
     }
     renderFilteredPage(page, force);
     panel?.removeAttribute("aria-busy");
+    if (isMobilePerformanceMode()) window.setTimeout(scheduleMobilePageWarmup, 120);
   }));
 }
 
