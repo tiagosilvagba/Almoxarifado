@@ -33,7 +33,7 @@
     const page=document.getElementById("page-comparativo-mensal");if(!page)return;
     const metrics=page.querySelectorAll("#monthlyCompareMetrics .month-compare-metric strong");
     for(let i=0;i<Math.min(4,metrics.length);i++)scaleNode(metrics[i]);
-    page.querySelectorAll(".month-consideration__total > strong,.month-consideration li > strong:last-child,.month-stock-inclusions__total strong,.month-stock-inclusions li > strong:last-child").forEach(scaleNode);
+    page.querySelectorAll(".month-consideration__total > strong,.month-consideration li > strong:last-child").forEach(scaleNode);
   }
 
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(apply);}

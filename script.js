@@ -1,16 +1,16 @@
 "use strict";
 
-/** Bootstrap 7.7: todos os componentes são servidos pelo próprio projeto. */
-const BOOTSTRAP_VERSION = "7.7";
+/** Bootstrap 7.8: todos os componentes são servidos pelo próprio projeto. */
+const BOOTSTRAP_VERSION = "7.8";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=7.7",
+  base: "./app/layers/features.js?v=7.8",
   responsive: "./app/modules/responsive-layout.js?v=7.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
-  area: "./app/modules/area-filter-active.js?v=7.7",
+  area: "./app/modules/area-filter-active.js?v=7.8",
   noTurn: "./app/modules/itens-sem-giro.js?v=7.0",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=7.3",
@@ -24,10 +24,10 @@ const MODULES = Object.freeze({
     ["./app/modules/comparativo-excel-padrao.js?v=7.0", "Excel"],
     ["./app/modules/comparativo-item-split.js?v=7.0", "itens"],
     ["./app/modules/comparativo-meta-visual.js?v=7.0", "meta visual"],
-    ["./app/modules/comparativo-inclusoes.js?v=7.0", "inclusões"],
+    ["./app/modules/comparativo-inclusoes.js?v=7.8", "inclusões"],
     ["./app/modules/comparativo-cards-resumo.js?v=7.0", "resumos"],
     ["./app/modules/comparativo-mes-a-mes.js?v=7.0", "mês a mês"],
-    ["./app/modules/comparativo-escala-mil.js?v=7.0", "escala"],
+    ["./app/modules/comparativo-escala-mil.js?v=7.8", "escala"],
   ],
 });
 

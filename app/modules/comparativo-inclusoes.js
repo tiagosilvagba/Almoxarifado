@@ -109,6 +109,7 @@
       const bi = col(h, ["CD Filial", "Cd Filial", "Código Filial", "Codigo Filial", "Filial"], ["cd filial", "codigo filial"]);
       const li = col(h, ["Local de estoque", "Local Estoque", "CD Local", "Cd Local", "Local"], ["local de estoque", "local estoque", "cd local"]);
       const ui = col(h, ["Nome utilização", "Nome utilizacao", "NM Utilização", "NM Utilizacao", "Utilização", "Utilizacao"], ["nome utilizacao", "nm utilizacao"]);
+      const umi = col(h, ["Unidade", "Unidade de Medida", "Unidade Medida", "UM", "UN"], ["unidade medida", "unidade"]);
       if (ci < 0 || si < 0) throw new Error(`${fileName}: colunas Item ou Saldo Real não encontradas`);
       const records = [];
       for (const r of p.rows) {
@@ -116,7 +117,7 @@
         if (!parsed.code) continue;
         const branch = bi >= 0 ? String(r[bi] ?? "").trim() : "";
         const local = li >= 0 ? String(r[li] ?? "").trim() : "";
-        records.push({ ...parsed, balance:parseNumber(r[si]), branch, local, usage:ui >= 0 ? String(r[ui] ?? "").trim() : "", areas:[...(areaMap.get(positionKey(branch, local)) || [])] });
+        records.push({ ...parsed, balance:parseNumber(r[si]), branch, local, usage:ui >= 0 ? String(r[ui] ?? "").trim() : "", unit:umi >= 0 ? String(r[umi] ?? "").trim() : "", areas:[...(areaMap.get(positionKey(branch, local)) || [])] });
       }
       return { fileName, records };
     })();
@@ -142,8 +143,9 @@
   function aggregate(records) {
     const map = new Map();
     for (const r of records) {
-      const item = map.get(r.code) || { code:r.code, displayCode:r.displayCode, name:r.name, balance:0 };
+      const item = map.get(r.code) || { code:r.code, displayCode:r.displayCode, name:r.name, balance:0, units:new Set() };
       if (!item.name && r.name) item.name = r.name;
+      if (r.unit) item.units.add(r.unit);
       item.balance += r.balance;
       map.set(r.code, item);
     }
@@ -154,7 +156,7 @@
     if (document.getElementById("monthlyStockInclusionStyles")) return;
     const style = document.createElement("style");
     style.id = "monthlyStockInclusionStyles";
-    style.textContent = `.month-stock-inclusions,.month-stock-zero-reductions{margin:0 0 18px;padding:16px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}.month-stock-inclusions__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.month-stock-inclusions__head h3{margin:0 0 4px}.month-stock-inclusions__head p{margin:0;color:var(--muted)}.month-stock-inclusions__total{min-width:150px;padding:10px 12px;border:1px solid var(--steel-200);border-radius:12px;text-align:right}.month-stock-inclusions__total span{display:block;font-size:12px;color:var(--muted);font-weight:800}.month-stock-inclusions__total strong{font-size:21px}.month-stock-inclusions__list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}.month-stock-inclusions__list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--steel-200);border-radius:12px;background:var(--steel-50,#fff)}.month-stock-inclusions__identity{min-width:0}.month-stock-inclusions__identity strong{display:block}.month-stock-inclusions__identity small{display:block;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}.month-stock-inclusions__value{font-variant-numeric:tabular-nums;font-weight:900;color:#169b62;white-space:nowrap}.month-stock-zero-reductions .month-stock-inclusions__value{color:#d64545}.month-stock-inclusions__empty{padding:14px;border:1px dashed var(--steel-200);border-radius:12px;color:var(--muted)}@media(max-width:900px){.month-stock-inclusions__head{display:grid}.month-stock-inclusions__total{text-align:left}.month-stock-inclusions__list{grid-template-columns:1fr}}`;
+    style.textContent = `.month-stock-inclusions,.month-stock-zero-reductions{margin:0 0 18px;padding:18px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}.month-stock-inclusions__head{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:18px;align-items:start;margin-bottom:12px}.month-stock-inclusions__head h3{margin:0 0 6px}.month-stock-inclusions__head p{margin:0;color:var(--muted);line-height:1.45}.month-stock-inclusions__summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.month-stock-inclusions__stat{display:grid;gap:3px;padding:12px;border:1px solid var(--steel-200);border-radius:12px;background:var(--steel-50,#fff)}.month-stock-inclusions__stat span{font-size:12px;color:var(--muted);font-weight:800}.month-stock-inclusions__stat strong{font-size:22px;line-height:1.15;font-variant-numeric:tabular-nums}.month-stock-inclusions__stat small{font-size:11px;color:var(--muted);line-height:1.35}.month-stock-inclusions__note{margin:0 0 12px!important;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--cyan,#1b8fa8) 9%,transparent);font-size:12px;color:var(--muted);line-height:1.4}.month-stock-inclusions__list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}.month-stock-inclusions__list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--steel-200);border-radius:12px;background:var(--steel-50,#fff)}.month-stock-inclusions__identity{min-width:0}.month-stock-inclusions__identity strong{display:block}.month-stock-inclusions__identity small{display:block;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}.month-stock-inclusions__value{display:grid;justify-items:end;gap:1px;min-width:126px;font-variant-numeric:tabular-nums;white-space:nowrap}.month-stock-inclusions__value small,.month-stock-inclusions__value em{font-size:10px;color:var(--muted);font-style:normal;font-weight:700}.month-stock-inclusions__value strong{font-size:17px;color:#169b62}.month-stock-zero-reductions .month-stock-inclusions__value strong{color:#d64545}.month-stock-inclusions__empty{padding:14px;border:1px dashed var(--steel-200);border-radius:12px;color:var(--muted)}@media(max-width:900px){.month-stock-inclusions__head{grid-template-columns:1fr}.month-stock-inclusions__summary{grid-template-columns:repeat(2,minmax(0,1fr))}.month-stock-inclusions__list{grid-template-columns:1fr}}@media(max-width:520px){.month-stock-inclusions__summary{grid-template-columns:1fr}.month-stock-inclusions__list li{grid-template-columns:1fr}.month-stock-inclusions__value{justify-items:start}}`;
     document.head.appendChild(style);
   }
 
@@ -170,7 +172,7 @@
 
   function renderRankList(items, valueSelector, negative = false) {
     if (!items.length) return '<div class="month-stock-inclusions__empty">Nenhum item identificado neste recorte.</div>';
-    return `<ol class="month-stock-inclusions__list">${items.map((item, index) => `<li><div class="month-stock-inclusions__identity"><strong>${index + 1}. ${esc(item.displayCode || item.code)}</strong><small>${esc(item.name || "Item sem nome")}</small></div><span class="month-stock-inclusions__value" data-scale-mil="1">${negative ? "−" : ""}${nf.format(Math.abs(valueSelector(item) * VALUE_MULTIPLIER))}</span></li>`).join("")}</ol>`;
+    return `<ol class="month-stock-inclusions__list">${items.map((item, index) => `<li><div class="month-stock-inclusions__identity"><strong>${index + 1}. ${esc(item.displayCode || item.code)}</strong><small>${esc(item.name || "Item sem nome")}</small></div><span class="month-stock-inclusions__value"><small>${negative ? "Saldo retirado" : "Saldo incluído"}</small><strong data-scale-mil="1">${negative ? "−" : ""}${nf.format(Math.abs(valueSelector(item) * VALUE_MULTIPLIER))}</strong><em>${esc([...(item.units || [])].join(" / ") || "unid. de estoque")}</em></span></li>`).join("")}</ol>`;
   }
 
   async function render() {
@@ -196,8 +198,8 @@
       const totalInclusions = inclusions.reduce((s,x) => s + x.balance, 0);
       const totalReductions = zeroReductions.reduce((s,x) => s + x.balance, 0);
 
-      inclusionsNode.innerHTML = `<div class="month-stock-inclusions__head"><div><h3>Inclusões de estoque · Top 10</h3><p>Itens de ${esc(currentLabel)} que não existiam em ${esc(baseLabel)} no mesmo recorte filtrado.</p></div><div class="month-stock-inclusions__total"><span>Total de inclusões</span><strong>${inclusions.length}</strong><small>${nf.format(totalInclusions * VALUE_MULTIPLIER)} de saldo incluído</small></div></div>${renderRankList(inclusions.slice(0,10), x => x.balance)}`;
-      reductionsNode.innerHTML = `<div class="month-stock-inclusions__head"><div><h3>Reduções de estoque · Top 10 zerados</h3><p>Itens que tinham saldo em ${esc(baseLabel)} e estão zerados em ${esc(currentLabel)}.</p></div><div class="month-stock-inclusions__total"><span>Total de itens zerados</span><strong>${zeroReductions.length}</strong><small>−${nf.format(totalReductions * VALUE_MULTIPLIER)} de saldo reduzido</small></div></div>${renderRankList(zeroReductions.slice(0,10), x => x.balance, true)}`;
+      inclusionsNode.innerHTML = `<div class="month-stock-inclusions__head"><div><h3>Inclusões de estoque · Top 10</h3><p>Itens de ${esc(currentLabel)} que não existiam em ${esc(baseLabel)} no mesmo recorte filtrado.</p></div><div class="month-stock-inclusions__summary"><article class="month-stock-inclusions__stat"><span>Códigos incluídos</span><strong data-scale-mil="1">${inclusions.length}</strong><small>quantidade de itens novos</small></article><article class="month-stock-inclusions__stat"><span>Saldo somado das inclusões</span><strong data-scale-mil="1">${nf.format(totalInclusions * VALUE_MULTIPLIER)}</strong><small>quantidade, não valor financeiro</small></article></div></div><p class="month-stock-inclusions__note">Os saldos podem possuir unidades de medida diferentes. O total é apenas uma soma quantitativa; consulte a unidade indicada em cada item.</p>${renderRankList(inclusions.slice(0,10), x => x.balance)}`;
+      reductionsNode.innerHTML = `<div class="month-stock-inclusions__head"><div><h3>Reduções de estoque · Top 10 zerados</h3><p>Itens que tinham saldo em ${esc(baseLabel)} e estão zerados em ${esc(currentLabel)}.</p></div><div class="month-stock-inclusions__summary"><article class="month-stock-inclusions__stat"><span>Códigos zerados</span><strong data-scale-mil="1">${zeroReductions.length}</strong><small>quantidade de itens zerados</small></article><article class="month-stock-inclusions__stat"><span>Saldo retirado desses itens</span><strong data-scale-mil="1">−${nf.format(totalReductions * VALUE_MULTIPLIER)}</strong><small>quantidade, não valor financeiro</small></article></div></div><p class="month-stock-inclusions__note">Os saldos podem possuir unidades de medida diferentes. O total é apenas uma soma quantitativa; consulte a unidade indicada em cada item.</p>${renderRankList(zeroReductions.slice(0,10), x => x.balance, true)}`;
       inclusionsNode.classList.remove("is-hidden");
       reductionsNode.classList.remove("is-hidden");
     } catch (error) {
