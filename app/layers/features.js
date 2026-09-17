@@ -1,11 +1,11 @@
 "use strict";
 
 /* Bootstrap 2.0 — preserva a aplicação estável e adiciona melhorias incrementais. */
-const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=7.0";
+const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=7.4";
 const ALMOX_STABLE_FALLBACK = ALMOX_STABLE_APP;
 const MONTHLY_COMPARISON_MODULE = "./app/modules/comparativo-mensal-core.js?v=7.0";
 const MONTHLY_COMPARISON_FALLBACK = MONTHLY_COMPARISON_MODULE;
-const AREA_MASTER_FILE = "./02 - Responsaveis_Reposição.CSV?area=20260914-1";
+const AREA_MASTER_FILE = "./02 - Responsaveis_Reposição.CSV?area=20260917-1";
 
 const NAV_ICONS = Object.freeze({
   dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>',

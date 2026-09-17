@@ -68,6 +68,19 @@
     applyFilters.__areaPatched=true;
     applyFilters.__areaStrict=true;
 
+    if(typeof renderPurchaseNeeds === "function" && !renderPurchaseNeeds.__areaStrict){
+      const previousRenderPurchaseNeeds=renderPurchaseNeeds;
+      renderPurchaseNeeds=function(){
+        const selected=selectedAreas();
+        if(!selected.length) return previousRenderPurchaseNeeds();
+        const completePurchaseNeeds=state.purchaseNeeds;
+        state.purchaseNeeds=completePurchaseNeeds.filter(need=>matchesArea(need.position,selected));
+        try { return previousRenderPurchaseNeeds(); }
+        finally { state.purchaseNeeds=completePurchaseNeeds; }
+      };
+      renderPurchaseNeeds.__areaStrict=true;
+    }
+
     area.addEventListener("change",()=>{
       if(typeof markFilterDraftDirty === "function") markFilterDraftDirty();
     });
