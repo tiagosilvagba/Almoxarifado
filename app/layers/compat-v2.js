@@ -1,9 +1,9 @@
 "use strict";
 
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
-const ALMOX_BASE = "./app/core/catalog-app.js?v=7.4";
+const ALMOX_BASE = "./app/core/catalog-app.js?v=7.5";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
-const CURRENT_VERSION_LABEL = "Versão 7.4";
+const CURRENT_VERSION_LABEL = "Versão 7.5";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],
@@ -333,7 +333,13 @@ function installZeroWithoutScMetric() {
   card.className = "metric metric--red metric--zero-without-sc";
   card.type = "button";
   card.innerHTML = '<span class="metric__label">Itens zerados sem SC</span><strong id="metricZeroWithoutSc">—</strong><small>zerados parametrizados sem SC ativa na filial</small>';
-  card.addEventListener("click", () => typeof navigateToPage === "function" && navigateToPage("necessidade-compra"));
+  card.addEventListener("click", () => {
+    if (typeof setFilterValues === "function" && ui?.stockStatusFilter) {
+      setFilterValues(ui.stockStatusFilter, ["zero-no-sc"]);
+    }
+    if (typeof applyAllFilters === "function") applyAllFilters(false);
+    if (typeof navigateToPage === "function") navigateToPage("necessidade-compra", true);
+  });
   grid.appendChild(card);
 
   const original = updateDashboardMetrics;
