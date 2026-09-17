@@ -1,12 +1,12 @@
 "use strict";
 
-/** Bootstrap 8.2: adiciona rotação 3D de 360 graus na abertura dos modais. */
-const BOOTSTRAP_VERSION = "8.2";
+/** Bootstrap 8.3: desacelera a rotação dos modais e separa quantidades solicitada e entregue. */
+const BOOTSTRAP_VERSION = "8.3";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=7.9",
+  base: "./app/layers/features.js?v=8.3",
   responsive: "./app/modules/responsive-layout.js?v=8.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",

@@ -4647,7 +4647,8 @@ function renderHistory(item, scopedHistory = null) {
   const rows = visible.map((record) => {
     const date = record.rec?.entryDate || record.rec?.issueDate || record.of?.date || record.sc?.date || "—";
     const supplier = record.rec?.supplier || record.of?.supplier || "—";
-    const quantity = firstDefined(record.rec?.quantity, record.of?.deliveredQuantity, record.of?.requestedQuantity, record.sc?.quantity);
+    const requestedQuantity = firstDefined(record.of?.requestedQuantity, record.sc?.quantity);
+    const deliveredQuantity = firstDefined(record.of?.deliveredQuantity, record.rec?.quantity);
     const unitValue = firstDefined(record.rec?.unitValue, record.of?.unitValue);
     const documentValue = firstDefined(record.rec?.documentValue, record.sc?.estimatedValue);
 
@@ -4658,7 +4659,8 @@ function renderHistory(item, scopedHistory = null) {
       <td>${stageCell(record.rec, "rec")}</td>
       <td class="cell-wrap">${escapeHtml(record.branch || "—")}</td>
       <td class="cell-wrap">${escapeHtml(supplier)}</td>
-      <td class="number">${quantity == null ? "—" : numberFormatter.format(quantity)}</td>
+      <td class="number">${requestedQuantity == null ? "—" : numberFormatter.format(requestedQuantity)}</td>
+      <td class="number">${deliveredQuantity == null ? "—" : numberFormatter.format(deliveredQuantity)}</td>
       <td class="number">${unitValue == null ? "—" : currencyFormatter.format(unitValue)}</td>
       <td class="number">${documentValue == null ? "—" : currencyFormatter.format(documentValue)}</td>
     </tr>`;
@@ -4667,8 +4669,9 @@ function renderHistory(item, scopedHistory = null) {
   ui.historyTableWrap.innerHTML = `<table class="data-table">
     <thead><tr>
       <th>Data</th><th>Solicitação (SC)</th><th>Ordem (OF)</th><th>Recebimento / NF</th>
-      <th>Filial</th><th>Fornecedor</th><th class="number">Quantidade</th>
-      <th class="number">Valor unit.</th><th class="number">Valor doc./estimado</th>
+      <th>Filial</th><th>Fornecedor</th><th class="number">Quantidade solicitada</th>
+      <th class="number">Quantidade entregue</th><th class="number">Valor unit.</th>
+      <th class="number">Valor doc./estimado</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;

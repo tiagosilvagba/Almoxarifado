@@ -1210,7 +1210,7 @@ button.chart-bar:hover { background: var(--blue-100); }
 .item-modal[open] {
   transform-origin: center;
   transform-style: preserve-3d;
-  animation: modal-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: modal-enter 1050ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .item-modal::backdrop {
