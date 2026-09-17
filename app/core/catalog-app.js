@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 74851)
-Total output lines: 5538
-
 "use strict";
 
 const CONFIG = Object.freeze({
@@ -2435,7 +2432,887 @@ function getItemPurchaseCommitments(item) {
     const quantity = [...request.lines.values()]
       .filter((line) => !line.hasOf)
       .reduce((sum, line) => sum + line.quantity, 0);
-    if (!(quantity > 0)) contin…14851 tokens truncated…lierCode,
+    if (!(quantity > 0)) continue;
+    ensureBranch(request.branchCode).scs.push({
+      code: request.code,
+      branchCode: request.branchCode,
+      quantity,
+      remaining: quantity,
+    });
+  }
+  return byBranch;
+}
+
+function purchaseCommitmentLineKey(record) {
+  const scCode = normalizeSearch(record.sc?.code) || "sem-sc";
+  const sequence = normalizeSearch(record.sc?.sequence);
+  if (sequence) return `${scCode}::seq:${sequence}`;
+  const deliveryDate = normalizeSearch(record.of?.deliveryDate || record.sc?.deliveryDate);
+  return `${scCode}::data:${deliveryDate || "sem-data"}`;
+}
+
+function isActiveScForPurchaseCoverage(sc) {
+  if (["s", "sim", "1", "true"].includes(normalizeSearch(sc.cancelled))) return false;
+  const status = normalizeSearch(sc.status);
+  // A cobertura de reposição considera somente SCs ainda efetivamente em fluxo
+  // de compra. "Aguardando aprovação" precisa reduzir a necessidade líquida,
+  // assim como as SCs confirmadas e em negociação.
+  return [
+    "compra confirmada",
+    "aguardando aprovacao",
+    "comprador negociando",
+  ].some((eligibleStatus) => status.includes(eligibleStatus));
+}
+
+function isWarehouseSc(sc) {
+  return /^0*1500(?:[.,]0+)?$/.test(String(sc?.allocationCostCenter || "").trim());
+}
+
+function itemIsWarehouseStockItem(item) {
+  return (item.positions || []).some((position) => (
+    position.quantity > 0
+    || (position.minimum ?? 0) > 0
+    || (position.maximum ?? 0) > 0
+  ));
+}
+
+function itemHasWarehouseStock(item) {
+  return itemIsWarehouseStockItem(item);
+}
+
+function recordMatchesCcuClassification(record, item, classification) {
+  if (!classification) return true;
+  if (!record?.sc?.code) return false;
+  if (classification === "warehouse") return isWarehouseSc(record.sc);
+  const direct = !isWarehouseSc(record.sc);
+  if (classification === "direct") return direct;
+  if (classification === "direct-with-stock") return direct && itemIsWarehouseStockItem(item);
+  return true;
+}
+
+function itemMatchesCcuClassification(item, classification) {
+  return (item.history || []).some((record) => recordMatchesCcuClassification(record, item, classification));
+}
+
+function purchaseClassificationLabel(sc) {
+  return isWarehouseSc(sc) ? "Entrada no almoxarifado · CCU 1500" : "Direto para a área · CCU diferente de 1500";
+}
+
+function isClosedOf(of) {
+  if (!of) return false;
+  const status = normalizeSearch(of.status);
+  const closedFlag = normalizeSearch(of.closed);
+  return /(fechad|encerrad|closed)/.test(status) || ["s", "sim", "1", "true"].includes(closedFlag);
+}
+
+function isOpenOfForPurchase(of) {
+  return Boolean(of?.code && of.balance > 0 && !isClosedOf(of));
+}
+
+function branchCodeFromFilter(value) {
+  if (Array.isArray(value)) return value.length === 1 ? branchCodeFromFilter(value[0]) : "";
+  return String(value || "").split("::branch::")[0];
+}
+
+function positionMatchesBranch(position, selectedBranch) {
+  if (Array.isArray(selectedBranch)) return !selectedBranch.length || selectedBranch.some((value) => positionMatchesBranch(position, value));
+  if (!selectedBranch) return true;
+  if (String(selectedBranch).includes("::branch::")) return position.branchKey === selectedBranch;
+  return position.branchCode === selectedBranch;
+}
+
+function positionMatchesReplenishmentResponsible(position, selectedResponsible) {
+  if (Array.isArray(selectedResponsible)) return !selectedResponsible.length || selectedResponsible.some((value) => positionMatchesReplenishmentResponsible(position, value));
+  if (!selectedResponsible) return true;
+  const normalized = normalizeSearch(selectedResponsible);
+  return (position.replenishmentResponsibles || []).some((value) => normalizeSearch(value) === normalized);
+}
+
+function replenishmentResponsiblesForPositions(positions) {
+  return unique((positions || []).flatMap((position) => position.replenishmentResponsibles || []));
+}
+
+function scopedReplenishmentResponsibles(item) {
+  return replenishmentResponsiblesForPositions(currentScopedPositions(item, false));
+}
+
+function replenishmentResponsiblesForItemCodes(itemCodes) {
+  return unique((itemCodes || []).flatMap((code) => {
+    const item = state.itemByCode.get(code);
+    return item ? scopedReplenishmentResponsibles(item) : [];
+  }));
+}
+
+function allocatePurchaseCoverage(pool, grossSuggested) {
+  let remainingNeed = grossSuggested;
+  const result = { ofQuantity: 0, scQuantity: 0, total: 0, ofCodes: [], scCodes: [] };
+  if (!pool || !(remainingNeed > 0)) return result;
+  const allocate = (records, type) => {
+    for (const record of records) {
+      if (!(remainingNeed > 0)) break;
+      const used = Math.min(record.remaining || 0, remainingNeed);
+      if (!(used > 0)) continue;
+      record.remaining -= used;
+      remainingNeed -= used;
+      result.total += used;
+      if (type === "of") {
+        result.ofQuantity += used;
+        result.ofCodes.push(record.code);
+      } else {
+        result.scQuantity += used;
+        result.scCodes.push(record.code);
+      }
+    }
+  };
+  allocate(pool.ofs, "of");
+  allocate(pool.scs, "sc");
+  result.ofCodes = unique(result.ofCodes);
+  result.scCodes = unique(result.scCodes);
+  return result;
+}
+
+function renderPendingScList() {
+  const rows = collectPendingScRows().sort((a, b) => {
+    const dateOrder = dateTimestamp(a.sc.date) - dateTimestamp(b.sc.date);
+    return dateOrder || a.sc.code.localeCompare(b.sc.code, "pt-BR", { numeric: true });
+  });
+  const uniqueSc = new Set(rows.map(({ sc }) => sc.code));
+  state.pendingScRows = rows;
+  state.pendingScVisible = 0;
+  state.pendingScByKey.clear();
+  rows.forEach((row, index) => {
+    row.key = `pending-sc-${index}`;
+    state.pendingScByKey.set(row.key, row);
+  });
+  ui.pendingScListCount.textContent = `${pluralize(uniqueSc.size, "SC", "SCs")} · ${pluralize(rows.length, "item", "itens")}`;
+
+  if (!rows.length) {
+    ui.pendingScTableWrap.innerHTML = `<div class="table-empty">Nenhuma SC sem OF corresponde aos filtros aplicados.</div>`;
+    ui.pendingScLoadMore.classList.add("is-hidden");
+    ui.pendingScVisibleCount.textContent = "";
+    return;
+  }
+  ui.pendingScTableWrap.replaceChildren();
+  renderNextPendingScBatch();
+}
+
+function renderNextPendingScBatch() {
+  const start = state.pendingScVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.pendingScRows.length);
+  if (start >= end) return;
+  ui.pendingScTableWrap.insertAdjacentHTML("beforeend", state.pendingScRows.slice(start, end).map(({ item, record, sc, key }) => `<button class="report-card report-card--sc" type="button" data-pending-sc-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">SC ${escapeHtml(sc.code)}</span><span>${escapeHtml(ageLabel(sc.date))}</span></span>
+    <strong class="report-card__title">${escapeHtml(item.name)}</strong>
+    <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+    <span class="item-card__address">${escapeHtml(formatItemAddress(item, record.branchCode))}</span>
+    <span class="item-card__address">Reposição: ${escapeHtml(scopedReplenishmentResponsibles(item).join(", ") || "Não informada")}</span>
+    <span class="report-card__meta"><span><small>Solicitante</small><strong>${escapeHtml(sc.requesterName || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
+    <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
+  </button>`).join(""));
+  state.pendingScVisible = end;
+  ui.pendingScVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.pendingScRows.length)} solicitações`;
+  ui.pendingScLoadMore.classList.toggle("is-hidden", end >= state.pendingScRows.length);
+}
+
+function collectPendingScRows() {
+  const rowsByKey = new Map();
+  const branch = effectiveBranchFilter();
+  const branchCodes = selectedBranchCodes();
+  const query = normalizeSearch(ui.searchInput.value);
+  const category = filterValues(ui.categoryFilter);
+  const unit = filterValues(ui.unitFilter);
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
+  const scStatus = filterValues(ui.scStatusFilter);
+  const ccuClassification = filterValues(ui.ccuClassificationFilter);
+  const itemCode = filterValues(ui.itemCodeFilter);
+  const positiveOnly = ui.positiveBalanceFilter.checked;
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  for (const item of state.items) {
+    if (itemCode.length && !itemCode.includes(item.code)) continue;
+    if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) continue;
+    if (query && !item.searchText.includes(query)) continue;
+    if (category.length && !category.some((value) => (item.categories || []).includes(value))) continue;
+    if (unit.length && !unit.some((value) => (item.units || []).includes(value))) continue;
+    if (supplier.length && !supplier.some((value) => (item.suppliers || []).includes(value))) continue;
+    if (requester.length && !itemMatchesRequester(item, requester)) continue;
+    const selectedLocations = filterValues(ui.locationFilter);
+    const selectedBranches = filterValues(ui.branchFilter);
+    if (stockStatus.length || positiveOnly || selectedLocations.length || replenishmentResponsible.length) {
+      const positions = (item.positions || []).filter((position) => {
+        if (!positionMatchesBranch(position, selectedBranches.length ? selectedBranches : branch)) return false;
+        if (selectedLocations.length && !selectedLocations.includes(position.locationKey)) return false;
+        if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
+        return true;
+      });
+      if (!positions.length) continue;
+      const adjustmentMatches = stockStatus.includes("adjust-location") && itemNeedsLocationAdjustment(item, selectedBranches.length ? selectedBranches : branch, selectedLocations);
+      const regularMatches = stockStatus.some((value) => value !== "adjust-location" && positions.some((position) => positionMatchesStatus(position, value)));
+      if (stockStatus.length && !adjustmentMatches && !regularMatches) continue;
+      if (positiveOnly && positions.reduce((sum, position) => sum + position.quantity, 0) <= 0) continue;
+    }
+    const pendingCodes = new Set(item.pendingScCodes || []);
+    for (const record of item.history || []) {
+      const sc = record.sc;
+      if (!sc?.code || !pendingCodes.has(sc.code) || record.of?.code) continue;
+      if (ccuClassification.length && !ccuClassification.some((value) => recordMatchesCcuClassification(record, item, value))) continue;
+      if (!recordMatchesRequester(record, requester)) continue;
+      if (branchCodes.length && !branchCodes.includes(record.branchCode)) continue;
+      if (scStatus.length && !scStatus.includes(procurementRecordStatus(record))) continue;
+      if (query && !recordMatchesQuery(item, record, query)) continue;
+      const key = `${sc.code}::${item.code}`;
+      if (!rowsByKey.has(key)) rowsByKey.set(key, { item, record, sc });
+    }
+  }
+  return [...rowsByKey.values()];
+}
+
+function renderPurchaseNeeds() {
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
+  const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
+  const visible = state.purchaseNeeds.filter((need) => {
+    const { item, position } = need;
+    if (!filteredCodes.has(item.code)) return false;
+    if (!cavacoNeedMatchesProcessFilters(need)) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
+    if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
+    if (stockStatus.length && !stockStatus.includes("adjust-location") && !stockStatus.some((value) => positionMatchesStatus(position, value))) return false;
+    return true;
+  });
+
+  const itemCodes = new Set(visible.map(({ item }) => item.code));
+  const withoutMaximum = visible.filter(({ position, cavacoAlert }) => !cavacoAlert && !(position.maximum > 0)).length;
+  const ruptures = visible.filter(({ rupture }) => rupture).length;
+  const estimatedValue = visible.reduce((sum, need) => sum + need.estimatedValue, 0);
+  ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
+  ui.purchaseNeedPositions.textContent = integerFormatter.format(visible.length);
+  ui.purchaseNeedRuptures.textContent = integerFormatter.format(ruptures);
+  ui.purchaseNeedEstimated.textContent = compactCurrencyFormatter.format(estimatedValue);
+  ui.purchaseNeedEstimated.title = currencyFormatter.format(estimatedValue);
+  ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
+  ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "pendência", "pendências")} exibida${visible.length === 1 ? "" : "s"}`;
+  state.visiblePurchaseNeeds = visible;
+  state.purchaseNeedVisible = 0;
+
+  if (!visible.length) {
+    ui.purchaseNeedTableWrap.innerHTML = `<div class="table-empty">Nenhuma necessidade de compra corresponde à busca informada.</div>`;
+    ui.purchaseNeedLoadMore.classList.add("is-hidden");
+    ui.purchaseNeedVisibleCount.textContent = "";
+    return;
+  }
+  ui.purchaseNeedTableWrap.replaceChildren();
+  renderNextPurchaseNeedBatch();
+}
+
+function renderNextPurchaseNeedBatch() {
+  const start = state.purchaseNeedVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
+  if (start >= end) return;
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, averageMonthlyConsumption, rupture, key, cavacoAlert, cavacoThreshold, cavacoOfBalance, cavacoSupplier }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+    <strong class="report-card__title">${escapeHtml(item.name)}</strong>
+    <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
+    <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
+    <span class="item-card__address">Reposição: ${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informada")}</span>
+    <span class="purchase-min-max"><span>Mín. cadastrado <strong>${formatOptionalNumber(position.minimum)}</strong></span><span>Máx. cadastrado <strong>${formatOptionalNumber(position.maximum)}</strong></span><span>Consumo médio/mês <strong>${formatOptionalNumber(averageMonthlyConsumption)}</strong></span></span>
+    ${cavacoAlert
+      ? `<span class="report-card__meta"><span><small>OFs</small><strong>${escapeHtml(ofCodes.join(", ") || "—")}</strong></span><span><small>Saldo somado das OFs</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-supplier-note"><strong>Fornecedor:</strong> ${escapeHtml(cavacoSupplier || "Não informado")}</span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo somado das OFs abertas deste fornecedor ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
+      : `<span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}`}
+    <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
+  </button>`).join(""));
+  state.purchaseNeedVisible = end;
+  ui.purchaseNeedVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visiblePurchaseNeeds.length)} necessidades`;
+  ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.visiblePurchaseNeeds.length);
+}
+
+function openPurchaseNeedModal(key) {
+  const need = state.purchaseNeedByKey.get(key);
+  if (!need) return;
+  const { item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, averageMonthlyConsumption, consumptionMonthCount, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance } = need;
+  state.activePurchaseNeed = need;
+  state.lastFocusedElement = document.activeElement;
+
+  ui.purchaseModalCode.textContent = `Código ${item.code}`;
+  ui.purchaseModalTitle.textContent = item.name;
+  ui.purchaseModalSubtitle.textContent = [
+    position.branchCode,
+    position.branchName,
+    position.localCode,
+    position.localName,
+  ].filter(Boolean).join(" · ");
+  ui.purchaseModalSummary.innerHTML = `
+    <article><span>${cavacoAlert ? "Saldo atual da OF" : "Saldo atual"}</span><strong>${numberFormatter.format(cavacoAlert ? cavacoOfBalance : position.quantity)}</strong></article>
+    <article><span>Mínimo</span><strong>${formatOptionalNumber(position.minimum)}</strong></article>
+    <article><span>Máximo</span><strong>${formatOptionalNumber(position.maximum)}</strong></article>
+    <article><span>Consumo médio/mês</span><strong>${formatOptionalNumber(averageMonthlyConsumption)}</strong><small>${consumptionMonthCount ? `${integerFormatter.format(consumptionMonthCount)} meses considerados` : "Sem histórico disponível"}</small></article>
+    <article><span>${cavacoAlert ? "Limite do alerta" : "Meta"}</span><strong>${numberFormatter.format(target)}</strong></article>
+    <article><span>${cavacoAlert ? "Déficit até 200" : "Necessidade bruta"}</span><strong>${numberFormatter.format(suggested)}</strong></article>
+    <article><span>Saldo em OF aberta · CCU 1500</span><strong>${numberFormatter.format(openOfBalance)}</strong></article>
+    <article><span>SC sem OF · CCU 1500</span><strong>${numberFormatter.format(pendingScQuantity)}</strong></article>
+    <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
+    <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
+    <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
+  renderOperationalInsights(ui.purchaseModalOperational, getOperationalInsight(item, position.branchCode, position));
+  ui.purchaseModalDetails.innerHTML = `
+    <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
+    <div><dt>Filial</dt><dd>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</dd></div>
+    <div><dt>Local</dt><dd>${escapeHtml([position.localCode, position.localName].filter(Boolean).join(" · ") || "—")}</dd></div>
+    <div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "—")}</dd></div>
+    <div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "—")}</dd></div>
+    <div><dt>Divisão</dt><dd>${escapeHtml(position.division || "—")}</dd></div>
+    <div><dt>Responsável pela reposição</dt><dd>${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informado")}</dd></div>
+    <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
+    <div><dt>Prioridade</dt><dd>${cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
+    <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
+    <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
+    <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
+    <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
+    <div><dt>Observação</dt><dd>${cavacoAlert ? `As OFs ${escapeHtml(ofCodes.join(", ") || "—")} possuem saldo somado de ${numberFormatter.format(cavacoOfBalance)}, abaixo do gatilho operacional de ${numberFormatter.format(cavacoThreshold)} para o fornecedor.` : coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
+    <div><dt>Critério da sugestão</dt><dd>${cavacoAlert ? "Reposição especial pela diferença entre 200 e o saldo somado das OFs abertas do fornecedor" : position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
+
+  if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
+  else ui.purchaseNeedModal.setAttribute("open", "");
+  ui.purchaseModalClose.focus();
+}
+
+function closePurchaseNeedModal() {
+  if (typeof ui.purchaseNeedModal.close === "function" && ui.purchaseNeedModal.open) ui.purchaseNeedModal.close();
+  else ui.purchaseNeedModal.removeAttribute("open");
+}
+
+function openPendingScModal(key) {
+  const row = state.pendingScByKey.get(key);
+  if (!row) return;
+  const { item, record, sc } = row;
+  state.activePendingSc = row;
+  state.lastFocusedElement = document.activeElement;
+  ui.pendingScModalCode.textContent = `Solicitação de Compra · SC ${sc.code}`;
+  ui.pendingScModalTitle.textContent = "Aguardando geração de OF";
+  ui.pendingScModalSubtitle.textContent = `${item.name} · Item ${item.code} · ${record.branch || "Filial não informada"}`;
+  ui.pendingScSubject.innerHTML = `<span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">${isOverdue(sc.deliveryDate) ? "Entrega prevista vencida" : "Processo pendente"}</span><div><strong>SC ${escapeHtml(sc.code)} sem Ordem de Fornecimento</strong><small>Solicitada por ${escapeHtml(sc.requesterName || "usuário não informado")} em ${escapeHtml(formatDate(sc.date))}</small></div>`;
+  ui.pendingScModalSummary.innerHTML = `
+    <article><span>Quantidade</span><strong>${formatOptionalNumber(sc.quantity)}</strong></article>
+    <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></article>
+    <article><span>Criação</span><strong>${escapeHtml(formatDate(sc.date))}</strong></article>
+    <article><span>Entrega</span><strong>${escapeHtml(formatDate(sc.deliveryDate))}</strong></article>
+    <article><span>Tempo aguardando</span><strong>${escapeHtml(ageLabel(sc.date))}</strong></article>`;
+  renderOperationalInsights(ui.pendingScModalOperational, getOperationalInsight(item, record.branchCode));
+  ui.pendingScModalDetails.innerHTML = `
+    <div><dt>Situação</dt><dd>${escapeHtml(sc.status || "—")}</dd></div>
+    <div><dt>Cancelada</dt><dd>${escapeHtml(sc.cancelled || "Não")}</dd></div>
+    <div><dt>Categoria</dt><dd>${escapeHtml(sc.category || "—")}</dd></div>
+    <div><dt>Motivo</dt><dd>${escapeHtml(sc.reason || "—")}</dd></div>
+    <div><dt>Filial</dt><dd>${escapeHtml(record.branch || "—")}</dd></div>
+    <div><dt>Empresa</dt><dd>${escapeHtml(sc.company || "—")}</dd></div>
+    <div><dt>Usuário solicitante</dt><dd>${escapeHtml(sc.requesterName || "—")}</dd></div>
+    <div><dt>Centro de custo aprovador</dt><dd>${escapeHtml(sc.costCenter || "—")}</dd></div>
+    <div><dt>CCU da etiqueta</dt><dd>${escapeHtml(sc.allocationCostCenter || "—")}</dd></div>
+    <div><dt>Classificação da compra</dt><dd>${escapeHtml(purchaseClassificationLabel(sc))}</dd></div>
+    <div><dt>Local de estoque</dt><dd>${escapeHtml(sc.stockLocation || "—")}</dd></div>
+    <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
+    <div><dt>Descrição detalhada</dt><dd>${escapeHtml(item.detailedName || item.name)}</dd></div>
+    <div><dt>Observação</dt><dd>${escapeHtml(sc.observation || "—")}</dd></div>
+    <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
+    <div><dt>OF</dt><dd>Não gerada</dd></div>`;
+  if (typeof ui.pendingScModal.showModal === "function") ui.pendingScModal.showModal();
+  else ui.pendingScModal.setAttribute("open", "");
+  ui.pendingScModalClose.focus();
+}
+
+function closePendingScModal() {
+  if (typeof ui.pendingScModal.close === "function" && ui.pendingScModal.open) ui.pendingScModal.close();
+  else ui.pendingScModal.removeAttribute("open");
+}
+
+function getVisiblePurchaseNeeds() {
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  const stockStatus = filterValues(ui.stockStatusFilter);
+  const filteredCodes = new Set(state.filteredItems.map((item) => item.code));
+  return state.purchaseNeeds.filter((need) => {
+    const { item, position } = need;
+    if (!filteredCodes.has(item.code)) return false;
+    if (!cavacoNeedMatchesProcessFilters(need)) return false;
+    if (!positionMatchesBranch(position, branch)) return false;
+    if (location.length && !location.includes(position.locationKey)) return false;
+    if (!positionMatchesReplenishmentResponsible(position, replenishmentResponsible)) return false;
+    if (stockStatus.length && !stockStatus.includes("adjust-location") && !stockStatus.some((value) => positionMatchesStatus(position, value))) return false;
+    return true;
+  });
+}
+
+function cavacoNeedMatchesProcessFilters(need) {
+  if (!need.cavacoAlert) return true;
+  const record = need.record;
+  if (!recordMatchesRequester(record, filterValues(ui.requesterFilter))) return false;
+  const suppliers = filterValues(ui.supplierFilter);
+  if (suppliers.length && !suppliers.some((value) => normalizeSearch(record.of?.supplier) === normalizeSearch(value))) return false;
+  const statuses = filterValues(ui.scStatusFilter);
+  if (statuses.length && !statuses.includes(procurementRecordStatus(record))) return false;
+  const classifications = filterValues(ui.ccuClassificationFilter);
+  if (classifications.length && !classifications.some((value) => recordMatchesCcuClassification(record, need.item, value))) return false;
+  const query = normalizeSearch(ui.searchInput.value);
+  return !query || recordMatchesQuery(need.item, record, query);
+}
+
+function exportPurchaseNeeds(format = "excel") {
+  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, averageMonthlyConsumption, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance }) => [
+    item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
+    position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
+    position.shelf, position.division, position.quantity, position.minimum, position.maximum, averageMonthlyConsumption, target, suggested, openOfBalance,
+    pendingScQuantity, coveredQuantity, coverageSource, ofCodes.join(" | "), scCodes.join(" | "), netSuggested,
+    referencePrice, estimatedValue, cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
+    position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
+    cavacoAlert ? "Reposição especial por saldo de OF de Cavaco abaixo de 200" : position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
+    cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo", cavacoAlert ? ofCodes.join(" | ") : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
+    (position.replenishmentResponsibles || []).join(" | "),
+  ]);
+  exportReport(format, {
+    title: "Necessidade de Compra",
+    filename: "necessidade-de-compra.xls",
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Consumo médio mensal", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta · CCU 1500", "Quantidade coberta por SC sem OF · CCU 1500", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério", "Tipo de pendência", "OF Cavaco", "Limite Cavaco", "Saldo OF Cavaco", "Responsáveis pela reposição"],
+    rows,
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 28, 29, 30, 35, 36]),
+    currencyColumns: new Set([25, 26, 29, 30]),
+  });
+}
+
+function exportPendingSc(format = "excel") {
+  const sourceRows = pendingScRowsForExport(state.pendingScRows, format);
+  const rows = sourceRows.map(({ item, record, sc }) => [
+    sc.code, item.code, ageDays(sc.date), sc.status, sc.requesterName, sc.cancelled, sc.date, sc.deliveryDate, isOverdue(sc.deliveryDate) ? "Sim" : "Não", sc.quantity, sc.estimatedValue,
+    sc.category, sc.reason, item.name, item.detailedName, (item.categories || []).join(" | "),
+    (item.units || []).join(" | "), record.branch, sc.allocationCostCenter, purchaseClassificationLabel(sc), (item.suppliers || []).join(" | "), "", "Não gerada", scopedReplenishmentResponsibles(item).join(" | "),
+  ]);
+  exportReport(format, {
+    title: format === "pdf" ? "SC pendente de OF há mais de 7 dias" : "SC pendente de OF",
+    filename: format === "pdf" ? "sc-pendente-of-superior-7-dias.xls" : "sc-pendente-de-of.xls",
+    headers: ["SC", "Código do item", "Dias aguardando OF", "Situação SC", "Usuário solicitante", "Cancelada", "Data de criação", "Data de entrega", "Entrega vencida", "Quantidade", "Valor estimado", "Categoria SC", "Motivo", "Descrição", "Descrição detalhada", "Categorias do item", "Unidades", "Filial", "SC - CCU Etq", "Classificação da compra", "Fornecedores relacionados", "Código OF", "Situação OF", "Responsáveis pela reposição"],
+    rows,
+    numericColumns: new Set([2, 9, 10]),
+    currencyColumns: new Set([10]),
+    dateColumns: new Set([6, 7]),
+    pdfIdentityColumns: [0, 1, 2],
+  });
+}
+
+function pendingScRowsForExport(rows, format) {
+  if (format !== "pdf") return [...rows];
+  return rows.filter(({ sc }) => {
+    const pendingDays = ageDays(sc?.date);
+    return pendingDays !== null && pendingDays > 7;
+  });
+}
+
+function exportProcurement(format = "excel") {
+  const rows = state.procurementRows.map(({ item, record }) => {
+    const { sc, of, rec } = record;
+    return [
+      item.code, item.name, item.detailedName, record.branchCode, record.branch,
+      sc?.code, sc?.status, sc?.date, sc?.deliveryDate, sc?.quantity, sc?.estimatedValue, sc?.category, sc?.reason, sc?.cancelled, sc?.company, sc?.requesterName, sc?.costCenter, sc?.stockLocation, sc?.allocationCostCenter, sc?.code ? purchaseClassificationLabel(sc) : "",
+      of?.code, of?.status, of?.date, of?.deliveryDate, of?.supplierCode, of?.supplier, of?.supplierEmail, of?.requestedQuantity, of?.deliveredQuantity, of?.balance, of?.unitValue, of?.currency, of?.paymentTerms, of?.paymentMethod, of?.freight, of?.icms, of?.ipi, of?.closed, of?.blocked, of?.type, of?.carrier,
+      rec?.invoice, rec?.series, rec?.issueDate, rec?.entryDate, rec?.supplierCode, rec?.supplier, rec?.quantity, rec?.unitValue, rec?.documentValue, rec?.currency, rec?.paymentTerms, rec?.paymentMethod, rec?.freight, rec?.icms, rec?.ipi,
+      scopedReplenishmentResponsibles(item).join(" | "),
+    ];
+  });
+  exportReport(format, {
+    title: "Consulta SC OF e Recebimentos",
+    filename: "consulta-sc-of-recebimentos.xls",
+    headers: [
+      "Código do item", "Descrição", "Descrição detalhada", "Código filial", "Filial",
+      "SC - Código", "SC - Situação", "SC - Data de criação", "SC - Data de entrega", "SC - Quantidade", "SC - Valor estimado", "SC - Categoria", "SC - Motivo", "SC - Cancelada", "SC - Empresa", "SC - Usuário solicitante", "SC - Centro de custo", "SC - Local de estoque", "SC - CCU Etq", "Classificação da compra",
+      "OF - Código", "OF - Situação", "OF - Data", "OF - Data de entrega", "OF - Código fornecedor", "OF - Fornecedor", "OF - E-mail do fornecedor", "OF - Quantidade solicitada", "OF - Quantidade entregue", "OF - Saldo", "OF - Valor unitário", "OF - Moeda", "OF - Condição de pagamento", "OF - Forma de pagamento", "OF - Frete", "OF - ICMS", "OF - IPI", "OF - Fechada", "OF - Bloqueada", "OF - Tipo", "OF - Transportador",
+      "REC - Nota fiscal", "REC - Série", "REC - Data de emissão", "REC - Data de entrada", "REC - Código fornecedor", "REC - Fornecedor", "REC - Quantidade", "REC - Valor unitário", "REC - Valor do documento", "REC - Moeda", "REC - Condição de pagamento", "REC - Forma de pagamento", "REC - Frete", "REC - ICMS", "REC - IPI",
+      "Responsáveis pela reposição",
+    ],
+    rows,
+    numericColumns: new Set([9, 10, 27, 28, 29, 30, 34, 35, 36, 47, 48, 49, 53, 54, 55]),
+    currencyColumns: new Set([10, 30, 48, 49]),
+    dateColumns: new Set([7, 8, 22, 23, 43, 44]),
+  });
+}
+
+function exportMinMaxReviews(format = "excel") {
+  const rows = state.visibleMinMaxReviews.map((review) => {
+    const { item, position } = review;
+    const status = review.status === "ideal" ? "Parâmetros ideais"
+      : review.status === "adjust" ? "Ajuste recomendado" : "Histórico insuficiente";
+    const monthlyHistory = review.monthlyAnalysis
+      .map(({ month, value, isOutlier }) => `${month}: ${numberFormatter.format(value)}${isOutlier ? " (anomalia excluída)" : " (considerado)"}`)
+      .join(" | ");
+    const excludedMonths = review.monthlyAnalysis
+      .filter(({ isOutlier }) => isOutlier)
+      .map(({ month, value }) => `${month}: ${numberFormatter.format(value)}`)
+      .join(" | ");
+    return [
+      item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
+      position.branchCode, position.branchName, position.localCode, position.localName,
+      position.partition, position.shelf, position.division, position.quantity,
+      review.currentMinimum, review.currentMaximum, review.averageMonthlyConsumption, review.monthCount, review.consideredMonthCount, review.outlierMonthCount,
+      review.leadTimeDays, review.leadTimeSource === "real" ? "Histórico real" : "Referência estimada",
+      review.leadSamples.length, review.leadSamples.join(" | "), review.recommendedMinimum, review.recommendedMaximum,
+      status, review.direction === "increase" ? "Elevar parâmetros" : "Reduzir parâmetros", review.referencePrice,
+      review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível",
+      review.currentMinimumValue, review.recommendedMinimumValue, review.minimumValueImpact,
+      review.currentMaximumValue, review.recommendedMaximumValue, review.maximumValueImpact,
+      monthlyHistory, excludedMonths,
+      "Mínimo = (consumo diário sem anomalias × lead time) + margem preventiva de 20%; Máximo = mínimo sugerido + 30 dias de consumo; tolerância de validação de ±20%. Anomalias identificadas pelo desvio absoluto mediano (MAD).",
+      (position.replenishmentResponsibles || []).join(" | "),
+    ];
+  });
+  exportReport(format, {
+    title: "Revisão de mín. e máx.",
+    filename: "revisao-minimo-maximo.xls",
+    headers: [
+      "Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Código local", "Local de estoque",
+      "Repartição", "Prateleira", "Divisão", "Saldo atual", "Mínimo atual", "Máximo atual", "Consumo médio mensal", "Meses analisados",
+      "Meses considerados", "Meses anômalos excluídos", "Lead time em dias", "Origem do lead time", "Amostras de lead time", "Tempos encontrados", "Mínimo sugerido", "Máximo sugerido",
+      "Validação", "Alteração proposta", "Preço de referência", "Origem do preço", "Valor do mínimo atual", "Valor do mínimo sugerido", "Impacto do ajuste do mínimo",
+      "Valor do máximo atual", "Valor do máximo sugerido", "Impacto do ajuste do máximo", "Consumo por mês", "Anomalias excluídas", "Critério de cálculo", "Responsáveis pela reposição",
+    ],
+    rows,
+    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 21, 23, 24, 27, 29, 30, 31, 32, 33, 34]),
+    currencyColumns: new Set([27, 29, 30, 31, 32, 33, 34]),
+  });
+}
+
+function exportReport(format, config) {
+  if (format === "pdf") {
+    exportPdfReport({ ...config, filename: config.filename.replace(/\.xls$/i, ".pdf") });
+    return;
+  }
+  exportExcelReport(config);
+}
+
+function localizeReport({ title, headers, rows }) {
+  return {
+    title: translateUiText(title),
+    headers: headers.map((header) => translateUiText(header)),
+    rows: rows.map((row) => row.map((value) => typeof value === "string" ? translateUiText(value) : value)),
+  };
+}
+
+function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+  ({ title, headers, rows } = localizeReport({ title, headers, rows }));
+  const styles = getComputedStyle(document.documentElement);
+  const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
+  const accentColor = cssColorToHex(styles.getPropertyValue("--blue-500"), "2086D2");
+  const filterText = ui.filterSummary.textContent || "Todos os registros";
+  const cell = (value, index, header = false, alternate = false) => {
+    if (header) return `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+    const date = dateColumns.has(index) ? excelDateValue(value) : "";
+    if (date) return `<Cell ss:StyleID="Date${alternate ? "Even" : "Odd"}"><Data ss:Type="DateTime">${date}</Data></Cell>`;
+    const numeric = (numericColumns.has(index) || currencyColumns.has(index)) && value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    const style = `${currencyColumns.has(index) ? "Currency" : numeric ? "Number" : "Text"}${alternate ? "Even" : "Odd"}`;
+    return `<Cell ss:StyleID="${style}"><Data ss:Type="${numeric ? "Number" : "String"}">${escapeXml(numeric ? Number(value) : value ?? "")}</Data></Cell>`;
+  };
+  const columns = headers.map((header) => `<Column ss:AutoFitWidth="0" ss:Width="${/descri|fornecedor|motivo|local/i.test(header) ? 190 : /data|situação|categoria|filial|critério/i.test(header) ? 120 : 88}"/>`).join("");
+  const dataRows = rows.map((row, rowIndex) => `<Row ss:AutoFitHeight="1" ss:Height="20">${headers.map((_, index) => cell(row[index], index, false, rowIndex % 2 === 1)).join("")}</Row>`).join("");
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>
+  <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+    <Styles>
+      <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Aptos" ss:Size="10"/></Style>
+      <Style ss:ID="Title"><Alignment ss:Vertical="Center"/><Font ss:FontName="Aptos Display" ss:Size="18" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#${headerColor}" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="Subtitle"><Font ss:FontName="Aptos" ss:Size="10" ss:Color="#445566"/><Interior ss:Color="#EAF1F6" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="Header"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Aptos" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#${accentColor}" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/></Borders></Style>
+      <Style ss:ID="RowOdd"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5E0E8"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#EDF2F6"/></Borders><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="RowEven" ss:Parent="RowOdd"><Interior ss:Color="#F3F7FA" ss:Pattern="Solid"/></Style>
+      <Style ss:ID="TextOdd" ss:Parent="RowOdd"/><Style ss:ID="TextEven" ss:Parent="RowEven"/>
+      <Style ss:ID="NumberOdd" ss:Parent="RowOdd"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+      <Style ss:ID="NumberEven" ss:Parent="RowEven"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+      <Style ss:ID="CurrencyOdd" ss:Parent="RowOdd"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/></Style>
+      <Style ss:ID="CurrencyEven" ss:Parent="RowEven"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/></Style>
+      <Style ss:ID="DateOdd" ss:Parent="RowOdd"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="dd/mm/yyyy"/></Style>
+      <Style ss:ID="DateEven" ss:Parent="RowEven"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="dd/mm/yyyy"/></Style>
+    </Styles>
+    <Worksheet ss:Name="${escapeXml(title.slice(0, 31))}"><Table>${columns}
+      <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · ${escapeXml(translateUiText("Gestão de Almoxarifado"))} · ${APP_VERSION}</Data></Cell></Row>
+      <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} ${activeLanguage === "en" ? "records" : "registros"} · ${activeLanguage === "en" ? "Exported on" : "Exportado em"} ${escapeXml(new Date().toLocaleString(activeLanguage === "en" ? "en-US" : "pt-BR"))}</Data></Cell></Row>
+      <Row ss:Height="8"></Row><Row ss:Height="30">${headers.map((header, index) => cell(header, index, true)).join("")}</Row>${dataRows}
+    </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet>
+  </Workbook>`;
+  const blob = new Blob(["\ufeff", xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+  downloadBlob(blob, filename);
+}
+
+function exportPdfReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), pdfIdentityColumns = [0, 1] }) {
+  ({ title, headers, rows } = localizeReport({ title, headers, rows }));
+  const filterText = ui.filterSummary.textContent || (activeLanguage === "en" ? "All records" : "Todos os registros");
+  const blob = createPdfBlob({ title, headers, rows, filterText, numericColumns, currencyColumns, dateColumns, pdfIdentityColumns });
+  downloadBlob(blob, filename);
+}
+
+function downloadBlob(blob, filename) {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function createPdfBlob({ title, headers, rows, filterText = "", numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), pdfIdentityColumns = [0, 1] }) {
+  const PAGE_WIDTH = 842;
+  const PAGE_HEIGHT = 595;
+  const MARGIN = 28;
+  const TABLE_WIDTH = PAGE_WIDTH - (MARGIN * 2);
+  const LINE_HEIGHT = 8;
+  const FOOTER_TOP = 25;
+  const pages = [];
+  const groups = buildPdfColumnGroups(headers, pdfIdentityColumns);
+  const locale = activeLanguage === "en" ? "en-US" : "pt-BR";
+  const recordsLabel = activeLanguage === "en" ? "records" : "registros";
+  const exportedLabel = activeLanguage === "en" ? "Exported on" : "Exportado em";
+  const blockLabel = activeLanguage === "en" ? "Column block" : "Bloco de colunas";
+  const pageLabel = activeLanguage === "en" ? "Page" : "Página";
+  const exportedAt = new Date().toLocaleString(locale);
+
+  const numberValue = (value, index) => {
+    if (dateColumns.has(index)) return formatDate(value) || String(value ?? "");
+    const numeric = (numericColumns.has(index) || currencyColumns.has(index)) && value !== "" && value !== null && value !== undefined && Number.isFinite(Number(value));
+    if (!numeric) return String(value ?? "");
+    return currencyColumns.has(index)
+      ? Number(value).toLocaleString(locale, { style: "currency", currency: "BRL", maximumFractionDigits: 2 })
+      : Number(value).toLocaleString(locale, { maximumFractionDigits: 2 });
+  };
+
+  const addText = (commands, text, x, y, size = 7, bold = false, color = "0.08 0.14 0.22") => {
+    commands.push(`BT /${bold ? "F2" : "F1"} ${pdfNumber(size)} Tf ${color} rg 1 0 0 1 ${pdfNumber(x)} ${pdfNumber(y)} Tm (${pdfEscapeText(text)}) Tj ET`);
+  };
+  const fillRect = (commands, x, y, width, height, color) => commands.push(`q ${color} rg ${pdfNumber(x)} ${pdfNumber(y)} ${pdfNumber(width)} ${pdfNumber(height)} re f Q`);
+  const strokeRect = (commands, x, y, width, height, color = "0.82 0.87 0.91") => commands.push(`q ${color} RG 0.45 w ${pdfNumber(x)} ${pdfNumber(y)} ${pdfNumber(width)} ${pdfNumber(height)} re S Q`);
+
+  const startPage = (groupIndex, indices, widths) => {
+    const commands = [];
+    fillRect(commands, 0, PAGE_HEIGHT - 58, PAGE_WIDTH, 58, "0.015 0.035 0.065");
+    fillRect(commands, 0, PAGE_HEIGHT - 58, 8, 58, "0.05 0.75 0.95");
+    addText(commands, `${title} · ${APP_VERSION}`, MARGIN, PAGE_HEIGHT - 28, 15, true, "0.88 0.97 1");
+    const meta = `${filterText} · ${rows.length} ${recordsLabel} · ${exportedLabel} ${exportedAt}`;
+    addText(commands, clipPdfText(meta, 142), MARGIN, PAGE_HEIGHT - 44, 6.5, false, "0.62 0.78 0.88");
+    addText(commands, `${blockLabel} ${groupIndex + 1}/${groups.length}`, MARGIN, PAGE_HEIGHT - 76, 8.5, true, "0.04 0.32 0.5");
+    let x = MARGIN;
+    const headerTop = PAGE_HEIGHT - 84;
+    const headerHeight = 28;
+    indices.forEach((index, columnIndex) => {
+      const width = widths[columnIndex];
+      fillRect(commands, x, headerTop - headerHeight, width, headerHeight, columnIndex < 2 ? "0.035 0.16 0.27" : "0.02 0.38 0.58");
+      strokeRect(commands, x, headerTop - headerHeight, width, headerHeight, "0.25 0.63 0.76");
+      const headerLines = wrapPdfText(headers[index], width - 8, 6.4).slice(0, 3);
+      headerLines.forEach((line, lineIndex) => addText(commands, line, x + 4, headerTop - 10 - (lineIndex * 7), 6.4, true, "1 1 1"));
+      x += width;
+    });
+    const page = { commands, groupIndex };
+    pages.push(page);
+    return { page, y: headerTop - headerHeight, indices, widths };
+  };
+
+  groups.forEach((indices, groupIndex) => {
+    const widths = pdfColumnWidths(headers, rows, indices, TABLE_WIDTH);
+    let context = startPage(groupIndex, indices, widths);
+    rows.forEach((row, rowIndex) => {
+      const cellLines = indices.map((index, columnIndex) => wrapPdfText(numberValue(row[index], index), widths[columnIndex] - 8, 6.2));
+      const totalLines = Math.max(1, ...cellLines.map((lines) => lines.length));
+      let lineOffset = 0;
+      while (lineOffset < totalLines) {
+        let lineCapacity = Math.floor((context.y - FOOTER_TOP - 7) / LINE_HEIGHT);
+        if (lineCapacity < 1) {
+          context = startPage(groupIndex, indices, widths);
+          lineCapacity = Math.floor((context.y - FOOTER_TOP - 7) / LINE_HEIGHT);
+        }
+        const drawnLines = Math.min(totalLines - lineOffset, lineCapacity);
+        const rowHeight = Math.max(20, (drawnLines * LINE_HEIGHT) + 7);
+        const rowBottom = context.y - rowHeight;
+        const rowColor = rowIndex % 2 ? "0.94 0.965 0.98" : "1 1 1";
+        fillRect(context.page.commands, MARGIN, rowBottom, TABLE_WIDTH, rowHeight, rowColor);
+        let x = MARGIN;
+        indices.forEach((index, columnIndex) => {
+          const width = widths[columnIndex];
+          strokeRect(context.page.commands, x, rowBottom, width, rowHeight);
+          cellLines[columnIndex].slice(lineOffset, lineOffset + drawnLines).forEach((line, localLineIndex) => {
+            addText(context.page.commands, line, x + 4, context.y - 10 - (localLineIndex * LINE_HEIGHT), 6.2, false);
+          });
+          x += width;
+        });
+        context.y = rowBottom;
+        lineOffset += drawnLines;
+      }
+    });
+  });
+
+  pages.forEach((page, index) => {
+    fillRect(page.commands, 0, 0, PAGE_WIDTH, 20, "0.015 0.035 0.065");
+    addText(page.commands, `${APP_VERSION} · ${pageLabel} ${index + 1}/${pages.length}`, MARGIN, 7, 6.4, true, "0.62 0.88 0.96");
+    addText(page.commands, "Gestão de Almoxarifado", PAGE_WIDTH - 142, 7, 6.4, false, "0.62 0.78 0.88");
+  });
+
+  return assemblePdf(pages.map((page) => page.commands.join("\n")), PAGE_WIDTH, PAGE_HEIGHT);
+}
+
+function buildPdfColumnGroups(headers, identityColumns = [0, 1]) {
+  if (headers.length <= 7) return [headers.map((_, index) => index)];
+  const identity = [...new Set(identityColumns)].filter((index) => Number.isInteger(index) && index >= 0 && index < headers.length);
+  const remaining = headers.map((_, index) => index).filter((index) => !identity.includes(index));
+  const groups = [];
+  for (let index = 0; index < remaining.length; index += 4) groups.push([...identity, ...remaining.slice(index, index + 4)]);
+  return groups;
+}
+
+function pdfColumnWidths(headers, rows, indices, totalWidth) {
+  const weights = indices.map((index, columnIndex) => {
+    const sampleLength = rows.slice(0, 80).reduce((maximum, row) => Math.max(maximum, String(row[index] ?? "").length), headers[index].length);
+    if (columnIndex === 0) return 1.05;
+    if (columnIndex === 1) return 2.25;
+    if (/descri|fornecedor|motivo|critério|observ|consumo/i.test(headers[index])) return 1.8;
+    return Math.min(1.55, Math.max(0.8, sampleLength / 18));
+  });
+  const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
+  return weights.map((weight) => (weight / weightTotal) * totalWidth);
+}
+
+function wrapPdfText(value, width, fontSize) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return [""];
+  const maxCharacters = Math.max(4, Math.floor(width / (fontSize * 0.51)));
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const parts = word.length > maxCharacters ? word.match(new RegExp(`.{1,${maxCharacters}}`, "g")) : [word];
+    parts.forEach((part) => {
+      if (!current) current = part;
+      else if (`${current} ${part}`.length <= maxCharacters) current += ` ${part}`;
+      else { lines.push(current); current = part; }
+    });
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
+}
+
+function clipPdfText(value, maxCharacters) {
+  const text = String(value ?? "");
+  return text.length > maxCharacters ? `${text.slice(0, maxCharacters - 3)}...` : text;
+}
+
+function pdfNumber(value) {
+  return Number(value).toFixed(2).replace(/\.00$/, "");
+}
+
+function pdfEscapeText(value) {
+  return toWinAnsi(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[\r\n]/g, " ");
+}
+
+function toWinAnsi(value) {
+  const replacements = new Map([[0x20ac, 0x80], [0x201a, 0x82], [0x0192, 0x83], [0x201e, 0x84], [0x2026, 0x85], [0x2020, 0x86], [0x2021, 0x87], [0x2018, 0x91], [0x2019, 0x92], [0x201c, 0x93], [0x201d, 0x94], [0x2022, 0x95], [0x2013, 0x96], [0x2014, 0x97]]);
+  let result = "";
+  for (const character of String(value ?? "")) {
+    const code = character.codePointAt(0);
+    if (code <= 0xff) result += String.fromCharCode(code);
+    else if (replacements.has(code)) result += String.fromCharCode(replacements.get(code));
+    else if (code === 0x2192) result += "->";
+    else result += "?";
+  }
+  return result;
+}
+
+function assemblePdf(streams, width, height) {
+  const objects = [];
+  const pageIds = streams.map((_, index) => 5 + (index * 2));
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Count ${streams.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`;
+  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  streams.forEach((stream, index) => {
+    const pageId = pageIds[index];
+    const streamId = pageId + 1;
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${streamId} 0 R >>`;
+    objects[streamId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+  let binary = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  const offsets = [0];
+  for (let id = 1; id < objects.length; id += 1) {
+    offsets[id] = binary.length;
+    binary += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+  }
+  const xrefOffset = binary.length;
+  binary += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for (let id = 1; id < objects.length; id += 1) binary += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
+  binary += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0) & 0xff);
+  return new Blob([bytes], { type: "application/pdf" });
+}
+
+function cssColorToHex(color, fallback) {
+  const match = String(color).match(/\d+/g);
+  if (!match || match.length < 3) return fallback;
+  return match.slice(0, 3).map((value) => Number(value).toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+function escapeXml(value) {
+  return String(value ?? "").replace(/[<>&"']/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[character]);
+}
+
+function buildProcurementRows() {
+  const rows = collectProcurementRows(true);
+  state.procurementRows = rows;
+  state.procurementByKey.clear();
+  rows.forEach((row, index) => { row.key = `process-${index}`; state.procurementByKey.set(row.key, row); });
+  state.procurementVisible = 0;
+  ui.procurementGrid.replaceChildren();
+  ui.procurementCount.textContent = pluralize(rows.length, "processo", "processos");
+  const awaiting = new Set();
+  const open = new Set();
+  const partial = new Set();
+  const received = new Set();
+  for (const { record } of rows) {
+    if (record.sc?.code && !record.of?.code) awaiting.add(record.sc.code);
+    if (isOpenOfForPurchase(record.of)) open.add(record.of.code);
+    if (isOpenOfForPurchase(record.of) && record.of.requestedQuantity > 0 && record.of.deliveredQuantity > 0 && record.of.deliveredQuantity < record.of.requestedQuantity) partial.add(record.of.code);
+    if (record.rec?.invoice) received.add(`${record.rec.invoice}::${record.rec.series || ""}`);
+  }
+  ui.procurementAwaiting.textContent = integerFormatter.format(awaiting.size);
+  ui.procurementOpen.textContent = integerFormatter.format(open.size);
+  ui.procurementPartial.textContent = integerFormatter.format(partial.size);
+  ui.procurementReceived.textContent = integerFormatter.format(received.size);
+  renderNextProcurementBatch();
+}
+
+function collectProcurementRows(shouldSort = true) {
+  const branchCodes = selectedBranchCodes();
+  const supplier = filterValues(ui.supplierFilter);
+  const requester = filterValues(ui.requesterFilter);
+  const query = normalizeSearch(ui.searchInput.value);
+  const scStatus = filterValues(ui.scStatusFilter);
+  const ccuClassification = filterValues(ui.ccuClassificationFilter);
+  const rows = [];
+  for (const item of state.items.filter(itemMatchesTransactionFilters)) {
+    for (const record of item.history || []) {
+      if (!record.sc?.code && !record.of?.code) continue;
+      if (ccuClassification.length && !ccuClassification.some((value) => recordMatchesCcuClassification(record, item, value))) continue;
+      if (!recordMatchesRequester(record, requester)) continue;
+      if (branchCodes.length && !branchCodes.includes(record.branchCode)) continue;
+      if (scStatus.length && !scStatus.includes(procurementRecordStatus(record))) continue;
+      if (supplier.length && !supplier.some((selected) => [record.of?.supplier, record.rec?.supplier].some((value) => normalizeSearch(value) === normalizeSearch(selected)))) continue;
+      if (query && !recordMatchesQuery(item, record, query)) continue;
+      rows.push({ item, record });
+    }
+  }
+  if (shouldSort) rows.sort((a, b) => (b.record.sortKey || 0) - (a.record.sortKey || 0));
+  return rows;
+}
+
+function recordMatchesQuery(item, record, query) {
+  return normalizeSearch([
+    item.code, item.name, item.detailedName,
+    record.sc?.code, record.sc?.status, record.sc?.requesterName, record.sc?.allocationCostCenter,
+    record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
+    record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
   ].join(" ")).includes(query);
 }
 
