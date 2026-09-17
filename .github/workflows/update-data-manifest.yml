@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -43,4 +45,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data-manifest.json data/catalog.json.gz data/catalog-meta.json
           git commit -m "Atualiza bases otimizadas"
-          git push
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "A publicação encontrou outro commit; tentando novamente ($attempt/3)."
+          done
+
+          echo "Não foi possível publicar a base após 3 tentativas."
+          exit 1
