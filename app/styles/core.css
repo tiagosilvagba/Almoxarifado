@@ -1208,8 +1208,9 @@ button.chart-bar:hover { background: var(--blue-100); }
 }
 
 .item-modal[open] {
-  transform-origin: center 46%;
-  animation: modal-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: center;
+  transform-style: preserve-3d;
+  animation: modal-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .item-modal::backdrop {
@@ -1223,13 +1224,16 @@ button.chart-bar:hover { background: var(--blue-100); }
 }
 
 @keyframes modal-enter {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(18px) scale(0.975);
+    transform: perspective(1400px) translateY(22px) rotateY(-360deg) scale(0.82);
   }
-  to {
+  58% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1400px) translateY(0) rotateY(0deg) scale(1);
   }
 }
 

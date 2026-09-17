@@ -1,7 +1,7 @@
 "use strict";
 
-/** Bootstrap 8.1: adiciona transição visual e desfoque na abertura dos modais. */
-const BOOTSTRAP_VERSION = "8.1";
+/** Bootstrap 8.2: adiciona rotação 3D de 360 graus na abertura dos modais. */
+const BOOTSTRAP_VERSION = "8.2";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
