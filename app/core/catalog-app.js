@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = window.__ALMOX_VERSION_LABEL__ || "Versão 9.3";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 9.3";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
