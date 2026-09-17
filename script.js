@@ -1,7 +1,7 @@
 "use strict";
 
-/** Bootstrap 8.0: inclui experiência visual exclusiva para iOS. */
-const BOOTSTRAP_VERSION = "8.0";
+/** Bootstrap 8.1: adiciona transição visual e desfoque na abertura dos modais. */
+const BOOTSTRAP_VERSION = "8.1";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
