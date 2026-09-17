@@ -1,17 +1,17 @@
 "use strict";
 
-/** Bootstrap 8.9: desacelera a rotação dos modais e separa quantidades solicitada e entregue. */
-const BOOTSTRAP_VERSION = "8.9";
+/** Bootstrap 9.0: corrige contraste das abas dinâmicas e organiza o menu. */
+const BOOTSTRAP_VERSION = "9.0";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=8.9",
-  responsive: "./app/modules/responsive-layout.js?v=8.0",
+  base: "./app/layers/features.js?v=9.0",
+  responsive: "./app/modules/responsive-layout.js?v=9.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
   area: "./app/modules/area-filter-active.js?v=7.9",
-  noTurn: "./app/modules/itens-sem-giro.js?v=7.0",
+  noTurn: "./app/modules/itens-sem-giro.js?v=9.0",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=7.3",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=7.0",

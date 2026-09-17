@@ -1,7 +1,7 @@
 "use strict";
 
 /* Bootstrap 2.0 — preserva a aplicação estável e adiciona melhorias incrementais. */
-const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=8.9";
+const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=9.0";
 const ALMOX_STABLE_FALLBACK = ALMOX_STABLE_APP;
 const MONTHLY_COMPARISON_MODULE = "./app/modules/comparativo-mensal-core.js?v=7.0";
 const MONTHLY_COMPARISON_FALLBACK = MONTHLY_COMPARISON_MODULE;
@@ -63,10 +63,12 @@ function ensureMonthlyComparisonTab() {
     tab.setAttribute("aria-selected", "false");
     tab.setAttribute("aria-controls", "page-comparativo-mensal");
     tab.textContent = "Comparativo mensal";
-    const dashboard = nav.querySelector('[data-page="dashboard"]');
-    if (dashboard) dashboard.insertAdjacentElement("afterend", tab);
-    else nav.prepend(tab);
+    const instructions = nav.querySelector('[data-page="instrucoes"]');
+    if (instructions) nav.insertBefore(tab, instructions);
+    else nav.append(tab);
   }
+  const instructions = nav.querySelector('[data-page="instrucoes"]');
+  if (instructions && tab.nextElementSibling !== instructions) nav.insertBefore(tab, instructions);
   return true;
 }
 

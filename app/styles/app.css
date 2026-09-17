@@ -4398,3 +4398,67 @@ html[data-theme] :is(#page-dashboard .metric,#page-dashboard .analytics-card,#pa
   [data-page-panel][aria-hidden="true"]{pointer-events:none}
 }
 
+
+
+/* =========================================================
+   Contraste das abas dinâmicas — versão 9.0
+   Impede que estilos carregados depois do tema ocultem textos.
+   ========================================================= */
+html[data-theme] #page-itens-sem-giro,
+html[data-theme] #page-comparativo-mensal{
+  color:var(--readable-body)!important;
+}
+html[data-theme] #page-itens-sem-giro :is(.nt-kpi,.nt-panel,.nt-table-wrap),
+html[data-theme] #page-comparativo-mensal :is(.month-compare-controls,.month-page-filters,.month-compare-metric,.month-consideration,.month-stock-inclusions,.month-target-block,.month-compared-meta-kpi,.month-compared-meta-status article,.month-compare-table-wrap,.month-target-table-wrap,.month-compare-message){
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+  border-color:var(--visual-border,var(--steel-200))!important;
+}
+html[data-theme] #page-itens-sem-giro :is(h1,h2,h3,h4,strong,b,.nt-bar),
+html[data-theme] #page-comparativo-mensal :is(h1,h2,h3,h4,strong,b,.month-consideration__total){
+  color:var(--readable-strong)!important;
+}
+html[data-theme] #page-itens-sem-giro :is(p,small,label,.nt-muted,.nt-kpi>span),
+html[data-theme] #page-comparativo-mensal :is(p,small,label,.month-filter-summary,.month-page-filters__head small,.month-compare-metric>span,.month-compare-metric>small){
+  color:var(--readable-muted)!important;
+  opacity:1!important;
+}
+html[data-theme] #page-itens-sem-giro :is(input,select,textarea,.nt-chip),
+html[data-theme] #page-comparativo-mensal :is(input,select,textarea,.month-local-filter){
+  color:var(--readable-field-text)!important;
+  background:var(--readable-field-bg)!important;
+  border-color:var(--visual-border,var(--steel-300))!important;
+}
+html[data-theme] #page-itens-sem-giro .nt-chip span{color:inherit!important}
+html[data-theme] #page-itens-sem-giro .nt-chip:has(input:checked){
+  color:var(--visual-accent-text,#fff)!important;
+  background:var(--visual-accent,var(--active-accent,#4777ff))!important;
+}
+html[data-theme] #page-itens-sem-giro .nt-table :is(th,td),
+html[data-theme] #page-comparativo-mensal :is(.month-compare-table,.month-target-table) :is(th,td){
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+  border-color:var(--visual-border,var(--steel-200))!important;
+}
+html[data-theme] #page-itens-sem-giro .nt-table th,
+html[data-theme] #page-comparativo-mensal :is(.month-compare-table,.month-target-table) th{
+  color:var(--readable-strong)!important;
+  background:color-mix(in srgb,var(--readable-table-bg) 88%,var(--visual-accent) 12%)!important;
+}
+html[data-theme] #page-comparativo-mensal .month-status--increase,
+html[data-theme] #page-comparativo-mensal .month-delta--up,
+html[data-theme] #page-comparativo-mensal .month-consideration--up h3{color:#087a49!important}
+html[data-theme] #page-comparativo-mensal .month-status--decrease,
+html[data-theme] #page-comparativo-mensal .month-delta--down,
+html[data-theme] #page-comparativo-mensal .month-consideration--down h3{color:#b4232f!important}
+@media (prefers-color-scheme:dark){
+  html[data-theme] #page-comparativo-mensal :is(.month-status--increase,.month-delta--up,.month-consideration--up h3){color:#62e7aa!important}
+  html[data-theme] #page-comparativo-mensal :is(.month-status--decrease,.month-delta--down,.month-consideration--down h3){color:#ff9da6!important}
+}
+
+/* Prioridade à leitura: a direção continua indicada por rótulo e fundo sem depender só da cor. */
+html[data-theme] #page-comparativo-mensal :is(.month-status--increase,.month-status--decrease,.month-delta--up,.month-delta--down,.month-consideration--up h3,.month-consideration--down h3){
+  color:var(--readable-strong)!important;
+}
+html[data-theme] #page-comparativo-mensal .month-status--increase{background:color-mix(in srgb,#169b62 20%,var(--readable-table-bg))!important}
+html[data-theme] #page-comparativo-mensal .month-status--decrease{background:color-mix(in srgb,#d64545 20%,var(--readable-table-bg))!important}

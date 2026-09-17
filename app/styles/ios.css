@@ -1220,3 +1220,36 @@ html.os-ios[data-theme] #page-sc-pendente-of .report-card{background:color-mix(i
     box-shadow:none!important;
   }
 }
+
+
+/* Contraste final das abas dinâmicas no acabamento Apple/iOS — versão 9.0. */
+html.os-ios[data-theme] :is(#page-itens-sem-giro,#page-comparativo-mensal){
+  color:var(--readable-body)!important;
+}
+html.os-ios[data-theme] #page-itens-sem-giro :is(.nt-kpi,.nt-panel,.nt-table-wrap),
+html.os-ios[data-theme] #page-comparativo-mensal :is(.month-compare-controls,.month-page-filters,.month-compare-metric,.month-consideration,.month-stock-inclusions,.month-target-block,.month-compared-meta-kpi,.month-compared-meta-status article,.month-compare-table-wrap,.month-target-table-wrap,.month-compare-message){
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+}
+html.os-ios[data-theme] #page-itens-sem-giro :is(h1,h2,h3,h4,strong,b),
+html.os-ios[data-theme] #page-comparativo-mensal :is(h1,h2,h3,h4,strong,b){color:var(--readable-strong)!important}
+html.os-ios[data-theme] #page-itens-sem-giro :is(p,small,label,.nt-muted,.nt-kpi>span),
+html.os-ios[data-theme] #page-comparativo-mensal :is(p,small,label,.month-filter-summary,.month-page-filters__head small,.month-compare-metric>span,.month-compare-metric>small){
+  color:var(--readable-muted)!important;
+  opacity:1!important;
+}
+html.os-ios[data-theme] :is(#page-itens-sem-giro,#page-comparativo-mensal) :is(input,select,textarea,.nt-chip,.month-local-filter){
+  color:var(--readable-field-text)!important;
+  background:var(--readable-field-bg)!important;
+}
+html.os-ios[data-theme] #page-itens-sem-giro .nt-chip:has(input:checked){
+  color:var(--visual-accent-text,#fff)!important;
+  background:var(--visual-accent,var(--active-accent,#4777ff))!important;
+}
+html.os-ios[data-theme] #page-itens-sem-giro .nt-table :is(th,td),
+html.os-ios[data-theme] #page-comparativo-mensal :is(.month-compare-table,.month-target-table) :is(th,td){
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+}
+
+html.os-ios[data-theme] #page-comparativo-mensal :is(.month-status--increase,.month-status--decrease,.month-delta--up,.month-delta--down,.month-consideration--up h3,.month-consideration--down h3){color:var(--readable-strong)!important}
