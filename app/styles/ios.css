@@ -987,9 +987,59 @@ html.os-ios.viewport-tablet main.main-content {
 }
 
 /* MOVIMENTO / ACESSIBILIDADE ============================== */
+/*
+ * No Safari/iOS a animação aplicada diretamente ao <dialog> pode ser ignorada.
+ * O shell interno recebe a rotação para garantir o mesmo efeito dos demais
+ * dispositivos, enquanto o backdrop ganha desfoque progressivo.
+ */
 @media (prefers-reduced-motion: no-preference) {
+  html.os-ios .item-modal[open] {
+    perspective: 1400px;
+    animation: ios-modal-frame-in 1050ms var(--ios-ease) both !important;
+  }
+
+  html.os-ios .item-modal[open] > .modal-shell {
+    transform-origin: center;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    animation: ios-modal-spin-in 1050ms var(--ios-ease) both !important;
+    will-change: transform;
+  }
+
+  html.os-ios .item-modal[open]::backdrop {
+    animation: ios-modal-backdrop-in 480ms ease-out both !important;
+  }
+
   html.os-ios .page-panel:not(.is-hidden) {
     animation: ios-panel-in 420ms var(--ios-ease) both;
+  }
+}
+
+@keyframes ios-modal-frame-in {
+  from { opacity: 0; }
+  58%, to { opacity: 1; }
+}
+
+@keyframes ios-modal-spin-in {
+  0% {
+    transform: perspective(1400px) translateY(22px) rotateY(-360deg) scale(.82);
+  }
+  100% {
+    transform: perspective(1400px) translateY(0) rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes ios-modal-backdrop-in {
+  from {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0) saturate(100%);
+    -webkit-backdrop-filter: blur(0) saturate(100%);
+  }
+  to {
+    background: rgba(0, 0, 0, .30);
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
   }
 }
 
