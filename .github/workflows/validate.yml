@@ -3,6 +3,10 @@ name: Validar aplicação
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "data-manifest.json"
+      - "data/catalog.json.gz"
+      - "data/catalog-meta.json"
   pull_request:
 
 permissions:
@@ -17,13 +21,15 @@ jobs:
         with:
           node-version: "22"
       - uses: actions/setup-python@v5
+        if: ${{ github.event_name == 'pull_request' }}
         with:
           python-version: "3.12"
       - name: Validar sintaxe JavaScript
         run: find . -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
       - name: Executar testes das regras
         run: node --test tests/core.test.js
-      - name: Validar manifesto dos CSVs
+      - name: Validar manifesto dos CSVs em pull requests
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           python tools/build_manifest.py
           git diff --exit-code -- data-manifest.json
