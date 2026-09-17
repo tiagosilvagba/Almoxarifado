@@ -4462,3 +4462,36 @@ html[data-theme] #page-comparativo-mensal :is(.month-status--increase,.month-sta
 }
 html[data-theme] #page-comparativo-mensal .month-status--increase{background:color-mix(in srgb,#169b62 20%,var(--readable-table-bg))!important}
 html[data-theme] #page-comparativo-mensal .month-status--decrease{background:color-mix(in srgb,#d64545 20%,var(--readable-table-bg))!important}
+
+
+/* =========================================================
+   Android leve — versão 9.1
+   Mantém transições e efeitos; evita pintura e trabalho fora da área visível.
+   ========================================================= */
+html.os-android,
+html.os-android body{
+  background-attachment:scroll!important;
+}
+html.os-android :is(.app-nav__tab,button,[role="button"],a,input,select){
+  touch-action:manipulation;
+}
+html.os-android :is(.app-nav,.table-wrap,.month-compare-table-wrap,.month-target-table-wrap,.nt-table-wrap){
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-inline:contain;
+}
+html.os-android [data-page-panel].is-hidden{
+  content-visibility:hidden;
+  contain:strict;
+}
+html.os-android [data-page-panel]:not(.is-hidden) :is(
+  .nt-kpi,.nt-panel,.month-compare-metric,.month-consideration,
+  .month-stock-inclusions,.month-target-block,.month-compared-meta-kpi,
+  .month-compared-meta-status article
+){
+  content-visibility:auto;
+  contain:layout paint style;
+  contain-intrinsic-size:auto 220px;
+}
+html.os-android :is(.cards-grid,.report-grid,.need-grid,.month-compare-metrics,.month-considerations){
+  contain:layout style;
+}

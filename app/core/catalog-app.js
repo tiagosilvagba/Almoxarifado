@@ -1087,6 +1087,11 @@ function isMobilePerformanceMode() {
     || window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
 }
 
+function isAndroidPerformanceMode() {
+  return document.documentElement.classList.contains("os-android")
+    || /Android/i.test(navigator.userAgent || "");
+}
+
 function cancelMobilePageWarmup() {
   if (state.mobileWarmupHandle == null) return;
   const pending = state.mobileWarmupHandle;
@@ -1097,7 +1102,9 @@ function cancelMobilePageWarmup() {
 
 function scheduleMobilePageWarmup() {
   cancelMobilePageWarmup();
-  if (!isMobilePerformanceMode() || !state.items.length || document.hidden) return;
+  // No Android, renderizar abas invisíveis em segundo plano disputa memória e CPU
+  // com a aba ativa. Cada módulo continua sendo renderizado normalmente ao abrir.
+  if (!isMobilePerformanceMode() || isAndroidPerformanceMode() || !state.items.length || document.hidden) return;
 
   const activePage = pageFromHash();
   const queue = FILTERED_PAGE_IDS.filter((page) =>
@@ -1163,7 +1170,7 @@ function navigateToPage(page, updateHash) {
 
   document.title = `${translateUiText(pageTitle(validPage))} · ${translateUiText("Gestão de Almoxarifado")}`;
   if (state.items.length && !ui.catalogContent.classList.contains("is-hidden")) scheduleFilteredPage(validPage);
-  window.setTimeout(scheduleMobilePageWarmup, 160);
+  if (!isAndroidPerformanceMode()) window.setTimeout(scheduleMobilePageWarmup, 160);
 }
 
 function handlePageTabKeydown(event) {
@@ -1432,7 +1439,7 @@ function scheduleFilteredPage(page, force = false) {
     }
     renderFilteredPage(page, force);
     panel?.removeAttribute("aria-busy");
-    if (isMobilePerformanceMode()) window.setTimeout(scheduleMobilePageWarmup, 120);
+    if (isMobilePerformanceMode() && !isAndroidPerformanceMode()) window.setTimeout(scheduleMobilePageWarmup, 120);
   }));
 }
 

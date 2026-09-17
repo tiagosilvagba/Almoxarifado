@@ -1,12 +1,12 @@
 "use strict";
 
-/** Bootstrap 9.0: corrige contraste das abas dinâmicas e organiza o menu. */
-const BOOTSTRAP_VERSION = "9.0";
+/** Bootstrap 9.1: otimiza a navegação no Android sem remover efeitos visuais. */
+const BOOTSTRAP_VERSION = "9.1";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=9.0",
+  base: "./app/layers/features.js?v=9.1",
   responsive: "./app/modules/responsive-layout.js?v=9.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
