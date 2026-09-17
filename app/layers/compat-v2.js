@@ -1,9 +1,9 @@
 "use strict";
 
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
-const ALMOX_BASE = "./app/core/catalog-app.js?v=7.6";
+const ALMOX_BASE = "./app/core/catalog-app.js?v=7.7";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
-const CURRENT_VERSION_LABEL = "Versão 7.6";
+const CURRENT_VERSION_LABEL = "Versão 7.7";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],
@@ -154,7 +154,7 @@ function installZeroWithoutScStockFilter() {
   if (!select.querySelector('option[value="zero-no-sc"]')) {
     const option = document.createElement("option");
     option.value = "zero-no-sc";
-    option.textContent = "Itens zerados sem cobertura";
+    option.textContent = "Itens zerados sem cobertura total";
     const zeroOption = select.querySelector('option[value="zero"]');
     if (zeroOption) zeroOption.insertAdjacentElement("afterend", option);
     else select.appendChild(option);
@@ -172,20 +172,17 @@ function installZeroWithoutScStockFilter() {
     for (const item of state.items || []) for (const position of item.positions || []) ownerByPosition.set(position, item);
   }
 
-  function zeroPositionHasNoPurchaseCoverage(position) {
+  function zeroPositionHasOutstandingPurchaseNeed(position) {
     refreshPositionOwners();
     const item = ownerByPosition.get(position);
     if (!item) return false;
     const need = (state.purchaseNeeds || []).find((entry) => entry.item === item && entry.position === position);
-    if (!need || !need.rupture || !(need.netSuggested > 0)) return false;
-    return !(need.coveredQuantity > 0)
-      && !(need.openOfBalance > 0)
-      && !(need.pendingScQuantity > 0);
+    return Boolean(need?.rupture && need.netSuggested > 0);
   }
 
   positionMatchesStatus = function patchedPositionMatchesStatus(position, status) {
     if (status !== "zero-no-sc") return originalPositionMatchesStatus(position, status);
-    return originalPositionMatchesStatus(position, "zero") && zeroPositionHasNoPurchaseCoverage(position);
+    return originalPositionMatchesStatus(position, "zero") && zeroPositionHasOutstandingPurchaseNeed(position);
   };
   positionMatchesStatus.__zeroWithoutScPatched = true;
 }
@@ -327,7 +324,7 @@ function installZeroWithoutScMetric() {
   const card = document.createElement("button");
   card.className = "metric metric--red metric--zero-without-sc";
   card.type = "button";
-  card.innerHTML = '<span class="metric__label">Itens zerados sem cobertura</span><strong id="metricZeroWithoutSc">—</strong><small>rupturas sem cobertura efetiva por OF ou SC</small>';
+  card.innerHTML = '<span class="metric__label">Itens zerados sem cobertura total</span><strong id="metricZeroWithoutSc">—</strong><small>rupturas com compra líquida após cobertura por OF ou SC</small>';
   card.addEventListener("click", () => {
     if (typeof setFilterValues === "function" && ui?.stockStatusFilter) {
       setFilterValues(ui.stockStatusFilter, ["zero-no-sc"]);
