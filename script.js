@@ -15,6 +15,7 @@ const MODULES = Object.freeze({
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=7.3",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=7.0",
+  imageViewer: "./app/modules/image-viewer.js?v=8.0",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
   comparison: [
@@ -99,6 +100,7 @@ function exposeAppState(attempt = 0) {
     [MODULES.noTurn, "itens sem giro"],
     [MODULES.followUp, "follow up"],
     [MODULES.purchaseLeadTime, "lead time de reposição"],
+    [MODULES.imageViewer, "visualizador de fotos"],
   ]) {
     await optional(src, name);
     await yieldToBrowser();
