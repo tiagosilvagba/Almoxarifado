@@ -1,13 +1,13 @@
 "use strict";
 
-/** Bootstrap 7.9: todos os componentes são servidos pelo próprio projeto. */
-const BOOTSTRAP_VERSION = "7.9";
+/** Bootstrap 8.0: inclui experiência visual exclusiva para iOS. */
+const BOOTSTRAP_VERSION = "8.0";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
   base: "./app/layers/features.js?v=7.9",
-  responsive: "./app/modules/responsive-layout.js?v=7.0",
+  responsive: "./app/modules/responsive-layout.js?v=8.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
   area: "./app/modules/area-filter-active.js?v=7.9",
