@@ -17,6 +17,27 @@
     document.head.appendChild(link);
   }
 
+  function ensureIosVisualStyles(os) {
+    const existing = document.getElementById("iosProjectStyles");
+    if (os === "ios") {
+      if (!existing) {
+        const link = document.createElement("link");
+        link.id = "iosProjectStyles";
+        link.rel = "stylesheet";
+        link.href = "./app/styles/ios.css?v=8.0";
+        document.head.appendChild(link);
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) {
+      if (!themeColor.dataset.defaultColor) themeColor.dataset.defaultColor = themeColor.content || "#123a63";
+      themeColor.content = os === "ios" ? "#f5f5f7" : themeColor.dataset.defaultColor;
+    }
+  }
+
   function detectOS() {
     const ua = navigator.userAgent || "";
     const platform = navigator.userAgentData?.platform || navigator.platform || "";
@@ -39,6 +60,8 @@
     const fine = matchMedia("(pointer:fine)").matches;
     const touch = coarse || navigator.maxTouchPoints > 0;
     const os = detectOS();
+
+    ensureIosVisualStyles(os);
 
     let mode;
     if (width <= 600) mode = "mobile";
