@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-17T17:52:21.982Z",
+  "generatedAt": "2026-09-17T20:37:51.129Z",
   "items": 19991,
   "saldoRows": 10191,
   "comprasRows": 84788,
@@ -11,5 +11,5 @@
   ],
   "consumptionRows": 19149,
   "uncompressedBytes": 200098810,
-  "compressedBytes": 9430429
+  "compressedBytes": 9430428
 }
