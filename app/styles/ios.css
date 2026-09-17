@@ -986,6 +986,131 @@ html.os-ios.viewport-tablet main.main-content {
   padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
 }
 
+
+/* =========================================================
+   Ponte de temas para o visual iOS
+   Mantém a linguagem Apple e troca somente a paleta cromática.
+   ========================================================= */
+html.os-ios[data-theme="aurora"]{--ios-blue:#4f46e5;--ios-blue-hover:#3730a3;--ios-blue-soft:rgba(79,70,229,.13);--ios-bg:#eef1ff;--ios-surface-solid:#fbfcff;--ios-surface-soft:#f2f4ff;--ios-fill:#e9edfb;--ios-fill-strong:#dce3f5;--ios-text:#17213d;--ios-muted:#65718b;--ios-separator:rgba(49,68,130,.14);--ios-chrome:#172554}
+html.os-ios[data-theme="polar"]{--ios-blue:#0788cf;--ios-blue-hover:#0068b5;--ios-blue-soft:rgba(22,151,220,.13);--ios-bg:#edf7fc;--ios-surface-solid:#fbfeff;--ios-surface-soft:#f2f9fc;--ios-fill:#e5f1f7;--ios-fill-strong:#d4e6ef;--ios-text:#102b40;--ios-muted:#58758b;--ios-separator:rgba(0,63,134,.13);--ios-chrome:#002b62}
+html.os-ios[data-theme="rubi"]{--ios-blue:#bd1420;--ios-blue-hover:#930d17;--ios-blue-soft:rgba(189,20,32,.12);--ios-bg:#fbf5e8;--ios-surface-solid:#fffdf7;--ios-surface-soft:#fbf7eb;--ios-fill:#f4edda;--ios-fill-strong:#e8dcc0;--ios-text:#2e210d;--ios-muted:#71664f;--ios-separator:rgba(114,8,15,.14);--ios-chrome:#72080f}
+html.os-ios[data-theme="industrial"]{--ios-blue:#b06b18;--ios-blue-hover:#89510f;--ios-blue-soft:rgba(176,107,24,.13);--ios-bg:#f3f1ec;--ios-surface-solid:#fbfaf7;--ios-surface-soft:#f5f3ee;--ios-fill:#ebe7df;--ios-fill-strong:#ddd6c9;--ios-text:#302a22;--ios-muted:#746b5f;--ios-separator:rgba(70,58,42,.14);--ios-chrome:#39342d}
+html.os-ios[data-theme="graphite"]{--ios-blue:#337da8;--ios-blue-hover:#286787;--ios-blue-soft:rgba(51,125,168,.13);--ios-bg:#eef1f3;--ios-surface-solid:#fbfcfc;--ios-surface-soft:#f4f6f7;--ios-fill:#e8ecef;--ios-fill-strong:#d8dee2;--ios-text:#1d252b;--ios-muted:#65717a;--ios-separator:rgba(29,37,45,.13);--ios-chrome:#1d252d}
+html.os-ios[data-theme="operations"]{--ios-blue:#16805e;--ios-blue-hover:#0d684b;--ios-blue-soft:rgba(22,128,94,.13);--ios-bg:#edf7f3;--ios-surface-solid:#fbfefd;--ios-surface-soft:#f2f9f6;--ios-fill:#e3f0eb;--ios-fill-strong:#d4e2dd;--ios-text:#17352c;--ios-muted:#5e776f;--ios-separator:rgba(13,67,51,.13);--ios-chrome:#0d4333}
+html.os-ios[data-theme="logistics"]{--ios-blue:#b56b09;--ios-blue-hover:#89520a;--ios-blue-soft:rgba(181,107,9,.13);--ios-bg:#faf3e8;--ios-surface-solid:#fffdf9;--ios-surface-soft:#faf6ef;--ios-fill:#f1e8dc;--ios-fill-strong:#e4dacd;--ios-text:#352819;--ios-muted:#766955;--ios-separator:rgba(85,48,8,.13);--ios-chrome:#553008}
+html.os-ios[data-theme="corporate"]{--ios-blue:#6b4bb0;--ios-blue-hover:#54378f;--ios-blue-soft:rgba(107,75,176,.13);--ios-bg:#f4f0fa;--ios-surface-solid:#fdfcff;--ios-surface-soft:#f7f4fb;--ios-fill:#ece7f2;--ios-fill-strong:#dfdae7;--ios-text:#2b223b;--ios-muted:#70677e;--ios-separator:rgba(48,32,90,.13);--ios-chrome:#30205a}
+html.os-ios[data-theme="ocean"]{--ios-blue:#0789a3;--ios-blue-hover:#066b7f;--ios-blue-soft:rgba(7,137,163,.13);--ios-bg:#edf8fa;--ios-surface-solid:#fbfeff;--ios-surface-soft:#f1f9fa;--ios-fill:#e4f0f2;--ios-fill-strong:#d6e3e6;--ios-text:#17353b;--ios-muted:#5e7a80;--ios-separator:rgba(7,68,81,.13);--ios-chrome:#074451}
+html.os-ios[data-theme="neutral"]{--ios-blue:#356b94;--ios-blue-hover:#285574;--ios-blue-soft:rgba(53,107,148,.12);--ios-bg:#f4f5f6;--ios-surface-solid:#fff;--ios-surface-soft:#f8f9fa;--ios-fill:#eceff1;--ios-fill-strong:#dce1e4;--ios-text:#252a2f;--ios-muted:#6b747c;--ios-separator:rgba(52,59,67,.12);--ios-chrome:#343b43}
+html.os-ios[data-theme="contrast"]{--ios-blue:#005fcc;--ios-blue-hover:#004899;--ios-blue-soft:rgba(0,95,204,.13);--ios-bg:#fff;--ios-surface-solid:#fff;--ios-surface-soft:#f7f7f7;--ios-fill:#ededed;--ios-fill-strong:#d7d7d7;--ios-text:#000;--ios-muted:#333;--ios-separator:rgba(0,0,0,.28);--ios-chrome:#000}
+html.os-ios[data-theme="clean-light-2"]{--ios-blue:#2563eb;--ios-blue-hover:#1d4ed8;--ios-blue-soft:rgba(37,99,235,.12);--ios-bg:#eef5ff;--ios-surface-solid:#fff;--ios-surface-soft:#f7faff;--ios-fill:#eef4fb;--ios-fill-strong:#d9e4f1;--ios-text:#10284b;--ios-muted:#64748b;--ios-separator:rgba(21,70,160,.13);--ios-chrome:#1546a0}
+html.os-ios[data-theme="areia-industrial"]{--ios-blue:#9f752f;--ios-blue-hover:#7f5d25;--ios-blue-soft:rgba(159,117,47,.13);--ios-bg:#eee2ca;--ios-surface-solid:#fff9ec;--ios-surface-soft:#faf3e4;--ios-fill:#f0e5cf;--ios-fill-strong:#ddccaa;--ios-text:#3d321f;--ios-muted:#7e6f58;--ios-separator:rgba(89,67,38,.16);--ios-chrome:#594326}
+
+/* Tema T conserva cartões claros no estilo Apple e assume o chrome tecnológico. */
+html.os-ios[data-theme="theme-t"]{--ios-blue:#007fb8;--ios-blue-hover:#00658f;--ios-blue-soft:rgba(36,212,255,.14);--ios-bg:#06111b;--ios-surface-solid:#f8fcff;--ios-surface-soft:#edf5f9;--ios-fill:#e2edf3;--ios-fill-strong:#ccdce5;--ios-text:#0d2030;--ios-muted:#617789;--ios-separator:rgba(36,120,160,.19);--ios-chrome:#030812}
+
+/* Temas escuros reaproveitam as próprias variáveis cromáticas já cadastradas. */
+html.os-ios:is([data-theme="azul-corporativo"],[data-theme="verde-industrial-2"],[data-theme="amber-tech"],[data-theme="vermelho-impacto"],[data-theme="ciano-clean"],[data-theme="rosa-premium"],[data-theme="night-minimal"],[data-theme="galaxia"],[data-theme="palmeiras"]){
+  color-scheme:dark;
+  --ios-blue:var(--theme-accent);
+  --ios-blue-hover:var(--theme-accent-2);
+  --ios-blue-soft:var(--theme-accent-soft);
+  --ios-bg:var(--theme-bg);
+  --ios-surface-solid:var(--theme-surface);
+  --ios-surface-soft:var(--theme-surface-2);
+  --ios-fill:var(--theme-input);
+  --ios-fill-strong:var(--theme-surface-2);
+  --ios-text:var(--theme-text);
+  --ios-muted:var(--theme-muted);
+  --ios-separator:var(--theme-border);
+  --ios-chrome:var(--theme-topbar);
+}
+html.os-ios[data-theme="logistica-neon"]{color-scheme:dark;--ios-blue:#b160ff;--ios-blue-hover:#8b46ff;--ios-blue-soft:rgba(177,96,255,.18);--ios-bg:#03040b;--ios-surface-solid:#0b1026;--ios-surface-soft:#0c1129;--ios-fill:#151b3f;--ios-fill-strong:#202752;--ios-text:#f6f4ff;--ios-muted:#a8add0;--ios-separator:#202752;--ios-chrome:#07091a}
+
+/* Aplicação da paleta sem alterar geometria, densidade ou tipografia Apple. */
+html.os-ios[data-theme],
+html.os-ios[data-theme] body{
+  color:var(--ios-text)!important;
+  background:
+    radial-gradient(circle at 88% 3%,color-mix(in srgb,var(--ios-blue) 18%,transparent),transparent 31rem),
+    var(--ios-bg)!important;
+}
+html.os-ios[data-theme]{
+  --active-accent:var(--ios-blue);
+  --focus-color:color-mix(in srgb,var(--ios-blue) 28%,transparent);
+  --filter-count-bg:var(--ios-blue);
+  --blue-600:var(--ios-blue);
+  --blue-500:var(--ios-blue-hover);
+  --blue-100:var(--ios-blue-soft);
+  --text:var(--ios-text);
+  --muted:var(--ios-muted);
+  --surface:color-mix(in srgb,var(--ios-surface-solid) 92%,transparent);
+  --steel-50:var(--ios-surface-soft);
+  --steel-100:var(--ios-fill);
+  --steel-200:var(--ios-fill-strong);
+  --steel-500:var(--ios-muted);
+  --steel-700:var(--ios-text);
+  --app-chrome-background:color-mix(in srgb,var(--ios-chrome) 90%,transparent);
+  --app-chrome-border:color-mix(in srgb,var(--ios-text) 13%,transparent);
+  --app-chrome-text:#fff;
+}
+html.os-ios[data-theme] :is(.topbar,.app-nav-wrap){
+  color:#fff!important;
+  background:color-mix(in srgb,var(--ios-chrome) 88%,transparent)!important;
+  border-color:color-mix(in srgb,#fff 15%,transparent)!important;
+}
+html.os-ios[data-theme] :is(.topbar,.app-nav-wrap) :is(h1,h2,h3,p,span,strong,small,label,.app-nav__tab,.app-nav__label,.app-nav__icon){color:rgba(255,255,255,.78)!important}
+html.os-ios[data-theme] .topbar .brand h1,
+html.os-ios[data-theme] .app-nav__tab.is-active{color:#fff!important}
+html.os-ios[data-theme] .app-nav__tab.is-active{background:color-mix(in srgb,var(--ios-blue) 30%,transparent)!important}
+html.os-ios[data-theme] :is(.version-badge,.base-update-badge){color:rgba(255,255,255,.76)!important;background:rgba(255,255,255,.10)!important}
+html.os-ios[data-theme] :is(
+  .global-filter-bar,.filter-panel,.loading-panel,.analytics-card,.item-card,.report-card,
+  .need-summary article,.summary-cards article,.branch-balance-section,.month-compare-controls,
+  .month-page-filters,.month-compare-metric,.month-consideration,.of-trend-card,
+  .instruction-section,.instructions-index,.construction-state
+){
+  color:var(--ios-text)!important;
+  background:color-mix(in srgb,var(--ios-surface-solid) 88%,transparent)!important;
+  border-color:var(--ios-separator)!important;
+}
+html.os-ios[data-theme] :is(.item-modal,.item-modal .modal-shell,.item-modal .modal-content){
+  color:var(--ios-text)!important;
+  background:color-mix(in srgb,var(--ios-surface-solid) 96%,transparent)!important;
+}
+html.os-ios[data-theme] :is(.item-modal .modal-header,.modal-header--purchase,.modal-header--pending,.item-modal .modal-badges){
+  color:var(--ios-text)!important;
+  background:color-mix(in srgb,var(--ios-surface-solid) 92%,transparent)!important;
+  border-color:var(--ios-separator)!important;
+}
+html.os-ios[data-theme] .item-modal :is(.modal-header h2,.modal-header strong){color:var(--ios-text)!important}
+html.os-ios[data-theme] .item-modal :is(.modal-header p,.modal-code){color:var(--ios-muted)!important}
+html.os-ios[data-theme] :is(.gallery__main,.gallery__thumb,.excel-filter__menu,.data-table-wrap,.table-responsive){
+  color:var(--ios-text)!important;
+  background:var(--ios-surface-solid)!important;
+  border-color:var(--ios-separator)!important;
+}
+html.os-ios[data-theme] :is(input,select,textarea,.excel-filter__trigger,.excel-filter__search){
+  color:var(--ios-text)!important;
+  background:var(--ios-fill)!important;
+  border-color:var(--ios-separator)!important;
+}
+html.os-ios[data-theme] :is(input,textarea)::placeholder{color:var(--ios-muted)!important}
+html.os-ios[data-theme] :is(.data-table,.month-compare-table) th{
+  color:var(--ios-muted)!important;
+  background:var(--ios-surface-soft)!important;
+}
+html.os-ios[data-theme] :is(.data-table,.month-compare-table) td{
+  color:var(--ios-text)!important;
+  background:var(--ios-surface-solid)!important;
+  border-color:var(--ios-separator)!important;
+}
+html.os-ios[data-theme] :is(.button--primary,.button--export){
+  color:#fff!important;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--ios-blue) 82%,white),var(--ios-blue))!important;
+}
+html.os-ios[data-theme="amber-tech"] :is(.button--primary,.button--export),
+html.os-ios[data-theme="ciano-clean"] :is(.button--primary,.button--export){color:#111!important}
+
 /* MOVIMENTO / ACESSIBILIDADE ============================== */
 /*
  * No Safari/iOS a animação aplicada diretamente ao <dialog> pode ser ignorada.

@@ -3,7 +3,7 @@
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
 const ALMOX_BASE = "./app/core/catalog-app.js?v=8.3";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
-const CURRENT_VERSION_LABEL = "Versão 8.5";
+const CURRENT_VERSION_LABEL = "Versão 8.6";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],

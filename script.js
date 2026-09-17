@@ -1,12 +1,12 @@
 "use strict";
 
-/** Bootstrap 8.5: desacelera a rotação dos modais e separa quantidades solicitada e entregue. */
-const BOOTSTRAP_VERSION = "8.5";
+/** Bootstrap 8.6: desacelera a rotação dos modais e separa quantidades solicitada e entregue. */
+const BOOTSTRAP_VERSION = "8.6";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=8.5",
+  base: "./app/layers/features.js?v=8.6",
   responsive: "./app/modules/responsive-layout.js?v=8.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
@@ -15,7 +15,7 @@ const MODULES = Object.freeze({
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=7.3",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=7.0",
-  imageViewer: "./app/modules/image-viewer.js?v=8.5",
+  imageViewer: "./app/modules/image-viewer.js?v=8.6",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
   comparison: [
