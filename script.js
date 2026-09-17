@@ -1,12 +1,15 @@
 "use strict";
 
-/** Bootstrap 9.2: aplica contraste estrutural consistente em todas as abas. */
-const BOOTSTRAP_VERSION = "9.2";
+/** Bootstrap 9.3: unifica a versão exibida desde o primeiro quadro da página. */
+const BOOTSTRAP_VERSION = "9.3";
+const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
+window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
+window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=9.2",
+  base: "./app/layers/features.js?v=9.3",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
@@ -59,7 +62,7 @@ async function optional(src, name) {
 
 function setVersion() {
   const badge = document.getElementById("versionBadge");
-  if (badge) badge.textContent = `Versão ${BOOTSTRAP_VERSION}`;
+  if (badge && badge.textContent !== BOOTSTRAP_VERSION_LABEL) badge.textContent = BOOTSTRAP_VERSION_LABEL;
   document.documentElement.dataset.appVersion = BOOTSTRAP_VERSION;
 }
 
