@@ -1,16 +1,16 @@
 "use strict";
 
-/** Bootstrap 7.8: todos os componentes são servidos pelo próprio projeto. */
-const BOOTSTRAP_VERSION = "7.8";
+/** Bootstrap 7.9: todos os componentes são servidos pelo próprio projeto. */
+const BOOTSTRAP_VERSION = "7.9";
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=7.8",
+  base: "./app/layers/features.js?v=7.9",
   responsive: "./app/modules/responsive-layout.js?v=7.0",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
-  area: "./app/modules/area-filter-active.js?v=7.8",
+  area: "./app/modules/area-filter-active.js?v=7.9",
   noTurn: "./app/modules/itens-sem-giro.js?v=7.0",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=7.3",

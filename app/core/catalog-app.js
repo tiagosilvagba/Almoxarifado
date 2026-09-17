@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = "Versão 7.4";
+const APP_VERSION = "Versão 7.9";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -233,12 +233,17 @@ function bindEvents() {
   ui.filterSummary.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-clear-filter]");
     if (!trigger) return;
+    event.preventDefault();
     const id = trigger.dataset.clearFilter;
-    if (id === "positiveBalanceFilter") ui.positiveBalanceFilter.checked = false;
-    else if (ui[id]) {
+    const control = ui[id] || document.getElementById(id);
+    if (!control) return;
+    if (control.type === "checkbox") control.checked = false;
+    else if (control.tagName === "SELECT") {
       const value = trigger.dataset.clearFilterValue;
-      if (value) setFilterValues(ui[id], filterValues(ui[id]).filter((entry) => entry !== value));
-      else setFilterValues(ui[id], []);
+      if (value) setFilterValues(control, filterValues(control).filter((entry) => entry !== value));
+      else setFilterValues(control, []);
+    } else if ("value" in control) {
+      control.value = "";
     }
     handleAutomaticFilter(id);
   });
