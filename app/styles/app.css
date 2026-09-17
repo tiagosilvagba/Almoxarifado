@@ -4495,3 +4495,79 @@ html.os-android [data-page-panel]:not(.is-hidden) :is(
 html.os-android :is(.cards-grid,.report-grid,.need-grid,.month-compare-metrics,.month-considerations){
   contain:layout style;
 }
+
+
+/* =========================================================
+   Contraste estrutural global — versão 9.2
+   Toda superfície recebe um par explícito de fundo e texto.
+   ========================================================= */
+html[data-theme] :is(.page-panel,.tab-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu){
+  --text:var(--readable-strong);
+  --muted:var(--readable-muted);
+  --surface:var(--readable-table-bg);
+  --steel-50:color-mix(in srgb,var(--readable-table-bg) 96%,var(--readable-field-text) 4%);
+  --steel-100:color-mix(in srgb,var(--readable-table-bg) 90%,var(--readable-field-text) 10%);
+  --steel-200:color-mix(in srgb,var(--readable-table-bg) 82%,var(--readable-field-text) 18%);
+  --steel-300:color-mix(in srgb,var(--readable-table-bg) 72%,var(--readable-field-text) 28%);
+  color:var(--readable-body)!important;
+}
+html[data-theme] .page-panel :is(
+  .section-heading,.metric,.analytics-card,.item-card,.report-card,.filter-panel,
+  .global-filter-bar,.need-summary article,.pending-sc-summary article,.summary-cards article,
+  .purchase-summary-cards article,.review-summary article,.process-summary article,
+  .branch-balance-section,.branch-balance-grid article,.purchase-min-max,
+  .review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.process-detail-group,.process-stages article,
+  .storage-address-block,.operational-insights>article,.gallery-panel,
+  .nt-kpi,.nt-panel,.month-compare-controls,.month-page-filters,.month-compare-metric,
+  .month-consideration,.month-stock-inclusions,.month-target-block,.month-compared-meta-visual,
+  .month-compared-meta-kpi,.month-compared-meta-status article,.month-compare-message
+):not(.instruction-note):not(.cavaco-alert-note):not(.cavaco-supplier-note){
+  color:var(--readable-body)!important;
+  background:var(--visual-sheen,linear-gradient(135deg,transparent,transparent)),var(--readable-table-bg)!important;
+  border-color:color-mix(in srgb,var(--readable-field-text) 18%,transparent)!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu)
+  :is(h1,h2,h3,h4,h5,h6,legend,caption,strong,b,dd,.value,.amount,.item-card__title,.report-card__title){
+  color:var(--readable-strong)!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu)
+  :is(p,small,dt,label,.muted,.helper-text,.section-description,.metric__label,.filter-summary,.results__summary){
+  color:var(--readable-muted)!important;
+  opacity:1!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu)
+  :is(input,select,textarea,option,.excel-filter__trigger,.excel-filter__search){
+  color:var(--readable-field-text)!important;
+  background:var(--readable-field-bg)!important;
+  border-color:color-mix(in srgb,var(--readable-field-text) 24%,transparent)!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell) :is(table,.data-table,.month-compare-table,.month-target-table,.nt-table){
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell) :is(table,.data-table,.month-compare-table,.month-target-table,.nt-table) th{
+  color:var(--readable-strong)!important;
+  background:color-mix(in srgb,var(--readable-table-bg) 86%,var(--readable-field-text) 14%)!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell) :is(table,.data-table,.month-compare-table,.month-target-table,.nt-table) td{
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+}
+html[data-theme] :is(.page-panel,.modal-content,.modal-shell) :is(table,.data-table,.month-compare-table,.month-target-table,.nt-table) :is(th,td){
+  border-color:color-mix(in srgb,var(--readable-field-text) 16%,transparent)!important;
+}
+/* Componentes de ação e estado mantêm sua identidade com texto explicitamente contrastante. */
+html[data-theme] :is(.button--primary,.button--export,.app-nav__tab.is-active){color:var(--readable-accent-text)!important}
+html[data-theme] :is(.button--secondary,.button--ghost){color:var(--readable-field-text)!important}
+html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert){
+  --readable-strong:#24170b;
+  --readable-body:#3d2a17;
+  --readable-muted:#6f5335;
+  color:var(--readable-body)!important;
+  background:#fff8e7!important;
+}
+html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert)
+  :is(h1,h2,h3,h4,h5,h6,strong,b,dd,.value,.amount){color:var(--readable-strong)!important}
+html[data-theme] :is(.instruction-note,.cavaco-alert-note,.cavaco-supplier-note,.report-card--need.is-cavaco-alert)
+  :is(p,small,dt,label,.muted,.helper-text){color:var(--readable-muted)!important}
