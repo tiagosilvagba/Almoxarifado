@@ -1253,3 +1253,38 @@ html.os-ios[data-theme] #page-comparativo-mensal :is(.month-compare-table,.month
 }
 
 html.os-ios[data-theme] #page-comparativo-mensal :is(.month-status--increase,.month-status--decrease,.month-delta--up,.month-delta--down,.month-consideration--up h3,.month-consideration--down h3){color:var(--readable-strong)!important}
+
+
+/* Par global fundo/texto no acabamento Apple/iOS — versão 9.2. */
+html.os-ios[data-theme] :is(.page-panel,.tab-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu){
+  --text:var(--readable-strong);
+  --muted:var(--readable-muted);
+  --surface:var(--readable-table-bg);
+  color:var(--readable-body)!important;
+}
+html.os-ios[data-theme] .page-panel :is(
+  .section-heading,.metric,.analytics-card,.item-card,.report-card,.filter-panel,
+  .global-filter-bar,.need-summary article,.pending-sc-summary article,.summary-cards article,
+  .purchase-summary-cards article,.review-summary article,.process-summary article,
+  .branch-balance-section,.branch-balance-grid article,.purchase-min-max,
+  .review-detail-grid>section,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.process-detail-group,.process-stages article,
+  .storage-address-block,.operational-insights>article,.gallery-panel,
+  .nt-kpi,.nt-panel,.month-compare-controls,.month-page-filters,.month-compare-metric,
+  .month-consideration,.month-stock-inclusions,.month-target-block,.month-compared-meta-visual,
+  .month-compared-meta-kpi,.month-compared-meta-status article,.month-compare-message
+):not(.instruction-note):not(.cavaco-alert-note):not(.cavaco-supplier-note){
+  color:var(--readable-body)!important;
+  background:var(--visual-sheen,linear-gradient(135deg,transparent,transparent)),var(--readable-table-bg)!important;
+}
+html.os-ios[data-theme] :is(.page-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu)
+  :is(h1,h2,h3,h4,h5,h6,legend,caption,strong,b,dd,.value,.amount){color:var(--readable-strong)!important}
+html.os-ios[data-theme] :is(.page-panel,.modal-content,.modal-shell,.filter-panel,.excel-filter__menu)
+  :is(p,small,dt,label,.muted,.helper-text,.section-description,.metric__label,.filter-summary,.results__summary){
+  color:var(--readable-muted)!important;
+  opacity:1!important;
+}
+html.os-ios[data-theme] :is(.page-panel,.modal-content,.modal-shell) :is(table,.data-table,.month-compare-table,.month-target-table,.nt-table) :is(th,td){
+  color:var(--readable-body)!important;
+  background:var(--readable-table-bg)!important;
+}
