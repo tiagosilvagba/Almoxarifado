@@ -1237,6 +1237,31 @@ button.chart-bar:hover { background: var(--blue-100); }
   }
 }
 
+/* The desktop top layer can skip transform animations on <dialog>.
+   Animate its content so every modal keeps the full turn on each opening. */
+@media (min-width: 901px) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html:not(.os-ios) .item-modal[open] {
+    animation: modal-desktop-frame-in 1050ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html:not(.os-ios) .item-modal[open] > .modal-shell {
+    transform-origin: center;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    animation: modal-desktop-spin-in 1050ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes modal-desktop-frame-in {
+  from { opacity: 0; }
+  58%, to { opacity: 1; }
+}
+
+@keyframes modal-desktop-spin-in {
+  from { transform: perspective(1400px) translateY(22px) rotateY(-360deg) scale(0.82); }
+  to { transform: perspective(1400px) translateY(0) rotateY(0deg) scale(1); }
+}
+
 @keyframes modal-backdrop-enter {
   from {
     background: rgba(4, 18, 31, 0);
