@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 9.3";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 9.5";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -1132,22 +1132,11 @@ function scheduleMobilePageWarmup() {
   scheduleNext();
 }
 
-function navigateToPage(page, updateHash) {
-  const validPage = [...FILTERED_PAGE_IDS, "instrucoes"].includes(page) ? page : "dashboard";
-  const root = document.documentElement;
-  const previousPage = root.dataset.activePage || "";
-
-  if (previousPage === validPage && (!updateHash || window.location.hash === `#${validPage}`)) {
-    if (state.items.length) scheduleMobilePageWarmup();
-    return;
-  }
-
-  cancelMobilePageWarmup();
-  if (isMobilePerformanceMode()) {
-    root.classList.add("mobile-page-switching");
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => root.classList.remove("mobile-page-switching")));
-  }
-  root.dataset.activePage = validPage;
+function synchronizePageNavigation(validPage) {
+  // Algumas abas são adicionadas após a inicialização (comparativo, sem giro e follow up).
+  // Consultar o DOM aqui impede que uma aba dinâmica permaneça visualmente ativa.
+  ui.pageTabs = [...document.querySelectorAll(".app-nav__tab[data-page]")];
+  ui.pagePanels = [...document.querySelectorAll("[data-page-panel]")];
 
   for (const tab of ui.pageTabs) {
     const active = tab.dataset.page === validPage;
@@ -1162,6 +1151,26 @@ function navigateToPage(page, updateHash) {
     panel.classList.toggle("is-hidden", !active);
     panel.setAttribute("aria-hidden", String(!active));
     panel.inert = !active;
+  }
+}
+
+function navigateToPage(page, updateHash) {
+  const validPage = [...FILTERED_PAGE_IDS, "instrucoes"].includes(page) ? page : "dashboard";
+  const root = document.documentElement;
+  const previousPage = root.dataset.activePage || "";
+
+  root.dataset.activePage = validPage;
+  synchronizePageNavigation(validPage);
+
+  if (previousPage === validPage && (!updateHash || window.location.hash === `#${validPage}`)) {
+    if (state.items.length) scheduleMobilePageWarmup();
+    return;
+  }
+
+  cancelMobilePageWarmup();
+  if (isMobilePerformanceMode()) {
+    root.classList.add("mobile-page-switching");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => root.classList.remove("mobile-page-switching")));
   }
 
   if (updateHash && window.location.hash !== `#${validPage}`) {
