@@ -4942,3 +4942,10 @@ html[data-theme] #page-consumo :is(.consumption-panel,.need-summary article){
   .consumption-top-items button{grid-template-columns:minmax(0,1fr) 64px}
   .consumption-top-items button>strong{grid-column:1/-1;padding-left:34px}
 }
+
+
+/* Escala inicial de desktop — versão 9.8
+   Equivale visualmente ao zoom de 80% sem interferir em celular ou tablet. */
+@media (min-width:1100px){
+  html.viewport-desktop{zoom:.8}
+}
