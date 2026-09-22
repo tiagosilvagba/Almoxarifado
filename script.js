@@ -1,7 +1,7 @@
 "use strict";
 
-/** Bootstrap 9.8: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "9.8";
+/** Bootstrap 9.9: unifica a versão exibida desde o primeiro quadro da página. */
+const BOOTSTRAP_VERSION = "9.9";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;

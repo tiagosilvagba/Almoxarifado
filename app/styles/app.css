@@ -4944,8 +4944,16 @@ html[data-theme] #page-consumo :is(.consumption-panel,.need-summary article){
 }
 
 
-/* Escala inicial de desktop — versão 9.8
-   Equivale visualmente ao zoom de 80% sem interferir em celular ou tablet. */
+/* Escala inicial de desktop — versão 9.9
+   A largura de 125% compensa a escala de 80%, ocupando todo o viewport. */
 @media (min-width:1100px){
-  html.viewport-desktop{zoom:.8}
+  html.viewport-desktop{
+    width:125%;
+    min-height:125vh;
+    zoom:.8;
+    overflow-x:clip;
+  }
+  html.viewport-desktop body,
+  html.viewport-desktop main.main-content,
+  html.viewport-desktop #catalogContent{min-height:125vh}
 }
