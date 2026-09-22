@@ -4844,3 +4844,101 @@ html[data-theme="theme-t"] .modal-tab.is-active{color:#0066cc!important;border-c
   }
   html[data-theme="theme-t"] .page-panel{border-radius:24px;background:#f5f5f7!important;box-shadow:none!important}
 }
+
+
+/* =========================================================
+   Análise de consumo — versão 9.7
+   Usa os mesmos tokens de contraste, superfícies e movimento de cada tema.
+   ========================================================= */
+.consumption-page{display:grid;gap:18px}
+.consumption-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+.consumption-summary article{min-height:118px}
+.consumption-summary article strong{font-variant-numeric:tabular-nums}
+.consumption-analytics{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.75fr);gap:16px}
+.consumption-panel{
+  min-width:0;
+  padding:18px;
+  overflow:hidden;
+  color:var(--readable-body);
+  border:1px solid var(--visual-border);
+  border-radius:var(--visual-radius);
+  background:var(--visual-sheen),var(--readable-table-bg);
+  box-shadow:var(--visual-depth);
+}
+.consumption-panel .table-heading{margin-bottom:14px}
+.consumption-chart-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--readable-muted);font-size:.72rem;font-weight:750}
+.consumption-chart-legend span{display:inline-flex;align-items:center;gap:6px}
+.consumption-chart-legend i{width:10px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--visual-accent) 28%,var(--readable-table-bg))}
+.consumption-chart-legend i.is-considered{background:var(--visual-accent)}
+.consumption-chart-bars{
+  min-height:260px;
+  display:flex;
+  align-items:stretch;
+  gap:clamp(7px,1.3vw,16px);
+  overflow-x:auto;
+  padding:10px 4px 2px;
+  scrollbar-width:thin;
+}
+.consumption-chart-month{min-width:58px;flex:1 0 58px;display:grid;grid-template-rows:210px auto auto;gap:4px;text-align:center;color:var(--readable-body)}
+.consumption-chart-columns{height:210px;display:flex;align-items:flex-end;justify-content:center;gap:4px;border-bottom:1px solid var(--visual-border)}
+.consumption-chart-columns i{width:min(17px,32%);min-height:2px;border-radius:6px 6px 2px 2px;background:color-mix(in srgb,var(--visual-accent) 28%,var(--readable-table-bg));transition:height 360ms cubic-bezier(.22,1,.36,1)}
+.consumption-chart-columns i.is-considered{background:linear-gradient(180deg,color-mix(in srgb,var(--visual-accent) 70%,white),var(--visual-accent))}
+.consumption-chart-month>strong{max-width:76px;overflow:hidden;text-overflow:ellipsis;color:var(--readable-strong);font-size:.68rem;white-space:nowrap}
+.consumption-chart-month>small{color:var(--readable-muted);font-size:.62rem}
+.consumption-top-items{display:grid;gap:8px}
+.consumption-top-items button{
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 90px auto;
+  align-items:center;
+  gap:10px;
+  padding:9px 10px;
+  border:1px solid transparent;
+  border-radius:13px;
+  color:var(--readable-body);
+  background:color-mix(in srgb,var(--readable-table-bg) 94%,var(--visual-accent) 6%);
+  text-align:left;
+  cursor:pointer;
+}
+.consumption-top-items button:hover,.consumption-top-items button:focus-visible{border-color:color-mix(in srgb,var(--visual-accent) 38%,transparent);outline:0}
+.consumption-top-items button>span{min-width:0;display:flex;align-items:center;gap:9px}
+.consumption-top-items button>span>b{width:25px;height:25px;display:grid;place-items:center;flex:0 0 25px;border-radius:50%;color:var(--readable-accent-text);background:var(--visual-accent);font-size:.68rem}
+.consumption-top-items button>span>span{min-width:0}
+.consumption-top-items button strong,.consumption-top-items button small{display:block}
+.consumption-top-items button>span strong{overflow:hidden;color:var(--readable-strong);font-size:.72rem;text-overflow:ellipsis;white-space:nowrap}
+.consumption-top-items button small{margin-top:2px;color:var(--readable-muted);font-size:.61rem}
+.consumption-top-items button>i{height:7px;overflow:hidden;border-radius:999px;background:color-mix(in srgb,var(--readable-field-text) 10%,transparent)}
+.consumption-top-items button>i em{display:block;height:100%;border-radius:inherit;background:var(--visual-accent)}
+.consumption-top-items button>strong{color:var(--readable-strong);font-size:.68rem;white-space:nowrap}
+.consumption-table-wrap{max-height:680px}
+.consumption-table{min-width:1180px}
+.consumption-table tbody tr{cursor:pointer}
+.consumption-table td:first-child{min-width:230px}
+.consumption-table td:nth-child(2){min-width:190px}
+.consumption-table td strong,.consumption-table td small{display:block}
+.consumption-table td small{margin-top:3px;color:var(--readable-muted);font-size:.66rem}
+.consumption-table td:not(:first-child):not(:nth-child(2)){font-variant-numeric:tabular-nums}
+html[data-theme] #page-consumo .section-heading{--visual-accent:var(--blue-600)}
+html[data-theme] #page-consumo :is(.consumption-panel,.need-summary article){
+  border-color:var(--visual-border)!important;
+  background:var(--visual-sheen),var(--readable-table-bg)!important;
+  box-shadow:var(--visual-depth)!important;
+}
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .consumption-panel,.consumption-summary article{transition:transform 240ms cubic-bezier(.22,1,.36,1),box-shadow 240ms ease,border-color 240ms ease}
+  .consumption-summary article:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--visual-accent) 38%,var(--visual-border))!important}
+}
+@media (max-width:1000px){
+  .consumption-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .consumption-analytics{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .consumption-summary{grid-template-columns:1fr}
+  .consumption-summary article{min-height:94px}
+  .consumption-panel{padding:13px}
+  .consumption-chart-bars{min-height:230px}
+  .consumption-chart-month{grid-template-rows:180px auto auto}
+  .consumption-chart-columns{height:180px}
+  .consumption-top-items button{grid-template-columns:minmax(0,1fr) 64px}
+  .consumption-top-items button>strong{grid-column:1/-1;padding-left:34px}
+}

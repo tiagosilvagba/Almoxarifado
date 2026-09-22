@@ -1,7 +1,7 @@
 "use strict";
 
-/** Bootstrap 9.6: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "9.6";
+/** Bootstrap 9.7: unifica a versão exibida desde o primeiro quadro da página. */
+const BOOTSTRAP_VERSION = "9.7";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -9,7 +9,7 @@ const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=9.5",
+  base: "./app/layers/features.js?v=9.7",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",

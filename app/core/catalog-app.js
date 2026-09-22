@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 9.5";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 9.7";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -107,6 +107,8 @@ const state = {
   ofGenerationPeriod: { year: "", month: "", week: "", date: "" },
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
+  visibleConsumptionRows: [],
+  consumptionVisible: 0,
   minMaxReviews: [],
   visibleMinMaxReviews: [],
   minMaxReviewVisible: 0,
@@ -173,6 +175,7 @@ function cacheUi() {
     "ofGenerationCount", "ofGenerationSummary", "ofGenerationGrid", "ofGenerationLoadMore", "ofGenerationVisibleCount", "clearOfGenerationRange", "exportOfGenerationButton", "ofGenerationExportFormat",
     "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter", "clearOfGenerationPeriod", "ofGenerationChartGranularity", "ofGenerationChartBuckets", "ofGenerationTrendChart", "ofGenerationTrendSubtitle",
     "ofGenerationModal", "ofGenerationModalClose", "ofGenerationModalCode", "ofGenerationModalTitle", "ofGenerationModalSubtitle", "ofGenerationModalTimeline", "ofGenerationModalSummary", "ofGenerationModalDetails", "ofGenerationModalOpenItem",
+    "consumptionPageWaiting", "consumptionPageAvailable", "consumptionItemCount", "consumptionPositionCount", "consumptionHistoricalTotal", "consumptionAdjustedAverage", "consumptionEstimatedValue", "consumptionOutlierCount", "consumptionTrendChart", "consumptionTopItems", "consumptionResultCount", "consumptionTableWrap", "consumptionLoadMore", "consumptionVisibleCount", "exportConsumptionButton", "consumptionExportFormat",
     "consumptionWaiting", "consumptionAvailable", "reviewItemCount", "reviewIdealCount",
     "reviewAdjustCount", "reviewInsufficientCount", "reviewAverageLeadTime", "reviewIncreaseValue", "reviewReductionValue", "reviewNetImpactValue", "reviewNetImpactCard", "reviewResultCount", "reviewCardsGrid", "reviewLoadMore", "reviewVisibleCount", "exportMinMaxReviewButton", "minMaxExportFormat",
     "reviewModal", "reviewModalClose", "reviewModalCode", "reviewModalTitle", "reviewModalSubtitle",
@@ -274,6 +277,7 @@ function bindEvents() {
   ui.exportPendingScButton.addEventListener("click", () => exportPendingSc(ui.pendingScExportFormat.value));
   ui.exportProcurementButton.addEventListener("click", () => exportProcurement(ui.procurementExportFormat.value));
   ui.exportOfGenerationButton.addEventListener("click", () => exportOfGeneration(ui.ofGenerationExportFormat.value));
+  ui.exportConsumptionButton.addEventListener("click", () => exportConsumption(ui.consumptionExportFormat.value));
   ui.exportMinMaxReviewButton.addEventListener("click", () => exportMinMaxReviews(ui.minMaxExportFormat.value));
 
   ui.purchaseModalClose.addEventListener("click", closePurchaseNeedModal);
@@ -369,6 +373,20 @@ function bindEvents() {
     const code = state.activeOfGeneration?.item.code;
     closeOfGenerationModal();
     if (code) window.setTimeout(() => openItem(code), 0);
+  });
+  ui.consumptionLoadMore.addEventListener("click", renderNextConsumptionBatch);
+  for (const host of [ui.consumptionTableWrap, ui.consumptionTopItems]) {
+    host.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-consumption-item]");
+      if (trigger) openItem(trigger.dataset.consumptionItem);
+    });
+  }
+  ui.consumptionTableWrap.addEventListener("keydown", (event) => {
+    if (!["Enter", " "].includes(event.key)) return;
+    const trigger = event.target.closest("[data-consumption-item]");
+    if (!trigger) return;
+    event.preventDefault();
+    openItem(trigger.dataset.consumptionItem);
   });
   ui.reviewCardsGrid.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-review-key]");
@@ -673,6 +691,41 @@ const PT_EN = Object.freeze({
   "Recebimentos localizados": "Receipts found",
   "Carregar mais processos": "Load more processes",
   "Parametrização": "Parameter settings",
+  "Consumo": "Consumption",
+  "Movimentação de materiais": "Material movement",
+  "Análise de consumo": "Consumption analysis",
+  "Consumo mensal por item e posição, com exclusão das anomalias pela mesma regra usada na revisão de mínimo e máximo.": "Monthly consumption by item and position, excluding anomalies with the same rule used in the min. and max. review.",
+  "Base de consumo não disponível": "Consumption dataset unavailable",
+  "Itens com consumo": "Items with consumption",
+  "códigos distintos filtrados": "distinct filtered codes",
+  "Posições analisadas": "Positions analyzed",
+  "filial e local de estoque": "branch and stock location",
+  "Consumo total histórico": "Total historical consumption",
+  "soma dos movimentos mensais": "sum of monthly movements",
+  "Média mensal ajustada": "Adjusted monthly average",
+  "meses anormais excluídos": "abnormal months excluded",
+  "Valor mensal estimado": "Estimated monthly value",
+  "média × preço de referência": "average × reference price",
+  "Anomalias excluídas": "Excluded anomalies",
+  "meses fora do padrão": "months outside the pattern",
+  "Evolução mensal": "Monthly trend",
+  "Total bruto e total considerado após a exclusão de anomalias.": "Gross total and considered total after excluding anomalies.",
+  "Maiores consumos médios": "Highest average consumption",
+  "Itens com maior média mensal ajustada nos filtros atuais.": "Items with the highest adjusted monthly average in the current filters.",
+  "Consumo por item e posição": "Consumption by item and position",
+  "Média robusta, histórico, saldo atual, cobertura e valor mensal estimado.": "Robust average, history, current stock, coverage and estimated monthly value.",
+  "Carregar mais consumos": "Load more consumption records",
+  "Cobertura": "Coverage",
+  "Histórico válido": "Valid history",
+  "Consumo histórico": "Historical consumption",
+  "Consumo médio mensal ajustado": "Adjusted average monthly consumption",
+  "Última competência": "Latest period",
+  "Consumo da última competência": "Latest period consumption",
+  "Cobertura em dias": "Coverage in days",
+  "Preço de referência": "Reference price",
+  "Meses analisados": "Months analyzed",
+  "Meses considerados": "Months considered",
+  "Meses anômalos excluídos": "Abnormal months excluded",
   "Área preparada para analisar consumo e apoiar a revisão dos limites de estoque.": "Workspace for consumption analysis and inventory limit review.",
   "Em construção — aguardando CSV": "Under construction — awaiting CSV",
   "Itens analisados": "Items analyzed",
@@ -1074,12 +1127,12 @@ function applyTheme(theme, persist) {
 
 function pageFromHash() {
   const page = window.location.hash.replace(/^#/, "");
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max", "instrucoes"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "instrucoes"].includes(page)
     ? page
     : "dashboard";
 }
 
-const FILTERED_PAGE_IDS = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "revisao-min-max"];
+const FILTERED_PAGE_IDS = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max"];
 
 function isMobilePerformanceMode() {
   return document.documentElement.classList.contains("viewport-mobile")
@@ -1203,6 +1256,7 @@ function pageTitle(page) {
     "sc-pendente-of": "SC pendente de OF",
     "consulta-sc-of": "Consulta SC e OF",
     "tempo-geracao-of": "Tempo de geração de OF",
+    consumo: "Consumo",
     "revisao-min-max": "Revisão de mín. e máx.",
     instrucoes: "Instruções",
   })[page];
@@ -1427,6 +1481,8 @@ function renderFilteredPage(page, force = false) {
     buildProcurementRows();
   } else if (page === "tempo-geracao-of") {
     renderOfGenerationAnalysis();
+  } else if (page === "consumo") {
+    renderConsumptionAnalysis();
   } else if (page === "revisao-min-max") {
     renderConsumptionReview();
   }
@@ -3914,6 +3970,137 @@ function exportOfGeneration(format = "excel") {
     currencyColumns: new Set([17, 21]),
     dateColumns: new Set([4, 5, 22]),
     pdfIdentityColumns: [0, 1, 2],
+  });
+}
+
+function consumptionRowsForCurrentFilters() {
+  const visibleCodes = new Set(state.filteredItems.map((item) => item.code));
+  const branch = filterValues(ui.branchFilter);
+  const location = filterValues(ui.locationFilter);
+  const replenishmentResponsible = filterValues(ui.replenishmentResponsibleFilter);
+  return state.minMaxReviews.filter((review) => {
+    if (!visibleCodes.has(review.item.code)) return false;
+    if (!positionMatchesBranch(review.position, branch)) return false;
+    if (location.length && !location.includes(review.position.locationKey)) return false;
+    if (!positionMatchesReplenishmentResponsible(review.position, replenishmentResponsible)) return false;
+    return review.monthCount > 0;
+  }).map((review) => {
+    const historicalTotal = review.monthlyAnalysis.reduce((sum, entry) => sum + entry.value, 0);
+    const latest = review.monthlyAnalysis[review.monthlyAnalysis.length - 1] || null;
+    const dailyConsumption = review.averageMonthlyConsumption / 30;
+    const coverageDays = dailyConsumption > 0 ? Math.max(0, Number(review.position.quantity) || 0) / dailyConsumption : null;
+    const estimatedMonthlyValue = review.referencePrice > 0 ? review.averageMonthlyConsumption * review.referencePrice : null;
+    return { ...review, historicalTotal, latest, coverageDays, estimatedMonthlyValue };
+  }).sort((left, right) =>
+    right.averageMonthlyConsumption - left.averageMonthlyConsumption
+    || right.historicalTotal - left.historicalTotal
+    || left.item.code.localeCompare(right.item.code, "pt-BR", { numeric: true })
+  );
+}
+
+function renderConsumptionAnalysis() {
+  const consumption = state.consumption || { available: false };
+  ui.consumptionPageWaiting.classList.toggle("is-hidden", consumption.available);
+  ui.consumptionPageAvailable.classList.toggle("is-hidden", !consumption.available);
+  if (!consumption.available) return;
+
+  const rows = consumptionRowsForCurrentFilters();
+  state.visibleConsumptionRows = rows;
+  state.consumptionVisible = 0;
+  const itemCount = new Set(rows.map((row) => row.item.code)).size;
+  const historicalTotal = rows.reduce((sum, row) => sum + row.historicalTotal, 0);
+  const adjustedAverage = rows.reduce((sum, row) => sum + row.averageMonthlyConsumption, 0);
+  const estimatedValueRows = rows.filter((row) => Number.isFinite(row.estimatedMonthlyValue));
+  const estimatedMonthlyValue = estimatedValueRows.reduce((sum, row) => sum + row.estimatedMonthlyValue, 0);
+  const outlierCount = rows.reduce((sum, row) => sum + row.outlierMonthCount, 0);
+
+  ui.consumptionItemCount.textContent = integerFormatter.format(itemCount);
+  ui.consumptionPositionCount.textContent = integerFormatter.format(rows.length);
+  ui.consumptionHistoricalTotal.textContent = numberFormatter.format(historicalTotal);
+  ui.consumptionAdjustedAverage.textContent = numberFormatter.format(adjustedAverage);
+  ui.consumptionEstimatedValue.textContent = estimatedValueRows.length ? currencyFormatter.format(estimatedMonthlyValue) : "Sem preço";
+  ui.consumptionOutlierCount.textContent = integerFormatter.format(outlierCount);
+  ui.consumptionResultCount.textContent = pluralize(rows.length, "posição", "posições");
+
+  renderConsumptionTrend(rows);
+  renderConsumptionTopItems(rows);
+  renderConsumptionTableShell();
+  renderNextConsumptionBatch();
+}
+
+function renderConsumptionTrend(rows) {
+  const months = new Map();
+  for (const row of rows) {
+    for (const entry of row.monthlyAnalysis) {
+      if (!months.has(entry.month)) months.set(entry.month, { month: entry.month, gross: 0, considered: 0, outliers: 0 });
+      const aggregate = months.get(entry.month);
+      aggregate.gross += entry.value;
+      if (entry.isOutlier) aggregate.outliers += 1;
+      else aggregate.considered += entry.value;
+    }
+  }
+  const values = [...months.values()];
+  if (!values.length) {
+    ui.consumptionTrendChart.innerHTML = '<div class="table-empty">Nenhum consumo corresponde aos filtros atuais.</div>';
+    return;
+  }
+  const max = Math.max(...values.flatMap((entry) => [entry.gross, entry.considered]), 1);
+  ui.consumptionTrendChart.innerHTML = `<div class="consumption-chart-legend"><span><i class="is-gross"></i>Total bruto</span><span><i class="is-considered"></i>Total considerado</span></div><div class="consumption-chart-bars">${values.map((entry) => `<div class="consumption-chart-month" title="${escapeHtml(entry.month)} · bruto ${numberFormatter.format(entry.gross)} · considerado ${numberFormatter.format(entry.considered)}"><div class="consumption-chart-columns"><i class="is-gross" style="height:${Math.max(2, entry.gross / max * 100)}%"></i><i class="is-considered" style="height:${Math.max(2, entry.considered / max * 100)}%"></i></div><strong>${escapeHtml(entry.month)}</strong><small>${numberFormatter.format(entry.considered)}</small></div>`).join("")}</div>`;
+}
+
+function renderConsumptionTopItems(rows) {
+  const byItem = new Map();
+  for (const row of rows) {
+    const current = byItem.get(row.item.code) || { code: row.item.code, name: row.item.name, average: 0 };
+    current.average += row.averageMonthlyConsumption;
+    byItem.set(row.item.code, current);
+  }
+  const top = [...byItem.values()].sort((a, b) => b.average - a.average).slice(0, 10);
+  const max = top[0]?.average || 1;
+  ui.consumptionTopItems.innerHTML = top.map((entry, index) => `<button type="button" data-consumption-item="${escapeHtml(entry.code)}"><span><b>${index + 1}</b><span><strong>${escapeHtml(entry.name)}</strong><small>Código ${escapeHtml(entry.code)}</small></span></span><i><em style="width:${Math.max(2, entry.average / max * 100)}%"></em></i><strong>${numberFormatter.format(entry.average)}/mês</strong></button>`).join("") || '<div class="table-empty">Nenhum item com consumo.</div>';
+}
+
+function renderConsumptionTableShell() {
+  if (!state.visibleConsumptionRows.length) {
+    ui.consumptionTableWrap.innerHTML = '<div class="table-empty">Nenhum consumo corresponde aos filtros atuais.</div>';
+    ui.consumptionLoadMore.classList.add("is-hidden");
+    ui.consumptionVisibleCount.textContent = "";
+    return;
+  }
+  ui.consumptionTableWrap.innerHTML = `<table class="data-table consumption-table"><thead><tr><th>Item</th><th>Filial e local</th><th>Média mensal ajustada</th><th>Último mês</th><th>Consumo histórico</th><th>Saldo atual</th><th>Cobertura</th><th>Valor mensal estimado</th><th>Histórico válido</th></tr></thead><tbody id="consumptionTableBody"></tbody></table>`;
+}
+
+function renderNextConsumptionBatch() {
+  const body = document.getElementById("consumptionTableBody");
+  if (!body) return;
+  const start = state.consumptionVisible;
+  const end = Math.min(start + CONFIG.reportBatch, state.visibleConsumptionRows.length);
+  if (start >= end) return;
+  body.insertAdjacentHTML("beforeend", state.visibleConsumptionRows.slice(start, end).map((row) => `<tr tabindex="0" data-consumption-item="${escapeHtml(row.item.code)}"><td><strong>${escapeHtml(row.item.name)}</strong><small>Código ${escapeHtml(row.item.code)}</small></td><td><strong>${escapeHtml(row.position.branchName || row.position.branchCode || "—")}</strong><small>${escapeHtml([row.position.branchCode, row.position.localCode, row.position.localName].filter(Boolean).join(" · "))}</small></td><td><strong>${numberFormatter.format(row.averageMonthlyConsumption)}</strong><small>${row.outlierMonthCount ? `${integerFormatter.format(row.outlierMonthCount)} anomalia(s) excluída(s)` : "sem anomalias"}</small></td><td><strong>${row.latest ? numberFormatter.format(row.latest.value) : "—"}</strong><small>${escapeHtml(row.latest?.month || "sem competência")}</small></td><td>${numberFormatter.format(row.historicalTotal)}</td><td>${numberFormatter.format(row.position.quantity || 0)}</td><td>${row.coverageDays === null ? "—" : `${numberFormatter.format(row.coverageDays)} dias`}</td><td>${row.estimatedMonthlyValue === null ? "Sem preço" : currencyFormatter.format(row.estimatedMonthlyValue)}</td><td>${integerFormatter.format(row.consideredMonthCount)}/${integerFormatter.format(row.monthCount)} meses</td></tr>`).join(""));
+  state.consumptionVisible = end;
+  ui.consumptionVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visibleConsumptionRows.length)} posições`;
+  ui.consumptionLoadMore.classList.toggle("is-hidden", end >= state.visibleConsumptionRows.length);
+}
+
+function exportConsumption(format = "excel") {
+  const rows = state.visibleConsumptionRows.map((row) => [
+    row.item.code, row.item.name, row.position.branchCode, row.position.branchName,
+    row.position.localCode, row.position.localName, row.position.partition, row.position.shelf, row.position.division,
+    row.position.quantity, row.historicalTotal, row.averageMonthlyConsumption,
+    row.latest?.month || "", row.latest?.value ?? null, row.coverageDays,
+    row.referencePrice || null, row.estimatedMonthlyValue,
+    row.monthCount, row.consideredMonthCount, row.outlierMonthCount,
+    row.monthlyAnalysis.map((entry) => `${entry.month}: ${numberFormatter.format(entry.value)}${entry.isOutlier ? " (excluído)" : ""}`).join(" | "),
+    (row.position.replenishmentResponsibles || []).join(", "),
+  ]);
+  exportReport(format, {
+    title: "Análise de consumo",
+    filename: "analise-consumo.xls",
+    headers: ["Código", "Descrição", "Código filial", "Filial", "Código local", "Local de estoque", "Repartição", "Prateleira", "Divisão", "Saldo atual", "Consumo histórico", "Consumo médio mensal ajustado", "Última competência", "Consumo da última competência", "Cobertura em dias", "Preço de referência", "Valor mensal estimado", "Meses analisados", "Meses considerados", "Meses anômalos excluídos", "Consumo por mês", "Responsáveis pela reposição"],
+    rows,
+    numericColumns: new Set([9, 10, 11, 13, 14, 15, 16, 17, 18, 19]),
+    currencyColumns: new Set([15, 16]),
+    pdfIdentityColumns: [0, 1, 3],
   });
 }
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="9.6">
+<html lang="pt-BR" data-app-version="9.7">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,8 +8,8 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
-    <link rel="stylesheet" href="app/styles/app.css?v=9.6">
-    <script src="script.js?v=9.6" defer></script>
+    <link rel="stylesheet" href="app/styles/app.css?v=9.7">
+    <script src="script.js?v=9.7" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -23,7 +23,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 9.6</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 9.7</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -64,6 +64,7 @@
           <a class="app-nav__tab" href="#sc-pendente-of" data-page="sc-pendente-of" role="tab" aria-selected="false" aria-controls="page-sc-pendente-of">SC pendente de OF</a>
           <a class="app-nav__tab" href="#consulta-sc-of" data-page="consulta-sc-of" role="tab" aria-selected="false" aria-controls="page-consulta-sc-of">Consulta SC e OF</a>
           <a class="app-nav__tab" href="#tempo-geracao-of" data-page="tempo-geracao-of" role="tab" aria-selected="false" aria-controls="page-tempo-geracao-of">Tempo de geração de OF</a>
+          <a class="app-nav__tab" href="#consumo" data-page="consumo" role="tab" aria-selected="false" aria-controls="page-consumo">Consumo</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
           <a class="app-nav__tab" href="#instrucoes" data-page="instrucoes" role="tab" aria-selected="false" aria-controls="page-instrucoes">Instruções</a>
         </nav>
@@ -392,6 +393,69 @@
           </div>
         </section>
 
+        <section id="page-consumo" class="page-panel is-hidden" data-page-panel="consumo" aria-labelledby="consumptionTitle">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Movimentação de materiais</span>
+              <h2 id="consumptionTitle">Análise de consumo</h2>
+              <p class="section-description">Consumo mensal por item e posição, com exclusão das anomalias pela mesma regra usada na revisão de mínimo e máximo.</p>
+            </div>
+            <span class="context-label">03 - Consumo.csv</span>
+          </div>
+
+          <div id="consumptionPageWaiting" class="construction-state">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40h32M13 40l3-23h16l3 23M14.5 28h19M18 12h12M24 12V6"></path></svg>
+            <span>Consumo</span>
+            <h3>Base de consumo não disponível</h3>
+            <p>Adicione o arquivo <strong>03 - Consumo.csv</strong> na raiz do repositório.</p>
+          </div>
+
+          <div id="consumptionPageAvailable" class="consumption-page is-hidden">
+            <div class="need-summary consumption-summary">
+              <article><span>Itens com consumo</span><strong id="consumptionItemCount">—</strong><small>códigos distintos filtrados</small></article>
+              <article><span>Posições analisadas</span><strong id="consumptionPositionCount">—</strong><small>filial e local de estoque</small></article>
+              <article><span>Consumo total histórico</span><strong id="consumptionHistoricalTotal">—</strong><small>soma dos movimentos mensais</small></article>
+              <article><span>Média mensal ajustada</span><strong id="consumptionAdjustedAverage">—</strong><small>meses anormais excluídos</small></article>
+              <article><span>Valor mensal estimado</span><strong id="consumptionEstimatedValue">—</strong><small>média × preço de referência</small></article>
+              <article><span>Anomalias excluídas</span><strong id="consumptionOutlierCount">—</strong><small>meses fora do padrão</small></article>
+            </div>
+
+            <div class="consumption-analytics">
+              <section class="consumption-panel">
+                <div class="table-heading">
+                  <div><h3>Evolução mensal</h3><p>Total bruto e total considerado após a exclusão de anomalias.</p></div>
+                </div>
+                <div id="consumptionTrendChart" class="consumption-trend-chart" role="img" aria-label="Evolução mensal do consumo"></div>
+              </section>
+              <section class="consumption-panel">
+                <div class="table-heading">
+                  <div><h3>Maiores consumos médios</h3><p>Itens com maior média mensal ajustada nos filtros atuais.</p></div>
+                </div>
+                <div id="consumptionTopItems" class="consumption-top-items"></div>
+              </section>
+            </div>
+
+            <div class="table-heading report-heading">
+              <div>
+                <h3>Consumo por item e posição</h3>
+                <p>Média robusta, histórico, saldo atual, cobertura e valor mensal estimado.</p>
+              </div>
+              <div class="heading-actions">
+                <span id="consumptionResultCount" class="context-label">—</span>
+                <div class="export-control">
+                  <label><span>Formato</span><select id="consumptionExportFormat" aria-label="Formato da exportação de consumo"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label>
+                  <button id="exportConsumptionButton" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button>
+                </div>
+              </div>
+            </div>
+            <div id="consumptionTableWrap" class="table-wrap consumption-table-wrap" aria-live="polite"></div>
+            <div class="load-more-wrap">
+              <button id="consumptionLoadMore" class="button button--secondary is-hidden" type="button">Carregar mais consumos</button>
+              <span id="consumptionVisibleCount" class="visible-count"></span>
+            </div>
+          </div>
+        </section>
+
         <section id="page-revisao-min-max" class="page-panel is-hidden" data-page-panel="revisao-min-max" aria-labelledby="reviewTitle">
           <div class="section-heading">
             <div>
@@ -464,9 +528,10 @@
               <a href="#instr-sc">7. SC pendente de OF</a>
               <a href="#instr-compras">8. Consulta de compras</a>
               <a href="#instr-tempo-of">9. Tempo de geração de OF</a>
-              <a href="#instr-min-max">10. Revisão de mín. e máx.</a>
-              <a href="#instr-exportacoes">11. Exportações</a>
-              <a href="#instr-regras">12. Regras especiais</a>
+              <a href="#instr-consumo">10. Consumo</a>
+              <a href="#instr-min-max">11. Revisão de mín. e máx.</a>
+              <a href="#instr-exportacoes">12. Exportações</a>
+              <a href="#instr-regras">13. Regras especiais</a>
             </nav>
 
             <div class="instructions-content">
@@ -535,6 +600,11 @@
                 <div><h3>Tempo de geração de OF</h3><p>Mede a eficiência entre a criação da solicitação e a emissão da ordem. Cada combinação SC + OF é contabilizada uma única vez.</p>
                 <div class="instruction-formulas"><div><span>Tempo de geração</span><code>data de emissão da OF − SC - Data Criação</code></div><div><span>Média geral</span><code>Σ dias para geração ÷ quantidade de processos válidos</code></div></div>
                 <ul><li>Faixas: até 7; 8–15; 16–20; 21–25; 26–30; e acima de 30 dias.</li><li>Os segmentadores de ano, mês, semana e data usam sempre a coluna <strong>SC - Data Criação</strong>.</li><li>O gráfico pode ser agrupado em visão anual, mensal, semanal ou diária.</li><li>O valor apresentado em cada ponto é a quantidade de itens dos processos naquele período.</li><li>A seleção da faixa de dias do gráfico é independente da faixa aplicada à lista de cards.</li><li>Datas ausentes, inválidas ou em que a OF seja anterior à SC não entram no indicador.</li></ul></div>
+              </article>
+
+              <article id="instr-consumo" class="instruction-section instruction-section--accent">
+                <span class="instruction-section__number">10</span>
+                <div><h3>Consumo</h3><p>A aba usa o arquivo <strong>03 - Consumo.csv</strong> e respeita todos os filtros globais. A média mensal ajustada exclui meses anormais pela mediana e pelo desvio absoluto mediano (MAD), exatamente como na revisão de mínimo e máximo.</p><p>O valor mensal estimado multiplica a média ajustada pelo preço de referência do estoque ou, quando indisponível, pelo último preço de compra. A cobertura em dias divide o saldo atual pelo consumo diário médio.</p></div>
               </article>
 
               <article id="instr-min-max" class="instruction-section instruction-section--accent">
