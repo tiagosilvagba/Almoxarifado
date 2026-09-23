@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.2";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.3";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -4801,13 +4801,13 @@ function renderGallery(item) {
     : "Até 6 fotos salvas neste aparelho";
   ui.photoUploadButton.disabled = images.filter((image) => !image.fallback).length >= CONFIG.maxImages;
   if (!images.length) {
-    ui.modalGallery.innerHTML = `<div class="gallery__main"><span class="image-placeholder"><span>${packageIcon()}<span>Imagem não cadastrada</span></span></span></div>`;
+    ui.modalGallery.innerHTML = `<div class="gallery__main"><span class="image-placeholder"><span>${packageIcon()}<span>Imagem não cadastrada</span>${webImageSearchAction(item)}</span></span></div>`;
     return;
   }
 
   ui.modalGallery.innerHTML = `
     <div class="gallery__main">
-      <span class="image-placeholder is-hidden"><span>${packageIcon()}<span>Imagem indisponível</span></span></span>
+      <span class="image-placeholder is-hidden"><span>${packageIcon()}<span>Imagem não cadastrada na base</span>${webImageSearchAction(item)}</span></span>
       <img src="${escapeHtml(images[0].url)}" alt="${escapeHtml(item.name)} — foto 1">
     </div>
     <div class="gallery__thumbs"></div>`;
@@ -5062,6 +5062,27 @@ function imagesForItem(item, includeFallbackSet) {
     const name = `${item.code} - ${order}.jpg`;
     return { order: index + 1, name, url: localImageUrl(name), fallback: true };
   });
+}
+
+function webImageSearchQuery(item) {
+  const terms = [
+    item?.name,
+    item?.detailedName,
+    item?.code ? `código ${item.code}` : "",
+    ...(item?.categories || []),
+    ...(item?.units || []).map((unit) => `unidade ${unit}`),
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  const unique = [...new Set(terms.map((value) => value.replace(/\s+/g, " ")))];
+  return [...unique, "peça industrial", "foto do produto"].join(" ").slice(0, 420);
+}
+
+function webImageSearchUrl(item) {
+  return `https://www.google.com/search?tbm=isch&safe=active&q=${encodeURIComponent(webImageSearchQuery(item))}`;
+}
+
+function webImageSearchAction(item) {
+  const query = webImageSearchQuery(item);
+  return `<a class="web-image-search" href="${escapeHtml(webImageSearchUrl(item))}" target="_blank" rel="noopener noreferrer" aria-label="Pesquisar imagens na web para ${escapeHtml(item.name || item.code)}"><span>Pesquisar imagem na web</span><small>${escapeHtml(query)}</small></a>`;
 }
 
 function localImageUrl(name) {
