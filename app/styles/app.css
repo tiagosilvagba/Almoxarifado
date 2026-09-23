@@ -4943,3 +4943,370 @@ html[data-theme] #page-consumo :is(.consumption-panel,.need-summary article){
   .consumption-top-items button>strong{grid-column:1/-1;padding-left:34px}
 }
 
+
+
+/* =========================================================
+   Contrato universal de contraste — versão 10.1
+   Uma única camada final governa texto/fundo em todos os temas,
+   inclusive módulos que injetam estilos depois do carregamento.
+   WCAG AA: pares essenciais validados com contraste >= 4,5:1.
+   ========================================================= */
+html[data-theme]{
+  --a11y-surface:#fff;
+  --a11y-surface-alt:#f3f5f7;
+  --a11y-text:#172033;
+  --a11y-muted:#586477;
+  --a11y-field-bg:#fff;
+  --a11y-field-text:#172033;
+  --a11y-accent-bg:#0057b8;
+  --a11y-accent-text:#fff;
+  --a11y-chrome-bg:#10213d;
+  --a11y-chrome-text:#fff;
+  --a11y-link:var(--a11y-text);
+}
+html[data-theme="theme-t"]{--a11y-surface:#ffffff;--a11y-text:#1d1d1f;--a11y-muted:#55555a;--a11y-field-bg:#ffffff;--a11y-field-text:#1d1d1f;--a11y-accent-bg:#0068d0;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#f5f5f7;--a11y-chrome-text:#1d1d1f}
+html[data-theme="aurora"]{--a11y-surface:#ffffff;--a11y-text:#17213d;--a11y-muted:#56627a;--a11y-field-bg:#ffffff;--a11y-field-text:#17213d;--a11y-accent-bg:#4338ca;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#172554;--a11y-chrome-text:#ffffff}
+html[data-theme="polar"]{--a11y-surface:#ffffff;--a11y-text:#102b40;--a11y-muted:#4b6678;--a11y-field-bg:#ffffff;--a11y-field-text:#102b40;--a11y-accent-bg:#006493;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#0b3146;--a11y-chrome-text:#ffffff}
+html[data-theme="rubi"]{--a11y-surface:#fffdf8;--a11y-text:#2e210d;--a11y-muted:#665b46;--a11y-field-bg:#fffdf8;--a11y-field-text:#2e210d;--a11y-accent-bg:#8d1b26;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#531018;--a11y-chrome-text:#ffffff}
+html[data-theme="industrial"]{--a11y-surface:#ffffff;--a11y-text:#302a22;--a11y-muted:#675f55;--a11y-field-bg:#ffffff;--a11y-field-text:#302a22;--a11y-accent-bg:#76521c;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#3e3428;--a11y-chrome-text:#ffffff}
+html[data-theme="graphite"]{--a11y-surface:#ffffff;--a11y-text:#1d252b;--a11y-muted:#59646c;--a11y-field-bg:#ffffff;--a11y-field-text:#1d252b;--a11y-accent-bg:#34404a;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#161d23;--a11y-chrome-text:#ffffff}
+html[data-theme="operations"]{--a11y-surface:#ffffff;--a11y-text:#17352c;--a11y-muted:#4f6b62;--a11y-field-bg:#ffffff;--a11y-field-text:#17352c;--a11y-accent-bg:#087247;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#12372b;--a11y-chrome-text:#ffffff}
+html[data-theme="logistics"]{--a11y-surface:#fffdf9;--a11y-text:#352819;--a11y-muted:#695c49;--a11y-field-bg:#fffdf9;--a11y-field-text:#352819;--a11y-accent-bg:#8a5900;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#4a351c;--a11y-chrome-text:#ffffff}
+html[data-theme="corporate"]{--a11y-surface:#ffffff;--a11y-text:#2b223b;--a11y-muted:#62586f;--a11y-field-bg:#ffffff;--a11y-field-text:#2b223b;--a11y-accent-bg:#6b3fa0;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#342452;--a11y-chrome-text:#ffffff}
+html[data-theme="ocean"]{--a11y-surface:#ffffff;--a11y-text:#17353b;--a11y-muted:#536f75;--a11y-field-bg:#ffffff;--a11y-field-text:#17353b;--a11y-accent-bg:#007086;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#083f49;--a11y-chrome-text:#ffffff}
+html[data-theme="neutral"]{--a11y-surface:#ffffff;--a11y-text:#252a2f;--a11y-muted:#5f6870;--a11y-field-bg:#ffffff;--a11y-field-text:#252a2f;--a11y-accent-bg:#35404a;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#ffffff;--a11y-chrome-text:#252a2f}
+html[data-theme="contrast"]{--a11y-surface:#ffffff;--a11y-text:#000000;--a11y-muted:#333333;--a11y-field-bg:#ffffff;--a11y-field-text:#000000;--a11y-accent-bg:#000000;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#000000;--a11y-chrome-text:#ffffff}
+html[data-theme="logistica-neon"]{--a11y-surface:#0b1026;--a11y-text:#f8f7ff;--a11y-muted:#bfc4e5;--a11y-field-bg:#0b1026;--a11y-field-text:#f8f7ff;--a11y-accent-bg:#ffe726;--a11y-accent-text:#171300;--a11y-chrome-bg:#090717;--a11y-chrome-text:#ffffff}
+html[data-theme="azul-corporativo"]{--a11y-surface:#09172b;--a11y-text:#f5f9ff;--a11y-muted:#b8cbe0;--a11y-field-bg:#09172b;--a11y-field-text:#f5f9ff;--a11y-accent-bg:#1762d1;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#061326;--a11y-chrome-text:#ffffff}
+html[data-theme="verde-industrial-2"]{--a11y-surface:#071a14;--a11y-text:#f1fff8;--a11y-muted:#b8d8c7;--a11y-field-bg:#071a14;--a11y-field-text:#f1fff8;--a11y-accent-bg:#00b96b;--a11y-accent-text:#00160d;--a11y-chrome-bg:#041610;--a11y-chrome-text:#f1fff8}
+html[data-theme="amber-tech"]{--a11y-surface:#1a1106;--a11y-text:#fff9ec;--a11y-muted:#dfcba7;--a11y-field-bg:#1a1106;--a11y-field-text:#fff9ec;--a11y-accent-bg:#f49a0a;--a11y-accent-text:#211300;--a11y-chrome-bg:#161005;--a11y-chrome-text:#fff9ec}
+html[data-theme="vermelho-impacto"]{--a11y-surface:#19080d;--a11y-text:#fff5f7;--a11y-muted:#e0b7c1;--a11y-field-bg:#19080d;--a11y-field-text:#fff5f7;--a11y-accent-bg:#d91e3b;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#15050a;--a11y-chrome-text:#fff5f7}
+html[data-theme="ciano-clean"]{--a11y-surface:#061a21;--a11y-text:#f2fdff;--a11y-muted:#b6dce4;--a11y-field-bg:#061a21;--a11y-field-text:#f2fdff;--a11y-accent-bg:#00cde8;--a11y-accent-text:#001b20;--a11y-chrome-bg:#05171d;--a11y-chrome-text:#f2fdff}
+html[data-theme="rosa-premium"]{--a11y-surface:#1a0918;--a11y-text:#fff6fc;--a11y-muted:#dfb8d3;--a11y-field-bg:#1a0918;--a11y-field-text:#fff6fc;--a11y-accent-bg:#d91c82;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#160713;--a11y-chrome-text:#fff6fc}
+html[data-theme="night-minimal"]{--a11y-surface:#0b0f15;--a11y-text:#f4f6f8;--a11y-muted:#aeb8c6;--a11y-field-bg:#0b0f15;--a11y-field-text:#f4f6f8;--a11y-accent-bg:#b8c2cf;--a11y-accent-text:#0a0d12;--a11y-chrome-bg:#080b10;--a11y-chrome-text:#f4f6f8}
+html[data-theme="galaxia"]{--a11y-surface:#0d0820;--a11y-text:#faf7ff;--a11y-muted:#c9bde0;--a11y-field-bg:#0d0820;--a11y-field-text:#faf7ff;--a11y-accent-bg:#7b46f6;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#0c061d;--a11y-chrome-text:#faf7ff}
+html[data-theme="clean-light-2"]{--a11y-surface:#ffffff;--a11y-text:#10284b;--a11y-muted:#586b84;--a11y-field-bg:#ffffff;--a11y-field-text:#10284b;--a11y-accent-bg:#1558bd;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#1546a0;--a11y-chrome-text:#ffffff}
+html[data-theme="areia-industrial"]{--a11y-surface:#fffaf0;--a11y-text:#3d321f;--a11y-muted:#6f604b;--a11y-field-bg:#fffaf0;--a11y-field-text:#3d321f;--a11y-accent-bg:#805b20;--a11y-accent-text:#ffffff;--a11y-chrome-bg:#594326;--a11y-chrome-text:#ffffff}
+html[data-theme="palmeiras"]{--a11y-surface:#071a12;--a11y-text:#f4fff8;--a11y-muted:#b9d8c6;--a11y-field-bg:#071a12;--a11y-field-text:#f4fff8;--a11y-accent-bg:#00a84f;--a11y-accent-text:#00170e;--a11y-chrome-bg:#002116;--a11y-chrome-text:#f4fff8}
+
+/* Compatibilidade: componentes antigos e novos usam o mesmo contrato. */
+html[data-theme]{
+  --text:var(--a11y-text);
+  --muted:var(--a11y-muted);
+  --surface:var(--a11y-surface);
+  --card-bg:var(--a11y-surface);
+  --border-color:color-mix(in srgb,var(--a11y-text) 22%,var(--a11y-surface));
+  --accent:var(--a11y-accent-bg);
+  --readable-strong:var(--a11y-text);
+  --readable-body:var(--a11y-text);
+  --readable-muted:var(--a11y-muted);
+  --readable-field-bg:var(--a11y-field-bg);
+  --readable-field-text:var(--a11y-field-text);
+  --readable-table-bg:var(--a11y-surface);
+  --readable-chrome:var(--a11y-chrome-text);
+  --readable-accent-text:var(--a11y-accent-text);
+  --visual-accent:var(--a11y-accent-bg);
+  --visual-accent-text:var(--a11y-accent-text);
+}
+html[data-theme] body{color:var(--a11y-text)!important}
+
+/* Chrome: cabeçalho, navegação e cabeçalhos de modal formam um par indivisível. */
+html[data-theme] :is(.topbar,.app-nav-wrap,.modal-header){
+  color:var(--a11y-chrome-text)!important;
+  border-color:color-mix(in srgb,var(--a11y-chrome-text) 24%,transparent)!important;
+  background:linear-gradient(135deg,var(--a11y-chrome-bg),color-mix(in srgb,var(--a11y-chrome-bg) 86%,var(--a11y-chrome-text)))!important;
+}
+html[data-theme] :is(.topbar,.app-nav-wrap,.modal-header)
+  :is(h1,h2,h3,h4,p,span,small,strong,b,label,a,.app-nav__tab,.app-nav__label,.app-nav__icon,.modal-code){
+  color:inherit!important;
+  text-shadow:none!important;
+}
+html[data-theme] :is(.topbar,.app-nav-wrap,.modal-header)
+  :is(select,input,textarea,.density-toggle,.language-toggle,.icon-button,.modal-close){
+  color:var(--a11y-chrome-text)!important;
+  border-color:color-mix(in srgb,var(--a11y-chrome-text) 35%,transparent)!important;
+  background:color-mix(in srgb,var(--a11y-chrome-bg) 78%,var(--a11y-chrome-text))!important;
+}
+html[data-theme] :is(.topbar,.modal-header) select option{
+  color:var(--a11y-field-text)!important;
+  background:var(--a11y-field-bg)!important;
+}
+
+/* Superfícies de conteúdo: lista completa e cobertura dos módulos dinâmicos. */
+html[data-theme] :is(
+  .page-panel>.section-heading,.metric,.analytics-card,.item-card,.report-card,
+  .filter-panel,.global-filter-bar,.excel-filter__menu,.loading-panel,.construction-state,
+  .need-summary>article,.pending-sc-summary>article,.summary-cards>article,
+  .purchase-summary-cards>article,.review-summary>article,.process-summary>article,
+  .branch-balance-section,.branch-balance-grid>article,.purchase-min-max,
+  .review-card,.review-detail-grid>section,.review-recommendation,
+  .process-detail-group,.process-stages>article,.storage-address-block,
+  .operational-insights>article,.gallery-panel,.instruction-section,.instructions-index,
+  .of-generation-summary__bucket,.of-trend-card,.of-period-slicer,
+  .nt-kpi,.nt-panel,.fu-card,.fu-panel,
+  .month-compare-controls,.month-page-filters,.month-compare-metric,.month-consideration,
+  .month-stock-inclusions,.month-target-block,.month-compared-meta-visual,
+  .month-compared-meta-kpi,.month-compared-meta-status>article,.month-compare-message,
+  .consumption-summary>article,.consumption-panel,.consumption-top-items>button,
+  .modal-shell,.modal-content,.purchase-modal-content,.review-modal-content,.of-generation-modal-content
+){
+  --steel-50:color-mix(in srgb,var(--a11y-surface) 96%,var(--a11y-text))!important;
+  --steel-100:color-mix(in srgb,var(--a11y-surface) 91%,var(--a11y-text))!important;
+  --steel-200:color-mix(in srgb,var(--a11y-surface) 82%,var(--a11y-text))!important;
+  --steel-300:color-mix(in srgb,var(--a11y-surface) 70%,var(--a11y-text))!important;
+  color:var(--a11y-text)!important;
+  border-color:color-mix(in srgb,var(--a11y-text) 20%,var(--a11y-surface))!important;
+  background:var(--visual-sheen,linear-gradient(135deg,transparent,transparent)),var(--a11y-surface)!important;
+}
+
+/* Todo texto dentro de uma superfície parte de uma cor conhecida. */
+html[data-theme] :is(
+  .page-panel,.modal-shell,.modal-content,.filter-panel,.excel-filter__menu,
+  .fu-card,.fu-panel,.nt-kpi,.nt-panel,.consumption-panel
+) :is(h1,h2,h3,h4,h5,h6,legend,caption,strong,b,dd,.value,.amount,.item-card__title,.report-card__title){
+  color:var(--a11y-text)!important;
+  text-shadow:none!important;
+}
+html[data-theme] :is(
+  .page-panel,.modal-shell,.modal-content,.filter-panel,.excel-filter__menu,
+  .fu-card,.fu-panel,.nt-kpi,.nt-panel,.consumption-panel
+) :is(p,small,dt,label,.muted,.helper-text,.section-description,.metric__label,
+      .filter-summary,.results__summary,.nt-muted,.month-filter-summary){
+  color:var(--a11y-muted)!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+html[data-theme] :is(
+  .metric,.analytics-card,.item-card,.report-card,.review-card,.instruction-section,
+  .fu-card,.fu-panel,.nt-kpi,.nt-panel,.month-compare-metric,.month-consideration,
+  .consumption-summary>article,.consumption-panel
+) :is(span,em,li,code){color:inherit}
+html[data-theme] :is(.eyebrow,a.text-action,.section-heading a){
+  color:var(--a11y-link,var(--a11y-text))!important;
+  text-shadow:none!important;
+}
+
+/* Campos e filtros: texto, placeholder, opção e estado desabilitado. */
+html[data-theme] :is(
+  input,select,textarea,option,.excel-filter__trigger,.excel-filter__search,
+  .month-local-filter,.nt-toolbar input,.fu-toolbar input
+){
+  color:var(--a11y-field-text)!important;
+  -webkit-text-fill-color:var(--a11y-field-text)!important;
+  caret-color:var(--a11y-field-text)!important;
+  border-color:color-mix(in srgb,var(--a11y-field-text) 28%,var(--a11y-field-bg))!important;
+  background:var(--a11y-field-bg)!important;
+  opacity:1!important;
+}
+html[data-theme] :is(input,textarea)::placeholder{
+  color:var(--a11y-muted)!important;
+  -webkit-text-fill-color:var(--a11y-muted)!important;
+  opacity:1!important;
+}
+html[data-theme] :is(input,select,textarea,button):disabled,
+html[data-theme] [aria-disabled="true"]{
+  color:var(--a11y-muted)!important;
+  -webkit-text-fill-color:var(--a11y-muted)!important;
+  background:color-mix(in srgb,var(--a11y-surface) 90%,var(--a11y-text))!important;
+  opacity:1!important;
+}
+
+/* Tabelas, inclusive as inseridas por Follow up, Consumo e Comparativo. */
+html[data-theme] :is(
+  .table-wrap,.data-table-wrap,.fu-table-wrap,.nt-table-wrap,.consumption-table-wrap,
+  .month-compare-table-wrap,.month-target-table-wrap,.instruction-table-wrap
+){
+  color:var(--a11y-text)!important;
+  border-color:color-mix(in srgb,var(--a11y-text) 20%,var(--a11y-surface))!important;
+  background:var(--a11y-surface)!important;
+}
+html[data-theme] :is(
+  table,.data-table,.fu-table,.nt-table,.consumption-table,
+  .month-compare-table,.month-target-table,.instruction-table
+){
+  color:var(--a11y-text)!important;
+  background:var(--a11y-surface)!important;
+}
+html[data-theme] :is(
+  table,.data-table,.fu-table,.nt-table,.consumption-table,
+  .month-compare-table,.month-target-table,.instruction-table
+) th{
+  color:var(--a11y-text)!important;
+  background:color-mix(in srgb,var(--a11y-surface) 84%,var(--a11y-text))!important;
+}
+html[data-theme] :is(
+  table,.data-table,.fu-table,.nt-table,.consumption-table,
+  .month-compare-table,.month-target-table,.instruction-table
+) td{
+  color:var(--a11y-text)!important;
+  background:var(--a11y-surface)!important;
+}
+html[data-theme] :is(
+  table,.data-table,.fu-table,.nt-table,.consumption-table,
+  .month-compare-table,.month-target-table,.instruction-table
+) :is(th,td,span,small,strong,b,a){
+  border-color:color-mix(in srgb,var(--a11y-text) 18%,var(--a11y-surface))!important;
+  text-shadow:none!important;
+}
+html[data-theme] :is(
+  table,.data-table,.fu-table,.nt-table,.consumption-table,
+  .month-compare-table,.month-target-table,.instruction-table
+) :is(td,th) :is(span,small,strong,b,a){color:inherit!important}
+
+/* Botões, abas, chips, badges e estados selecionados. */
+html[data-theme] :is(.button--primary,.button--export,.app-nav__tab.is-active){
+  color:var(--a11y-accent-text)!important;
+  background:var(--a11y-accent-bg)!important;
+  border-color:var(--a11y-accent-bg)!important;
+  text-shadow:none!important;
+}
+html[data-theme] :is(.button--secondary,.button--ghost,.text-action){
+  color:var(--a11y-field-text)!important;
+  background:var(--a11y-field-bg)!important;
+  border-color:color-mix(in srgb,var(--a11y-field-text) 28%,var(--a11y-field-bg))!important;
+}
+html[data-theme] :is(
+  .context-label,.status-pill,.badge,.month-status,.filter-chip,.active-filter-chip,
+  .nt-chip span,.fu-chip span
+){
+  color:var(--a11y-text)!important;
+  background:color-mix(in srgb,var(--a11y-surface) 82%,var(--a11y-accent-bg))!important;
+  border-color:color-mix(in srgb,var(--a11y-text) 24%,var(--a11y-surface))!important;
+  text-shadow:none!important;
+  opacity:1!important;
+}
+html[data-theme] :is(
+  .nt-chip input:checked+span,.fu-chip input:checked+span,
+  .filter-chip.is-active,.active-filter-chip.is-active,[aria-pressed="true"].button
+){
+  color:var(--a11y-accent-text)!important;
+  background:var(--a11y-accent-bg)!important;
+  border-color:var(--a11y-accent-bg)!important;
+}
+
+/* Alertas mantêm um par próprio; nunca herdam texto claro sobre amarelo claro. */
+html[data-theme] :is(
+  .instruction-note,.instruction-alert,.cavaco-alert-note,.cavaco-supplier-note,
+  .report-card--need.is-cavaco-alert
+){
+  color:#3d2a17!important;
+  border-color:#b77a1b!important;
+  background:#fff4d6!important;
+}
+html[data-theme] :is(
+  .instruction-note,.instruction-alert,.cavaco-alert-note,.cavaco-supplier-note,
+  .report-card--need.is-cavaco-alert
+) :is(h1,h2,h3,h4,strong,b,span,p,small,dt,dd,label,li,code){
+  color:inherit!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+
+/* Gráficos e mensagens sem dados também obedecem ao tema. */
+html[data-theme] :is(
+  .chart-empty,.empty-state,.no-results,.month-compare-message,
+  .consumption-chart-legend,.of-trend-chart__caption
+){color:var(--a11y-muted)!important}
+html[data-theme] svg text{fill:var(--a11y-text)!important}
+html[data-theme] :is(.of-trend-chart__grid,.chart-grid){stroke:color-mix(in srgb,var(--a11y-text) 20%,transparent)!important}
+html[data-theme] ::selection{
+  color:var(--a11y-accent-text);
+  background:var(--a11y-accent-bg);
+}
+html[data-theme] :focus-visible{
+  outline:3px solid color-mix(in srgb,var(--a11y-accent-bg) 72%,#fff)!important;
+  outline-offset:2px;
+}
+
+
+/* =========================================================
+   Transição de páginas e filtros múltiplos de OF — versão 10.1
+   ========================================================= */
+@keyframes page-soft-focus-in{
+  0%{opacity:.28;filter:blur(10px);transform:translateY(10px) scale(.992)}
+  58%{opacity:.88;filter:blur(2px);transform:translateY(2px) scale(.998)}
+  100%{opacity:1;filter:blur(0);transform:none}
+}
+@keyframes page-soft-focus-mobile{
+  0%{opacity:.48;filter:blur(3px);transform:translateY(4px)}
+  100%{opacity:1;filter:blur(0);transform:none}
+}
+[data-page-panel].page-entering{
+  animation:page-soft-focus-in 520ms cubic-bezier(.22,1,.36,1) both;
+  transform-origin:50% 18%;
+  will-change:opacity,filter,transform;
+}
+@media(max-width:1099px){
+  [data-page-panel].page-entering{animation-name:page-soft-focus-mobile;animation-duration:300ms}
+}
+html.os-android [data-page-panel].page-entering{
+  animation-name:page-soft-focus-mobile;
+  animation-duration:240ms;
+  will-change:opacity,transform;
+}
+@media(prefers-reduced-motion:reduce){
+  [data-page-panel].page-entering{animation:none!important;filter:none!important;transform:none!important}
+}
+
+.of-period-slicer{overflow:visible!important}
+.of-period-slicer__controls{align-items:start}
+.of-period-slicer__controls>label{
+  position:relative;
+  display:block;
+  min-width:0;
+  min-height:86px;
+  overflow:visible;
+  color:var(--a11y-text)!important;
+  border-color:color-mix(in srgb,var(--a11y-text) 20%,var(--a11y-surface))!important;
+  background:var(--a11y-surface)!important;
+}
+.of-period-slicer__controls>label:has(.excel-filter.is-open){z-index:1200}
+.of-period-slicer__controls>label>span{
+  display:block;
+  color:var(--a11y-text)!important;
+  font-size:.75rem;
+  font-weight:850;
+}
+.of-period-slicer__controls .excel-filter{width:100%;margin-top:7px}
+.of-period-slicer__controls .excel-filter__trigger{
+  width:100%;
+  min-height:42px;
+  padding:9px 11px;
+  border-radius:10px;
+  font-size:.8rem;
+}
+.of-period-slicer__controls .excel-filter__menu{
+  left:0;
+  width:min(420px,calc(100vw - 36px));
+  max-width:min(420px,calc(100vw - 36px));
+}
+.of-period-slicer__controls .excel-filter__options{max-height:min(310px,46dvh)}
+html[data-theme] .excel-filter__option{
+  color:var(--a11y-field-text)!important;
+  background:var(--a11y-field-bg)!important;
+  border-color:color-mix(in srgb,var(--a11y-field-text) 16%,var(--a11y-field-bg))!important;
+  opacity:1!important;
+}
+html[data-theme] .excel-filter__option:hover,
+html[data-theme] .excel-filter__option:focus-within{
+  color:var(--a11y-text)!important;
+  background:color-mix(in srgb,var(--a11y-surface) 82%,var(--a11y-accent-bg))!important;
+}
+html[data-theme] .excel-filter__actions button{
+  color:var(--a11y-accent-text)!important;
+  background:var(--a11y-accent-bg)!important;
+  border:1px solid var(--a11y-accent-bg)!important;
+}
+html[data-theme] .filter-summary button{
+  color:var(--a11y-text)!important;
+  background:color-mix(in srgb,var(--a11y-surface) 84%,var(--a11y-accent-bg))!important;
+  border-color:color-mix(in srgb,var(--a11y-text) 22%,var(--a11y-surface))!important;
+}
+@media(max-width:700px){
+  .of-period-slicer__controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .of-period-slicer__controls .excel-filter__menu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100vw - 28px);max-width:480px;max-height:78dvh}
+}
+@media(max-width:430px){
+  .of-period-slicer__controls{grid-template-columns:1fr}
+  .of-period-slicer__controls>label{min-height:82px}
+}

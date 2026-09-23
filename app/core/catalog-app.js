@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 9.7";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.1";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -38,6 +38,7 @@ const MULTI_FILTER_IDS = [
   "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter",
   "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter",
   "itemCodeFilter", "stockStatusFilter", "scStatusFilter",
+  "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter",
 ];
 let activeLanguage = "pt-BR";
 let languageObserver = null;
@@ -104,7 +105,7 @@ const state = {
   ofGenerationBucket: "all",
   ofGenerationChartBucket: "all",
   ofGenerationChartGranularity: "month",
-  ofGenerationPeriod: { year: "", month: "", week: "", date: "" },
+  ofGenerationPeriod: { year: [], month: [], week: [], date: [] },
   localPhotos: new Map(),
   consumption: { available: false, headers: [], rows: [], rowCount: 0 },
   visibleConsumptionRows: [],
@@ -335,13 +336,14 @@ function bindEvents() {
   ["year", "month", "week", "date"].forEach((periodPart, index, parts) => {
     const control = ui[`ofGeneration${periodPart[0].toUpperCase()}${periodPart.slice(1)}Filter`];
     control.addEventListener("change", () => {
-      state.ofGenerationPeriod[periodPart] = control.value;
-      parts.slice(index + 1).forEach((dependentPart) => { state.ofGenerationPeriod[dependentPart] = ""; });
+      normalizeMultiSelection(control);
+      state.ofGenerationPeriod[periodPart] = filterValues(control);
+      parts.slice(index + 1).forEach((dependentPart) => { state.ofGenerationPeriod[dependentPart] = []; });
       renderOfGenerationAnalysis();
     });
   });
   ui.clearOfGenerationPeriod.addEventListener("click", () => {
-    state.ofGenerationPeriod = { year: "", month: "", week: "", date: "" };
+    state.ofGenerationPeriod = { year: [], month: [], week: [], date: [] };
     renderOfGenerationAnalysis();
   });
   ui.ofGenerationChartBuckets.addEventListener("click", (event) => {
@@ -1207,6 +1209,25 @@ function synchronizePageNavigation(validPage) {
   }
 }
 
+function animatePageEntry(panel) {
+  if (!panel || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+  panel.__almoxPageEntryCleanup?.();
+  panel.classList.remove("page-entering");
+  void panel.offsetWidth;
+  panel.classList.add("page-entering");
+  let fallback = 0;
+  const onEnd = (event) => { if (event.target === panel) cleanup(); };
+  const cleanup = () => {
+    window.clearTimeout(fallback);
+    panel.removeEventListener("animationend", onEnd);
+    panel.classList.remove("page-entering");
+    delete panel.__almoxPageEntryCleanup;
+  };
+  panel.__almoxPageEntryCleanup = cleanup;
+  panel.addEventListener("animationend", onEnd);
+  fallback = window.setTimeout(cleanup, isAndroidPerformanceMode() ? 360 : 700);
+}
+
 function navigateToPage(page, updateHash) {
   const validPage = [...FILTERED_PAGE_IDS, "instrucoes"].includes(page) ? page : "dashboard";
   const root = document.documentElement;
@@ -1214,6 +1235,7 @@ function navigateToPage(page, updateHash) {
 
   root.dataset.activePage = validPage;
   synchronizePageNavigation(validPage);
+  const activePanel = ui.pagePanels.find((panel) => panel.dataset.pagePanel === validPage);
 
   if (previousPage === validPage && (!updateHash || window.location.hash === `#${validPage}`)) {
     if (state.items.length) scheduleMobilePageWarmup();
@@ -1221,9 +1243,16 @@ function navigateToPage(page, updateHash) {
   }
 
   cancelMobilePageWarmup();
-  if (isMobilePerformanceMode()) {
-    root.classList.add("mobile-page-switching");
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => root.classList.remove("mobile-page-switching")));
+  if (previousPage && previousPage !== validPage) {
+    if (isMobilePerformanceMode()) {
+      root.classList.add("mobile-page-switching");
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        root.classList.remove("mobile-page-switching");
+        animatePageEntry(activePanel);
+      }));
+    } else {
+      animatePageEntry(activePanel);
+    }
   }
 
   if (updateHash && window.location.hash !== `#${validPage}`) {
@@ -3734,46 +3763,57 @@ function ofGenerationWeekLabel(value) {
   return match ? `${translateUiText("Semana")} ${Number(match[2])} · ${match[1]}` : value;
 }
 
-function setOfGenerationPeriodOptions(control, values, allLabel, labelForValue = (value) => value, selected = "") {
+function setOfGenerationPeriodOptions(control, values, allLabel, labelForValue = (value) => value, selected = []) {
+  const selectedValues = Array.isArray(selected) ? selected : selected ? [selected] : [];
+  const available = new Set(values);
+  const validSelected = selectedValues.filter((value) => available.has(value));
   control.innerHTML = `<option value="">${escapeHtml(translateUiText(allLabel))}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labelForValue(value))}</option>`).join("")}`;
-  control.value = values.includes(selected) ? selected : "";
+  setFilterValues(control, validSelected);
+  return validSelected;
+}
+
+function ofGenerationPeriodHasValues(period = state.ofGenerationPeriod) {
+  return Object.values(period).some((values) => Array.isArray(values) && values.length > 0);
 }
 
 function rowMatchesOfGenerationPeriod(row, period = state.ofGenerationPeriod) {
   const parts = row.scPeriod;
   if (!parts) return false;
-  return (!period.year || parts.year === period.year)
-    && (!period.month || parts.month === period.month)
-    && (!period.week || parts.week === period.week)
-    && (!period.date || parts.date === period.date);
+  const matches = (selected, value) => !Array.isArray(selected) || selected.length === 0 || selected.includes(value);
+  return matches(period.year, parts.year)
+    && matches(period.month, parts.month)
+    && matches(period.week, parts.week)
+    && matches(period.date, parts.date);
 }
 
 function populateOfGenerationPeriodFilters(rows) {
   const period = state.ofGenerationPeriod;
   const unique = (values) => [...new Set(values.filter(Boolean))].sort();
+
   const years = unique(rows.map((row) => row.scPeriod?.year));
-  if (period.year && !years.includes(period.year)) Object.assign(period, { year: "", month: "", week: "", date: "" });
-  setOfGenerationPeriodOptions(ui.ofGenerationYearFilter, years, "Todos os anos", (value) => value, period.year);
-  period.year = ui.ofGenerationYearFilter.value;
+  period.year = setOfGenerationPeriodOptions(
+    ui.ofGenerationYearFilter, years, "Todos os anos", (value) => value, period.year
+  );
 
-  const yearRows = rows.filter((row) => !period.year || row.scPeriod?.year === period.year);
+  const yearRows = rows.filter((row) => !period.year.length || period.year.includes(row.scPeriod?.year));
   const months = unique(yearRows.map((row) => row.scPeriod?.month));
-  if (period.month && !months.includes(period.month)) { period.month = ""; period.week = ""; period.date = ""; }
-  setOfGenerationPeriodOptions(ui.ofGenerationMonthFilter, months, "Todos os meses", ofGenerationMonthLabel, period.month);
-  ui.ofGenerationMonthFilter.value = period.month;
+  period.month = setOfGenerationPeriodOptions(
+    ui.ofGenerationMonthFilter, months, "Todos os meses", ofGenerationMonthLabel, period.month
+  );
 
-  const monthRows = yearRows.filter((row) => !period.month || row.scPeriod?.month === period.month);
+  const monthRows = yearRows.filter((row) => !period.month.length || period.month.includes(row.scPeriod?.month));
   const weeks = unique(monthRows.map((row) => row.scPeriod?.week));
-  if (period.week && !weeks.includes(period.week)) { period.week = ""; period.date = ""; }
-  setOfGenerationPeriodOptions(ui.ofGenerationWeekFilter, weeks, "Todas as semanas", ofGenerationWeekLabel, period.week);
-  ui.ofGenerationWeekFilter.value = period.week;
+  period.week = setOfGenerationPeriodOptions(
+    ui.ofGenerationWeekFilter, weeks, "Todas as semanas", ofGenerationWeekLabel, period.week
+  );
 
-  const weekRows = monthRows.filter((row) => !period.week || row.scPeriod?.week === period.week);
+  const weekRows = monthRows.filter((row) => !period.week.length || period.week.includes(row.scPeriod?.week));
   const dates = unique(weekRows.map((row) => row.scPeriod?.date));
-  if (period.date && !dates.includes(period.date)) period.date = "";
-  setOfGenerationPeriodOptions(ui.ofGenerationDateFilter, dates, "Todas as datas", (value) => formatDate(value), period.date);
-  ui.ofGenerationDateFilter.value = period.date;
-  ui.clearOfGenerationPeriod.classList.toggle("is-hidden", !Object.values(period).some(Boolean));
+  period.date = setOfGenerationPeriodOptions(
+    ui.ofGenerationDateFilter, dates, "Todas as datas", (value) => formatDate(value), period.date
+  );
+
+  ui.clearOfGenerationPeriod.classList.toggle("is-hidden", !ofGenerationPeriodHasValues(period));
 }
 
 function ofGenerationTrendGranularity(rows) {

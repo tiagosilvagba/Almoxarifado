@@ -27,7 +27,7 @@ jobs:
       - name: Validar sintaxe JavaScript
         run: find . -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
       - name: Executar testes das regras
-        run: node --test tests/core.test.js
+        run: node --test tests/*.test.js
       - name: Validar manifesto dos CSVs em pull requests
         if: ${{ github.event_name == 'pull_request' }}
         run: |
