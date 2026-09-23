@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.1";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.2";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -38,7 +38,6 @@ const MULTI_FILTER_IDS = [
   "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter",
   "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter",
   "itemCodeFilter", "stockStatusFilter", "scStatusFilter",
-  "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter",
 ];
 let activeLanguage = "pt-BR";
 let languageObserver = null;
@@ -123,6 +122,7 @@ const state = {
   filterDraftDirty: false,
   filterOptionSignatures: new WeakMap(),
   excelFilterControls: new WeakMap(),
+  ofGenerationSlicerControls: new WeakMap(),
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
@@ -137,6 +137,7 @@ if (typeof document !== "undefined") {
 async function init() {
   cacheUi();
   initializeExcelFilterControls();
+  initializeOfGenerationSlicers();
   initializeLanguage();
   initializeTheme();
   initializeDensity();
@@ -337,6 +338,7 @@ function bindEvents() {
     const control = ui[`ofGeneration${periodPart[0].toUpperCase()}${periodPart.slice(1)}Filter`];
     control.addEventListener("change", () => {
       normalizeMultiSelection(control);
+      syncOfGenerationSlicer(control);
       state.ofGenerationPeriod[periodPart] = filterValues(control);
       parts.slice(index + 1).forEach((dependentPart) => { state.ofGenerationPeriod[dependentPart] = []; });
       renderOfGenerationAnalysis();
@@ -1313,6 +1315,50 @@ function setFilterValues(select, values) {
   const selected = new Set(Array.isArray(values) ? values : values ? [values] : []);
   for (const option of select.options) option.selected = option.value ? selected.has(option.value) : selected.size === 0;
   syncExcelFilterControl(select);
+}
+
+const OF_GENERATION_SLICER_IDS = [
+  "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter",
+];
+
+function initializeOfGenerationSlicers() {
+  for (const id of OF_GENERATION_SLICER_IDS) {
+    const select = ui[id];
+    if (!select || state.ofGenerationSlicerControls.has(select)) continue;
+    select.classList.add("of-segmented-select");
+    const slicer = document.createElement("div");
+    slicer.className = "of-segmented-filter";
+    slicer.setAttribute("role", "group");
+    slicer.setAttribute("aria-label", select.getAttribute("aria-label") || "Segmentação de período");
+    select.insertAdjacentElement("afterend", slicer);
+    slicer.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-of-slicer-value]");
+      if (!button || button.disabled) return;
+      const value = button.dataset.ofSlicerValue || "";
+      const selected = new Set(filterValues(select));
+      if (!value) selected.clear();
+      else if (selected.has(value)) selected.delete(value);
+      else selected.add(value);
+      setFilterValues(select, [...selected]);
+      syncOfGenerationSlicer(select);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    new MutationObserver(() => syncOfGenerationSlicer(select)).observe(select, { childList: true, subtree: true });
+    state.ofGenerationSlicerControls.set(select, slicer);
+    syncOfGenerationSlicer(select);
+  }
+}
+
+function syncOfGenerationSlicer(select) {
+  const slicer = state.ofGenerationSlicerControls.get(select);
+  if (!slicer) return;
+  const selected = new Set(filterValues(select));
+  const options = [...select.options];
+  slicer.innerHTML = options.map((option) => {
+    const value = option.value || "";
+    const active = value ? selected.has(value) : selected.size === 0;
+    return `<button type="button" data-of-slicer-value="${escapeHtml(value)}" class="${active ? "is-active" : ""}" aria-pressed="${String(active)}"${option.disabled ? " disabled" : ""}>${escapeHtml(option.textContent || value)}</button>`;
+  }).join("");
 }
 
 function initializeExcelFilterControls() {
@@ -3769,6 +3815,7 @@ function setOfGenerationPeriodOptions(control, values, allLabel, labelForValue =
   const validSelected = selectedValues.filter((value) => available.has(value));
   control.innerHTML = `<option value="">${escapeHtml(translateUiText(allLabel))}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labelForValue(value))}</option>`).join("")}`;
   setFilterValues(control, validSelected);
+  syncOfGenerationSlicer(control);
   return validSelected;
 }
 

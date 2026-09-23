@@ -1697,6 +1697,12 @@ html[data-theme="theme-t"] .of-generation-summary__headline { background:linear-
 .of-period-slicer__controls label { display:grid; gap:5px; min-width:0; padding:8px 10px; border:1px solid var(--steel-200); border-radius:12px; background:var(--steel-50); }
 .of-period-slicer__controls label > span { color:var(--blue-600); font-size:.75rem; font-weight:850; letter-spacing:.035em; }
 .of-period-slicer__controls select { width:100%; min-width:0; border:0; outline:0; color:var(--text); background:transparent; font:inherit; font-size:.82rem; font-weight:750; cursor:pointer; }
+.of-period-slicer__controls .of-segmented-select { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.of-segmented-filter { display:flex; gap:6px; width:100%; min-width:0; padding:2px 0 3px; overflow-x:auto; scrollbar-width:thin; overscroll-behavior-inline:contain; }
+.of-segmented-filter button { flex:0 0 auto; min-height:32px; max-width:210px; padding:6px 10px; overflow:hidden; border:1px solid var(--steel-200); border-radius:999px; color:var(--muted); background:var(--surface); font:inherit; font-size:.74rem; font-weight:800; line-height:1.15; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; transition:background 150ms ease,border-color 150ms ease,color 150ms ease,transform 150ms ease; }
+.of-segmented-filter button:hover { border-color:var(--blue-500); color:var(--blue-600); transform:translateY(-1px); }
+.of-segmented-filter button.is-active { border-color:var(--blue-600); color:var(--a11y-accent-text,#fff); background:var(--a11y-accent-bg,var(--blue-600)); box-shadow:0 5px 13px color-mix(in srgb,var(--blue-600) 20%,transparent); }
+.of-segmented-filter button:focus-visible { outline:3px solid color-mix(in srgb,var(--blue-500) 30%,transparent); outline-offset:2px; }
 .of-period-slicer__controls label:focus-within { border-color:var(--blue-500); box-shadow:0 0 0 3px color-mix(in srgb,var(--blue-500) 16%,transparent); }
 
 .of-trend-card { margin:18px 0 22px; padding:18px; border:var(--layout-card-border); border-radius:var(--layout-card-radius); background:var(--surface); box-shadow:var(--layout-card-shadow); }
@@ -4946,7 +4952,7 @@ html[data-theme] #page-consumo :is(.consumption-panel,.need-summary article){
 
 
 /* =========================================================
-   Contrato universal de contraste — versão 10.1
+   Contrato universal de contraste — versão 10.2
    Uma única camada final governa texto/fundo em todos os temas,
    inclusive módulos que injetam estilos depois do carregamento.
    WCAG AA: pares essenciais validados com contraste >= 4,5:1.
@@ -5220,7 +5226,7 @@ html[data-theme] :focus-visible{
 
 
 /* =========================================================
-   Transição de páginas e filtros múltiplos de OF — versão 10.1
+   Transição de páginas e filtros múltiplos de OF — versão 10.2
    ========================================================= */
 @keyframes page-soft-focus-in{
   0%{opacity:.28;filter:blur(10px);transform:translateY(10px) scale(.992)}

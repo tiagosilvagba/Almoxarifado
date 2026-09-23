@@ -85,7 +85,7 @@ test("módulos dinâmicos participam do contrato de contraste", () => {
   for (const selector of requiredSelectors) {
     assert.ok(css.includes(selector), "cobertura ausente para " + selector);
   }
-  assert.ok(css.includes("Contrato universal de contraste — versão 10.1"));
+  assert.ok(css.includes("Contrato universal de contraste — versão 10.2"));
 });
 
 test("folha principal mantém chaves balanceadas", () => {
@@ -114,6 +114,11 @@ test("filtros de período da OF usam multisseleção dependente", () => {
   assert.ok(app.includes('ofGenerationPeriod: { year: [], month: [], week: [], date: [] }'));
   assert.ok(app.includes("selected.includes(value)"));
   assert.ok(app.includes("setFilterValues(control, validSelected)"));
+  assert.ok(app.includes("function initializeOfGenerationSlicers()"));
+  assert.ok(app.includes("data-of-slicer-value"));
+  const multiFilterBlock = app.match(/const MULTI_FILTER_IDS = \[([\s\S]*?)\];/)?.[1] || "";
+  for (const id of ids) assert.ok(!multiFilterBlock.includes(id), "segmentador não deve usar filtro Excel: " + id);
+  assert.ok(!css.includes(".of-segmented-filter input[type=\"checkbox\"]"));
 });
 
 test("navegação possui transição suave com alternativa leve", () => {
