@@ -85,7 +85,7 @@ test("módulos dinâmicos participam do contrato de contraste", () => {
   for (const selector of requiredSelectors) {
     assert.ok(css.includes(selector), "cobertura ausente para " + selector);
   }
-  assert.ok(css.includes("Contrato universal de contraste — versão 10.3"));
+  assert.ok(css.includes("Contrato universal de contraste — versão 10.4"));
 });
 
 test("folha principal mantém chaves balanceadas", () => {
@@ -114,19 +114,17 @@ test("filtros de período da OF usam multisseleção dependente", () => {
   assert.ok(app.includes('ofGenerationPeriod: { year: [], month: [], week: [], date: [] }'));
   assert.ok(app.includes("selected.includes(value)"));
   assert.ok(app.includes("setFilterValues(control, validSelected)"));
-  assert.ok(app.includes("function initializeOfGenerationSlicers()"));
-  assert.ok(app.includes("data-of-slicer-value"));
   const multiFilterBlock = app.match(/const MULTI_FILTER_IDS = \[([\s\S]*?)\];/)?.[1] || "";
-  for (const id of ids) assert.ok(!multiFilterBlock.includes(id), "segmentador não deve usar filtro Excel: " + id);
-  assert.ok(!css.includes(".of-segmented-filter input[type=\"checkbox\"]"));
+  for (const id of ids) assert.ok(multiFilterBlock.includes(id), "filtro OF deve reutilizar controle Excel estável: " + id);
 });
 
-test("item sem foto oferece pesquisa web detalhada sem atribuição automática", () => {
-  assert.ok(app.includes("function webImageSearchQuery(item)"));
+test("item sem foto pesquisa e exibe resultados externos automaticamente", () => {
+  assert.ok(app.includes("function loadAutomaticWebImages(item)"));
+  assert.ok(app.includes("searchOpenverseImages"));
+  assert.ok(app.includes("searchWikimediaImages"));
+  assert.ok(app.includes("Imagens encontradas automaticamente"));
   assert.ok(app.includes("item?.detailedName"));
-  assert.ok(app.includes("tbm=isch&safe=active"));
-  assert.ok(app.includes('target="_blank" rel="noopener noreferrer"'));
-  assert.ok(css.includes(".web-image-search"));
+  assert.ok(css.includes(".web-image-results"));
 });
 
 test("navegação possui transição suave com alternativa leve", () => {

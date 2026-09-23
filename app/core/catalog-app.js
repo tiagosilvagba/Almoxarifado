@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.3";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.4";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -38,6 +38,7 @@ const MULTI_FILTER_IDS = [
   "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter",
   "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter",
   "itemCodeFilter", "stockStatusFilter", "scStatusFilter",
+  "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter",
 ];
 let activeLanguage = "pt-BR";
 let languageObserver = null;
@@ -79,6 +80,7 @@ const state = {
   itemByCode: new Map(),
   imageIndex: new Map(),
   imagePromise: null,
+  webImageCache: new Map(),
   renderedCount: 0,
   activeItem: null,
   historyVisible: CONFIG.historyBatch,
@@ -122,7 +124,6 @@ const state = {
   filterDraftDirty: false,
   filterOptionSignatures: new WeakMap(),
   excelFilterControls: new WeakMap(),
-  ofGenerationSlicerControls: new WeakMap(),
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
@@ -137,7 +138,6 @@ if (typeof document !== "undefined") {
 async function init() {
   cacheUi();
   initializeExcelFilterControls();
-  initializeOfGenerationSlicers();
   initializeLanguage();
   initializeTheme();
   initializeDensity();
@@ -338,7 +338,6 @@ function bindEvents() {
     const control = ui[`ofGeneration${periodPart[0].toUpperCase()}${periodPart.slice(1)}Filter`];
     control.addEventListener("change", () => {
       normalizeMultiSelection(control);
-      syncOfGenerationSlicer(control);
       state.ofGenerationPeriod[periodPart] = filterValues(control);
       parts.slice(index + 1).forEach((dependentPart) => { state.ofGenerationPeriod[dependentPart] = []; });
       renderOfGenerationAnalysis();
@@ -1315,50 +1314,6 @@ function setFilterValues(select, values) {
   const selected = new Set(Array.isArray(values) ? values : values ? [values] : []);
   for (const option of select.options) option.selected = option.value ? selected.has(option.value) : selected.size === 0;
   syncExcelFilterControl(select);
-}
-
-const OF_GENERATION_SLICER_IDS = [
-  "ofGenerationYearFilter", "ofGenerationMonthFilter", "ofGenerationWeekFilter", "ofGenerationDateFilter",
-];
-
-function initializeOfGenerationSlicers() {
-  for (const id of OF_GENERATION_SLICER_IDS) {
-    const select = ui[id];
-    if (!select || state.ofGenerationSlicerControls.has(select)) continue;
-    select.classList.add("of-segmented-select");
-    const slicer = document.createElement("div");
-    slicer.className = "of-segmented-filter";
-    slicer.setAttribute("role", "group");
-    slicer.setAttribute("aria-label", select.getAttribute("aria-label") || "Segmentação de período");
-    select.insertAdjacentElement("afterend", slicer);
-    slicer.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-of-slicer-value]");
-      if (!button || button.disabled) return;
-      const value = button.dataset.ofSlicerValue || "";
-      const selected = new Set(filterValues(select));
-      if (!value) selected.clear();
-      else if (selected.has(value)) selected.delete(value);
-      else selected.add(value);
-      setFilterValues(select, [...selected]);
-      syncOfGenerationSlicer(select);
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    new MutationObserver(() => syncOfGenerationSlicer(select)).observe(select, { childList: true, subtree: true });
-    state.ofGenerationSlicerControls.set(select, slicer);
-    syncOfGenerationSlicer(select);
-  }
-}
-
-function syncOfGenerationSlicer(select) {
-  const slicer = state.ofGenerationSlicerControls.get(select);
-  if (!slicer) return;
-  const selected = new Set(filterValues(select));
-  const options = [...select.options];
-  slicer.innerHTML = options.map((option) => {
-    const value = option.value || "";
-    const active = value ? selected.has(value) : selected.size === 0;
-    return `<button type="button" data-of-slicer-value="${escapeHtml(value)}" class="${active ? "is-active" : ""}" aria-pressed="${String(active)}"${option.disabled ? " disabled" : ""}>${escapeHtml(option.textContent || value)}</button>`;
-  }).join("");
 }
 
 function initializeExcelFilterControls() {
@@ -3815,7 +3770,6 @@ function setOfGenerationPeriodOptions(control, values, allLabel, labelForValue =
   const validSelected = selectedValues.filter((value) => available.has(value));
   control.innerHTML = `<option value="">${escapeHtml(translateUiText(allLabel))}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labelForValue(value))}</option>`).join("")}`;
   setFilterValues(control, validSelected);
-  syncOfGenerationSlicer(control);
   return validSelected;
 }
 
@@ -4796,21 +4750,23 @@ function activateTab(name) {
 function renderGallery(item) {
   const images = imagesForItem(item, true).slice(0, CONFIG.maxImages);
   const savedCount = (state.localPhotos.get(normalizeCode(item.code)) || []).length;
+  const hasRegisteredImages = images.some((image) => !image.fallback);
   ui.photoUploadStatus.textContent = savedCount
     ? `${pluralize(savedCount, "foto salva", "fotos salvas")} neste aparelho · máximo 6`
     : "Até 6 fotos salvas neste aparelho";
   ui.photoUploadButton.disabled = images.filter((image) => !image.fallback).length >= CONFIG.maxImages;
   if (!images.length) {
-    ui.modalGallery.innerHTML = `<div class="gallery__main"><span class="image-placeholder"><span>${packageIcon()}<span>Imagem não cadastrada</span>${webImageSearchAction(item)}</span></span></div>`;
+    ui.modalGallery.innerHTML = `<div class="gallery__main"><span class="image-placeholder"><span>${packageIcon()}<span>Imagem não cadastrada</span></span></span><div class="web-image-panel"></div></div>`;
     return;
   }
 
   ui.modalGallery.innerHTML = `
     <div class="gallery__main">
-      <span class="image-placeholder is-hidden"><span>${packageIcon()}<span>Imagem não cadastrada na base</span>${webImageSearchAction(item)}</span></span>
+      <span class="image-placeholder is-hidden"><span>${packageIcon()}<span>Imagem não cadastrada na base</span></span></span>
       <img src="${escapeHtml(images[0].url)}" alt="${escapeHtml(item.name)} — foto 1">
     </div>
-    <div class="gallery__thumbs"></div>`;
+    <div class="gallery__thumbs"></div>
+    ${hasRegisteredImages ? "" : '<section class="web-image-panel" aria-live="polite"></section>'}`;
 
   const mainImage = ui.modalGallery.querySelector(".gallery__main img");
   const placeholder = ui.modalGallery.querySelector(".image-placeholder");
@@ -4851,6 +4807,8 @@ function renderGallery(item) {
     }
     thumbs.append(wrap);
   });
+
+  if (!hasRegisteredImages) loadAutomaticWebImages(item);
 }
 
 async function handlePhotoUpload() {
@@ -5064,25 +5022,136 @@ function imagesForItem(item, includeFallbackSet) {
   });
 }
 
-function webImageSearchQuery(item) {
-  const terms = [
-    item?.name,
-    item?.detailedName,
-    item?.code ? `código ${item.code}` : "",
-    ...(item?.categories || []),
-    ...(item?.units || []).map((unit) => `unidade ${unit}`),
-  ].map((value) => String(value || "").trim()).filter(Boolean);
-  const unique = [...new Set(terms.map((value) => value.replace(/\s+/g, " ")))];
-  return [...unique, "peça industrial", "foto do produto"].join(" ").slice(0, 420);
+function webImageSearchQueries(item) {
+  const detailed = String(item?.detailedName || "").trim();
+  const name = String(item?.name || "").trim();
+  const code = String(item?.code || "").trim();
+  const category = (item?.categories || []).find(Boolean) || "";
+  return [...new Set([
+    [detailed || name, code].filter(Boolean).join(" "),
+    detailed || name,
+    [name, category].filter(Boolean).join(" "),
+  ].map((value) => value.replace(/\s+/g, " ").trim()).filter(Boolean))];
 }
 
-function webImageSearchUrl(item) {
-  return `https://www.google.com/search?tbm=isch&safe=active&q=${encodeURIComponent(webImageSearchQuery(item))}`;
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["https:", "http:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
 }
 
-function webImageSearchAction(item) {
-  const query = webImageSearchQuery(item);
-  return `<a class="web-image-search" href="${escapeHtml(webImageSearchUrl(item))}" target="_blank" rel="noopener noreferrer" aria-label="Pesquisar imagens na web para ${escapeHtml(item.name || item.code)}"><span>Pesquisar imagem na web</span><small>${escapeHtml(query)}</small></a>`;
+function normalizedWebImage(result) {
+  const imageUrl = safeExternalUrl(result.imageUrl);
+  if (!imageUrl) return null;
+  return {
+    imageUrl,
+    pageUrl: safeExternalUrl(result.pageUrl) || imageUrl,
+    title: String(result.title || "Imagem do item").trim(),
+    creator: String(result.creator || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+    license: String(result.license || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+    source: String(result.source || "Web").trim(),
+  };
+}
+
+async function searchOpenverseImages(query) {
+  const params = new URLSearchParams({ q: query, page_size: "8", mature: "false" });
+  const response = await fetch(`https://api.openverse.org/v1/images/?${params}`, { mode: "cors", credentials: "omit" });
+  if (!response.ok) throw new Error(`Openverse ${response.status}`);
+  const payload = await response.json();
+  return (payload.results || []).map((result) => normalizedWebImage({
+    imageUrl: result.thumbnail || result.url,
+    pageUrl: result.foreign_landing_url || result.detail_url,
+    title: result.title,
+    creator: result.creator,
+    license: [result.license, result.license_version].filter(Boolean).join(" "),
+    source: result.source || "Openverse",
+  })).filter(Boolean);
+}
+
+async function searchWikimediaImages(query) {
+  const params = new URLSearchParams({
+    action: "query", format: "json", origin: "*", generator: "search",
+    gsrsearch: query, gsrnamespace: "6", gsrlimit: "8",
+    prop: "imageinfo", iiprop: "url|extmetadata", iiurlwidth: "720",
+  });
+  const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, { mode: "cors", credentials: "omit" });
+  if (!response.ok) throw new Error(`Wikimedia ${response.status}`);
+  const payload = await response.json();
+  return Object.values(payload.query?.pages || {}).map((page) => {
+    const info = page.imageinfo?.[0] || {};
+    const metadata = info.extmetadata || {};
+    return normalizedWebImage({
+      imageUrl: info.thumburl || info.url,
+      pageUrl: info.descriptionurl,
+      title: String(page.title || "").replace(/^File:/i, ""),
+      creator: metadata.Artist?.value,
+      license: metadata.LicenseShortName?.value,
+      source: "Wikimedia Commons",
+    });
+  }).filter(Boolean);
+}
+
+async function findWebImagesForItem(item) {
+  const key = normalizeCode(item.code);
+  if (state.webImageCache.has(key)) return state.webImageCache.get(key);
+  const request = (async () => {
+    const queries = webImageSearchQueries(item);
+    for (const query of queries) {
+      try {
+        const images = await searchOpenverseImages(query);
+        if (images.length) return images.slice(0, 8);
+      } catch {}
+      try {
+        const images = await searchWikimediaImages(query);
+        if (images.length) return images.slice(0, 8);
+      } catch {}
+    }
+    return [];
+  })();
+  state.webImageCache.set(key, request);
+  return request;
+}
+
+function renderAutomaticWebImages(item, images) {
+  const panel = ui.modalGallery.querySelector(".web-image-panel");
+  if (!panel || state.activeItem?.code !== item.code) return;
+  if (!images.length) {
+    panel.innerHTML = `<p class="web-image-panel__empty">Nenhuma imagem externa compatível foi encontrada automaticamente.</p>`;
+    return;
+  }
+  panel.innerHTML = `<div class="web-image-panel__heading"><strong>Imagens encontradas automaticamente</strong><small>Resultados externos — confira antes de cadastrar</small></div><div class="web-image-results"></div>`;
+  const results = panel.querySelector(".web-image-results");
+  for (const [index, image] of images.entries()) {
+    const card = document.createElement("article");
+    card.className = "web-image-result";
+    card.innerHTML = `<button type="button" aria-label="Visualizar resultado ${index + 1}: ${escapeHtml(image.title)}"><img src="${escapeHtml(image.imageUrl)}" alt="" loading="lazy" decoding="async"><span>${escapeHtml(image.title)}</span></button><small>${escapeHtml([image.creator, image.license, image.source].filter(Boolean).join(" · "))}</small><a href="${escapeHtml(image.pageUrl)}" target="_blank" rel="noopener noreferrer">Abrir fonte</a>`;
+    const preview = card.querySelector("button");
+    const thumbnail = card.querySelector("img");
+    thumbnail.addEventListener("error", () => card.remove(), { once: true });
+    preview.addEventListener("click", () => {
+      const mainImage = ui.modalGallery.querySelector(".gallery__main img");
+      const placeholder = ui.modalGallery.querySelector(".image-placeholder");
+      if (!mainImage) return;
+      placeholder?.classList.add("is-hidden");
+      mainImage.classList.remove("is-hidden");
+      mainImage.src = image.imageUrl;
+      mainImage.alt = `${item.name} — resultado externo ${index + 1}`;
+      panel.querySelectorAll(".web-image-result").forEach((entry) => entry.classList.remove("is-active"));
+      card.classList.add("is-active");
+    });
+    results.append(card);
+  }
+}
+
+async function loadAutomaticWebImages(item) {
+  const panel = ui.modalGallery.querySelector(".web-image-panel");
+  if (!panel) return;
+  panel.innerHTML = `<div class="web-image-panel__loading"><span aria-hidden="true"></span><p>Pesquisando imagens na web pela descrição detalhada…</p></div>`;
+  const images = await findWebImagesForItem(item);
+  renderAutomaticWebImages(item, images);
 }
 
 function localImageUrl(name) {
