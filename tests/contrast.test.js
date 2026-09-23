@@ -85,7 +85,7 @@ test("módulos dinâmicos participam do contrato de contraste", () => {
   for (const selector of requiredSelectors) {
     assert.ok(css.includes(selector), "cobertura ausente para " + selector);
   }
-  assert.ok(css.includes("Contrato universal de contraste — versão 10.4"));
+  assert.ok(css.includes("Contrato universal de contraste — versão 10.5"));
 });
 
 test("folha principal mantém chaves balanceadas", () => {
@@ -133,4 +133,14 @@ test("navegação possui transição suave com alternativa leve", () => {
   assert.ok(css.includes("@keyframes page-soft-focus-in"));
   assert.ok(css.includes("@keyframes page-soft-focus-mobile"));
   assert.ok(css.includes("prefers-reduced-motion:reduce"));
+});
+
+test("painel global usa um único componente de filtro reconstruído", () => {
+  assert.ok(app.includes('select.hidden = true'));
+  assert.ok(app.includes('select.dataset.filterSource = "true"'));
+  assert.ok(app.includes("function setExcelFilterOpen(select, open)"));
+  assert.ok(app.includes("excel-filter__backdrop"));
+  assert.ok(app.includes("excel-filter__footer"));
+  assert.ok(css.includes('select[data-filter-source="true"]'));
+  assert.ok(css.includes("Painel de filtros reconstruído — versão 10.5"));
 });

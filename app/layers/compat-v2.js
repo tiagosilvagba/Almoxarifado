@@ -1,9 +1,9 @@
 "use strict";
 
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
-const ALMOX_BASE = "./app/core/catalog-app.js?v=10.4";
+const ALMOX_BASE = "./app/core/catalog-app.js?v=10.5";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
-const CURRENT_VERSION_LABEL = window.__ALMOX_VERSION_LABEL__ || "Versão 10.4";
+const CURRENT_VERSION_LABEL = window.__ALMOX_VERSION_LABEL__ || "Versão 10.5";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],

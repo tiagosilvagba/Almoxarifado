@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.4">
+<html lang="pt-BR" data-app-version="10.5">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,8 +8,8 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
-    <link rel="stylesheet" href="app/styles/app.css?v=10.4">
-    <script src="script.js?v=10.4" defer></script>
+    <link rel="stylesheet" href="app/styles/app.css?v=10.5">
+    <script src="script.js?v=10.5" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -23,7 +23,7 @@
           </span>
           <div>
             <h1>Gestão de Almoxarifado</h1>
-            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 10.4</span></p>
+            <p><span id="statusLine" aria-live="polite">Preparando catálogo…</span><span id="baseUpdateBadge" class="base-update-badge is-hidden"></span><span id="versionBadge" class="version-badge">Versão 10.5</span></p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -112,27 +112,27 @@
                 <input id="searchInput" type="search" autocomplete="off" placeholder="Busque item, SC, OF, NF ou fornecedor">
               </span>
             </label>
-            <p class="multi-filter-hint">Cada filtro abre uma lista suspensa com caixas de seleção, como no Excel. Marque quantas opções precisar e use “Concluir e fechar” para aplicar.</p>
-            <label class="field"><span>Filial</span><select id="branchFilter" multiple size="3"><option value="">Todas as filiais</option></select></label>
-            <label class="field"><span>Local de estoque</span><select id="locationFilter" multiple size="3"><option value="">Todos os locais</option></select></label>
-            <label class="field"><span>Responsável pela reposição</span><select id="replenishmentResponsibleFilter" multiple size="3"><option value="">Todos os responsáveis</option></select></label>
-            <label class="field"><span>Categoria ou grupo</span><select id="categoryFilter" multiple size="3"><option value="">Todas as categorias</option></select></label>
-            <label class="field"><span>Unidade</span><select id="unitFilter" multiple size="3"><option value="">Todas as unidades</option></select></label>
-            <label class="field"><span>Fornecedor</span><select id="supplierFilter" multiple size="3"><option value="">Todos os fornecedores</option></select></label>
-            <label class="field"><span>Solicitante da SC</span><select id="requesterFilter" multiple size="3"><option value="">Todos os solicitantes</option></select></label>
+            <p class="multi-filter-hint">Escolha um ou vários critérios. As alterações só serão aplicadas ao clicar em “Concluir e fechar”.</p>
+            <label class="field"><span>Filial</span><select id="branchFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as filiais</option></select></label>
+            <label class="field"><span>Local de estoque</span><select id="locationFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os locais</option></select></label>
+            <label class="field"><span>Responsável pela reposição</span><select id="replenishmentResponsibleFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os responsáveis</option></select></label>
+            <label class="field"><span>Categoria ou grupo</span><select id="categoryFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as categorias</option></select></label>
+            <label class="field"><span>Unidade</span><select id="unitFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as unidades</option></select></label>
+            <label class="field"><span>Fornecedor</span><select id="supplierFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os fornecedores</option></select></label>
+            <label class="field"><span>Solicitante da SC</span><select id="requesterFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os solicitantes</option></select></label>
             <label class="field">
               <span>Classificação da compra</span>
-              <select id="ccuClassificationFilter" multiple size="3">
+              <select id="ccuClassificationFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1">
                 <option value="">Todas as classificações</option>
                 <option value="warehouse">Entrada no almoxarifado · CCU 1500</option>
                 <option value="direct">Direto para a área · CCU diferente de 1500</option>
                 <option value="direct-with-stock">Compra direta de item de estoque do almoxarifado</option>
               </select>
             </label>
-            <label class="field"><span>Código do item em compra direta</span><select id="itemCodeFilter" multiple size="3"><option value="">Todos os códigos</option></select></label>
+            <label class="field"><span>Código do item em compra direta</span><select id="itemCodeFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os códigos</option></select></label>
             <label class="field">
               <span>Situação do estoque</span>
-              <select id="stockStatusFilter" multiple size="4">
+              <select id="stockStatusFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1">
                 <option value="">Todas as situações</option>
                 <option value="zero">Itens zerados (mín. + máx. &gt; 0)</option>
                 <option value="below-min">Itens abaixo do mínimo</option>
@@ -145,7 +145,7 @@
             </label>
             <label class="field">
               <span>Situação da SC e entrega</span>
-              <select id="scStatusFilter" multiple size="4">
+              <select id="scStatusFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1">
                 <option value="">Todas as situações</option>
                 <option value="awaiting-of">Aguardando OF</option>
                 <option value="partial">Entrega parcial</option>
@@ -365,10 +365,10 @@
           <div class="of-period-slicer" aria-label="Segmentação pela data de criação da SC">
             <div class="of-period-slicer__heading"><div><span class="eyebrow">Período de análise</span><strong>Data de criação da SC</strong></div><button id="clearOfGenerationPeriod" class="button button--secondary is-hidden" type="button">Limpar período</button></div>
             <div class="of-period-slicer__controls">
-              <label><span>Ano</span><select id="ofGenerationYearFilter" multiple aria-label="Selecionar uma ou mais opções"><option value="">Todos os anos</option></select></label>
-              <label><span>Mês</span><select id="ofGenerationMonthFilter" multiple aria-label="Selecionar uma ou mais opções"><option value="">Todos os meses</option></select></label>
-              <label><span>Semana</span><select id="ofGenerationWeekFilter" multiple aria-label="Selecionar uma ou mais opções"><option value="">Todas as semanas</option></select></label>
-              <label><span>Data</span><select id="ofGenerationDateFilter" multiple aria-label="Selecionar uma ou mais opções"><option value="">Todas as datas</option></select></label>
+              <label><span>Ano</span><select id="ofGenerationYearFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1" aria-label="Selecionar uma ou mais opções"><option value="">Todos os anos</option></select></label>
+              <label><span>Mês</span><select id="ofGenerationMonthFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1" aria-label="Selecionar uma ou mais opções"><option value="">Todos os meses</option></select></label>
+              <label><span>Semana</span><select id="ofGenerationWeekFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1" aria-label="Selecionar uma ou mais opções"><option value="">Todas as semanas</option></select></label>
+              <label><span>Data</span><select id="ofGenerationDateFilter" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1" aria-label="Selecionar uma ou mais opções"><option value="">Todas as datas</option></select></label>
             </div>
           </div>
           <div id="ofGenerationSummary" class="need-summary of-generation-summary" aria-label="Distribuição do tempo de geração de OF"></div>
