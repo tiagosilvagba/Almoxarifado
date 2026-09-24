@@ -60,3 +60,33 @@ test("mantém contexto em pergunta de continuação", () => {
   assert.equal(result.totalMatched,1);
   assert.equal(result.rows[0].code,"1001");
 });
+
+test("resolve nome parcial do responsável e conta itens distintos", () => {
+  const source=rows();
+  source.push({...source[0],localCode:"9",search:source[0].search+" 9"});
+  const plan=assistant.parsePlan("Quantos itens zerados o Daniel Custódio tem?",source);
+  const result=assistant.runPlan(plan,source);
+  assert.equal(result.totalMatched,2);
+  assert.equal(plan.intent,"aggregate");
+  assert.equal(plan.countField,"code");
+  assert.ok(plan.filters.some(f=>f.field==="responsible"&&/DANIEL CORREIA CUSTODIO/i.test(f.value)));
+  assert.deepEqual(plan.textTerms,[]);
+});
+
+test("resolve apenas o primeiro nome quando a entidade é única", () => {
+  const source=rows();
+  const plan=assistant.parsePlan("quantos itens zerados o Daniel tem?",source);
+  const result=assistant.runPlan(plan,source);
+  assert.equal(result.totalMatched,1);
+  assert.ok(plan.filters.some(f=>f.field==="responsible"&&/DANIEL/i.test(f.value)));
+});
+
+test("entende qual responsável tem maior valor em ruptura sem exigir por responsável", () => {
+  const source=rows();
+  const plan=assistant.parsePlan("qual responsável tem maior valor de reposição em ruptura?",source);
+  const result=assistant.runPlan(plan,source);
+  assert.equal(plan.groupBy,"responsible");
+  assert.equal(plan.groupMetric,"purchaseValue");
+  assert.equal(result.groups[0].key,"DANIEL CORREIA CUSTODIO");
+  assert.equal(result.groups[0].purchaseValue,500);
+});
