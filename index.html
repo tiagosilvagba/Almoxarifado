@@ -8,8 +8,8 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
-    <link rel="stylesheet" href="app/styles/app.css?v=10.7.7">
-    <script src="script.js?v=10.7.13" defer></script>
+    <link rel="stylesheet" href="app/styles/app.css?v=10.7.8">
+    <script src="script.js?v=10.7.14" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -23,6 +23,7 @@
         <div class="startup-screen__progress" role="progressbar" aria-label="Preparando aplicação" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <span id="startupProgress"></span>
         </div>
+        <div id="startupPercent" class="startup-screen__percent" aria-hidden="true">0%</div>
         <div class="startup-screen__quote" aria-live="polite"><span id="startupQuote">Controle transforma informação em decisão.</span></div>
         <p class="startup-screen__hint">Os dados e indicadores estarão prontos antes de liberar o acesso.</p>
       </div>
