@@ -813,6 +813,9 @@
 .excel-filter__options { max-height:min(340px,50dvh); overflow:auto; border-top:1px solid var(--steel-200); }
 .excel-filter__option { display:grid; grid-template-columns:18px minmax(0,1fr); align-items:start; gap:9px; min-width:0; padding:9px 7px; border-bottom:1px solid var(--steel-100); color:var(--text); font-size:.84rem; font-weight:650; line-height:1.35; overflow-wrap:anywhere; cursor:pointer; }
 .excel-filter__option:hover { background:var(--steel-50); }
+/* Respect search results even when option rows use grid or flex layouts. */
+.excel-filter__option[hidden],
+#globalFiltersPanel .excel-filter__option[hidden] { display:none !important; }
 .excel-filter__option > input[type="checkbox"] { appearance:auto !important; -webkit-appearance:checkbox !important; box-sizing:border-box; display:block; width:18px !important; min-width:18px !important; height:18px !important; min-height:18px !important; margin:1px 0 0 !important; padding:0 !important; border:0 !important; border-radius:3px !important; background:initial !important; box-shadow:none !important; accent-color:var(--blue-600); }
 
 @media (max-width:600px) {
