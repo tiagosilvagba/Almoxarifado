@@ -1141,6 +1141,7 @@ function pageFromHash() {
 const FILTERED_PAGE_IDS = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max"];
 
 function isMobilePerformanceMode() {
+  if (typeof document === "undefined" || typeof window === "undefined") return false;
   return document.documentElement.classList.contains("viewport-mobile")
     || document.documentElement.classList.contains("viewport-tablet")
     || window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
@@ -1720,13 +1721,13 @@ async function handleWorkerMessage(event) {
     ui.statusLine.textContent = "Finalizando painel…";
     updateLoadingProgress(98);
 
-    // Indicadores pesados (mín./máx. e necessidade de compra) não bloqueiam mais
-    // a abertura do site. Eles são calculados sob demanda ao abrir essas abas.
+    // Prefere os indicadores pré-calculados no GitHub Actions. Se a base ainda
+    // não os tiver (ou estiver em uma versão antiga), mantém o cálculo local como fallback.
     state.minMaxReviews = [];
     state.minMaxReviewByKey.clear();
     state.purchaseNeeds = [];
     state.purchaseNeedByKey.clear();
-    state.derivedIndicatorsReady = false;
+    state.derivedIndicatorsReady = hydrateDerivedIndicators(message.payload.derivedIndicators);
     state.derivedIndicatorsPromise = null;
 
     applyAllFilters(false);
@@ -1745,19 +1746,95 @@ async function handleWorkerMessage(event) {
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
 
-    // Mantém a abertura rápida, mas recompõe em segundo plano os indicadores que
-    // alimentam o Dashboard. Isso evita cards zerados até o usuário abrir outra aba.
-    window.setTimeout(() => {
-      ensureDerivedIndicators().catch((error) => {
-        console.warn("Falha ao preparar indicadores derivados em segundo plano.", error);
-      });
-    }, 0);
+    // Bases novas já chegam com os indicadores prontos. O fallback abaixo só
+    // trabalha quando a base otimizada é antiga ou foi carregada pelos CSVs originais.
+    if (!state.derivedIndicatorsReady) {
+      window.setTimeout(() => {
+        ensureDerivedIndicators().catch((error) => {
+          console.warn("Falha ao preparar indicadores derivados em segundo plano.", error);
+        });
+      }, 0);
+    }
 
     state.worker?.terminate();
     state.worker = null;
   } catch (error) {
     showError("Os dados foram lidos, mas não puderam ser exibidos.", error.message);
   }
+}
+
+function hydrateDerivedIndicators(snapshot) {
+  if (!snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.reviews) || !Array.isArray(snapshot.needs)) return false;
+  const itemsByCode = new Map(state.items.map((item) => [item.code, item]));
+  const consumptionByPosition = new Map((state.consumption.records || []).map((record) => [
+    `${normalizeCode(record.code)}::${record.branchCode}::${record.localCode}`,
+    record,
+  ]));
+
+  const resolvePosition = (item, positionIndex) => item?.positions?.[positionIndex] || null;
+  const reviews = [];
+  for (const compact of snapshot.reviews) {
+    const item = itemsByCode.get(compact.itemCode);
+    const position = resolvePosition(item, compact.positionIndex);
+    if (!item || !position) return false;
+    const { itemCode, positionIndex, ...metrics } = compact;
+    reviews.push({
+      ...metrics,
+      item,
+      position,
+      consumption: consumptionByPosition.get(`${item.code}::${position.branchCode}::${position.localCode}`) || null,
+    });
+  }
+  state.minMaxReviews = reviews;
+  state.minMaxReviewByKey.clear();
+  reviews.forEach((review, index) => {
+    review.key = `review-${index}`;
+    state.minMaxReviewByKey.set(review.key, review);
+  });
+
+  const needs = [];
+  for (const compact of snapshot.needs) {
+    const item = itemsByCode.get(compact.itemCode);
+    const position = resolvePosition(item, compact.positionIndex);
+    if (!item || !position) return false;
+    const { itemCode, positionIndex, historyIndex, ...metrics } = compact;
+    needs.push({
+      ...metrics,
+      item,
+      position,
+      record: Number.isInteger(historyIndex) && historyIndex >= 0 ? item.history?.[historyIndex] || null : null,
+    });
+  }
+  state.purchaseNeeds = needs;
+  state.purchaseNeedByKey.clear();
+  needs.forEach((need, index) => {
+    need.key = `need-${index}`;
+    state.purchaseNeedByKey.set(need.key, need);
+  });
+  return true;
+}
+
+async function precomputeDerivedIndicators(payload) {
+  if (!payload || !Array.isArray(payload.items)) return null;
+  state.items = payload.items;
+  state.consumption = payload.consumption || { available: false, headers: [], records: [], rowCount: 0 };
+  await buildMinMaxReviews();
+  await buildPurchaseNeeds();
+
+  const reviews = state.minMaxReviews.map((review) => {
+    const { item, position, consumption, key, ...metrics } = review;
+    return { ...metrics, itemCode: item.code, positionIndex: item.positions.indexOf(position) };
+  });
+  const needs = state.purchaseNeeds.map((need) => {
+    const { item, position, record, key, ...metrics } = need;
+    return {
+      ...metrics,
+      itemCode: item.code,
+      positionIndex: item.positions.indexOf(position),
+      historyIndex: record ? item.history.indexOf(record) : -1,
+    };
+  });
+  return { version: 1, reviews, needs };
 }
 
 async function ensureDerivedIndicators() {
@@ -1919,7 +1996,10 @@ async function loadImageIndex() {
 }
 
 function yieldForHeavyWork() {
-  return new Promise((resolve) => window.setTimeout(resolve, 0));
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && typeof window.setTimeout === "function") window.setTimeout(resolve, 0);
+    else setTimeout(resolve, 0);
+  });
 }
 
 async function prepareItems() {
@@ -6252,5 +6332,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
