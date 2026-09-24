@@ -35,7 +35,10 @@
     pendingScDays:{label:"Dias SC sem OF",type:"days",aliases:["dias sc","tempo sc","sc sem of"]},
     scCount:{label:"SCs",type:"number",aliases:["sc","scs","solicitacao","solicitação"]},
     ofCount:{label:"OFs",type:"number",aliases:["of","ofs","ordem fornecimento"]},
-    receiptCount:{label:"Recebimentos",type:"number",aliases:["recebimento","recebimentos","rec","nota","nf"]}
+    receiptCount:{label:"Recebimentos",type:"number",aliases:["recebimento","recebimentos","rec","nota","nf"]},
+    scCodes:{label:"SC",type:"text",aliases:["numero sc","número sc","codigo sc","código sc"]},
+    ofCodes:{label:"OF",type:"text",aliases:["numero of","número of","codigo of","código of"]},
+    invoices:{label:"NF",type:"text",aliases:["numero nf","número nf","nota fiscal","nf"]}
   };
 
   const norm = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
@@ -134,7 +137,8 @@
           row.pendingSc?"sc sem of":"",row.hasOpenOf?"of aberta":"",row.overdueOf?"of atrasada":"",
           row.purchaseNeed>0?"necessidade compra":"",row.averageConsumption<=0&&row.balance>0?"sem consumo":""
         ].filter(Boolean).join(" ");
-        row.search=norm(Object.values(row).filter(v=>typeof v!=="object").join(" "));
+        const rawContext = (() => { try { return JSON.stringify({item,position,history}); } catch { return ""; } })();
+        row.search=norm(Object.values(row).filter(v=>typeof v!=="object").join(" ")+" "+rawContext);
         rows.push(row);
       }
     }
@@ -207,6 +211,7 @@
     if(/acima (do )?maxim/.test(n))add("_status","=","above-max","acima do máximo");
     if(/dentro (da )?faixa|entre minimo e maximo/.test(n))add("_status","=","within","dentro da faixa");
     if(/sem sc|nao (tem|possui|tenham|possuem) sc/.test(n))add("hasSc","=",false,"sem SC");
+    if(/sem sc (ou|e) of|sem sc\/of/.test(n)){add("hasSc","=",false,"sem SC");add("hasOf","=",false,"sem OF");}
     if(/com sc|possui sc|tenham sc/.test(n))add("hasSc","=",true,"com SC");
     if(/sc sem of|sc pendente|aguardando of/.test(n))add("pendingSc","=",true,"SC sem OF");
     if(/sem of|nao (tem|possui|tenham|possuem) of/.test(n))add("hasOf","=",false,"sem OF");
@@ -230,6 +235,12 @@
 
     const codeMatch=n.match(/(?:codigo|cod|item)?\s*\b(\d{4,})\b/);
     if(codeMatch&&rows.some(r=>r.code===codeMatch[1]))add("code","=",codeMatch[1],`Código ${codeMatch[1]}`);
+    const scMatch=n.match(/\bsc\s*(?:n|numero|número|codigo|código)?\s*[:#-]?\s*(\d{3,})\b/);
+    const ofMatch=n.match(/\bof\s*(?:n|numero|número|codigo|código)?\s*[:#-]?\s*(\d{3,})\b/);
+    const nfMatch=n.match(/\b(?:nf|nota fiscal)\s*(?:n|numero|número)?\s*[:#-]?\s*(\d{3,})\b/);
+    if(scMatch)add("scCodes","contains",scMatch[1],`SC ${scMatch[1]}`);
+    if(ofMatch)add("ofCodes","contains",ofMatch[1],`OF ${ofMatch[1]}`);
+    if(nfMatch)add("invoices","contains",nfMatch[1],`NF ${nfMatch[1]}`);
 
     const groupMap=[["supplier","fornecedor"],["responsible","responsavel"],["branchCode","filial"],["localCode","local"],["category","categoria"],["requester","solicitante"],["area","area"]];
     for(const [field,word] of groupMap)if(new RegExp("(por|agrup|separ).*"+word).test(n)){plan.groupBy=field;break;}
@@ -258,7 +269,7 @@
     const recognized=new Set();
     for(const def of Object.values(FIELD_DEFS))for(const a of def.aliases)norm(a).split(" ").forEach(t=>recognized.add(t));
     (plan.filters||[]).forEach(f=>norm(f.value).split(" ").forEach(t=>recognized.add(t)));
-    const terms=norm(original).split(" ").filter(t=>t.length>2&&!STOP.has(t)&&!recognized.has(t)&&!/^(maior|menor|acima|abaixo|media|total|dias|reais|real|top)$/.test(t)&&! /^\d+$/.test(t));
+    const terms=norm(original).split(" ").filter(t=>t.length>2&&!STOP.has(t)&&!recognized.has(t)&&!/^(maior|menor|acima|abaixo|media|total|dias|reais|real|top)$/.test(t)&&(!/^\d+$/.test(t)||t.length>=4));
     const useful=terms.filter(t=>rows.some(r=>r.search.includes(t)));
     plan.textTerms=uniq(contextual?[...(plan.textTerms||[]),...useful]:useful).slice(0,8);
 
