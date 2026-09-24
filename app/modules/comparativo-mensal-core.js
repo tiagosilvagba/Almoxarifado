@@ -362,11 +362,11 @@
   function pageTemplate() {
     return `
       <section id="page-comparativo-mensal" class="page-panel is-hidden" data-page-panel="comparativo-mensal" aria-labelledby="monthlyCompareTitle">
-        <div class="section-heading"><div><span class="eyebrow">Evolução mensal</span><h2 id="monthlyCompareTitle">Comparativo mensal de estoque</h2><p class="section-description">Compare Saldo Real e Consumo real entre os arquivos mensais do repositório.</p></div><span id="monthlyFileCount" class="context-label">Procurando bases…</span></div>
+        <div class="section-heading"><div><span class="eyebrow">Evolução mensal</span><h2 id="monthlyCompareTitle">Comparativo mensal de estoque</h2><p class="section-description">Compare Saldo Real e Consumo real entre os arquivos mensais do repositório.</p></div><div class="heading-actions"><span id="monthlyFileCount" class="context-label">Procurando bases…</span><div class="export-control"><label><span>Formato</span><select id="monthlyExportFormat" aria-label="Formato da exportação do comparativo mensal"><option value="excel">Excel</option></select></label><button id="monthlyExportExcel" class="button button--export" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div></div>
         <div class="month-compare-controls">
           <label>Mês base<select id="monthlyBaseSelect"></select></label>
           <label>Mês comparado<select id="monthlyCurrentSelect"></select></label>
-          <div class="month-compare-actions"><button id="monthlyCompareButton" class="button button--primary" type="button">Comparar meses</button><button id="monthlyExportExcel" class="button button--export" type="button">Baixar Excel</button></div>
+          <div class="month-compare-actions"><button id="monthlyCompareButton" class="button button--primary" type="button">Comparar meses</button></div>
         </div>
         <section class="month-page-filters" aria-label="Filtros exclusivos do comparativo mensal">
           <div class="month-page-filters__head"><div><strong>Filtros do comparativo mensal</strong><br><small>Aplicados somente nesta página</small></div></div>
