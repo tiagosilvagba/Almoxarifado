@@ -1911,13 +1911,15 @@ function updateLoadingProgress(percent = 0) {
 function loadingProgressCeilingFor(checkpoint = 0) {
   const value = Math.max(0, Math.min(100, Number(checkpoint) || 0));
   if (value >= 100) return 100;
-  if (value >= 90) return 97;
-  if (value >= 85) return 89;
-  if (value >= 55) return Math.min(89, value + 8);
-  if (value >= 36) return 53;
-  if (value >= 28) return 34;
-  if (value >= 8) return 26;
-  return 7;
+  // Mantém margem visual até o fim: o progresso pode continuar avançando
+  // lentamente até 99,4%, mas 100% fica reservado à liberação real do app.
+  if (value >= 90) return 99.4;
+  if (value >= 85) return 94.5;
+  if (value >= 55) return Math.min(91, value + 10);
+  if (value >= 36) return 58;
+  if (value >= 28) return 39;
+  if (value >= 8) return 29;
+  return 8;
 }
 
 function startLoadingProgressPulse() {
@@ -1925,7 +1927,11 @@ function startLoadingProgressPulse() {
   state.loadingProgressTimer = setInterval(() => {
     const remaining = state.loadingProgressCeiling - state.loadingProgressValue;
     if (remaining <= 0.08) return;
-    const increment = Math.max(0.12, Math.min(0.72, remaining * 0.045));
+    // Curva desacelera progressivamente perto do fim, sem congelar em um
+    // percentual inteiro. Assim 99% ainda transmite atividade e 100% coincide
+    // exatamente com a liberação do sistema.
+    const pace = state.loadingProgressValue >= 97 ? 0.018 : state.loadingProgressValue >= 90 ? 0.028 : 0.045;
+    const increment = Math.max(0.035, Math.min(0.64, remaining * pace));
     state.loadingProgressValue = Math.min(state.loadingProgressCeiling, state.loadingProgressValue + increment);
     renderLoadingProgress();
   }, 420);
