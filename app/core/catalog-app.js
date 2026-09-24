@@ -127,6 +127,8 @@ const state = {
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
+  startupQuoteTimer: null,
+  startupQuoteIndex: 0,
   derivedIndicatorsReady: false,
   derivedIndicatorsPromise: null,
 };
@@ -139,6 +141,7 @@ if (typeof document !== "undefined") {
 
 async function init() {
   cacheUi();
+  startStartupQuotes();
   initializeExcelFilterControls();
   initializeLanguage();
   initializeTheme();
@@ -151,7 +154,7 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "startupScreen", "startupMessage", "startupProgress", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
+    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "startupScreen", "startupMessage", "startupProgress", "startupQuote", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
@@ -1746,6 +1749,7 @@ async function handleWorkerMessage(event) {
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
     if (ui.startupMessage) ui.startupMessage.textContent = "Tudo pronto.";
+    stopStartupQuotes();
     document.body.classList.remove("app-booting");
     document.body.classList.add("app-ready");
     ui.startupScreen?.setAttribute("aria-busy", "false");
@@ -1867,6 +1871,10 @@ async function ensureDerivedIndicators() {
     state.derivedIndicatorsPromise = null;
   }
 }
+
+const STARTUP_QUOTES = Object.freeze(["Controle transforma informação em decisão.","O que é bem medido pode ser melhorado.","Organização hoje evita urgências amanhã.","Estoque certo, no lugar certo, no momento certo.","Precisão nos dados gera confiança nas decisões.","Antecipar necessidades é melhor do que reagir a faltas.","Cada detalhe controlado fortalece toda a operação.","Boa gestão começa com informação confiável.","Eficiência é fazer o necessário com clareza e controle.","Consistência nos processos constrói resultados sustentáveis."]);
+function startStartupQuotes(){if(!ui.startupQuote||state.startupQuoteTimer)return;state.startupQuoteIndex=0;ui.startupQuote.textContent=STARTUP_QUOTES[0];state.startupQuoteTimer=window.setInterval(()=>{ui.startupQuote.classList.add("is-changing");window.setTimeout(()=>{state.startupQuoteIndex=(state.startupQuoteIndex+1)%STARTUP_QUOTES.length;if(!ui.startupQuote)return;ui.startupQuote.textContent=STARTUP_QUOTES[state.startupQuoteIndex];ui.startupQuote.classList.remove("is-changing");},360);},3200);}
+function stopStartupQuotes(){if(!state.startupQuoteTimer)return;clearInterval(state.startupQuoteTimer);state.startupQuoteTimer=null;}
 
 function showLoading(title, message) {
   ui.loadingPanel.classList.remove("is-hidden", "has-error");
