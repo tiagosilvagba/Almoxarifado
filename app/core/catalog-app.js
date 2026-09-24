@@ -151,7 +151,7 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
+    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "startupScreen", "startupMessage", "startupProgress", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
@@ -1745,6 +1745,11 @@ async function handleWorkerMessage(event) {
     ui.loadingPanel.classList.add("is-hidden");
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
+    if (ui.startupMessage) ui.startupMessage.textContent = "Tudo pronto.";
+    document.body.classList.remove("app-booting");
+    document.body.classList.add("app-ready");
+    ui.startupScreen?.setAttribute("aria-busy", "false");
+    window.setTimeout(() => ui.startupScreen?.remove(), 800);
 
     // Bases novas já chegam com os indicadores prontos. O fallback abaixo só
     // trabalha quando a base otimizada é antiga ou foi carregada pelos CSVs originais.
@@ -1868,6 +1873,7 @@ function showLoading(title, message) {
   ui.loadingPanel.setAttribute("aria-busy", "true");
   ui.loadingTitle.textContent = title;
   ui.loadingMessage.textContent = message;
+  if (ui.startupMessage) ui.startupMessage.textContent = message || "Preparando seu ambiente…";
   ui.retryButton.classList.add("is-hidden");
   ui.statusLine.textContent = message;
   ui.baseUpdateBadge.classList.add("is-hidden");
@@ -1929,6 +1935,10 @@ function renderLoadingProgress(complete = false) {
   ui.loadingProgress.style.width = `${value.toFixed(2)}%`;
   ui.loadingProgressText.textContent = complete ? "100% · concluído" : `${displayed}% · processando…`;
   ui.loadingProgress.parentElement?.setAttribute("aria-valuenow", String(displayed));
+  if (ui.startupProgress) {
+    ui.startupProgress.style.width = `${value.toFixed(2)}%`;
+    ui.startupProgress.parentElement?.setAttribute("aria-valuenow", String(displayed));
+  }
 }
 
 function updateBaseTimestamp(value) {
