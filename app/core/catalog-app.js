@@ -2020,6 +2020,17 @@ async function prepareItems() {
       ...(item.suppliers || []),
       ...(item.replenishmentResponsibles || []),
       ...(item.units || []),
+      // Permite localizar o item também pelo endereço físico de armazenagem.
+      // Os campos ficam no índice global de pesquisa e aceitam busca isolada
+      // (ex.: A3) ou combinada (ex.: AP A3 02).
+      ...(item.positions || []).flatMap((position) => [
+        position.partition,
+        position.shelf,
+        position.division,
+        [position.partition, position.shelf, position.division].filter(Boolean).join(" "),
+        position.localCode,
+        position.localName,
+      ]),
       ...(item.history || []).flatMap((record) => [
         record.sc?.code, record.sc?.status, record.sc?.requesterName,
         record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierEmail,
