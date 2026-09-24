@@ -128,3 +128,21 @@ test("comparativo mensal cruza snapshots carregados dinamicamente", async () => 
   assert.equal(result.rows[0].itemCode,"1001");
   assert.equal(result.rows[0].delta,4);
 });
+
+
+test("agrupamento por responsável soma valor de ruptura", async () => {
+  const state = mockState();
+  const engine = createAssistantEngine({stateProvider:() => state});
+  const result = await engine.ask("qual responsável tem maior valor em ruptura?");
+  assert.equal(result.result.type,"group");
+  assert.equal(result.rows[0].group,"DANIEL CORREIA CUSTODIO");
+  assert.equal(result.rows[0].value,200);
+});
+
+test("consulta de itens com SC antiga e sem OF usa idade da SC no cruzamento", async () => {
+  const state = mockState();
+  const engine = createAssistantEngine({stateProvider:() => state});
+  const result = await engine.ask("itens com SC há mais de 7 dias sem OF");
+  assert.equal(result.result.total,1);
+  assert.equal(result.rows[0].itemCode,"1001");
+});
