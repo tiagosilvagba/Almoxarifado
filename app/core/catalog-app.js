@@ -2665,10 +2665,17 @@ async function buildPurchaseNeeds() {
     const item = state.items[itemIndex];
     const commitmentsByBranch = getItemPurchaseCommitments(item);
     for (const position of item.positions || []) {
-      if (!(position.minimum > 0 && position.quantity < position.minimum)) continue;
       const target = position.maximum > 0 ? position.maximum : position.minimum;
+      if (!(target > 0)) continue;
+      const branchCommitments = commitmentsByBranch.get(normalizeBranchCode(position.branchCode));
+      const hasPurchaseCoverage = Boolean(branchCommitments?.ofs?.some((entry) => entry.remaining > 0)
+        || branchCommitments?.scs?.some((entry) => entry.remaining > 0));
+      // A posição entra na análise quando está abaixo do mínimo OU quando já existe
+      // compra em andamento. Assim uma OF/SC válida nunca fica invisível e evita
+      // uma nova compra sem descontar primeiro a cobertura existente.
+      if (!(position.minimum > 0 && position.quantity < position.minimum) && !hasPurchaseCoverage) continue;
       const grossSuggested = Math.max(target - position.quantity, 0);
-      const coverage = allocatePurchaseCoverage(commitmentsByBranch.get(normalizeBranchCode(position.branchCode)), grossSuggested);
+      const coverage = allocatePurchaseCoverage(branchCommitments, grossSuggested);
       const netSuggested = Math.max(grossSuggested - coverage.total, 0);
       // Mantém também as necessidades totalmente cobertas para que a tela consiga
       // informar explicitamente "Compra já coberta" em vez de ocultar o processo.
