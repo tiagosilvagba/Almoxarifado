@@ -6160,3 +6160,5 @@ html[data-theme] .excel-filter__option:hover{
     grid-column:auto;
   }
 }
+
+.startup-screen__quote{display:flex;align-items:center;justify-content:center;min-height:54px;margin:24px auto 2px;max-width:480px;padding:0 18px;font-size:14px;font-weight:500;line-height:1.45;color:#515154}.startup-screen__quote span{opacity:1;transform:translateY(0);transition:opacity .35s ease,transform .35s ease}.startup-screen__quote span.is-changing{opacity:0;transform:translateY(6px)}
