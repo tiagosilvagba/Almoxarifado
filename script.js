@@ -18,9 +18,8 @@ const MODULES = Object.freeze({
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=10.7",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.5",
-  internalAssistant: "./app/modules/assistente-interno.js?v=10.7.7",
+  internalAssistant: "./app/modules/assistente-interno.js?v=10.7.8",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
-  assistant: "./app/modules/local-ai-assistant.js?v=10.7.6",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
   comparison: [
@@ -111,7 +110,6 @@ function exposeAppState(attempt = 0) {
     [MODULES.purchaseLeadTime, "lead time de reposição"],
     [MODULES.internalAssistant, "assistente analítico interno"],
     [MODULES.imageViewer, "visualizador de fotos"],
-    [MODULES.assistant, "assistente IA local"],
   ]) {
     await optional(src, name);
     await yieldToBrowser();
