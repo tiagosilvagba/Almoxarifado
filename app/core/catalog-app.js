@@ -1161,7 +1161,7 @@ function scheduleMobilePageWarmup() {
   cancelMobilePageWarmup();
   // No Android, renderizar abas invisíveis em segundo plano disputa memória e CPU
   // com a aba ativa. Cada módulo continua sendo renderizado normalmente ao abrir.
-  if (!isMobilePerformanceMode() || isAndroidPerformanceMode() || !state.items.length || document.hidden) return;
+  if (isMobilePerformanceMode() || !state.items.length || document.hidden) return;
 
   const activePage = pageFromHash();
   const queue = FILTERED_PAGE_IDS.filter((page) =>
@@ -1212,7 +1212,7 @@ function synchronizePageNavigation(validPage) {
 }
 
 function animatePageEntry(panel) {
-  if (!panel || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+  if (!panel || isMobilePerformanceMode() || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
   panel.__almoxPageEntryCleanup?.();
   panel.classList.remove("page-entering");
   void panel.offsetWidth;
@@ -1694,11 +1694,33 @@ async function handleWorkerMessage(event) {
     }
     state.items = message.payload.items;
     state.consumption = message.payload.consumption;
-    state.imageIndex = await state.imagePromise;
-    prepareItems();
+    state.imagePromise?.then((index) => {
+      state.imageIndex = index || new Map();
+    }).catch(() => {});
+
+    ui.loadingMessage.textContent = "Organizando itens e pesquisas…";
+    ui.statusLine.textContent = "Organizando itens e pesquisas…";
+    updateLoadingProgress(93);
+    await prepareItems();
+    await yieldForHeavyWork();
+
+    ui.loadingMessage.textContent = "Preparando filtros…";
+    ui.statusLine.textContent = "Preparando filtros…";
+    updateLoadingProgress(95);
     populateFilters();
-    buildMinMaxReviews();
-    buildPurchaseNeeds();
+    await yieldForHeavyWork();
+
+    ui.loadingMessage.textContent = "Calculando indicadores de mínimo e máximo…";
+    ui.statusLine.textContent = "Calculando indicadores de mínimo e máximo…";
+    updateLoadingProgress(96);
+    await buildMinMaxReviews();
+
+    ui.loadingMessage.textContent = "Calculando necessidades de compra…";
+    ui.statusLine.textContent = "Calculando necessidades de compra…";
+    updateLoadingProgress(98);
+    await buildPurchaseNeeds();
+    await yieldForHeavyWork();
+
     applyAllFilters(false);
     navigateToPage(pageFromHash(), false);
 
@@ -1853,10 +1875,16 @@ async function loadImageIndex() {
   return index;
 }
 
-function prepareItems() {
+function yieldForHeavyWork() {
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
+}
+
+async function prepareItems() {
   state.itemByCode.clear();
 
-  for (const item of state.items) {
+  const chunkSize = isMobilePerformanceMode() ? 90 : 320;
+  for (let itemIndex = 0; itemIndex < state.items.length; itemIndex += 1) {
+    const item = state.items[itemIndex];
     item.flags.locationAdjustment = itemNeedsLocationAdjustment(item);
     item.requesters = [...new Set((item.history || [])
       .map((record) => String(record.sc?.requesterName || "").trim())
@@ -1876,6 +1904,7 @@ function prepareItems() {
       ]),
     ].join(" "));
     state.itemByCode.set(item.code, item);
+    if ((itemIndex + 1) % chunkSize === 0) await yieldForHeavyWork();
   }
 
   state.items.sort((a, b) => a.code.localeCompare(b.code, "pt-BR", {
@@ -2173,7 +2202,13 @@ function applyFilters(renderCatalog = true) {
     return true;
   };
 
-  state.filteredItems = state.items.filter((item) => {
+  const hasActiveFilters = Boolean(
+    query || branch.length || location.length || replenishmentResponsible.length || category.length
+    || unit.length || supplier.length || requester.length || ccuClassification.length || itemCode.length
+    || stockStatus.length || scStatus.length || positiveOnly
+  );
+
+  state.filteredItems = hasActiveFilters ? state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
     if (query && !item.searchText.includes(query)) return false;
     if (itemCode.length && !itemCode.includes(item.code)) return false;
@@ -2195,17 +2230,19 @@ function applyFilters(renderCatalog = true) {
     if (scStatus.length && !scStatus.some((value) => itemMatchesProcurementStatus(item, value, branch, requester))) return false;
     if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
-  });
+  }) : state.items.filter((item) => !item.flags.inactiveOnly);
   for (const item of state.filteredItems) visibleItemByCode.set(String(item.code).replace(/^0+(?=\d)/, ""), item);
 
   const sort = ui.catalogSort.value;
-  state.filteredItems.sort((a, b) => {
-    if (sort === "description") return a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" });
-    if (sort === "balance") return b.balanceTotal - a.balanceTotal || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
-    if (sort === "value") return b.stockValueTotal - a.stockValueTotal || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
-    if (sort === "critical") return itemCriticality(b) - itemCriticality(a) || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
-    return a.code.localeCompare(b.code, "pt-BR", { numeric: true, sensitivity: "base" });
-  });
+  if (sort !== "code") {
+    state.filteredItems.sort((a, b) => {
+      if (sort === "description") return a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" });
+      if (sort === "balance") return b.balanceTotal - a.balanceTotal || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
+      if (sort === "value") return b.stockValueTotal - a.stockValueTotal || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
+      if (sort === "critical") return itemCriticality(b) - itemCriticality(a) || a.code.localeCompare(b.code, "pt-BR", { numeric: true });
+      return a.code.localeCompare(b.code, "pt-BR", { numeric: true, sensitivity: "base" });
+    });
+  }
 
   ui.resultCount.textContent = pluralize(state.filteredItems.length, "item", "itens");
   if (!renderCatalog) return;
@@ -2478,14 +2515,16 @@ function handleChartFilter(event) {
   handleAutomaticFilter(branch ? "branchFilter" : "stockStatusFilter");
 }
 
-function buildPurchaseNeeds() {
+async function buildPurchaseNeeds() {
   const needs = [];
   const consumptionByPosition = new Map(state.minMaxReviews.map((review) => [
     `${review.item.code}::${review.position.branchCode}::${review.position.localCode}`,
     review,
   ]));
 
-  for (const item of state.items) {
+  const chunkSize = isMobilePerformanceMode() ? 45 : 180;
+  for (let itemIndex = 0; itemIndex < state.items.length; itemIndex += 1) {
+    const item = state.items[itemIndex];
     const commitmentsByBranch = getItemPurchaseCommitments(item);
     for (const position of item.positions || []) {
       if (!(position.minimum > 0 && position.quantity < position.minimum)) continue;
@@ -2573,6 +2612,7 @@ function buildPurchaseNeeds() {
         record,
       });
     }
+    if ((itemIndex + 1) % chunkSize === 0) await yieldForHeavyWork();
   }
 
   state.purchaseNeeds = needs.sort((a, b) => {
@@ -4356,13 +4396,15 @@ function renderNextMinMaxReviewBatch() {
   ui.reviewLoadMore.classList.toggle("is-hidden", end >= state.visibleMinMaxReviews.length);
 }
 
-function buildMinMaxReviews() {
+async function buildMinMaxReviews() {
   const consumptionByPosition = new Map((state.consumption.records || []).map((record) => [
     `${normalizeCode(record.code)}::${record.branchCode}::${record.localCode}`,
     record,
   ]));
   const reviews = [];
-  for (const item of state.items) {
+  const chunkSize = isMobilePerformanceMode() ? 45 : 180;
+  for (let itemIndex = 0; itemIndex < state.items.length; itemIndex += 1) {
+    const item = state.items[itemIndex];
     if (item.flags.inactiveOnly || !item.positions.length) continue;
     const leadByBranch = calculateItemLeadTimes(item);
     const purchasePrice = latestPurchasePrice(item);
@@ -4405,6 +4447,7 @@ function buildMinMaxReviews() {
         direction: recommendedTotal >= currentTotal ? "increase" : "reduce",
       });
     }
+    if ((itemIndex + 1) % chunkSize === 0) await yieldForHeavyWork();
   }
   reviews.sort((a, b) => {
     const statusOrder = { adjust: 0, insufficient: 1, ideal: 2 };
