@@ -2668,9 +2668,10 @@ async function buildPurchaseNeeds() {
       if (!(position.minimum > 0 && position.quantity < position.minimum)) continue;
       const target = position.maximum > 0 ? position.maximum : position.minimum;
       const grossSuggested = Math.max(target - position.quantity, 0);
-      const coverage = allocatePurchaseCoverage(commitmentsByBranch.get(position.branchCode), grossSuggested);
+      const coverage = allocatePurchaseCoverage(commitmentsByBranch.get(normalizeBranchCode(position.branchCode)), grossSuggested);
       const netSuggested = Math.max(grossSuggested - coverage.total, 0);
-      if (netSuggested <= 0) continue;
+      // Mantém também as necessidades totalmente cobertas para que a tela consiga
+      // informar explicitamente "Compra já coberta" em vez de ocultar o processo.
       const referencePrice = position.unitCost || latestPurchasePrice(item) || 0;
       const consumptionReview = consumptionByPosition.get(`${item.code}::${position.branchCode}::${position.localCode}`);
       needs.push({
@@ -2821,7 +2822,15 @@ function getItemPurchaseCommitments(item) {
   const requests = new Map();
   for (const record of item.history || []) {
     if (!isWarehouseSc(record.sc)) continue;
-    const branchCode = record.branchCode || "";
+    // Para cobertura de compra, prioriza a filial de destino da SC/OF. O campo
+    // genérico do registro pode vir do recebimento e não representar a posição
+    // de estoque que originou a necessidade.
+    const branchCode = normalizeBranchCode(first(
+      record.sc?.destinationBranch,
+      record.of?.deliveryBranchCode,
+      record.sc?.branchCode,
+      record.branchCode,
+    ));
     if (isOpenOfForPurchase(record.of)) {
       const orderKey = `${record.of.code}::${branchCode}`;
       const existing = orders.get(orderKey) || {
@@ -2903,6 +2912,12 @@ function isActiveScForPurchaseCoverage(sc) {
     "aguardando aprovacao",
     "comprador negociando",
   ].some((eligibleStatus) => status.includes(eligibleStatus));
+}
+
+function normalizeBranchCode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return /^\d+$/.test(raw) ? raw.replace(/^0+(?=\d)/, "") : raw;
 }
 
 function isWarehouseSc(sc) {
