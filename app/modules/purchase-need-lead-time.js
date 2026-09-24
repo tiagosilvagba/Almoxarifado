@@ -364,7 +364,7 @@
         .purchase-need-lead-time{grid-template-columns:1fr}
         .purchase-need-lead-time__total,.purchase-need-lead-stage{min-height:0}
       }
-    `
+    `;
     document.head.appendChild(sheet);
   }
 
