@@ -9,12 +9,12 @@ const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=10.7.1",
+  base: "./app/layers/features.js?v=10.7.2",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
   area: "./app/modules/area-filter-active.js?v=7.9",
-  noTurn: "./app/modules/itens-sem-giro.js?v=10.7",
+  noTurn: "./app/modules/itens-sem-giro.js?v=10.7.2",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
   followUp: "./app/modules/follow-up.js?v=10.7",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=7.0",
@@ -25,7 +25,7 @@ const MODULES = Object.freeze({
     ["./app/modules/comparativo-meta.js?v=7.0", "metas"],
     ["./app/modules/layout-fix.js?v=7.0", "layout"],
     ["./app/modules/comparativo-periodos.js?v=7.0", "períodos"],
-    ["./app/modules/comparativo-excel-padrao.js?v=7.0", "Excel"],
+    ["./app/modules/comparativo-excel-padrao.js?v=10.7.2", "Excel"],
     ["./app/modules/comparativo-item-split.js?v=7.0", "itens"],
     ["./app/modules/comparativo-meta-visual.js?v=7.0", "meta visual"],
     ["./app/modules/comparativo-inclusoes.js?v=10.7", "inclusões"],
