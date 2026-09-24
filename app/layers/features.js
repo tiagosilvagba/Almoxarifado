@@ -1,9 +1,9 @@
 "use strict";
 
 /* Bootstrap 2.0 — preserva a aplicação estável e adiciona melhorias incrementais. */
-const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=10.7.4";
+const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=10.7.10";
 const ALMOX_STABLE_FALLBACK = ALMOX_STABLE_APP;
-const MONTHLY_COMPARISON_MODULE = "./app/modules/comparativo-mensal-core.js?v=10.7.3";
+const MONTHLY_COMPARISON_MODULE = "./app/modules/comparativo-mensal-core.js?v=10.7.10";
 const MONTHLY_COMPARISON_FALLBACK = MONTHLY_COMPARISON_MODULE;
 const AREA_MASTER_FILE = "./02 - Responsaveis_Reposição.CSV?area=20260917-1";
 
