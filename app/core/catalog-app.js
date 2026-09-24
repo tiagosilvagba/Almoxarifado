@@ -157,7 +157,7 @@ function cacheUi() {
     "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter", "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter", "itemCodeFilter", "scStatusFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
-    "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState",
+    "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState", "exportCatalogButton", "catalogExportFormat",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
     "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBranchBalances",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
@@ -275,6 +275,7 @@ function bindEvents() {
   });
   ui.purchaseNeedLoadMore.addEventListener("click", renderNextPurchaseNeedBatch);
   ui.pendingScLoadMore.addEventListener("click", renderNextPendingScBatch);
+  ui.exportCatalogButton.addEventListener("click", () => exportCatalog(ui.catalogExportFormat.value));
   ui.exportPurchaseNeedButton.addEventListener("click", () => exportPurchaseNeeds(ui.purchaseNeedExportFormat.value));
   ui.exportPendingScButton.addEventListener("click", () => exportPendingSc(ui.pendingScExportFormat.value));
   ui.exportProcurementButton.addEventListener("click", () => exportProcurement(ui.procurementExportFormat.value));
@@ -3137,6 +3138,39 @@ function exportPurchaseNeeds(format = "excel") {
     rows,
     numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 28, 29, 30, 35, 36]),
     currencyColumns: new Set([25, 26, 29, 30]),
+  });
+}
+
+function exportCatalog(format = "excel") {
+  const rows = state.filteredItems.flatMap((item) => currentScopedPositions(item).map((position) => {
+    const stockStatus = position.negative ? "Saldo negativo"
+      : position.outOfStock ? "Zerado"
+        : position.belowMin ? "Abaixo do mínimo"
+          : position.aboveMax ? "Acima do máximo"
+            : position.unconfigured ? "Sem parametrização"
+              : "Dentro da faixa";
+    return [
+      item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
+      position.branchCode, position.branchName, position.localCode, position.localName, position.localType,
+      position.quantity, position.minimum, position.maximum, stockStatus, position.forecast,
+      position.unitCost, position.stockValue, position.partition, position.shelf, position.division,
+      (position.replenishmentResponsibles || item.replenishmentResponsibles || []).join(" | "),
+      (item.suppliers || []).join(" | "),
+    ];
+  }));
+  exportReport(format, {
+    title: "Catálogo de estoque",
+    filename: "catalogo-de-estoque.xls",
+    headers: [
+      "Código do item", "Descrição", "Descrição detalhada", "Categorias", "Unidades",
+      "Código filial", "Filial", "Código local", "Local de estoque", "Tipo de local",
+      "Saldo atual", "Mínimo", "Máximo", "Situação do estoque", "Previsão de consumo",
+      "Custo unitário", "Valor em estoque", "Repartição", "Prateleira", "Divisão",
+      "Responsáveis pela reposição", "Fornecedores",
+    ],
+    rows,
+    numericColumns: new Set([10, 11, 12, 14, 15, 16]),
+    currencyColumns: new Set([15, 16]),
   });
 }
 
