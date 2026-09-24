@@ -9,7 +9,7 @@ const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=10.7",
+  base: "./app/layers/features.js?v=10.7.1",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
@@ -62,7 +62,11 @@ async function optional(src, name) {
 
 function setVersion() {
   const badge = document.getElementById("versionBadge");
-  if (badge && badge.textContent !== BOOTSTRAP_VERSION_LABEL) badge.textContent = BOOTSTRAP_VERSION_LABEL;
+  if (badge) {
+    badge.textContent = BOOTSTRAP_VERSION_LABEL;
+    badge.hidden = false;
+    badge.removeAttribute("aria-hidden");
+  }
   document.documentElement.dataset.appVersion = BOOTSTRAP_VERSION;
 }
 
