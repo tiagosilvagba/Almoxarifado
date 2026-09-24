@@ -2794,7 +2794,7 @@ html[data-theme="logistica-neon"] .app-nav-wrap {
     justify-content:center !important;
     white-space:normal !important;
     text-align:center !important;
-    font-size:10.5px !important;
+    font-size:10.6px !important;
     font-weight:700;
     line-height:1.12 !important;
     border-radius:12px !important;
@@ -4969,7 +4969,7 @@ html[data-theme] #page-consumo :is(.consumption-panel,.need-summary article){
 
 
 /* =========================================================
-   Contrato universal de contraste — versão 10.5
+   Contrato universal de contraste — versão 10.6
    Uma única camada final governa texto/fundo em todos os temas,
    inclusive módulos que injetam estilos depois do carregamento.
    WCAG AA: pares essenciais validados com contraste >= 4,5:1.
@@ -5243,7 +5243,7 @@ html[data-theme] :focus-visible{
 
 
 /* =========================================================
-   Transição de páginas e filtros múltiplos de OF — versão 10.5
+   Transição de páginas e filtros múltiplos de OF — versão 10.6
    ========================================================= */
 @keyframes page-soft-focus-in{
   0%{opacity:.28;filter:blur(10px);transform:translateY(10px) scale(.992)}
@@ -5336,7 +5336,7 @@ html[data-theme] .filter-summary button{
 
 
 /* =========================================================
-   Painel de filtros reconstruído — versão 10.5
+   Painel de filtros reconstruído — versão 10.6
    O select nativo é somente a fonte de dados; nunca participa do layout.
    ========================================================= */
 select[data-filter-source="true"],
@@ -5740,4 +5740,199 @@ html[data-theme] .excel-filter__option:hover{
   }
   .excel-filter__footer{display:grid;grid-template-columns:1fr}
   .excel-filter__footer .button{width:100%}
+}
+
+
+/* Filtros incorporados aos módulos — versão 10.6
+   Mesmo componente dos filtros globais, permanentemente visível nas páginas. */
+.embedded-filter-panel{
+  display:grid;
+  gap:16px;
+  width:100%;
+  margin:18px 0 22px;
+  padding:18px;
+  border:1px solid color-mix(in srgb,var(--a11y-text) 13%,var(--a11y-surface));
+  border-radius:22px;
+  color:var(--a11y-text)!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--a11y-surface) 97%,var(--a11y-accent-bg)),var(--a11y-surface));
+  box-shadow:0 16px 42px rgba(15,23,42,.08);
+}
+.embedded-filter-panel__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  min-width:0;
+}
+.embedded-filter-panel__header>div{display:grid;gap:3px;min-width:0}
+.embedded-filter-panel__header h3{
+  margin:0;
+  color:var(--a11y-text)!important;
+  font-size:clamp(1rem,1.5vw,1.22rem);
+}
+.embedded-filter-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  min-width:0;
+}
+.embedded-filter-grid--five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.embedded-filter-panel .field{
+  display:grid;
+  align-content:start;
+  gap:7px;
+  min-width:0;
+  margin:0;
+  padding:12px;
+  border:1px solid color-mix(in srgb,var(--a11y-text) 13%,var(--a11y-surface));
+  border-radius:16px;
+  color:var(--a11y-text)!important;
+  background:color-mix(in srgb,var(--a11y-surface) 96%,var(--a11y-text));
+  box-shadow:0 5px 16px rgba(15,23,42,.05);
+}
+.embedded-filter-panel .field>span:first-child,
+.embedded-filter-search>span:first-child{
+  display:block;
+  min-height:18px;
+  margin:0;
+  color:var(--a11y-muted)!important;
+  font-size:.72rem;
+  font-weight:850;
+  line-height:1.25;
+  letter-spacing:.035em;
+  text-transform:uppercase;
+}
+.embedded-filter-panel .filter-picker{
+  position:relative!important;
+  z-index:auto;
+  width:100%;
+  min-width:0;
+  margin:0;
+}
+.embedded-filter-panel .filter-picker.is-open{z-index:10001}
+.embedded-filter-panel .filter-picker__trigger{
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr) auto 24px;
+  align-items:center;
+  gap:9px;
+  width:100%!important;
+  min-width:0;
+  min-height:54px!important;
+  margin:0;
+  padding:8px 10px!important;
+  border:1px solid color-mix(in srgb,var(--a11y-field-text) 22%,var(--a11y-field-bg))!important;
+  border-radius:13px!important;
+  color:var(--a11y-field-text)!important;
+  background:var(--a11y-field-bg)!important;
+  box-shadow:none!important;
+  text-align:left;
+}
+.embedded-filter-panel .filter-picker__trigger:hover,
+.embedded-filter-panel .filter-picker__trigger[aria-expanded="true"]{
+  border-color:var(--a11y-accent-bg)!important;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--a11y-accent-bg) 14%,transparent)!important;
+}
+.embedded-filter-panel .filter-picker__copy strong{
+  overflow:hidden;
+  color:var(--a11y-field-text)!important;
+  font-size:.8rem;
+  font-weight:850;
+  line-height:1.2;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.embedded-filter-panel .filter-picker__copy small{
+  overflow:hidden;
+  color:var(--a11y-muted)!important;
+  font-size:.65rem;
+  line-height:1.2;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.embedded-filter-panel .excel-filter__arrow{
+  display:grid;
+  place-items:center;
+  color:var(--a11y-muted);
+  transition:transform .18s ease;
+}
+.embedded-filter-panel .filter-picker.is-open .excel-filter__arrow{transform:rotate(180deg)}
+.embedded-filter-panel .excel-filter__menu{
+  position:fixed!important;
+  z-index:10002!important;
+  top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:50%!important;
+  display:grid!important;
+  grid-template-rows:auto auto auto minmax(120px,1fr) auto;
+  width:min(580px,calc(100vw - 32px))!important;
+  height:min(650px,calc(100dvh - 48px))!important;
+  max-width:580px!important;
+  max-height:650px!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  transform:translate(-50%,-50%)!important;
+  border:1px solid color-mix(in srgb,var(--a11y-text) 18%,var(--a11y-surface))!important;
+  border-radius:22px!important;
+  color:var(--a11y-text)!important;
+  background:var(--a11y-surface)!important;
+  box-shadow:0 32px 100px rgba(0,0,0,.36)!important;
+}
+.embedded-filter-panel .excel-filter__menu.is-hidden{display:none!important}
+.embedded-filter-panel .excel-filter__search{
+  width:100%!important;
+  min-height:46px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.embedded-filter-search{
+  display:grid;
+  gap:7px;
+  min-width:0;
+  padding:12px;
+  border:1px solid color-mix(in srgb,var(--a11y-text) 13%,var(--a11y-surface));
+  border-radius:16px;
+  background:color-mix(in srgb,var(--a11y-surface) 96%,var(--a11y-text));
+}
+.embedded-filter-search input{
+  width:100%!important;
+  min-height:48px!important;
+  margin:0!important;
+  padding:0 14px!important;
+  border:1px solid color-mix(in srgb,var(--a11y-field-text) 22%,var(--a11y-field-bg))!important;
+  border-radius:13px!important;
+  color:var(--a11y-field-text)!important;
+  background:var(--a11y-field-bg)!important;
+}
+@media(max-width:1400px){
+  .embedded-filter-grid--five{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  .embedded-filter-grid,
+  .embedded-filter-grid--five{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .embedded-filter-panel{padding:14px;border-radius:18px}
+}
+@media(max-width:620px){
+  .embedded-filter-panel__header{align-items:stretch;flex-direction:column}
+  .embedded-filter-panel__header .button{width:100%}
+  .embedded-filter-grid,
+  .embedded-filter-grid--five{grid-template-columns:1fr}
+  .embedded-filter-panel .field{padding:10px}
+  .embedded-filter-panel .excel-filter__menu{
+    top:auto!important;
+    right:6px!important;
+    bottom:calc(env(safe-area-inset-bottom) + 6px)!important;
+    left:6px!important;
+    width:auto!important;
+    height:min(72dvh,620px)!important;
+    max-width:none!important;
+    max-height:min(72dvh,620px)!important;
+    transform:none!important;
+    border-radius:22px 22px 16px 16px!important;
+  }
 }

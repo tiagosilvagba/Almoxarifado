@@ -139,7 +139,7 @@
     let rows = [];
     let filtered = [];
     let installed = false;
-    const selected = { delivery: new Set(), branch: new Set(), supplier: new Set(), age: new Set() };
+    const selected = { delivery: new Set(), branch: new Set(), supplier: new Set(), requester: new Set(), age: new Set() };
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
     const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
@@ -147,7 +147,7 @@
       if (document.getElementById("fuStyle")) return;
       const style = document.createElement("style");
       style.id = "fuStyle";
-      style.textContent = ".fu-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.fu-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}.fu-card,.fu-panel{border:1px solid var(--border-color,#d8e0e8);background:var(--card-bg,#fff);border-radius:15px;padding:14px}.fu-card strong{display:block;font-size:1.3rem;margin-top:5px}.fu-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fu-options{display:flex;gap:6px;flex-wrap:wrap;max-height:120px;overflow:auto}.fu-chip input{position:absolute;opacity:0}.fu-chip span{display:block;border:1px solid var(--border-color,#ccd6e0);border-radius:999px;padding:6px 9px;font-size:.72rem;cursor:pointer}.fu-chip input:checked+span{background:var(--accent,#123a63);color:#fff}.fu-toolbar{display:flex;gap:8px;margin:10px 0}.fu-toolbar input{flex:1;padding:10px;border:1px solid var(--border-color,#ccd6e0);border-radius:10px;background:inherit;color:inherit}.fu-table-wrap{overflow:auto;max-height:650px}.fu-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:1250px}.fu-table th,.fu-table td{padding:8px;border-bottom:1px solid var(--border-color,#e4e9ee);text-align:left}.fu-table th{position:sticky;top:0;background:var(--card-bg,#fff);z-index:2}.fu-risk{font-weight:800}@media(max-width:900px){.fu-grid{grid-template-columns:repeat(2,1fr)}.fu-filters{grid-template-columns:1fr 1fr}}@media(max-width:600px){.fu-grid,.fu-filters{grid-template-columns:1fr}}";
+      style.textContent = ".fu-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.fu-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}.fu-card,.fu-panel{border:1px solid var(--border-color,#d8e0e8);background:var(--card-bg,#fff);border-radius:15px;padding:14px}.fu-card strong{display:block;font-size:1.3rem;margin-top:5px}.fu-table-wrap{overflow:auto;max-height:650px}.fu-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:1250px}.fu-table th,.fu-table td{padding:8px;border-bottom:1px solid var(--border-color,#e4e9ee);text-align:left}.fu-table th{position:sticky;top:0;background:var(--card-bg,#fff);z-index:2}.fu-risk{font-weight:800}@media(max-width:900px){.fu-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.fu-grid{grid-template-columns:1fr}}";
       document.head.appendChild(style);
     }
 
@@ -170,23 +170,29 @@
         page.id = "page-follow-up";
         page.dataset.pagePanel = "follow-up";
         page.className = "page-panel is-hidden";
-        page.innerHTML = '<div class="nt-head"><div><span class="eyebrow">Gestão de fornecimento</span><h2>Follow up</h2><p class="nt-muted">SCs com compra confirmada, OF não fechada e entrega total ou parcialmente pendente.</p></div><span id="fuStatus" class="context-label">Aguardando dados…</span></div><div id="fuKpis" class="fu-grid"></div><div class="fu-filters"><div class="fu-panel"><h4>Situação da entrega</h4><div id="fuFDelivery" class="fu-options"></div></div><div class="fu-panel"><h4>Filial</h4><div id="fuFBranch" class="fu-options"></div></div><div class="fu-panel"><h4>Fornecedor</h4><div id="fuFSupplier" class="fu-options"></div></div><div class="fu-panel"><h4>Tempo pendente</h4><div id="fuFAge" class="fu-options"></div></div></div><div class="fu-toolbar"><input id="fuSearch" type="search" placeholder="Pesquisar item, SC, OF, fornecedor ou solicitante"><button id="fuClear" class="button button--ghost">Limpar</button></div><div class="fu-panel"><div id="fuSummary" class="nt-muted"></div><div class="fu-table-wrap"><table class="fu-table"><thead><tr><th>Dias</th><th>Situação</th><th>Filial</th><th>Item</th><th>SC</th><th>OF</th><th>Status SC</th><th>Fornecedor</th><th>Entrega prevista</th><th>Solicitante</th><th>Qtd. OF</th><th>Entregue</th><th>Pendente</th><th>Valor pendente</th></tr></thead><tbody id="fuBody"></tbody></table></div></div>';
+        page.innerHTML = '<div class="nt-head"><div><span class="eyebrow">Gestão de fornecimento</span><h2>Follow up</h2><p class="nt-muted">SCs com compra confirmada, OF não fechada e entrega total ou parcialmente pendente.</p></div><span id="fuStatus" class="context-label">Aguardando dados…</span></div><div id="fuKpis" class="fu-grid"></div><section class="embedded-filter-panel fu-filter-panel" aria-label="Filtros de follow up"><header class="embedded-filter-panel__header"><div><span class="eyebrow">Filtros da análise</span><h3>Refinar follow up</h3></div><button id="fuClear" class="button button--ghost" type="button">Limpar filtros</button></header><div class="embedded-filter-grid embedded-filter-grid--five"><label class="field"><span>Situação da entrega</span><select id="fuDeliverySelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as situações</option></select></label><label class="field"><span>Filial</span><select id="fuBranchSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as filiais</option></select></label><label class="field"><span>Fornecedor</span><select id="fuSupplierSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os fornecedores</option></select></label><label class="field"><span>Solicitante da SC</span><select id="fuRequesterSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os solicitantes</option></select></label><label class="field"><span>Tempo pendente</span><select id="fuAgeSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os períodos</option></select></label></div><label class="embedded-filter-search"><span>Pesquisar no follow up</span><input id="fuSearch" type="search" placeholder="Item, SC, OF, fornecedor ou solicitante"></label></section><div class="fu-panel"><div id="fuSummary" class="nt-muted"></div><div class="fu-table-wrap"><table class="fu-table"><thead><tr><th>Dias</th><th>Situação</th><th>Filial</th><th>Item</th><th>SC</th><th>OF</th><th>Status SC</th><th>Fornecedor</th><th>Entrega prevista</th><th>Solicitante</th><th>Qtd. OF</th><th>Entregue</th><th>Pendente</th><th>Valor pendente</th></tr></thead><tbody id="fuBody"></tbody></table></div></div>';
         host.appendChild(page);
       }
       return true;
     }
 
-    function chips(id, key, values) {
+    function filterSelect(id, key, values, allLabel) {
       const element = document.getElementById(id);
       if (!element) return;
-      element.innerHTML = values.filter(Boolean).map((value) => `<label class="fu-chip"><input type="checkbox" value="${escapeHtml(value)}" ${selected[key].has(value) ? "checked" : ""}><span>${escapeHtml(value)}</span></label>`).join("");
-      element.querySelectorAll("input").forEach((input) => {
-        input.onchange = () => {
-          if (input.checked) selected[key].add(input.value);
-          else selected[key].delete(input.value);
+      const available = new Set(values.filter(Boolean));
+      for (const value of [...selected[key]]) if (!available.has(value)) selected[key].delete(value);
+      element.innerHTML = `<option value="">${escapeHtml(allLabel)}</option>${[...available].map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+      for (const option of element.options) option.selected = option.value ? selected[key].has(option.value) : !selected[key].size;
+      if (!element.dataset.followUpBound) {
+        element.dataset.followUpBound = "true";
+        element.addEventListener("change", () => {
+          selected[key].clear();
+          for (const option of element.selectedOptions) if (option.value) selected[key].add(option.value);
           apply();
-        };
-      });
+        });
+        windowObject.__almoxCreateMultiFilter?.(element);
+      }
+      windowObject.__almoxSyncMultiFilter?.(element);
     }
 
     function refresh() {
@@ -199,10 +205,11 @@
         return;
       }
       rows = buildFollowUpRows(items);
-      chips("fuFDelivery", "delivery", [DELIVERY_TOTAL, DELIVERY_PARTIAL]);
-      chips("fuFBranch", "branch", [...new Set(rows.map((row) => row.branch))].sort());
-      chips("fuFSupplier", "supplier", [...new Set(rows.map((row) => row.supplier))].sort());
-      chips("fuFAge", "age", ["0–7 dias", "8–15 dias", "16–20 dias", "21–30 dias", ">30 dias"]);
+      filterSelect("fuDeliverySelect", "delivery", [DELIVERY_TOTAL, DELIVERY_PARTIAL], "Todas as situações");
+      filterSelect("fuBranchSelect", "branch", [...new Set(rows.map((row) => row.branch))].sort(), "Todas as filiais");
+      filterSelect("fuSupplierSelect", "supplier", [...new Set(rows.map((row) => row.supplier))].sort(), "Todos os fornecedores");
+      filterSelect("fuRequesterSelect", "requester", [...new Set(rows.map((row) => row.requester))].sort(), "Todos os solicitantes");
+      filterSelect("fuAgeSelect", "age", ["0–7 dias", "8–15 dias", "16–20 dias", "21–30 dias", ">30 dias"], "Todos os períodos");
       apply();
       const uniqueSc = new Set(rows.map((row) => row.sc)).size;
       const uniqueOf = new Set(rows.map((row) => row.of)).size;
@@ -215,6 +222,7 @@
         (!selected.delivery.size || selected.delivery.has(row.deliveryStatus))
         && (!selected.branch.size || selected.branch.has(row.branch))
         && (!selected.supplier.size || selected.supplier.has(row.supplier))
+        && (!selected.requester.size || selected.requester.has(row.requester))
         && (!selected.age.size || selected.age.has(ageBucket(row.days)))
         && (!query || normalize(`${row.item} ${row.sc} ${row.of} ${row.supplier} ${row.requester} ${row.scStatus} ${row.ofStatus}`).includes(query))
       ));

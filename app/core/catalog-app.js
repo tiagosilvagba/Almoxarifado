@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.5";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.6";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -1317,78 +1317,11 @@ function setFilterValues(select, values) {
 }
 
 function initializeExcelFilterControls() {
-  for (const id of MULTI_FILTER_IDS) {
-    const select = ui[id];
-    if (!select || state.excelFilterControls.has(select)) continue;
-
-    const field = select.closest("label");
-    const fieldLabel = field?.querySelector(":scope > span:first-child")?.textContent?.trim() || "Filtro";
-    select.classList.add("excel-filter-select");
-    select.hidden = true;
-    select.setAttribute("aria-hidden", "true");
-    select.setAttribute("tabindex", "-1");
-    select.dataset.filterSource = "true";
-
-    const control = document.createElement("div");
-    control.className = "excel-filter filter-picker";
-    control.innerHTML = `
-      <button class="excel-filter__trigger filter-picker__trigger" type="button" aria-expanded="false">
-        <span class="filter-picker__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"></path></svg></span>
-        <span class="filter-picker__copy">
-          <strong class="excel-filter__label"></strong>
-          <small class="excel-filter__meta">Clique para selecionar</small>
-        </span>
-        <span class="excel-filter__selection-count is-hidden" aria-hidden="true">0</span>
-        <span class="excel-filter__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></span>
-      </button>
-      <div class="excel-filter__backdrop is-hidden" data-excel-filter-action="done"></div>
-      <section class="excel-filter__menu is-hidden" role="dialog" aria-modal="true" aria-label="${escapeHtml(fieldLabel)}">
-        <header class="excel-filter__header">
-          <div><span class="eyebrow">Selecionar opções</span><strong>${escapeHtml(fieldLabel)}</strong></div>
-          <button class="excel-filter__close" type="button" data-excel-filter-action="done" aria-label="Fechar lista">×</button>
-        </header>
-        <label class="excel-filter__search-wrap">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-          <input class="excel-filter__search" type="search" autocomplete="off" placeholder="Pesquisar opções">
-        </label>
-        <div class="excel-filter__actions">
-          <button type="button" data-excel-filter-action="all">Selecionar todas</button>
-          <button type="button" data-excel-filter-action="clear">Limpar seleção</button>
-        </div>
-        <div class="excel-filter__options" role="group"></div>
-        <footer class="excel-filter__footer">
-          <span class="excel-filter__footer-count">Nenhuma opção selecionada</span>
-          <button class="button button--primary" type="button" data-excel-filter-action="done">Confirmar seleção</button>
-        </footer>
-      </section>`;
-    select.insertAdjacentElement("afterend", control);
-
-    const trigger = control.querySelector(".excel-filter__trigger");
-    const menu = control.querySelector(".excel-filter__menu");
-    const search = control.querySelector(".excel-filter__search");
-
-    trigger.addEventListener("click", () => {
-      const opening = menu.classList.contains("is-hidden");
-      closeExcelFilterControls(select);
-      setExcelFilterOpen(select, opening);
-      if (opening) window.setTimeout(() => search.focus(), 40);
-    });
-    search.addEventListener("input", () => filterExcelFilterOptions(control, search.value));
-    control.addEventListener("click", (event) => {
-      const action = event.target.closest("[data-excel-filter-action]")?.dataset.excelFilterAction;
-      if (action === "all") {
-        setFilterValues(select, [...select.options].filter((option) => option.value && !option.disabled).map((option) => option.value));
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      if (action === "clear") {
-        setFilterValues(select, []);
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      if (action === "done") setExcelFilterOpen(select, false);
-    });
-    new MutationObserver(() => syncExcelFilterControl(select)).observe(select, { childList: true, subtree: true });
-    state.excelFilterControls.set(select, control);
-    syncExcelFilterControl(select);
+  for (const id of MULTI_FILTER_IDS) initializeExcelFilterControl(ui[id]);
+  if (typeof window !== "undefined") {
+    window.__almoxCreateMultiFilter = initializeExcelFilterControl;
+    window.__almoxSyncMultiFilter = syncExcelFilterControl;
+    window.__almoxSetMultiFilterValues = setFilterValues;
   }
 
   document.addEventListener("click", (event) => {
@@ -1397,6 +1330,80 @@ function initializeExcelFilterControls() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeExcelFilterControls();
   });
+}
+
+function initializeExcelFilterControl(select, fieldLabelOverride = "") {
+  if (!select || state.excelFilterControls.has(select)) return state.excelFilterControls.get(select) || null;
+
+  const field = select.closest("label");
+  const fieldLabel = fieldLabelOverride || field?.querySelector(":scope > span:first-child")?.textContent?.trim() || "Filtro";
+  select.classList.add("excel-filter-select");
+  select.hidden = true;
+  select.setAttribute("aria-hidden", "true");
+  select.setAttribute("tabindex", "-1");
+  select.dataset.filterSource = "true";
+
+  const control = document.createElement("div");
+  control.className = "excel-filter filter-picker";
+  control.dataset.filterSelectId = select.id;
+  control.innerHTML = `
+    <button class="excel-filter__trigger filter-picker__trigger" type="button" aria-expanded="false">
+      <span class="filter-picker__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"></path></svg></span>
+      <span class="filter-picker__copy">
+        <strong class="excel-filter__label"></strong>
+        <small class="excel-filter__meta">Clique para selecionar</small>
+      </span>
+      <span class="excel-filter__selection-count is-hidden" aria-hidden="true">0</span>
+      <span class="excel-filter__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></span>
+    </button>
+    <div class="excel-filter__backdrop is-hidden" data-excel-filter-action="done"></div>
+    <section class="excel-filter__menu is-hidden" role="dialog" aria-modal="true" aria-label="${escapeHtml(fieldLabel)}">
+      <header class="excel-filter__header">
+        <div><span class="eyebrow">Selecionar opções</span><strong>${escapeHtml(fieldLabel)}</strong></div>
+        <button class="excel-filter__close" type="button" data-excel-filter-action="done" aria-label="Fechar lista">×</button>
+      </header>
+      <label class="excel-filter__search-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+        <input class="excel-filter__search" type="search" autocomplete="off" placeholder="Pesquisar opções">
+      </label>
+      <div class="excel-filter__actions">
+        <button type="button" data-excel-filter-action="all">Selecionar todas</button>
+        <button type="button" data-excel-filter-action="clear">Limpar seleção</button>
+      </div>
+      <div class="excel-filter__options" role="group"></div>
+      <footer class="excel-filter__footer">
+        <span class="excel-filter__footer-count">Nenhuma opção selecionada</span>
+        <button class="button button--primary" type="button" data-excel-filter-action="done">Confirmar seleção</button>
+      </footer>
+    </section>`;
+  select.insertAdjacentElement("afterend", control);
+
+  const trigger = control.querySelector(".excel-filter__trigger");
+  const menu = control.querySelector(".excel-filter__menu");
+  const search = control.querySelector(".excel-filter__search");
+  trigger.addEventListener("click", () => {
+    const opening = menu.classList.contains("is-hidden");
+    closeExcelFilterControls(select);
+    setExcelFilterOpen(select, opening);
+    if (opening) window.setTimeout(() => search.focus(), 40);
+  });
+  search.addEventListener("input", () => filterExcelFilterOptions(control, search.value));
+  control.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-excel-filter-action]")?.dataset.excelFilterAction;
+    if (action === "all") {
+      setFilterValues(select, [...select.options].filter((option) => option.value && !option.disabled).map((option) => option.value));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (action === "clear") {
+      setFilterValues(select, []);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (action === "done") setExcelFilterOpen(select, false);
+  });
+  new MutationObserver(() => syncExcelFilterControl(select)).observe(select, { childList: true, subtree: true });
+  state.excelFilterControls.set(select, control);
+  syncExcelFilterControl(select);
+  return control;
 }
 
 function setExcelFilterOpen(select, open) {
@@ -1410,11 +1417,9 @@ function setExcelFilterOpen(select, open) {
 }
 
 function closeExcelFilterControls(exceptSelect = null) {
-  for (const id of MULTI_FILTER_IDS) {
-    const select = ui[id];
-    if (!select || select === exceptSelect) continue;
-    const control = state.excelFilterControls.get(select);
-    if (!control) continue;
+  for (const control of document.querySelectorAll(".excel-filter")) {
+    const select = document.getElementById(control.dataset.filterSelectId || "");
+    if (select && select === exceptSelect) continue;
     control.querySelector(".excel-filter__menu")?.classList.add("is-hidden");
     control.querySelector(".excel-filter__backdrop")?.classList.add("is-hidden");
     control.classList.remove("is-open");
@@ -5219,7 +5224,7 @@ function primaryCategory(item) {
 }
 
 function packageIcon() {
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 15 17-9 17 9v19l-17 9-17-9V15Z"></path><path d="m7 15 17 9 17-9M24 24v19M15.5 10.5l17 9"></path></svg>`;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 15 17-9 17 9v19l-17 9-17-9V15Z"></path><path d="m7 15 17 9 17-9M24 24v19M15.5 10.6l17 9"></path></svg>`;
 }
 
 function firstDefined(...values) {

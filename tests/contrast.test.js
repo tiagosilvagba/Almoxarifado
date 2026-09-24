@@ -10,6 +10,8 @@ const css = fs.readFileSync(path.join(root, "app/styles/app.css"), "utf8");
 const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "app/core/catalog-app.js"), "utf8");
 const compat = fs.readFileSync(path.join(root, "app/layers/compat-v2.js"), "utf8");
+const noTurn = fs.readFileSync(path.join(root, "app/modules/itens-sem-giro.js"), "utf8");
+const followUp = fs.readFileSync(path.join(root, "app/modules/follow-up.js"), "utf8");
 
 function luminance(hex) {
   const value = hex.replace("#", "");
@@ -85,7 +87,7 @@ test("módulos dinâmicos participam do contrato de contraste", () => {
   for (const selector of requiredSelectors) {
     assert.ok(css.includes(selector), "cobertura ausente para " + selector);
   }
-  assert.ok(css.includes("Contrato universal de contraste — versão 10.5"));
+  assert.ok(css.includes("Contrato universal de contraste — versão 10.6"));
 });
 
 test("folha principal mantém chaves balanceadas", () => {
@@ -142,5 +144,24 @@ test("painel global usa um único componente de filtro reconstruído", () => {
   assert.ok(app.includes("excel-filter__backdrop"));
   assert.ok(app.includes("excel-filter__footer"));
   assert.ok(css.includes('select[data-filter-source="true"]'));
-  assert.ok(css.includes("Painel de filtros reconstruído — versão 10.5"));
+  assert.ok(css.includes("Painel de filtros reconstruído — versão 10.6"));
+});
+
+
+test("itens sem giro e follow up reutilizam os filtros globais visíveis", () => {
+  assert.ok(app.includes("window.__almoxCreateMultiFilter = initializeExcelFilterControl"));
+  assert.ok(app.includes("window.__almoxSyncMultiFilter = syncExcelFilterControl"));
+  assert.ok(css.includes(".embedded-filter-panel"));
+  for (const id of ["ntTimeSelect", "ntBranchSelect", "ntLocalSelect"]) {
+    assert.ok(noTurn.includes('id="' + id + '"'), "filtro sem giro ausente: " + id);
+  }
+  for (const id of ["fuDeliverySelect", "fuBranchSelect", "fuSupplierSelect", "fuRequesterSelect", "fuAgeSelect"]) {
+    assert.ok(followUp.includes('id="' + id + '"'), "filtro follow up ausente: " + id);
+  }
+  assert.ok(noTurn.includes("window.__almoxCreateMultiFilter?.(e)"));
+  assert.ok(followUp.includes("windowObject.__almoxCreateMultiFilter?.(element)"));
+  assert.ok(followUp.includes("selected.requester.has(row.requester)"));
+  assert.ok(followUp.includes("sc.requesterName"));
+  assert.ok(!noTurn.includes("nt-chip"));
+  assert.ok(!followUp.includes("fu-chip"));
 });
