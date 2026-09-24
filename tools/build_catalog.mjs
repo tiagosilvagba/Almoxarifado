@@ -11,7 +11,7 @@ const gzipAsync = promisify(gzip);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT_DIR = path.join(ROOT, "data");
 const require = createRequire(import.meta.url);
-const { inventoryWorker } = require(path.join(ROOT, "app/core/catalog-app.js"));
+const { inventoryWorker, precomputeDerivedIndicators } = require(path.join(ROOT, "app/core/catalog-app.js"));
 const BASE_URL = "http://local/";
 
 globalThis.fetch = async (input) => {
@@ -57,6 +57,8 @@ self.onmessage({
 
 const payload = await workerResult;
 payload.baseUpdatedAt ||= new Date().toISOString();
+process.stdout.write("Pré-calculando indicadores derivados...\n");
+payload.derivedIndicators = await precomputeDerivedIndicators(payload);
 const json = JSON.stringify(payload);
 const compressed = await gzipAsync(Buffer.from(json), { level: 9 });
 
@@ -69,6 +71,8 @@ await fs.writeFile(path.join(OUTPUT_DIR, "catalog-meta.json"), `${JSON.stringify
   comprasRows: payload.comprasRows,
   comprasFiles: payload.comprasFiles,
   consumptionRows: payload.consumption?.rowCount || 0,
+  derivedReviews: payload.derivedIndicators?.reviews?.length || 0,
+  derivedPurchaseNeeds: payload.derivedIndicators?.needs?.length || 0,
   uncompressedBytes: Buffer.byteLength(json),
   compressedBytes: compressed.byteLength,
 }, null, 2)}\n`);
