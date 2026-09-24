@@ -407,11 +407,19 @@
 
   function openPage() {
     setGlobalFilterVisibility(true);
-    document.querySelectorAll("[data-page-panel]").forEach((panel) => panel.classList.toggle("is-hidden",panel.id !== "page-comparativo-mensal"));
+    document.querySelectorAll("[data-page-panel]").forEach((panel) => {
+      const active = panel.id === "page-comparativo-mensal";
+      panel.classList.toggle("is-hidden", !active);
+      panel.inert = !active;
+      panel.setAttribute("aria-hidden", String(!active));
+      if (active) panel.removeAttribute("hidden");
+    });
     document.querySelectorAll(".app-nav__tab").forEach((tab) => {
       const active = tab.dataset.page === "comparativo-mensal";
       tab.classList.toggle("is-active",active);
-      tab.setAttribute("aria-selected",active ? "true" : "false");
+      tab.setAttribute("aria-selected",String(active));
+      tab.setAttribute("aria-current",active ? "page" : "false");
+      tab.tabIndex = active ? 0 : -1;
     });
     history.replaceState(null,"","#comparativo-mensal");
     if (!availableFiles.length) refreshFiles();
@@ -424,7 +432,12 @@
       const other = event.target.closest?.(".app-nav__tab[data-page]");
       if (other && other.dataset.page !== "comparativo-mensal") {
         setGlobalFilterVisibility(false);
-        document.getElementById("page-comparativo-mensal")?.classList.add("is-hidden");
+        const page = document.getElementById("page-comparativo-mensal");
+        if (page) {
+          page.classList.add("is-hidden");
+          page.inert = true;
+          page.setAttribute("aria-hidden","true");
+        }
       }
     },true);
   }
