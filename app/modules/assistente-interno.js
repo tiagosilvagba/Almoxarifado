@@ -164,6 +164,83 @@
     return out.sort((a,b)=>b.n.length-a.n.length);
   }
 
+  const ENTITY_FIELD_PRIORITY={responsible:90,supplier:80,requester:75,branchName:70,branchCode:68,localCode:64,area:60,category:55,name:50,code:48};
+  const ENTITY_CUES={
+    responsible:["responsavel","responsável","repositor","reposicao","reposição"],
+    supplier:["fornecedor"],
+    requester:["solicitante","requisitante","usuario","usuário"],
+    branchName:["filial","empresa"],branchCode:["filial","empresa"],
+    localCode:["local"],area:["area","área"],category:["categoria","grupo","subgrupo"],
+    name:["item","material","produto","descricao","descrição"],code:["codigo","código","cod"]
+  };
+  const QUERY_NOISE=new Set(("zerado zerados zerada zeradas saldo negativo negativos negativa negativas abaixo acima minimo mínimo maximo máximo faixa sc of nf aberta aberto atrasada atrasado pendente pendentes consumo ruptura necessidade compra compras reposicao reposição valor valores total media média maior maiores menor menores top dias dia estoque quantidade").split(/\s+/).map(norm));
+
+  function tokenList(value){
+    return norm(value).split(" ").filter(t=>t.length>=2);
+  }
+
+  function hasCue(query,field){
+    const n=" "+norm(query)+" ";
+    return (ENTITY_CUES[field]||[]).some(c=>n.includes(" "+norm(c)+" "));
+  }
+
+  function fuzzyEntityMatches(query,index,currentFilters=[]){
+    const qTokens=tokenList(query).filter(t=>!STOP.has(t)&&!QUERY_NOISE.has(t)&&!/^\d+$/.test(t));
+    const qSet=new Set(qTokens);
+    if(!qSet.size)return [];
+    const tokenOwners=new Map();
+    for(const entity of index){
+      const id=entity.field+"|"+entity.n;
+      for(const token of tokenList(entity.n).filter(t=>t.length>=4)){
+        if(!tokenOwners.has(token))tokenOwners.set(token,new Set());
+        tokenOwners.get(token).add(id);
+      }
+    }
+    const candidates=[];
+    for(const entity of index){
+      if(currentFilters.some(f=>f.field===entity.field&&norm(f.value)===entity.n))continue;
+      const eTokens=tokenList(entity.n).filter(t=>t.length>=3&&!STOP.has(t));
+      if(!eTokens.length)continue;
+      const matched=eTokens.filter(t=>qSet.has(t));
+      if(!matched.length)continue;
+      const uniqueSingle=matched.length===1&&matched[0].length>=4&&(tokenOwners.get(matched[0])?.size||0)===1;
+      const explicit=hasCue(query,entity.field);
+      if(matched.length<2&&!uniqueSingle&&!explicit)continue;
+      const coverage=matched.length/eTokens.length;
+      const score=matched.length*100+coverage*35+(ENTITY_FIELD_PRIORITY[entity.field]||0)+(explicit?30:0);
+      candidates.push({...entity,matched,score});
+    }
+    candidates.sort((a,b)=>b.score-a.score||b.matched.length-a.matched.length||b.n.length-a.n.length);
+    const chosen=[],usedTokens=new Set(),usedFields=new Set();
+    for(const candidate of candidates){
+      if(usedFields.has(candidate.field))continue;
+      const fresh=candidate.matched.filter(t=>!usedTokens.has(t));
+      if(!fresh.length)continue;
+      if(candidate.matched.length===1&&!hasCue(query,candidate.field)&&(tokenOwners.get(candidate.matched[0])?.size||0)!==1)continue;
+      chosen.push(candidate);
+      candidate.matched.forEach(t=>usedTokens.add(t));
+      usedFields.add(candidate.field);
+    }
+    return chosen;
+  }
+
+  function searchHasToken(search,term){
+    const hay=" "+norm(search)+" ",needle=" "+norm(term)+" ";
+    return hay.includes(needle);
+  }
+
+  function distinctMetricCount(rows,field){
+    if(!field)return rows.length;
+    const values=new Set();
+    for(const row of rows){
+      const raw=row[field];
+      if(raw==null||raw==="")continue;
+      if(["scCodes","ofCodes","invoices"].includes(field)){
+        String(raw).split(/[,;|]/).map(v=>v.trim()).filter(Boolean).forEach(v=>values.add(v));
+      }else values.add(String(raw));
+    }
+    return values.size;
+  }
   function fieldFromText(text){
     const n=norm(text);let best=null;
     for(const [field,def] of Object.entries(FIELD_DEFS))for(const alias of def.aliases){
