@@ -5939,3 +5939,215 @@ html[data-theme] .excel-filter__option:hover{
     border-radius:22px 22px 16px 16px!important;
   }
 }
+
+
+/* Necessidade de compra — cards gerenciais v10.7.5 */
+#purchaseNeedTableWrap {
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));
+  gap:18px;
+  align-items:stretch;
+}
+
+#purchaseNeedTableWrap .report-card--need {
+  min-height:0;
+  gap:12px;
+  padding:20px;
+  overflow:hidden;
+  border-radius:20px;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__top {
+  min-height:30px;
+  align-items:center;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__top > :last-child {
+  flex:0 0 auto;
+  padding:4px 8px;
+  border:1px solid color-mix(in srgb,var(--steel-500) 18%,transparent);
+  border-radius:999px;
+  font-weight:750;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__identity {
+  grid-template-columns:66px minmax(0,1fr);
+  gap:14px;
+  margin:2px 0 0;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__avatar {
+  width:64px;
+  height:64px;
+  flex-basis:64px;
+  box-shadow:0 5px 16px rgba(0,0,0,.12),0 0 0 3px color-mix(in srgb,var(--blue-500,#4777ff) 9%,transparent);
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__avatar-fallback {
+  font-size:15px;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__title {
+  min-height:0;
+  font-size:1.08rem;
+  line-height:1.25;
+  letter-spacing:-.01em;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__code {
+  margin-top:3px;
+  font-size:.8rem;
+}
+
+#purchaseNeedTableWrap .report-card--need > .item-card__address {
+  margin:0;
+  overflow:visible;
+  color:var(--readable-body,var(--text));
+  font-size:.76rem;
+  line-height:1.35;
+  text-overflow:clip;
+  white-space:normal;
+  word-break:normal;
+  overflow-wrap:break-word;
+}
+
+#purchaseNeedTableWrap .report-card--need > .item-card__address + .item-card__address {
+  margin-top:-4px;
+  font-weight:700;
+}
+
+#purchaseNeedTableWrap .report-card--need .purchase-min-max {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  padding:0;
+  border:0;
+  background:transparent;
+}
+
+#purchaseNeedTableWrap .report-card--need .purchase-min-max > span {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:3px;
+  min-width:0;
+  min-height:58px;
+  padding:9px 10px;
+  border:1px solid var(--steel-200);
+  border-radius:11px;
+  background:color-mix(in srgb,var(--surface) 90%,var(--steel-100));
+  line-height:1.2;
+}
+
+#purchaseNeedTableWrap .report-card--need .purchase-min-max strong {
+  display:block;
+  margin:0;
+  font-size:.88rem;
+  line-height:1.15;
+  white-space:normal;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__meta {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch;
+  gap:8px;
+  margin-top:0;
+  padding:0;
+  border:0;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__meta > span {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  min-height:66px;
+  padding:10px 11px;
+  border:1px solid var(--steel-200);
+  border-radius:11px;
+  background:color-mix(in srgb,var(--surface) 90%,var(--steel-100));
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__meta small {
+  display:block;
+  font-size:.68rem;
+  line-height:1.25;
+  white-space:normal;
+  word-break:normal;
+  overflow-wrap:break-word;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__meta strong {
+  display:block;
+  margin-top:4px;
+  overflow:visible;
+  font-size:.9rem;
+  line-height:1.15;
+  text-overflow:clip;
+  white-space:normal;
+  word-break:normal;
+  overflow-wrap:break-word;
+}
+
+#purchaseNeedTableWrap .report-card--need .purchase-coverage-note {
+  margin:0;
+  padding:8px 10px;
+  border:1px solid color-mix(in srgb,var(--blue-500,#4777ff) 15%,transparent);
+  border-radius:10px;
+  line-height:1.35;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__footer {
+  margin-top:auto;
+  padding-top:11px;
+  border-top:1px solid var(--steel-100);
+  font-size:.78rem;
+}
+
+#purchaseNeedTableWrap .report-card--need .report-card__footer strong {
+  font-size:.92rem;
+}
+
+@media (max-width:720px) {
+  #purchaseNeedTableWrap {
+    grid-template-columns:1fr;
+  }
+
+  #purchaseNeedTableWrap .report-card--need {
+    padding:16px;
+    border-radius:16px;
+  }
+
+  #purchaseNeedTableWrap .report-card--need .report-card__identity {
+    grid-template-columns:54px minmax(0,1fr);
+    gap:11px;
+  }
+
+  #purchaseNeedTableWrap .report-card--need .report-card__avatar {
+    width:52px;
+    height:52px;
+    flex-basis:52px;
+  }
+
+  #purchaseNeedTableWrap .report-card--need .purchase-min-max,
+  #purchaseNeedTableWrap .report-card--need .report-card__meta {
+    grid-template-columns:1fr 1fr;
+  }
+
+  #purchaseNeedTableWrap .report-card--need .purchase-min-max > span:last-child,
+  #purchaseNeedTableWrap .report-card--need .report-card__meta > span:last-child {
+    grid-column:1 / -1;
+  }
+}
+
+@media (max-width:430px) {
+  #purchaseNeedTableWrap .report-card--need .purchase-min-max,
+  #purchaseNeedTableWrap .report-card--need .report-card__meta {
+    grid-template-columns:1fr;
+  }
+
+  #purchaseNeedTableWrap .report-card--need .purchase-min-max > span:last-child,
+  #purchaseNeedTableWrap .report-card--need .report-card__meta > span:last-child {
+    grid-column:auto;
+  }
+}
