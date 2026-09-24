@@ -301,8 +301,9 @@
   function makeProcessAggregate() {
     return {
       scCodes:new Set(), ofCodes:new Set(), recCodes:new Set(), suppliers:new Set(), requesters:new Set(),
-      statuses:new Set(), scToOf:[], ofToReceipt:[], totals:[], openScCount:0, openOfCount:0, overdueCount:0,
-      partialCount:0, directPurchaseCount:0, openOfBalance:0, pendingValue:0
+      statuses:new Set(), scToOf:[], ofToReceipt:[], totals:[],
+      openScCodes:new Set(), openOfCodes:new Set(), overdueCodes:new Set(), partialCodes:new Set(), directScCodes:new Set(),
+      openScAges:[], openOfAmounts:new Map()
     };
   }
 
@@ -316,24 +317,34 @@
     if (Number.isFinite(row.scToOfDays)) agg.scToOf.push(row.scToOfDays);
     if (Number.isFinite(row.ofToReceiptDays)) agg.ofToReceipt.push(row.ofToReceiptDays);
     if (Number.isFinite(row.totalLeadDays)) agg.totals.push(row.totalLeadDays);
-    if (row.scCode && !row.ofCode) agg.openScCount += 1;
-    if (row.ofCode && row.ofBalance > 0 && row.processStatus !== "fechada") agg.openOfCount += 1;
-    if (normalizeText(row.processStatus).includes("atrasada")) agg.overdueCount += 1;
-    if (normalizeText(row.processStatus).includes("parcial")) agg.partialCount += 1;
-    if (row.directPurchase) agg.directPurchaseCount += 1;
-    agg.openOfBalance += row.openOfBalance || 0;
-    agg.pendingValue += row.pendingValue || 0;
+    if (row.scCode && !row.ofCode) {
+      agg.openScCodes.add(row.scCode);
+      if (Number.isFinite(row.ageScDays)) agg.openScAges.push(row.ageScDays);
+    }
+    if (row.ofCode && row.ofBalance > 0 && row.processStatus !== "fechada") {
+      agg.openOfCodes.add(row.ofCode);
+      const previous = agg.openOfAmounts.get(row.ofCode) || {balance:0,value:0};
+      previous.balance = Math.max(previous.balance,Number(row.openOfBalance)||0);
+      previous.value = Math.max(previous.value,Number(row.pendingValue)||0);
+      agg.openOfAmounts.set(row.ofCode,previous);
+    }
+    if (normalizeText(row.processStatus).includes("atrasada")) agg.overdueCodes.add(row.ofCode || row.scCode || row.itemCode);
+    if (normalizeText(row.processStatus).includes("parcial")) agg.partialCodes.add(row.ofCode || row.scCode || row.itemCode);
+    if (row.directPurchase) agg.directScCodes.add(row.scCode || row.itemCode);
   }
 
   function finalizeProcessAggregate(agg) {
     if (!agg) return null;
+    const amounts = Array.from(agg.openOfAmounts.values());
     return {
       scCodes:Array.from(agg.scCodes), ofCodes:Array.from(agg.ofCodes), recCodes:Array.from(agg.recCodes),
       suppliers:Array.from(agg.suppliers), requesters:Array.from(agg.requesters), statuses:Array.from(agg.statuses),
       scCount:agg.scCodes.size, ofCount:agg.ofCodes.size, recCount:agg.recCodes.size,
-      openScCount:agg.openScCount, openOfCount:agg.openOfCount, overdueCount:agg.overdueCount,
-      partialCount:agg.partialCount, directPurchaseCount:agg.directPurchaseCount,
-      openOfBalance:agg.openOfBalance, pendingValue:agg.pendingValue,
+      openScCount:agg.openScCodes.size, openOfCount:agg.openOfCodes.size, overdueCount:agg.overdueCodes.size,
+      partialCount:agg.partialCodes.size, directPurchaseCount:agg.directScCodes.size,
+      openOfBalance:amounts.reduce(function(sum,value){return sum+value.balance;},0),
+      pendingValue:amounts.reduce(function(sum,value){return sum+value.value;},0),
+      ageScDays:agg.openScAges.length ? Math.max.apply(null,agg.openScAges) : null,
       scToOfDays:median(agg.scToOf), ofToReceiptDays:median(agg.ofToReceipt), totalLeadDays:median(agg.totals)
     };
   }
@@ -554,6 +565,7 @@
             overdueCount:proc ? proc.overdueCount : 0,
             partialCount:proc ? proc.partialCount : 0,
             directPurchaseCount:proc ? proc.directPurchaseCount : 0,
+            ageScDays:proc ? proc.ageScDays : null,
             openOfBalance:proc ? proc.openOfBalance : 0,
             pendingValue:proc ? proc.pendingValue : 0,
             scCodes:proc ? proc.scCodes.join(" | ") : "",
@@ -718,6 +730,12 @@
       }
       const waiting = q.match(/(?:ha|mais de)\s+(\d+)\s+dias?\s+(?:sem of|aguardando of)/);
       if (waiting) addFilter(filters,"ageScDays","gt",Number(waiting[1]),"SC há mais de " + waiting[1] + " dias");
+      const waitingBefore = q.match(/(?:sc\s+)?(?:ha\s+)?mais de\s+(\d+)\s+dias?\s+sem of/);
+      if (waitingBefore) addFilter(filters,"ageScDays","gt",Number(waitingBefore[1]),"SC há mais de " + waitingBefore[1] + " dias");
+      const noTurnAfter = q.match(/(?:sem giro|sem consumo).*?(?:ha\s+)?mais de\s+(\d+)\s+dias?/);
+      const noTurnBefore = q.match(/(?:ha\s+)?mais de\s+(\d+)\s+dias?\s+(?:sem giro|sem consumo)/);
+      const noTurnMatch = noTurnAfter || noTurnBefore;
+      if (noTurnMatch) addFilter(filters,"noTurnDays","gt",Number(noTurnMatch[1]),"sem consumo há mais de " + noTurnMatch[1] + " dias");
     }
 
     function valueCandidates(rows, field, limit) {
@@ -802,13 +820,17 @@
       if (/\bmedia\b/.test(q)) op = "avg";
       if (/\bmediana\b/.test(q)) op = "median";
       if (/\bsom[ae]\b|somar|valor total|total em reais|quanto custa|qual o valor|quanto da/.test(q)) op = "sum";
-      if (groupBy && op === "list") op = "count";
+      if (groupBy && op === "list") {
+        if (/\bvalor\b|\bcusto\b|\bcapital\b|\btotal\b/.test(q)) op = "sum";
+        else op = "count";
+      }
       let direction = "desc";
       if (/\bmenor(?:es)?\b|\bmenos\b|\breducao\b/.test(q)) direction = "asc";
       if (/\bmaior(?:es)?\b|\bmais\b|\baumento\b|\btop\b/.test(q)) direction = "desc";
       let metricField = fieldDef && fieldDef.key;
       if (!metricField && op === "sum") {
         if (/compr|repos|ruptur|necess/.test(q)) metricField = "needValue";
+        else if (/saldo|quantidade|unidades?/.test(q)) metricField = "quantity";
         else metricField = dataset === "processos" ? "pendingValue" : "stockValue";
       }
       if (!metricField && (op === "avg" || op === "median")) metricField = dataset === "processos" ? "delayDays" : "quantity";
@@ -818,7 +840,7 @@
     }
 
     function contextScope(q, filters) {
-      const follow = /^(agora|desses|destes|dessas|destas|somente|apenas|so|e |quanto custa|qual deles|qual dessas|o restante|restante)|\b(restante|anteriores)\b/.test(q);
+      const follow = /^(agora|desses|destes|dessas|destas|somente|apenas|so|e |quanto custa|qual deles|qual dessas|o restante|restante|ordene|ordenar|classifique|agrupe|separe)|\b(restante|anteriores)\b/.test(q);
       if (follow && session.lastItemCodes.length) {
         filters.push({ field:"itemCode", op:"in", value:session.lastItemCodes.slice(), label:"resultado anterior" });
         return true;
@@ -1040,17 +1062,31 @@
       const entries = Array.from(registered.values()).filter(function (entry) {
         const n = normalizeText(entry.name);
         return n.includes("monthly:") || n.includes("estoque_") || n.includes("estoque ");
+      }).sort(function (a,b) {
+        return periodFromName(a.name).key.localeCompare(periodFromName(b.name).key);
       });
+      const lastMatch = q.match(/ultimos?\s+(\d+)\s+meses?/);
+      if (lastMatch) return entries.slice(-Math.max(2,Number(lastMatch[1])||2));
+      const rangeMatch = q.match(/(?:de|entre)\s+([a-z]+).*?(?:a|ate|e)\s+([a-z]+)/);
+      if (rangeMatch) {
+        const start = MONTHS[rangeMatch[1]], end = MONTHS[rangeMatch[2]];
+        if (start && end) {
+          const low = Math.min(start,end), high = Math.max(start,end);
+          const ranged = entries.filter(function(entry){
+            const p=periodFromName(entry.name);
+            return p.month>=low && p.month<=high && (!/\b20\d{2}\b/.test(q) || q.includes(String(p.year)));
+          });
+          if (ranged.length>=2) return ranged;
+        }
+      }
       const mentioned = entries.filter(function (entry) {
         const p = periodFromName(entry.name);
         if (!p.month) return false;
         const yearOk = !p.year || q.includes(String(p.year)) || !/\b20\d{2}\b/.test(q);
-        const monthOk = Object.keys(MONTHS).some(function (key) { return MONTHS[key] === p.month && q.includes(key); });
+        const monthOk = Object.keys(MONTHS).some(function (key) { return MONTHS[key] === p.month && new RegExp("\\b"+escapeRegExp(key)+"\\b").test(q); });
         return monthOk && yearOk;
       });
-      return (mentioned.length >= 2 ? mentioned : entries).sort(function (a,b) {
-        return periodFromName(a.name).key.localeCompare(periodFromName(b.name).key);
-      });
+      return mentioned.length >= 2 ? mentioned : entries;
     }
 
     function executeMonthly(question) {
