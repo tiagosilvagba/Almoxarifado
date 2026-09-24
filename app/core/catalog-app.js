@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
   reportBatch: 60,
 });
 
-const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.6";
+const APP_VERSION = globalThis.__ALMOX_VERSION_LABEL__ || "Versão 10.7";
 const CAVACO_OF_THRESHOLD = 200;
 const MINIMUM_SAFETY_FACTOR = 1.2;
 const OF_GENERATION_BUCKETS = Object.freeze([
@@ -1130,7 +1130,7 @@ function applyTheme(theme, persist) {
 
 function pageFromHash() {
   const page = window.location.hash.replace(/^#/, "");
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "instrucoes"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "follow-up", "itens-sem-giro", "comparativo-mensal", "instrucoes"].includes(page)
     ? page
     : "dashboard";
 }
@@ -1230,7 +1230,7 @@ function animatePageEntry(panel) {
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = [...FILTERED_PAGE_IDS, "instrucoes"].includes(page) ? page : "dashboard";
+  const validPage = [...FILTERED_PAGE_IDS, "follow-up", "itens-sem-giro", "comparativo-mensal", "instrucoes"].includes(page) ? page : "dashboard";
   const root = document.documentElement;
   const previousPage = root.dataset.activePage || "";
 
@@ -1552,6 +1552,7 @@ function applyAllFilters(shouldClose = false) {
   scheduleFilteredPage(pageFromHash(), true);
   updateFilterSummary();
   state.filterDraftDirty = false;
+  window.dispatchEvent(new CustomEvent("almox-global-filters-applied"));
   if (shouldClose) closeFilters(false);
 }
 
@@ -2142,6 +2143,30 @@ function applyFilters(renderCatalog = true) {
   const scStatus = filterValues(ui.scStatusFilter);
   const positiveOnly = ui.positiveBalanceFilter.checked;
 
+  // Os módulos de análises usam o mesmo recorte de itens e posições do painel.
+  const visibleItemByCode = new Map();
+  window.__almoxGlobalRowFilter = (row) => {
+    const code = String(row.code || "").replace(/^0+(?=\d)/, "");
+    const item = visibleItemByCode.get(code);
+    if (!item) return false;
+    if (supplier.length && row.supplier && !supplier.some((value) => normalizeSearch(value) === normalizeSearch(row.supplier))) return false;
+    if (requester.length && row.requester && !requester.some((value) => normalizeSearch(value) === normalizeSearch(row.requester))) return false;
+    const rowBranch = normalizeSearch(row.branch || "");
+    const rowBranchCode = String(row.branchCode || "").replace(/^0+(?=\d)/, "");
+    const rowLocal = String(row.localCode || "").replace(/^0+(?=\d)/, "");
+    const scoped = (item.positions || []).filter((position) =>
+      positionMatchesBranch(position, branch)
+      && (!location.length || location.includes(position.locationKey))
+      && positionMatchesReplenishmentResponsible(position, replenishmentResponsible));
+    if (branch.length || location.length || replenishmentResponsible.length) {
+      if (!scoped.some((position) =>
+        (!rowBranchCode || String(position.branchCode).replace(/^0+(?=\d)/, "") === rowBranchCode)
+        && (!rowBranch || rowBranch === normalizeSearch(position.branchName) || rowBranch === normalizeSearch(position.branchCode))
+        && (!rowLocal || String(position.localCode).replace(/^0+(?=\d)/, "") === rowLocal))) return false;
+    }
+    return true;
+  };
+
   state.filteredItems = state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
     if (query && !item.searchText.includes(query)) return false;
@@ -2165,6 +2190,7 @@ function applyFilters(renderCatalog = true) {
     if (positiveOnly && matchingPositions.reduce((sum, position) => sum + position.quantity, 0) <= 0) return false;
     return true;
   });
+  for (const item of state.filteredItems) visibleItemByCode.set(String(item.code).replace(/^0+(?=\d)/, ""), item);
 
   const sort = ui.catalogSort.value;
   state.filteredItems.sort((a, b) => {

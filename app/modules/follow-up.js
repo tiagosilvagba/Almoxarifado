@@ -97,6 +97,8 @@
         const candidate = {
           key,
           branch: record.branch || record.branchName || record.branchCode || "—",
+          branchCode: record.branchCode || sc.branchCode || "",
+          code: item.code || "",
           item: `${item.code || ""} · ${item.name || item.detailedName || ""}`,
           sc: sc.code || "",
           of: of.code || "",
@@ -211,15 +213,14 @@
       filterSelect("fuRequesterSelect", "requester", [...new Set(rows.map((row) => row.requester))].sort(), "Todos os solicitantes");
       filterSelect("fuAgeSelect", "age", ["0–7 dias", "8–15 dias", "16–20 dias", "21–30 dias", ">30 dias"], "Todos os períodos");
       apply();
-      const uniqueSc = new Set(rows.map((row) => row.sc)).size;
-      const uniqueOf = new Set(rows.map((row) => row.of)).size;
-      if (status) status.textContent = `${uniqueSc.toLocaleString("pt-BR")} SCs · ${uniqueOf.toLocaleString("pt-BR")} OFs em aberto`;
+      if (status) status.textContent = `${filtered.length.toLocaleString("pt-BR")} registros no recorte atual`;
     }
 
     function apply() {
       const query = normalize(document.getElementById("fuSearch")?.value);
       filtered = rows.filter((row) => (
-        (!selected.delivery.size || selected.delivery.has(row.deliveryStatus))
+        (!windowObject.__almoxGlobalRowFilter || windowObject.__almoxGlobalRowFilter(row))
+        && (!selected.delivery.size || selected.delivery.has(row.deliveryStatus))
         && (!selected.branch.size || selected.branch.has(row.branch))
         && (!selected.supplier.size || selected.supplier.has(row.supplier))
         && (!selected.requester.size || selected.requester.has(row.requester))
@@ -248,11 +249,18 @@
       if (!page) return;
       document.getElementById("loadingPanel")?.classList.add("is-hidden");
       document.getElementById("catalogContent")?.classList.remove("is-hidden");
-      document.querySelectorAll("[data-page-panel]").forEach((panel) => panel.classList.toggle("is-hidden", panel !== page));
+      document.querySelectorAll("[data-page-panel]").forEach((panel) => {
+        const active = panel === page;
+        panel.classList.toggle("is-hidden", !active);
+        panel.inert = !active;
+        panel.setAttribute("aria-hidden", String(!active));
+      });
       document.querySelectorAll(".app-nav__tab").forEach((link) => {
         const active = link.dataset.page === "follow-up";
         link.classList.toggle("is-active", active);
         link.setAttribute("aria-selected", String(active));
+        link.setAttribute("aria-current", active ? "page" : "false");
+        link.tabIndex = active ? 0 : -1;
       });
       if (windowObject.location.hash !== "#follow-up") windowObject.history.replaceState(null, "", "#follow-up");
       refresh();
@@ -268,6 +276,7 @@
         open();
       }, true);
       windowObject.addEventListener("hashchange", () => { if (windowObject.location.hash === "#follow-up") open(); });
+      windowObject.addEventListener("almox-global-filters-applied", () => { if (rows.length) apply(); });
       document.getElementById("fuSearch")?.addEventListener("input", apply);
       document.getElementById("fuClear")?.addEventListener("click", () => {
         Object.values(selected).forEach((values) => values.clear());

@@ -1,7 +1,7 @@
 "use strict";
 
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
-const ALMOX_BASE = "./app/core/catalog-app.js?v=10.6";
+const ALMOX_BASE = "./app/core/catalog-app.js?v=10.7";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
 const CURRENT_VERSION_LABEL = window.__ALMOX_VERSION_LABEL__ || "Versão 10.6";
 const CUSTOM_THEMES = [

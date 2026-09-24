@@ -1,10 +1,15 @@
 "use strict";
 
-(() => {
+(function initializeInclusions(root, factory) {
+  const api = factory();
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  if (root?.document) api.install();
+})(typeof window !== "undefined" ? window : null, () => {
   const AREA_FILE = "./02 - Responsaveis_Reposição.CSV?inclusoes=20260914-3";
   const VALUE_MULTIPLIER = 1000;
   const areaMap = new Map();
   const cache = new Map();
+  let areasLoaded = false;
   let renderToken = 0;
   let renderTimer = 0;
   const nf = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -83,7 +88,8 @@
   }
 
   async function loadAreas() {
-    if (areaMap.size) return;
+    if (areasLoaded) return;
+    areasLoaded = true;
     try {
       const p = parseCsv(await fetchText(AREA_FILE, "no-store"));
       const bi = col(p.headers, ["FILIAL", "CD FILIAL"]), li = col(p.headers, ["CD LOCAL", "LOCAL"]), ai = col(p.headers, ["Área", "Area"]);
@@ -152,11 +158,74 @@
     return map;
   }
 
+  const MONTHS = {jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+  function chronologicalFiles(entries) {
+    return entries.map((entry) => {
+      const name = typeof entry === "string" ? entry : entry.name;
+      const match = /^01\s*-\s*Estoque_([A-Za-zÀ-ÿ]{3})_(\d{4})\.csv$/i.exec(name || "");
+      if (!match) return null;
+      const month = MONTHS[norm(match[1])];
+      return month ? { name, order:Number(match[2]) * 100 + month } : null;
+    }).filter(Boolean).sort((a,b) => a.order - b.order);
+  }
+  function compareInclusions(previous, current, filter = {branch:"all",local:"all",usage:"all",area:"all"}) {
+    // A existência do código é global; o recorte se aplica somente às linhas incluídas.
+    const previousCodes = new Set(previous.records.map((record) => keyPart(record.code)));
+    const included = current.records.filter((record) => !previousCodes.has(keyPart(record.code)) && matches(record, filter))
+      .map((record) => ({ ...record, code:keyPart(record.code) }));
+    const items = aggregate(included);
+    for (const record of included) {
+      const item = items.get(record.code);
+      if (!item.positions) item.positions = new Map();
+      const key = positionKey(record.branch, record.local);
+      const position = item.positions.get(key) || {branch:record.branch, local:record.local, balance:0};
+      position.balance += record.balance;
+      item.positions.set(key, position);
+    }
+    return { previous:previous.fileName, current:current.fileName, items:[...items.values()], count:items.size, balance:[...items.values()].reduce((sum,item) => sum + item.balance,0) };
+  }
+  let historyPromise = null;
+  async function loadHistoryFiles() {
+    if (historyPromise) return historyPromise;
+    historyPromise = (async () => {
+      const response = await fetch("data-manifest.json", {cache:"no-store"});
+      if (!response.ok) throw new Error("Não foi possível consultar as bases mensais.");
+      return chronologicalFiles(await response.json());
+    })();
+    try { return await historyPromise; } catch (error) { historyPromise = null; throw error; }
+  }
+  async function renderHistory(token) {
+    const node = document.getElementById("monthlyInclusionHistory");
+    if (!node) return;
+    try {
+      const files = await loadHistoryFiles();
+      if (token !== renderToken) return;
+      if (files.length < 2) { node.textContent = "Histórico de inclusões por atualização: é necessária pelo menos uma base anterior para comparar."; return; }
+      // O cache de promessas evita baixar uma base novamente em pares adjacentes.
+      const snapshots = await Promise.allSettled(files.map((file) => loadSnapshot(file.name)));
+      if (token !== renderToken) return;
+      const filter = filters();
+      const blocks = [];
+      for (let i = files.length - 1; i > 0; i--) {
+        const previous = snapshots[i-1], current = snapshots[i];
+        if (previous.status !== "fulfilled" || current.status !== "fulfilled") {
+          blocks.push(`<article class="month-history__entry"><strong>${esc(files[i-1].name)} → ${esc(files[i].name)}</strong><p>Não foi possível ler uma das bases desta atualização.</p></article>`);
+          continue;
+        }
+        const result = compareInclusions(previous.value, current.value, filter);
+        const details = result.items.sort((a,b) => b.balance - a.balance).map((item) => [...item.positions.values()].map((position) => `<tr><td>${esc(item.displayCode || item.code)}</td><td>${esc(item.name)}</td><td>${nf.format(position.balance * VALUE_MULTIPLIER)}</td><td>${esc([...item.units].join(" / ") || "—")}</td><td>${esc(position.branch || "—")}</td><td>${esc(position.local || "—")}</td></tr>`).join("")).join("");
+        blocks.push(`<details class="month-history__entry"><summary><strong>${esc(files[i-1].name)} → ${esc(files[i].name)}</strong><span>${result.count} códigos · saldo ${nf.format(result.balance * VALUE_MULTIPLIER)}</span></summary><div class="month-history__table"><table><thead><tr><th>Código</th><th>Descrição</th><th>Saldo incluído</th><th>Unidade</th><th>Filial</th><th>Local de estoque</th></tr></thead><tbody>${details || '<tr><td colspan="6">Nenhum código incluído neste recorte.</td></tr>'}</tbody></table></div></details>`);
+      }
+      node.innerHTML = `<h3>Histórico de inclusões por atualização</h3><p>Cada base é comparada com a imediatamente anterior. Saldos nas unidades informadas pelos arquivos.</p>${blocks.join("")}`;
+    } catch (error) { if (token === renderToken) node.textContent = `Histórico de inclusões indisponível: ${error.message}`; }
+  }
+
   function ensureStyles() {
     if (document.getElementById("monthlyStockInclusionStyles")) return;
     const style = document.createElement("style");
     style.id = "monthlyStockInclusionStyles";
     style.textContent = `.month-stock-inclusions,.month-stock-zero-reductions{margin:0 0 18px;padding:18px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}.month-stock-inclusions__head{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:18px;align-items:start;margin-bottom:12px}.month-stock-inclusions__head h3{margin:0 0 6px}.month-stock-inclusions__head p{margin:0;color:var(--muted);line-height:1.45}.month-stock-inclusions__summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.month-stock-inclusions__stat{display:grid;gap:3px;padding:12px;border:1px solid var(--steel-200);border-radius:12px;background:var(--steel-50,#fff)}.month-stock-inclusions__stat span{font-size:12px;color:var(--muted);font-weight:800}.month-stock-inclusions__stat strong{font-size:22px;line-height:1.15;font-variant-numeric:tabular-nums}.month-stock-inclusions__stat small{font-size:11px;color:var(--muted);line-height:1.35}.month-stock-inclusions__note{margin:0 0 12px!important;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--cyan,#1b8fa8) 9%,transparent);font-size:12px;color:var(--muted);line-height:1.4}.month-stock-inclusions__list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}.month-stock-inclusions__list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--steel-200);border-radius:12px;background:var(--steel-50,#fff)}.month-stock-inclusions__identity{min-width:0}.month-stock-inclusions__identity strong{display:block}.month-stock-inclusions__identity small{display:block;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}.month-stock-inclusions__value{display:grid;justify-items:end;gap:1px;min-width:126px;font-variant-numeric:tabular-nums;white-space:nowrap}.month-stock-inclusions__value small,.month-stock-inclusions__value em{font-size:10px;color:var(--muted);font-style:normal;font-weight:700}.month-stock-inclusions__value strong{font-size:17px;color:#169b62}.month-stock-zero-reductions .month-stock-inclusions__value strong{color:#d64545}.month-stock-inclusions__empty{padding:14px;border:1px dashed var(--steel-200);border-radius:12px;color:var(--muted)}@media(max-width:900px){.month-stock-inclusions__head{grid-template-columns:1fr}.month-stock-inclusions__summary{grid-template-columns:repeat(2,minmax(0,1fr))}.month-stock-inclusions__list{grid-template-columns:1fr}}@media(max-width:520px){.month-stock-inclusions__summary{grid-template-columns:1fr}.month-stock-inclusions__list li{grid-template-columns:1fr}.month-stock-inclusions__value{justify-items:start}}`;
+    style.textContent += `.month-history{margin:0 0 18px;padding:18px;border:1px solid var(--steel-200);border-radius:16px;background:var(--surface,#fff)}.month-history__entry{border-top:1px solid var(--steel-200);padding:12px 0}.month-history__entry summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.month-history__table{overflow:auto;max-height:520px}.month-history table{width:100%;border-collapse:collapse;min-width:680px}.month-history th,.month-history td{padding:8px;text-align:left;border-bottom:1px solid var(--steel-200)}`;
     document.head.appendChild(style);
   }
 
@@ -167,7 +236,9 @@
     if (!inclusionsNode) { inclusionsNode = document.createElement("section"); inclusionsNode.id = "monthlyStockInclusions"; inclusionsNode.className = "month-stock-inclusions is-hidden"; anchor.insertAdjacentElement("afterend", inclusionsNode); }
     let reductionsNode = document.getElementById("monthlyStockZeroReductions");
     if (!reductionsNode) { reductionsNode = document.createElement("section"); reductionsNode.id = "monthlyStockZeroReductions"; reductionsNode.className = "month-stock-zero-reductions is-hidden"; inclusionsNode.insertAdjacentElement("afterend", reductionsNode); }
-    return { inclusionsNode, reductionsNode };
+    let historyNode = document.getElementById("monthlyInclusionHistory");
+    if (!historyNode) { historyNode = document.createElement("section"); historyNode.id = "monthlyInclusionHistory"; historyNode.className = "month-history"; reductionsNode.insertAdjacentElement("afterend", historyNode); }
+    return { inclusionsNode, reductionsNode, historyNode };
   }
 
   function renderRankList(items, valueSelector, negative = false) {
@@ -180,6 +251,7 @@
     ensureStyles();
     const { inclusionsNode, reductionsNode } = ensureContainers();
     if (!inclusionsNode || !reductionsNode) return;
+    renderHistory(token);
     const baseSelect = document.getElementById("monthlyBaseSelect");
     const currentSelect = document.getElementById("monthlyCurrentSelect");
     const baseName = baseSelect?.value, currentName = currentSelect?.value;
@@ -189,7 +261,7 @@
       const [base, current] = await Promise.all([loadSnapshot(baseName), loadSnapshot(currentName)]);
       if (token !== renderToken) return;
       const f = filters();
-      const baseMap = aggregate(base.records.filter((r) => matches(r, f)));
+      const baseMap = aggregate(base.records);
       const currentMap = aggregate(current.records.filter((r) => matches(r, f)));
       const inclusions = [...currentMap.values()].filter((item) => !baseMap.has(item.code)).sort((a,b) => b.balance - a.balance);
       const zeroReductions = [...baseMap.values()].filter((item) => item.balance > 0 && currentMap.has(item.code) && Math.abs(currentMap.get(item.code).balance) < 0.000001).sort((a,b) => b.balance - a.balance);
@@ -225,5 +297,5 @@
     waitForPage();
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once:true }); else install();
-})();
+  return { chronologicalFiles, compareInclusions, install };
+});
