@@ -7,16 +7,18 @@ window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const IS_MOBILE_DEVICE = IS_IOS
+  || window.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches;
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=10.7.4",
+  base: "./app/layers/features.js?v=10.7.10",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
   area: "./app/modules/area-filter-active.js?v=7.9",
-  noTurn: "./app/modules/itens-sem-giro.js?v=10.7.2",
+  noTurn: "./app/modules/itens-sem-giro.js?v=10.7.10",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
-  followUp: "./app/modules/follow-up.js?v=10.7",
+  followUp: "./app/modules/follow-up.js?v=10.7.10",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.5",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
@@ -123,12 +125,33 @@ function exposeAppState(attempt = 0) {
     setTimeout(() => whenIdle(() => optional(MODULES.noTurnCross, "cruzamento sem giro"), 6000), 3500);
   }
 
-  whenIdle(async () => {
-    for (const [src, name] of MODULES.comparison) {
-      await optional(src, name);
-      await yieldToBrowser();
-    }
-  }, IS_IOS ? 12000 : 5000);
+  let comparisonLoading = null;
+  const loadComparisonEnhancements = () => {
+    if (comparisonLoading) return comparisonLoading;
+    comparisonLoading = (async () => {
+      for (const [src, name] of MODULES.comparison) {
+        await optional(src, name);
+        await yieldToBrowser();
+      }
+    })();
+    return comparisonLoading;
+  };
+
+  if (IS_MOBILE_DEVICE) {
+    const maybeLoadComparison = () => {
+      if (window.location.hash !== "#comparativo-mensal") return;
+      window.setTimeout(() => loadComparisonEnhancements(), 180);
+    };
+    document.addEventListener("click", (event) => {
+      if (event.target.closest?.('.app-nav__tab[data-page="comparativo-mensal"]')) {
+        window.setTimeout(() => loadComparisonEnhancements(), 180);
+      }
+    }, true);
+    window.addEventListener("hashchange", maybeLoadComparison);
+    maybeLoadComparison();
+  } else {
+    whenIdle(() => loadComparisonEnhancements(), 5000);
+  }
 
   [250, 1000, 2500].forEach((delay) => setTimeout(setVersion, delay));
 })().catch((error) => {
