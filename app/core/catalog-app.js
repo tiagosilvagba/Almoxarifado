@@ -2940,14 +2940,9 @@ function normalizeBranchCode(value) {
 }
 
 function isWarehouseSc(sc) {
-  // O CCU 1500 identifica compra destinada ao almoxarifado. Alguns registros
-  // históricos chegam sem o CCU, mas trazem explicitamente o local de estoque.
-  // Nesses casos não podemos descartar a compra, pois isso criaria risco de
-  // recomendar uma compra duplicada.
-  const ccu = String(sc?.allocationCostCenter || "").trim();
-  if (/^0*1500(?:[.,]0+)?$/.test(ccu)) return true;
-  if (ccu) return false;
-  return Boolean(String(sc?.stockLocation || "").trim());
+  // Somente SC destinada explicitamente ao CCU 1500 representa compra para
+  // entrada no almoxarifado. CCU diferente ou ausente não reduz a necessidade.
+  return /^0*1500(?:[.,]0+)?$/.test(String(sc?.allocationCostCenter || "").trim());
 }
 
 function itemIsWarehouseStockItem(item) {
