@@ -11,7 +11,7 @@ const IS_MOBILE_DEVICE = IS_IOS
   || window.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches;
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=10.7.10",
+  base: "./app/layers/features.js?v=10.7.11",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
