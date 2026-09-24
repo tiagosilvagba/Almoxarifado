@@ -404,7 +404,7 @@
   }
 
   function runPlan(plan,rows){
-    let result=rows.filter(r=>(plan.filters||[]).every(f=>compare(r,f))&&!(plan.excludes||[]).some(f=>compare(r,f))&&(plan.textTerms||[]).every(t=>r.search.includes(norm(t))));
+    let result=rows.filter(r=>(plan.filters||[]).every(f=>compare(r,f))&&!(plan.excludes||[]).some(f=>compare(r,f))&&(plan.textTerms||[]).every(t=>searchHasToken(r.search,t)));
     const totalMatched=result.length;
     if(plan.sort)result.sort((a,b)=>(num(a[plan.sort.field])-num(b[plan.sort.field]))*(plan.sort.dir==="asc"?1:-1));
     let groups=null;
@@ -412,10 +412,13 @@
       const map=new Map();
       for(const r of result){
         const key=String(r[plan.groupBy]||"Não informado");
-        const g=map.get(key)||{key,count:0,stockValue:0,purchaseValue:0,balance:0,purchaseNeed:0,openOfBalance:0};
-        g.count++;g.stockValue+=num(r.stockValue);g.purchaseValue+=num(r.purchaseValue);g.balance+=num(r.balance);g.purchaseNeed+=num(r.purchaseNeed);g.openOfBalance+=num(r.openOfBalance);map.set(key,g);
+        const g=map.get(key)||{key,count:0,itemCodes:new Set(),stockValue:0,purchaseValue:0,balance:0,purchaseNeed:0,openOfBalance:0};
+        g.count++;if(r.code)g.itemCodes.add(String(r.code));
+        g.stockValue+=num(r.stockValue);g.purchaseValue+=num(r.purchaseValue);g.balance+=num(r.balance);g.purchaseNeed+=num(r.purchaseNeed);g.openOfBalance+=num(r.openOfBalance);map.set(key,g);
       }
-      groups=[...map.values()].sort((a,b)=>b.count-a.count);
+      groups=[...map.values()].map(g=>({key:g.key,count:g.count,itemCount:g.itemCodes.size,stockValue:g.stockValue,purchaseValue:g.purchaseValue,balance:g.balance,purchaseNeed:g.purchaseNeed,openOfBalance:g.openOfBalance}));
+      const metric=plan.groupMetric||"count";
+      groups.sort((a,b)=>num(b[metric])-num(a[metric])||b.itemCount-a.itemCount||String(a.key).localeCompare(String(b.key),"pt-BR"));
     }
     return {rows:result.slice(0,plan.limit||50),allRows:result,totalMatched,groups};
   }
@@ -432,7 +435,7 @@
   function aggregateText(plan,result){
     const rows=result.allRows,parts=[];
     for(const metric of plan.metrics||[]){
-      if(metric==="count")parts.push(`${rows.length.toLocaleString("pt-BR")} registros encontrados`);
+      if(metric==="count"){const total=distinctMetricCount(rows,plan.countField);parts.push(`${total.toLocaleString("pt-BR")} ${plan.countLabel||"registros"} encontrado${total===1?"":"s"}`);}
       else{
         const [op,field]=metric.split(":"),vals=rows.map(r=>num(r[field]));
         const value=op==="sum"?vals.reduce((a,b)=>a+b,0):(vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0);
@@ -529,7 +532,13 @@
 
     function groupCards(result,plan){
       if(!result.groups?.length)return "";
-      return `<div class="ai-groups">${result.groups.slice(0,50).map(g=>`<article class="ai-group"><strong>${esc(g.key)}</strong><small>${g.count} posições</small><b>${money.format(g.purchaseValue||g.stockValue)}</b><small>${g.purchaseValue?"valor reposição":"valor estoque"}</small></article>`).join("")}</div>`;
+      const metric=plan.groupMetric||"count";
+      const metricLabel=metric==="purchaseValue"?"valor reposição":metric==="stockValue"?"valor estoque":metric==="purchaseNeed"?"necessidade":metric==="openOfBalance"?"saldo OF aberto":metric==="balance"?"saldo":"itens";
+      return `<div class="ai-groups">${result.groups.slice(0,50).map(g=>{
+        const value=metric==="count"?(g.itemCount||g.count):g[metric];
+        const formatted=["purchaseValue","stockValue"].includes(metric)?money.format(num(value)):fmt.format(num(value));
+        return `<article class="ai-group"><strong>${esc(g.key)}</strong><small>${g.itemCount||g.count} itens · ${g.count} posições</small><b>${esc(formatted)}</b><small>${esc(metricLabel)}</small></article>`;
+      }).join("")}</div>`;
     }
 
     function answer(question){
