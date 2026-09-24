@@ -2667,7 +2667,19 @@ async function buildPurchaseNeeds() {
     for (const position of item.positions || []) {
       const target = position.maximum > 0 ? position.maximum : position.minimum;
       if (!(target > 0)) continue;
-      const branchCommitments = commitmentsByBranch.get(normalizeBranchCode(position.branchCode));
+      const normalizedPositionBranch = normalizeBranchCode(position.branchCode);
+      let branchCommitments = commitmentsByBranch.get(normalizedPositionBranch);
+      // Bases antigas podem ter a filial de destino ausente na linha de compra.
+      // Só usa o grupo sem filial quando não há ambiguidade: uma única filial de
+      // estoque para o item. Nunca espalha a mesma compra entre filiais diferentes.
+      if (!branchCommitments && commitmentsByBranch.has("")) {
+        const stockBranches = unique((item.positions || [])
+          .map((entry) => normalizeBranchCode(entry.branchCode))
+          .filter(Boolean));
+        if (stockBranches.length === 1 && stockBranches[0] === normalizedPositionBranch) {
+          branchCommitments = commitmentsByBranch.get("");
+        }
+      }
       const hasPurchaseCoverage = Boolean(branchCommitments?.ofs?.some((entry) => entry.remaining > 0)
         || branchCommitments?.scs?.some((entry) => entry.remaining > 0));
       // A posição entra na análise quando está abaixo do mínimo OU quando já existe
@@ -2928,7 +2940,14 @@ function normalizeBranchCode(value) {
 }
 
 function isWarehouseSc(sc) {
-  return /^0*1500(?:[.,]0+)?$/.test(String(sc?.allocationCostCenter || "").trim());
+  // O CCU 1500 identifica compra destinada ao almoxarifado. Alguns registros
+  // históricos chegam sem o CCU, mas trazem explicitamente o local de estoque.
+  // Nesses casos não podemos descartar a compra, pois isso criaria risco de
+  // recomendar uma compra duplicada.
+  const ccu = String(sc?.allocationCostCenter || "").trim();
+  if (/^0*1500(?:[.,]0+)?$/.test(ccu)) return true;
+  if (ccu) return false;
+  return Boolean(String(sc?.stockLocation || "").trim());
 }
 
 function itemIsWarehouseStockItem(item) {
