@@ -8,10 +8,24 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
-    <link rel="stylesheet" href="app/styles/app.css?v=10.7.5">
-    <script src="script.js?v=10.7.11" defer></script>
+    <link rel="stylesheet" href="app/styles/app.css?v=10.7.6">
+    <script src="script.js?v=10.7.12" defer></script>
   </head>
-  <body>
+  <body class="app-booting">
+    <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
+      <div class="startup-screen__content">
+        <div class="startup-screen__mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M6 18.5 24 8l18 10.6v21a2.5 2.5 0 0 1-2.5 2.5h-31A2.5 2.5 0 0 1 6 39.5v-21Z"></path><path d="M14 26h20v16H14zM19 26v16M29 26v16M14 34h20"></path></svg>
+        </div>
+        <p class="startup-screen__eyebrow">Gestão de Almoxarifado</p>
+        <h1>Aguarde enquanto preparamos tudo.</h1>
+        <p id="startupMessage" class="startup-screen__message">Carregando seu ambiente de trabalho…</p>
+        <div class="startup-screen__progress" role="progressbar" aria-label="Preparando aplicação" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="startupProgress"></span>
+        </div>
+        <p class="startup-screen__hint">Os dados e indicadores estarão prontos antes de liberar o acesso.</p>
+      </div>
+    </section>
     <header class="topbar">
       <div class="shell topbar__content">
         <div class="brand">
