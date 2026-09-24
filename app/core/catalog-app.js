@@ -1744,6 +1744,15 @@ async function handleWorkerMessage(event) {
     ui.loadingPanel.classList.add("is-hidden");
     ui.catalogContent.classList.remove("is-hidden");
     ui.refreshButton.disabled = false;
+
+    // Mantém a abertura rápida, mas recompõe em segundo plano os indicadores que
+    // alimentam o Dashboard. Isso evita cards zerados até o usuário abrir outra aba.
+    window.setTimeout(() => {
+      ensureDerivedIndicators().catch((error) => {
+        console.warn("Falha ao preparar indicadores derivados em segundo plano.", error);
+      });
+    }, 0);
+
     state.worker?.terminate();
     state.worker = null;
   } catch (error) {
@@ -1760,6 +1769,15 @@ async function ensureDerivedIndicators() {
     await yieldForHeavyWork();
     await buildPurchaseNeeds();
     state.derivedIndicatorsReady = true;
+
+    // O Dashboard também depende destes indicadores. Depois do cálculo assíncrono,
+    // invalida apenas as páginas afetadas e atualiza o painel quando ele estiver ativo.
+    state.pageRenderRevision.delete("dashboard");
+    state.pageRenderRevision.delete("necessidade-compra");
+    state.pageRenderRevision.delete("revisao-min-max");
+    if (pageFromHash() === "dashboard") {
+      renderFilteredPage("dashboard", true);
+    }
   })();
   try {
     await state.derivedIndicatorsPromise;
