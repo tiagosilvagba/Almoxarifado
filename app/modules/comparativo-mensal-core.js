@@ -514,7 +514,8 @@
     const query = normalize(document.getElementById("monthlySearch")?.value || "");
     const status = document.getElementById("monthlyStatusFilter")?.value || "all";
     const visible = currentRows.filter((row) => (status === "all" || row.status === status) && (!query || normalize(`${row.code} ${row.name}`).includes(query)));
-    tbody.innerHTML = visible.slice(0,1000).map((row) => `<tr><td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.name)}</td><td>${nf2.format(row.baseBalance)}</td><td>${nf2.format(row.currentBalance)}</td><td class="${row.deltaBalance > 0 ? "month-delta--up" : row.deltaBalance < 0 ? "month-delta--down" : ""}">${formatSigned(row.deltaBalance)}${row.pctBalance == null ? "" : ` (${nf2.format(row.pctBalance)}%)`}</td><td>${nf2.format(row.baseConsumption)}</td><td>${nf2.format(row.currentConsumption)}</td><td>${formatSigned(row.deltaConsumption)}</td><td><span class="month-status month-status--${row.status}">${row.status === "increase" ? "Aumentou" : row.status === "decrease" ? "Reduziu" : "Estável"}</span></td></tr>`).join("");
+    const rowLimit = window.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches ? 350 : 1000;
+    tbody.innerHTML = visible.slice(0,rowLimit).map((row) => `<tr><td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.name)}</td><td>${nf2.format(row.baseBalance)}</td><td>${nf2.format(row.currentBalance)}</td><td class="${row.deltaBalance > 0 ? "month-delta--up" : row.deltaBalance < 0 ? "month-delta--down" : ""}">${formatSigned(row.deltaBalance)}${row.pctBalance == null ? "" : ` (${nf2.format(row.pctBalance)}%)`}</td><td>${nf2.format(row.baseConsumption)}</td><td>${nf2.format(row.currentConsumption)}</td><td>${formatSigned(row.deltaConsumption)}</td><td><span class="month-status month-status--${row.status}">${row.status === "increase" ? "Aumentou" : row.status === "decrease" ? "Reduziu" : "Estável"}</span></td></tr>`).join("");
   }
 
   function statusLabel(status) {
