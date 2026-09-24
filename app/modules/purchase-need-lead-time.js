@@ -188,7 +188,6 @@
 
     const totalLead = lead(row);
     const stages = stageLead(row);
-    const host = card.querySelector(".report-card__meta,.report-card__details,.report-card__body") || card;
     const tag = document.createElement("div");
     tag.className = "purchase-need-lead-time";
     tag.innerHTML = `
@@ -197,11 +196,12 @@
         <strong>${totalLead.days == null ? "Não disponível" : `${fmt.format(totalLead.days)} dias`}</strong>
         <em>${totalLead.source}</em>
       </span>
-      <span class="purchase-need-lead-time__stages">
-        ${stageMarkup("SC → OF", stages.scToOf)}
-        ${stageMarkup("OF → Recebimento", stages.ofToReceipt)}
-      </span>`;
-    host.appendChild(tag);
+      ${stageMarkup("SC → OF", stages.scToOf)}
+      ${stageMarkup("OF → Recebimento", stages.ofToReceipt)}
+    `;
+    const footer = card.querySelector(":scope > .report-card__footer");
+    if (footer) footer.before(tag);
+    else card.appendChild(tag);
     card.dataset.leadTimeReady = "true";
   }
 
@@ -301,17 +301,70 @@
     const sheet = document.createElement("style");
     sheet.id = "purchaseNeedLeadTimeStyle";
     sheet.textContent = `
-      .purchase-need-lead-time{display:grid;grid-template-columns:minmax(112px,.75fr) minmax(230px,1.6fr);gap:8px;width:100%;margin:8px 0 0;padding:8px;border:1px solid var(--steel-200,#d8e0e8);border-radius:10px;background:rgba(148,163,184,.08);box-sizing:border-box}
-      .purchase-need-lead-time__total,.purchase-need-lead-stage{display:flex;flex-direction:column;gap:1px;min-width:0}
-      .purchase-need-lead-time__total small,.purchase-need-lead-stage small{font-size:.66rem;opacity:.72}
-      .purchase-need-lead-time__total strong,.purchase-need-lead-stage strong{font-size:.8rem;line-height:1.2}
-      .purchase-need-lead-time__total em,.purchase-need-lead-stage em{font-size:.62rem;font-style:normal;opacity:.68;white-space:normal}
-      .purchase-need-lead-time__stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-      .purchase-need-lead-stage{padding-left:8px;border-left:1px solid var(--steel-200,#d8e0e8)}
+      .purchase-need-lead-time{
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:8px;
+        width:100%;
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+      }
+      .purchase-need-lead-time__total,
+      .purchase-need-lead-stage{
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        gap:3px;
+        min-width:0;
+        min-height:72px;
+        padding:10px 11px;
+        border:1px solid var(--steel-200,#d8e0e8);
+        border-radius:12px;
+        background:color-mix(in srgb,var(--surface,#fff) 88%,var(--steel-100,#eef2f6));
+        box-sizing:border-box;
+      }
+      .purchase-need-lead-time__total{
+        border-color:color-mix(in srgb,var(--blue-500,#4777ff) 28%,var(--steel-200,#d8e0e8));
+        background:color-mix(in srgb,var(--blue-100,#eaf3ff) 62%,var(--surface,#fff));
+      }
+      .purchase-need-lead-time__total small,
+      .purchase-need-lead-stage small{
+        display:block;
+        font-size:.68rem;
+        line-height:1.2;
+        opacity:.76;
+        white-space:normal;
+        word-break:normal;
+        overflow-wrap:break-word;
+      }
+      .purchase-need-lead-time__total strong,
+      .purchase-need-lead-stage strong{
+        display:block;
+        margin:0;
+        font-size:.92rem;
+        line-height:1.18;
+        white-space:normal;
+        word-break:normal;
+        overflow-wrap:break-word;
+      }
+      .purchase-need-lead-time__total em,
+      .purchase-need-lead-stage em{
+        display:block;
+        font-size:.64rem;
+        line-height:1.25;
+        font-style:normal;
+        opacity:.68;
+        white-space:normal;
+        word-break:normal;
+        overflow-wrap:break-word;
+      }
       .purchase-lead-stage-detail small{line-height:1.25}
-      @media (max-width:680px){.purchase-need-lead-time{grid-template-columns:1fr}.purchase-need-lead-time__stages{grid-template-columns:1fr 1fr}.purchase-need-lead-stage:first-child{padding-left:0;border-left:0}}
-      @media (max-width:430px){.purchase-need-lead-time__stages{grid-template-columns:1fr}.purchase-need-lead-stage{padding-left:0;border-left:0;border-top:1px solid var(--steel-200,#d8e0e8);padding-top:5px}}
-    `;
+      @media (max-width:720px){
+        .purchase-need-lead-time{grid-template-columns:1fr}
+        .purchase-need-lead-time__total,.purchase-need-lead-stage{min-height:0}
+      }
+    `
     document.head.appendChild(sheet);
   }
 
