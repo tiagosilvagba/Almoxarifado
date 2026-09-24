@@ -141,6 +141,8 @@
     let rows = [];
     let filtered = [];
     let installed = false;
+    let lastItems = null;
+    let dirty = true;
     const selected = { delivery: new Set(), branch: new Set(), supplier: new Set(), requester: new Set(), age: new Set() };
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
     const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
@@ -207,16 +209,19 @@
         return;
       }
       rows = buildFollowUpRows(items);
+      lastItems = items;
       filterSelect("fuDeliverySelect", "delivery", [DELIVERY_TOTAL, DELIVERY_PARTIAL], "Todas as situações");
       filterSelect("fuBranchSelect", "branch", [...new Set(rows.map((row) => row.branch))].sort(), "Todas as filiais");
       filterSelect("fuSupplierSelect", "supplier", [...new Set(rows.map((row) => row.supplier))].sort(), "Todos os fornecedores");
       filterSelect("fuRequesterSelect", "requester", [...new Set(rows.map((row) => row.requester))].sort(), "Todos os solicitantes");
       filterSelect("fuAgeSelect", "age", ["0–7 dias", "8–15 dias", "16–20 dias", "21–30 dias", ">30 dias"], "Todos os períodos");
       apply();
+      dirty = false;
       if (status) status.textContent = `${filtered.length.toLocaleString("pt-BR")} registros no recorte atual`;
     }
 
     function apply() {
+      dirty = false;
       const query = normalize(document.getElementById("fuSearch")?.value);
       filtered = rows.filter((row) => (
         (!windowObject.__almoxGlobalRowFilter || windowObject.__almoxGlobalRowFilter(row))
@@ -239,7 +244,7 @@
       document.getElementById("fuSummary").textContent = `${filtered.length.toLocaleString("pt-BR")} itens de SC com compra confirmada e entrega pendente · ordenados do mais antigo para o mais recente`;
       document.getElementById("fuBody").innerHTML = [...filtered]
         .sort((left, right) => right.days - left.days)
-        .slice(0, 2000)
+        .slice(0, windowObject.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches ? 400 : 1200)
         .map((row) => `<tr><td class="fu-risk">${row.days}</td><td><strong>${escapeHtml(row.deliveryStatus)}</strong></td><td>${escapeHtml(row.branch)}</td><td>${escapeHtml(row.item)}</td><td>${escapeHtml(row.sc || "—")}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(row.scStatus)}</td><td>${escapeHtml(row.supplier)}</td><td>${escapeHtml(row.delivery || "—")}</td><td>${escapeHtml(row.requester)}</td><td>${number.format(row.requested)}</td><td>${number.format(row.delivered)}</td><td>${number.format(row.quantity)}</td><td>${row.value ? money.format(row.value) : "—"}</td></tr>`)
         .join("") || '<tr><td colspan="14">Nenhuma SC com compra confirmada e entrega pendente.</td></tr>';
     }
@@ -263,8 +268,17 @@
         link.tabIndex = active ? 0 : -1;
       });
       if (windowObject.location.hash !== "#follow-up") windowObject.history.replaceState(null, "", "#follow-up");
-      refresh();
       windowObject.scrollTo({ top: 0, behavior: "auto" });
+      windowObject.requestAnimationFrame(() => windowObject.setTimeout(() => {
+        const fallbackState = typeof state !== "undefined" ? state : null;
+        const items = windowObject.__almoxState?.items || fallbackState?.items;
+        if (!Array.isArray(items)) {
+          refresh();
+          return;
+        }
+        if (items !== lastItems || !rows.length) refresh();
+        else if (dirty) apply();
+      }, 0));
     }
 
     function bind() {
@@ -276,13 +290,14 @@
         open();
       }, true);
       windowObject.addEventListener("hashchange", () => { if (windowObject.location.hash === "#follow-up") open(); });
-      windowObject.addEventListener("almox-global-filters-applied", () => { if (rows.length) apply(); });
+      windowObject.addEventListener("almox-global-filters-applied", () => { if (!rows.length) return; if (windowObject.location.hash === "#follow-up") apply(); else dirty = true; });
       document.getElementById("fuSearch")?.addEventListener("input", apply);
       document.getElementById("fuClear")?.addEventListener("click", () => {
         Object.values(selected).forEach((values) => values.clear());
         const query = document.getElementById("fuSearch");
         if (query) query.value = "";
-        refresh();
+        dirty = true;
+        apply();
       });
     }
 
