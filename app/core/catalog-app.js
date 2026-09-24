@@ -127,6 +127,8 @@ const state = {
   loadingProgressValue: 0,
   loadingProgressCeiling: 0,
   loadingProgressTimer: null,
+  derivedIndicatorsReady: false,
+  derivedIndicatorsPromise: null,
 };
 
 const ui = {};
@@ -1592,16 +1594,20 @@ function scheduleFilteredPage(page, force = false) {
   const token = ++state.pageRenderToken;
   const panel = ui.pagePanels.find((entry) => entry.dataset.pagePanel === page);
   panel?.setAttribute("aria-busy", "true");
-  // Dois frames dão ao navegador tempo para exibir a nova aba antes de iniciar
-  // cálculos mais pesados (relatórios, gráficos e revisão de mínimo/máximo).
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+  window.requestAnimationFrame(() => window.requestAnimationFrame(async () => {
     if (token !== state.pageRenderToken || pageFromHash() !== page) {
       panel?.removeAttribute("aria-busy");
       return;
     }
+    if ((page === "necessidade-compra" || page === "revisao-min-max") && !state.derivedIndicatorsReady) {
+      await ensureDerivedIndicators();
+      if (token !== state.pageRenderToken || pageFromHash() !== page) {
+        panel?.removeAttribute("aria-busy");
+        return;
+      }
+    }
     renderFilteredPage(page, force);
     panel?.removeAttribute("aria-busy");
-    if (isMobilePerformanceMode() && !isAndroidPerformanceMode()) window.setTimeout(scheduleMobilePageWarmup, 120);
   }));
 }
 
@@ -1710,16 +1716,18 @@ async function handleWorkerMessage(event) {
     populateFilters();
     await yieldForHeavyWork();
 
-    ui.loadingMessage.textContent = "Calculando indicadores de mínimo e máximo…";
-    ui.statusLine.textContent = "Calculando indicadores de mínimo e máximo…";
-    updateLoadingProgress(96);
-    await buildMinMaxReviews();
-
-    ui.loadingMessage.textContent = "Calculando necessidades de compra…";
-    ui.statusLine.textContent = "Calculando necessidades de compra…";
+    ui.loadingMessage.textContent = "Finalizando painel…";
+    ui.statusLine.textContent = "Finalizando painel…";
     updateLoadingProgress(98);
-    await buildPurchaseNeeds();
-    await yieldForHeavyWork();
+
+    // Indicadores pesados (mín./máx. e necessidade de compra) não bloqueiam mais
+    // a abertura do site. Eles são calculados sob demanda ao abrir essas abas.
+    state.minMaxReviews = [];
+    state.minMaxReviewByKey.clear();
+    state.purchaseNeeds = [];
+    state.purchaseNeedByKey.clear();
+    state.derivedIndicatorsReady = false;
+    state.derivedIndicatorsPromise = null;
 
     applyAllFilters(false);
     navigateToPage(pageFromHash(), false);
@@ -1740,6 +1748,23 @@ async function handleWorkerMessage(event) {
     state.worker = null;
   } catch (error) {
     showError("Os dados foram lidos, mas não puderam ser exibidos.", error.message);
+  }
+}
+
+async function ensureDerivedIndicators() {
+  if (state.derivedIndicatorsReady) return;
+  if (state.derivedIndicatorsPromise) return state.derivedIndicatorsPromise;
+  state.derivedIndicatorsPromise = (async () => {
+    await yieldForHeavyWork();
+    await buildMinMaxReviews();
+    await yieldForHeavyWork();
+    await buildPurchaseNeeds();
+    state.derivedIndicatorsReady = true;
+  })();
+  try {
+    await state.derivedIndicatorsPromise;
+  } finally {
+    state.derivedIndicatorsPromise = null;
   }
 }
 
@@ -2398,7 +2423,9 @@ function updateDashboardMetrics() {
     }
   }
 
-  const purchaseValue = getVisiblePurchaseNeeds().reduce((sum, need) => sum + (need.estimatedValue || 0), 0);
+  const purchaseValue = state.derivedIndicatorsReady
+    ? getVisiblePurchaseNeeds().reduce((sum, need) => sum + (need.estimatedValue || 0), 0)
+    : 0;
 
   ui.metricItems.textContent = integerFormatter.format(scopedItems.size);
   ui.metricQuantity.textContent = integerFormatter.format(codesWithStock.size);
@@ -2495,7 +2522,9 @@ function procurementFunnelCounts(rows) {
 }
 
 function renderDecisionLists() {
-  const needs = getVisiblePurchaseNeeds().filter((need) => need.netSuggested > 0).sort((a, b) => b.estimatedValue - a.estimatedValue).slice(0, 5);
+  const needs = state.derivedIndicatorsReady
+    ? getVisiblePurchaseNeeds().filter((need) => need.netSuggested > 0).sort((a, b) => b.estimatedValue - a.estimatedValue).slice(0, 5)
+    : [];
   ui.dashboardPriorityList.innerHTML = needs.map((need) => `<button type="button" data-purchase-need-key="${escapeHtml(need.key)}"><span><strong>${escapeHtml(need.item.code)} · ${escapeHtml(need.item.name)}</strong><small>${escapeHtml([need.position.branchCode, need.position.localCode].filter(Boolean).join(" · "))}</small></span><b>${currencyFormatter.format(need.estimatedValue)}</b></button>`).join("") || `<p class="chart-empty">Sem necessidade para o recorte atual.</p>`;
 
   const excess = [];
