@@ -1872,8 +1872,66 @@ async function ensureDerivedIndicators() {
   }
 }
 
-const STARTUP_QUOTES = Object.freeze(["Controle transforma informação em decisão.","O que é bem medido pode ser melhorado.","Organização hoje evita urgências amanhã.","Estoque certo, no lugar certo, no momento certo.","Precisão nos dados gera confiança nas decisões.","Antecipar necessidades é melhor do que reagir a faltas.","Cada detalhe controlado fortalece toda a operação.","Boa gestão começa com informação confiável.","Eficiência é fazer o necessário com clareza e controle.","Consistência nos processos constrói resultados sustentáveis."]);
-function startStartupQuotes(){if(!ui.startupQuote||state.startupQuoteTimer)return;state.startupQuoteIndex=0;ui.startupQuote.textContent=STARTUP_QUOTES[0];state.startupQuoteTimer=window.setInterval(()=>{ui.startupQuote.classList.add("is-changing");window.setTimeout(()=>{state.startupQuoteIndex=(state.startupQuoteIndex+1)%STARTUP_QUOTES.length;if(!ui.startupQuote)return;ui.startupQuote.textContent=STARTUP_QUOTES[state.startupQuoteIndex];ui.startupQuote.classList.remove("is-changing");},360);},3200);}
+const STARTUP_QUOTE_PARTS = Object.freeze({
+  subjects: ["Controle","Precisão","Organização","Disciplina","Planejamento","Consistência","Clareza","Prevenção","Agilidade","Qualidade","Confiabilidade","Eficiência","Foco","Método","Visibilidade","Rastreabilidade","Equilíbrio","Antecipação","Padronização","Responsabilidade","Informação","Análise","Acompanhamento","Gestão","Cuidado"],
+  actions: ["transforma dados em decisões","reduz surpresas na operação","antecipa necessidades","protege o fluxo de trabalho","fortalece decisões diárias","evita urgências desnecessárias","mantém o estoque sob domínio","aproxima planejamento e realidade","revela oportunidades de melhoria","sustenta resultados consistentes","faz cada movimento ter propósito","converte detalhe em resultado","mantém prioridades visíveis","cria confiança nos números","ajuda a agir antes da falta","reduz desperdícios silenciosos","torna desvios mais fáceis de corrigir","mantém recursos no lugar certo","conecta necessidade e disponibilidade","faz a rotina trabalhar a favor da equipe"],
+  endings: ["todos os dias.","com confiança.","antes que vire urgência.","sem perder o ritmo.","com menos desperdício.","com mais previsibilidade.","no momento certo.","de forma sustentável.","com decisões mais seguras.","e melhora toda a operação.","com simplicidade.","e fortalece o resultado.","com atenção aos detalhes.","sem depender do improviso.","e deixa o próximo passo mais claro.","com equilíbrio entre estoque e demanda.","com informação confiável.","e mantém a operação preparada.","com foco no que realmente importa.","e transforma rotina em excelência."]
+});
+
+const STARTUP_QUOTES = Object.freeze((() => {
+  const quotes = [];
+  for (let s = 0; s < STARTUP_QUOTE_PARTS.subjects.length; s += 1) {
+    for (let a = 0; a < STARTUP_QUOTE_PARTS.actions.length; a += 1) {
+      const ending = STARTUP_QUOTE_PARTS.endings[(s * 7 + a * 11) % STARTUP_QUOTE_PARTS.endings.length];
+      quotes.push(`${STARTUP_QUOTE_PARTS.subjects[s]} ${STARTUP_QUOTE_PARTS.actions[a]} ${ending}`);
+    }
+  }
+  return quotes; // 25 x 20 = 500 frases.
+})());
+
+function shuffledStartupQuoteIndexes() {
+  const indexes = Array.from({ length: STARTUP_QUOTES.length }, (_, index) => index);
+  if (globalThis.crypto?.getRandomValues) {
+    for (let i = indexes.length - 1; i > 0; i -= 1) {
+      const sample = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(sample);
+      const j = sample[0] % (i + 1);
+      [indexes[i], indexes[j]] = [indexes[j], indexes[i]];
+    }
+  } else {
+    for (let i = indexes.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indexes[i], indexes[j]] = [indexes[j], indexes[i]];
+    }
+  }
+  return indexes;
+}
+
+function startStartupQuotes() {
+  if (!ui.startupQuote || state.startupQuoteTimer) return;
+  let order = shuffledStartupQuoteIndexes();
+  let cursor = 0;
+  let lastIndex = -1;
+  const nextQuote = () => {
+    if (cursor >= order.length) {
+      order = shuffledStartupQuoteIndexes();
+      cursor = 0;
+      if (order[0] === lastIndex && order.length > 1) [order[0], order[1]] = [order[1], order[0]];
+    }
+    lastIndex = order[cursor++];
+    state.startupQuoteIndex = lastIndex;
+    ui.startupQuote.textContent = STARTUP_QUOTES[lastIndex];
+  };
+  nextQuote();
+  state.startupQuoteTimer = window.setInterval(() => {
+    ui.startupQuote.classList.add("is-changing");
+    window.setTimeout(() => {
+      if (!ui.startupQuote) return;
+      nextQuote();
+      ui.startupQuote.classList.remove("is-changing");
+    }, 360);
+  }, 3200);
+}
 function stopStartupQuotes(){if(!state.startupQuoteTimer)return;clearInterval(state.startupQuoteTimer);state.startupQuoteTimer=null;}
 
 function showLoading(title, message) {
