@@ -1476,7 +1476,12 @@ function syncExcelFilterControl(select) {
 function filterExcelFilterOptions(control, query) {
   const normalizedQuery = normalizeSearch(query);
   for (const row of control.querySelectorAll(".excel-filter__option")) {
-    row.hidden = Boolean(normalizedQuery) && !normalizeSearch(row.textContent).includes(normalizedQuery);
+    const filteredOut = Boolean(normalizedQuery) && !normalizeSearch(row.textContent).includes(normalizedQuery);
+    row.hidden = filteredOut;
+    // Alguns temas definem display:flex nos itens e podem prevalecer sobre o
+    // atributo HTML hidden. Forçamos também o display para a pesquisa sempre
+    // refletir imediatamente na lista visível.
+    row.style.display = filteredOut ? "none" : "";
   }
 }
 
