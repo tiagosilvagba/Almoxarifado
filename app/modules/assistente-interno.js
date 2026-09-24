@@ -312,6 +312,10 @@
       }
     }
 
+    for(const entity of fuzzyEntityMatches(original,idx,plan.filters||[])){
+      add(entity.field,"contains",entity.value,`${FIELD_DEFS[entity.field]?.label||entity.field}: ${entity.value}`);
+    }
+
     const codeMatch=n.match(/(?:codigo|cod|item)?\s*\b(\d{4,})\b/);
     if(codeMatch&&rows.some(r=>r.code===codeMatch[1]))add("code","=",codeMatch[1],`Código ${codeMatch[1]}`);
     const scMatch=n.match(/\bsc\s*(?:n|numero|número|codigo|código)?\s*[:#-]?\s*(\d{3,})\b/);
@@ -323,14 +327,35 @@
 
     const groupMap=[["supplier","fornecedor"],["responsible","responsavel"],["branchCode","filial"],["localCode","local"],["category","categoria"],["requester","solicitante"],["area","area"]];
     for(const [field,word] of groupMap)if(new RegExp("(por|agrup|separ).*"+word).test(n)){plan.groupBy=field;break;}
+    if(!plan.groupBy){
+      for(const [field,word] of groupMap){
+        if(new RegExp("(^| )qual(?: o| a)? "+word+"(?: |$)").test(n)||new RegExp("(^| )"+word+".*(maior|mais|menor|menos|total)").test(n)){
+          plan.groupBy=field;break;
+        }
+      }
+    }
 
-    if(/quantos|quantas|contagem|numero de|número de/.test(n)){plan.intent="aggregate";plan.metrics=["count"];}
+    if(/quantos|quantas|contagem|numero de|número de/.test(n)){
+      plan.intent="aggregate";plan.metrics=["count"];
+      if(/\b(itens|item|materiais|material|codigos|codigo)\b/.test(n)){plan.countField="code";plan.countLabel="itens";}
+      else if(/\b(ofs|of)\b/.test(n)){plan.countField="ofCodes";plan.countLabel="OFs";}
+      else if(/\b(scs|sc)\b/.test(n)){plan.countField="scCodes";plan.countLabel="SCs";}
+      else if(/\b(recebimentos|nf|nfs|notas)\b/.test(n)){plan.countField="invoices";plan.countLabel="recebimentos";}
+      else {plan.countField=null;plan.countLabel="registros";}
+    }
     if(/quanto (custa|vale)|valor total|some|soma|total de valor|capital/.test(n)){
       plan.intent="aggregate";
       plan.metrics=uniq([...(plan.metrics||[]),n.includes("repos")||n.includes("compr")?"sum:purchaseValue":"sum:stockValue"]);
     }
     if(/media|média/.test(n)){
       const f=fieldFromText(n)||"averageConsumption";plan.intent="aggregate";plan.metrics=uniq([...(plan.metrics||[]),`avg:${f}`]);
+    }
+    if(plan.groupBy){
+      plan.groupMetric=/valor.*repos|repos.*valor|valor.*compra/.test(n)?"purchaseValue":
+        /valor.*estoque|capital/.test(n)?"stockValue":
+        /necessidade|compra liquida/.test(n)?"purchaseNeed":
+        /saldo of|of aberta|of pendente/.test(n)?"openOfBalance":
+        /\bsaldo\b|quantidade/.test(n)?"balance":"count";
     }
     if(/maior|maiores|mais alto|top/.test(n)){
       const f=fieldFromText(n)||(n.includes("atras")?"pendingScDays":n.includes("valor")?"stockValue":n.includes("consumo")?"averageConsumption":"purchaseValue");
@@ -348,8 +373,8 @@
     const recognized=new Set();
     for(const def of Object.values(FIELD_DEFS))for(const a of def.aliases)norm(a).split(" ").forEach(t=>recognized.add(t));
     (plan.filters||[]).forEach(f=>norm(f.value).split(" ").forEach(t=>recognized.add(t)));
-    const terms=norm(original).split(" ").filter(t=>t.length>2&&!STOP.has(t)&&!recognized.has(t)&&!/^(maior|menor|acima|abaixo|media|total|dias|reais|real|top)$/.test(t)&&(!/^\d+$/.test(t)||t.length>=4));
-    const useful=terms.filter(t=>rows.some(r=>r.search.includes(t)));
+    const terms=norm(original).split(" ").filter(t=>t.length>2&&!STOP.has(t)&&!recognized.has(t)&&!QUERY_NOISE.has(t)&&!/^(maior|menor|acima|abaixo|media|total|dias|reais|real|top)$/.test(t)&&(!/^\d+$/.test(t)||t.length>=4));
+    const useful=terms.filter(t=>rows.some(r=>searchHasToken(r.search,t)));
     plan.textTerms=uniq(contextual?[...(plan.textTerms||[]),...useful]:useful).slice(0,8);
 
     const cols=["code","name","branchCode","localCode"];
