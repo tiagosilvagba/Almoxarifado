@@ -319,15 +319,47 @@ function repairFilters() {
   close?.addEventListener("click", (e) => { e.preventDefault(); hide(); }, true);
   close?.addEventListener("pointerup", (e) => { e.preventDefault(); hide(); }, true);
   trigger?.addEventListener("click", () => panel?.removeAttribute("hidden"), true);
-  document.addEventListener("input", (event) => {
-    const input = event.target;
+
+  const normalizeFilterSearch = (value) => String(value ?? "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+
+  const applyFilterSearch = (input) => {
     if (!(input instanceof HTMLInputElement) || !input.classList.contains("excel-filter__search")) return;
-    const q = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-    input.closest(".excel-filter")?.querySelectorAll(".excel-filter__option").forEach((row) => {
-      const text = (row.textContent || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-      row.style.display = q && !text.includes(q) ? "none" : "";
+    const control = input.closest(".excel-filter");
+    if (!control) return;
+    const q = normalizeFilterSearch(input.value);
+    control.querySelectorAll(".excel-filter__option").forEach((row) => {
+      const matches = !q || normalizeFilterSearch(row.textContent).includes(q);
+      row.hidden = !matches;
+      if (matches) row.style.removeProperty("display");
+      else row.style.setProperty("display", "none", "important");
     });
-  }, true);
+  };
+
+  const handleFilterSearch = (event) => applyFilterSearch(event.target);
+  document.addEventListener("input", handleFilterSearch, true);
+  document.addEventListener("keyup", handleFilterSearch, true);
+  document.addEventListener("search", handleFilterSearch, true);
+  document.addEventListener("change", handleFilterSearch, true);
+
+  const bindSearchInput = (input) => {
+    if (!(input instanceof HTMLInputElement) || input.dataset.searchRepairBound === "true") return;
+    input.dataset.searchRepairBound = "true";
+    input.addEventListener("input", () => applyFilterSearch(input));
+    input.addEventListener("search", () => applyFilterSearch(input));
+    applyFilterSearch(input);
+  };
+
+  document.querySelectorAll(".excel-filter__search").forEach(bindSearchInput);
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof Element)) continue;
+        if (node.matches?.(".excel-filter__search")) bindSearchInput(node);
+        node.querySelectorAll?.(".excel-filter__search").forEach(bindSearchInput);
+      }
+    }
+  }).observe(document.body, { childList:true, subtree:true });
 }
 
 function installZeroWithoutScMetric() {
