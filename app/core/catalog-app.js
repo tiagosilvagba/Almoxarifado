@@ -3015,7 +3015,7 @@ function openPurchaseNeedModal(key) {
     <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
     <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
     <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
-  renderOperationalInsights(ui.purchaseModalOperational, getOperationalInsight(item, position.branchCode, position));
+  renderOperationalInsights(ui.purchaseModalOperational, getOperationalInsight(item, position.branchCode, position), { showLeadTimeBreakdown: true });
   ui.purchaseModalDetails.innerHTML = `
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
     <div><dt>Filial</dt><dd>${escapeHtml([position.branchCode, position.branchName].filter(Boolean).join(" · ") || "—")}</dd></div>
@@ -4504,6 +4504,50 @@ function median(values) {
   return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
 }
 
+function calculateItemLeadTimeBreakdown(item, branchCode = "") {
+  const scToOfSamples = [];
+  const ofToReceiptSamples = [];
+  const seenScToOf = new Set();
+  const seenOfToReceipt = new Set();
+
+  for (const record of item.history || []) {
+    if (branchCode && record.branchCode !== branchCode) continue;
+
+    if (record.sc?.date && record.of?.date) {
+      const key = `${record.sc.code || ""}::${record.of.code || ""}::${record.branchCode || ""}`;
+      if (!seenScToOf.has(key)) {
+        const start = dateTimestamp(record.sc.date);
+        const end = dateTimestamp(record.of.date);
+        const days = start && end ? Math.round((end - start) / 86400000) : -1;
+        if (days >= 0 && days <= 730) {
+          seenScToOf.add(key);
+          scToOfSamples.push(days);
+        }
+      }
+    }
+
+    if (record.of?.date && record.rec?.entryDate) {
+      const key = `${record.of.code || ""}::${record.rec.invoice || ""}::${record.rec.series || ""}::${record.branchCode || ""}`;
+      if (!seenOfToReceipt.has(key)) {
+        const start = dateTimestamp(record.of.date);
+        const end = dateTimestamp(record.rec.entryDate);
+        const days = start && end ? Math.round((end - start) / 86400000) : -1;
+        if (days >= 0 && days <= 730) {
+          seenOfToReceipt.add(key);
+          ofToReceiptSamples.push(days);
+        }
+      }
+    }
+  }
+
+  return {
+    scToOfDays: scToOfSamples.length ? median(scToOfSamples) : null,
+    scToOfSamples: scToOfSamples.length,
+    ofToReceiptDays: ofToReceiptSamples.length ? median(ofToReceiptSamples) : null,
+    ofToReceiptSamples: ofToReceiptSamples.length,
+  };
+}
+
 function withinRecommendationRange(current, recommended) {
   if (recommended === 0) return current === 0;
   return Math.abs(current - recommended) <= Math.max(1, recommended * 0.2);
@@ -4533,6 +4577,7 @@ function getOperationalInsight(item, branchCode = "", positionHint = null, posit
   const fallbackLeadTimes = reviews.map((review) => review.leadTimeDays).filter((value) => value >= 0);
   const leadTimes = realLeadTimes.length ? realLeadTimes : fallbackLeadTimes;
   const leadTimeDays = leadTimes.length ? median(leadTimes) : null;
+  const leadTimeBreakdown = calculateItemLeadTimeBreakdown(item, branchCode);
   let nextPurchase = "Sem consumo suficiente";
   let nextPurchaseDetail = "Não foi possível projetar uma data";
   if (averageMonthlyConsumption > 0) {
@@ -4554,6 +4599,7 @@ function getOperationalInsight(item, branchCode = "", positionHint = null, posit
   return {
     leadTimeDays,
     leadTimeSource: realLeadTimes.length ? "histórico real" : leadTimes.length ? "referência estimada" : "sem histórico",
+    ...leadTimeBreakdown,
     averageMonthlyConsumption,
     balance,
     branchCount,
@@ -4563,9 +4609,14 @@ function getOperationalInsight(item, branchCode = "", positionHint = null, posit
   };
 }
 
-function renderOperationalInsights(container, insight) {
+function renderOperationalInsights(container, insight, options = {}) {
+  const leadTimeBreakdown = options.showLeadTimeBreakdown ? `
+    <article><span>SC → OF</span><strong>${insight.scToOfDays == null ? "Não disponível" : `${integerFormatter.format(insight.scToOfDays)} dias`}</strong><small>${insight.scToOfSamples ? `mediana de ${integerFormatter.format(insight.scToOfSamples)} processo(s)` : "sem histórico completo"}</small></article>
+    <article><span>OF → Recebimento</span><strong>${insight.ofToReceiptDays == null ? "Não disponível" : `${integerFormatter.format(insight.ofToReceiptDays)} dias`}</strong><small>${insight.ofToReceiptSamples ? `mediana de ${integerFormatter.format(insight.ofToReceiptSamples)} processo(s)` : "sem histórico completo"}</small></article>`
+    : "";
   container.innerHTML = `
-    <article><span>Lead time</span><strong>${insight.leadTimeDays == null ? "Não disponível" : `${integerFormatter.format(insight.leadTimeDays)} dias`}</strong><small>${escapeHtml(insight.leadTimeSource)}</small></article>
+    <article><span>Lead time total · SC → Recebimento</span><strong>${insight.leadTimeDays == null ? "Não disponível" : `${integerFormatter.format(insight.leadTimeDays)} dias`}</strong><small>${escapeHtml(insight.leadTimeSource)}</small></article>
+    ${leadTimeBreakdown}
     <article><span>Consumo médio mensal</span><strong>${numberFormatter.format(insight.averageMonthlyConsumption)}</strong><small>média dos meses considerados</small></article>
     <article><span>Saldo atual</span><strong>${insight.requiresBranchSelection ? "Ver saldos acima" : numberFormatter.format(insight.balance)}</strong><small>${insight.requiresBranchSelection ? `${integerFormatter.format(insight.branchCount)} filiais exibidas` : "posição considerada"}</small></article>
     <article class="operational-insights__projection"><span>Próxima compra</span><strong>${escapeHtml(insight.nextPurchase)}</strong><small>${escapeHtml(insight.nextPurchaseDetail)}</small></article>`;
