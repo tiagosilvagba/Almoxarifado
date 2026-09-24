@@ -1,9 +1,9 @@
 "use strict";
 
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
-const ALMOX_BASE = "./app/core/catalog-app.js?v=10.7";
+const ALMOX_BASE = "./app/core/catalog-app.js?v=10.7.1";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
-const CURRENT_VERSION_LABEL = window.__ALMOX_VERSION_LABEL__ || "Versão 10.6";
+const CURRENT_VERSION_LABEL = window.__ALMOX_VERSION_LABEL__ || "Versão 10.7";
 const CUSTOM_THEMES = [
   ["azul-corporativo","Azul Corporativo · Confiança"],
   ["verde-industrial-2","Verde Industrial · Resultado"],
@@ -31,7 +31,10 @@ function loadScript(src) {
 
 function enforceVersion() {
   const badge = document.getElementById("versionBadge");
-  if (badge) badge.textContent = CURRENT_VERSION_LABEL;
+  if (!badge) return;
+  badge.textContent = CURRENT_VERSION_LABEL;
+  badge.hidden = false;
+  badge.removeAttribute("aria-hidden");
 }
 
 function isDesktopNavigationMode() {
