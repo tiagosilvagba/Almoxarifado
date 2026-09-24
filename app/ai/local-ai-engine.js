@@ -592,8 +592,9 @@
 
     function selectDataset(query) {
       const q = normalizeText(query);
-      if (/\b(sc|of|ordem|fornecedor|recebimento|nota fiscal|nf|solicitante|atrasad|entrega|compras?)\b/.test(q)) return "processos";
       if (/\b(revisao|minimo sugerido|maximo sugerido|parametrizacao)\b/.test(q)) return "revisoes";
+      if (/\b(item|itens|material|materiais|produto|produtos|estoque|saldo|zerad|consumo|giro|minimo|maximo|ruptura|reposicao|necessidade)\b/.test(q)) return "estoque";
+      if (/\b(sc|of|ordem|fornecedor|recebimento|nota fiscal|nf|solicitante|atrasad|entrega|compras?)\b/.test(q)) return "processos";
       if (session.lastDataset && /^(agora|desses|destes|dessas|destas|somente|apenas|so|e |quanto custa|qual deles)/.test(q)) return session.lastDataset;
       return "estoque";
     }
@@ -1094,6 +1095,7 @@
         answer:answer,
         plan:{dataset:"mensal",question:question,normalized:q,filters:[],operation:{op:"compare"},usedContext:false},
         result:{type:"monthly",total:changes.length,rows:changes.slice(0,50),trend:trend},
+        rows:changes.slice(0,50),
         columns:[
           {key:"itemCode",label:"Item"},{key:"itemName",label:"Descrição"},{key:"base",label:"Base",formatField:"quantity"},
           {key:"current",label:"Atual",formatField:"quantity"},{key:"delta",label:"Variação",formatField:"quantity"},{key:"pct",label:"%",format:"percent"}
