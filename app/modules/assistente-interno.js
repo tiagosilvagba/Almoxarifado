@@ -6,7 +6,7 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root?.document) api.install(root);
 })(typeof window !== "undefined" ? window : null, () => {
-  const STOP = new Set(("a o os as um uma uns umas de da do das dos e ou em no na nos nas para por com sem que qual quais quero me mostre mostrar liste listar busque buscar procure procurar encontre encontrar veja ver diga informe informacao informação sobre entre dentro todos todas todo toda itens item material materiais dados base projeto almoxarifado agora apenas somente desses dessas esse essa isso estes estas tambem também ai aí favor preciso gostaria").split(/\s+/));
+  const STOP = new Set(("a o os as um uma uns umas de da do das dos e ou em no na nos nas para por com sem que qual quais quanto quantos quantas quero me mostre mostrar liste listar busque buscar procure procurar encontre encontrar veja ver diga informe informacao informação sobre entre dentro todos todas todo toda itens item material materiais dados base projeto almoxarifado agora apenas somente desses dessas esse essa isso estes estas tambem também ai aí favor preciso gostaria tem têm tenho possui possuem possuir esta estão estao fica ficam existe existem houve ha há pra pro pelo pela pelos pelas dele dela deles delas meu minha meus minhas").split(/\s+/));
 
   const FIELD_DEFS = {
     code:{label:"Código",type:"text",aliases:["codigo","código","cod","item","material"]},
@@ -116,17 +116,17 @@
           code:String(item.code||""),name:item.name||item.detailedName||"",detailedName:item.detailedName||"",
           branchCode:String(position.branchCode||""),branchName:position.branchName||"",localCode:String(position.localCode||""),
           partition:position.partition||"",shelf:position.shelf||"",division:position.division||"",
-          responsible:uniq(position.replenishmentResponsibles||[]).join(", "),
-          area:uniq(position.responsibleAreas||item.responsibleAreas||[]).join(", "),
+          responsible:uniq([...(position.replenishmentResponsibles||[]),...(item.replenishmentResponsibles||[])]).join(", "),
+          area:uniq([...(position.responsibleAreas||[]),...(item.responsibleAreas||[])]).join(", "),
           category:uniq(item.categories||[]).join(", "),unit:uniq(item.units||[]).join(", "),
-          balance,minimum,maximum,unitPrice:price,stockValue:balance*price,
+          balance,minimum,maximum,unitPrice:price,stockValue:num(position.stockValue ?? (balance*price)),
           averageConsumption,purchaseNeed,purchaseValue:num(need?.estimatedValue ?? purchaseNeed*price),
           coveredQuantity:num(need?.coveredQuantity),coverageSource:need?.coverageSource||"",
           rupture:Boolean(need?.rupture),leadTime:num(review?.leadTimeDays),leadTimeSource:review?.leadTimeSource||"",
           scToOfDays:median(scToOf),ofToReceiptDays:median(ofToRec),pendingScDays:pendingScAges.length?Math.max(...pendingScAges):0,
           scCount:uniq(scs).length,ofCount:uniq(ofs).length,receiptCount:uniq(recs).length,
           scCodes:uniq([...(need?.scCodes||[]),...scs]).join(", "),ofCodes:uniq([...(need?.ofCodes||[]),...ofs]).join(", "),
-          invoices:uniq(recs).join(", "),supplier:uniq(suppliers).join(", "),requester:uniq(requesters).join(", "),
+          invoices:uniq(recs).join(", "),supplier:uniq([...suppliers,...(item.suppliers||[])]).join(", "),requester:uniq([...requesters,...(item.requesters||[])]).join(", "),
           openOfBalance:openBalance,pendingSc,hasOpenOf:openBalance>0,overdueOf:overdue,hasSc:uniq(scs).length>0,hasOf:uniq(ofs).length>0
         };
         row.stockStatus=[
@@ -147,13 +147,15 @@
 
   function entityIndex(rows){
     const defs={
-      responsible:uniq(rows.map(r=>r.responsible).flatMap(v=>String(v).split(",")).map(v=>v.trim())),
-      supplier:uniq(rows.map(r=>r.supplier).flatMap(v=>String(v).split(",")).map(v=>v.trim())),
-      requester:uniq(rows.map(r=>r.requester).flatMap(v=>String(v).split(",")).map(v=>v.trim())),
+      responsible:uniq(rows.map(r=>r.responsible).flatMap(v=>String(v).split(/[,;|]/)).map(v=>v.trim())),
+      supplier:uniq(rows.map(r=>r.supplier).flatMap(v=>String(v).split(/[,;|]/)).map(v=>v.trim())),
+      requester:uniq(rows.map(r=>r.requester).flatMap(v=>String(v).split(/[,;|]/)).map(v=>v.trim())),
       branchCode:uniq(rows.map(r=>r.branchCode)),branchName:uniq(rows.map(r=>r.branchName)),
       localCode:uniq(rows.map(r=>r.localCode)),
-      category:uniq(rows.map(r=>r.category).flatMap(v=>String(v).split(",")).map(v=>v.trim())),
-      area:uniq(rows.map(r=>r.area).flatMap(v=>String(v).split(",")).map(v=>v.trim()))
+      category:uniq(rows.map(r=>r.category).flatMap(v=>String(v).split(/[,;|]/)).map(v=>v.trim())),
+      area:uniq(rows.map(r=>r.area).flatMap(v=>String(v).split(/[,;|]/)).map(v=>v.trim())),
+      name:uniq(rows.map(r=>r.name)),
+      code:uniq(rows.map(r=>r.code))
     };
     const out=[];
     for(const [field,values] of Object.entries(defs))for(const value of values){
