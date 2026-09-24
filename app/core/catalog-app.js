@@ -2832,12 +2832,12 @@ function getItemPurchaseCommitments(item) {
     // Para cobertura de compra, prioriza a filial de destino da SC/OF. O campo
     // genérico do registro pode vir do recebimento e não representar a posição
     // de estoque que originou a necessidade.
-    const branchCode = normalizeBranchCode(first(
+    const branchCode = normalizeBranchCode([
       record.sc?.destinationBranch,
       record.of?.deliveryBranchCode,
       record.sc?.branchCode,
       record.branchCode,
-    ));
+    ].find((value) => String(value || "").trim()) || "");
     if (isOpenOfForPurchase(record.of)) {
       const orderKey = `${record.of.code}::${branchCode}`;
       const existing = orders.get(orderKey) || {
