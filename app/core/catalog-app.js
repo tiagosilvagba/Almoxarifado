@@ -154,7 +154,7 @@ async function init() {
 
 function cacheUi() {
   const ids = [
-    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "startupScreen", "startupMessage", "startupProgress", "startupQuote", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
+    "statusLine", "baseUpdateBadge", "versionBadge", "refreshButton", "themeSelect", "languageToggle", "densityToggle", "startupScreen", "startupMessage", "startupProgress", "startupPercent", "startupQuote", "loadingPanel", "loadingTitle", "loadingMessage", "loadingProgress", "loadingProgressText",
     "retryButton", "catalogContent", "metricsContext", "metricItems", "metricQuantity", "metricZero", "metricReconciliation",
     "metricValue", "metricPurchaseValue", "metricExcessValue", "metricActionProcesses", "metricBelowMin", "metricAboveMax",
     "metricUnconfigured", "metricPendingSc", "metricNegative", "metricOpenOf", "branchChart", "stockChart", "valueChart",
@@ -1947,6 +1947,7 @@ function renderLoadingProgress(complete = false) {
     ui.startupProgress.style.width = `${value.toFixed(2)}%`;
     ui.startupProgress.parentElement?.setAttribute("aria-valuenow", String(displayed));
   }
+  if (ui.startupPercent) ui.startupPercent.textContent = `${displayed}%`;
 }
 
 function updateBaseTimestamp(value) {
