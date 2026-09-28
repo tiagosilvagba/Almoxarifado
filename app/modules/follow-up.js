@@ -66,13 +66,42 @@
     return [item?.code, sc.code, sc.sequence || "sem-seq", of.code].map(normalize).join("::");
   }
 
+  function parseSourceDate(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return null;
+    if (/^\d{5}(?:\.\d+)?$/.test(text)) {
+      const date = new Date(Date.UTC(1899, 11, 30) + Number(text) * 86400000);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+    const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) {
+      const date = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
+      return date.getUTCFullYear() === Number(iso[1]) && date.getUTCMonth() === Number(iso[2]) - 1 ? date : null;
+    }
+    const numeric = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (!numeric) return null;
+    const first = Number(numeric[1]);
+    const second = Number(numeric[2]);
+    const year = Number(numeric[3]) < 100 ? 2000 + Number(numeric[3]) : Number(numeric[3]);
+    // Prioridade absoluta para dd/mm/aaaa. Só interpreta mm/dd quando o
+    // segundo campo não pode ser mês, evitando inverter datas brasileiras.
+    const day = second > 12 && first <= 12 ? second : first;
+    const month = second > 12 && first <= 12 ? first : second;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null;
+  }
+
+  function formatDateBr(value) {
+    const date = parseSourceDate(value);
+    if (!date) return "—";
+    return [date.getUTCDate(), date.getUTCMonth() + 1, date.getUTCFullYear()]
+      .map((part, index) => index < 2 ? String(part).padStart(2, "0") : String(part))
+      .join("/");
+  }
+
   function daysSince(value, now = Date.now()) {
-    if (!value) return 0;
-    const match = String(value).match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
-    const parsed = match
-      ? new Date(Number(match[3]) < 100 ? 2000 + Number(match[3]) : Number(match[3]), Number(match[2]) - 1, Number(match[1]))
-      : new Date(value);
-    return Number.isNaN(parsed.getTime()) ? 0 : Math.max(0, Math.floor((now - parsed.getTime()) / 86400000));
+    const parsed = parseSourceDate(value);
+    return !parsed ? 0 : Math.max(0, Math.floor((now - parsed.getTime()) / 86400000));
   }
 
   function ageBucket(days) {
@@ -110,7 +139,7 @@
           supplier: of.supplier || "—",
           requester: sc.requesterName || "—",
           delivery: of.deliveryDate || sc.deliveryDate || "",
-          ofCreated: of.date || "",
+          ofCreated: formatDateBr(of.date),
           requested,
           delivered,
           quantity,
@@ -330,6 +359,8 @@
     followUpDeliveryState,
     isFollowUpRecord,
     buildFollowUpRows,
+    daysSince,
+    formatDateBr,
     install,
   };
 });
