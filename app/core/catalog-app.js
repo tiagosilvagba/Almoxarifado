@@ -3593,12 +3593,12 @@ function localizeReport({ title, headers, rows }) {
   };
 }
 
-function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set() }) {
+function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), filterSummary = "" }) {
   ({ title, headers, rows } = localizeReport({ title, headers, rows }));
   const styles = getComputedStyle(document.documentElement);
   const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
   const accentColor = cssColorToHex(styles.getPropertyValue("--blue-500"), "2086D2");
-  const filterText = ui.filterSummary.textContent || "Todos os registros";
+  const filterText = filterSummary || ui.filterSummary.textContent || "Todos os registros";
   const cell = (value, index, header = false, alternate = false) => {
     if (header) return `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
     const date = dateColumns.has(index) ? excelDateValue(value) : "";
@@ -3636,9 +3636,9 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns = ne
   downloadBlob(blob, filename);
 }
 
-function exportPdfReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), pdfIdentityColumns = [0, 1] }) {
+function exportPdfReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), pdfIdentityColumns = [0, 1], filterSummary = "" }) {
   ({ title, headers, rows } = localizeReport({ title, headers, rows }));
-  const filterText = ui.filterSummary.textContent || (activeLanguage === "en" ? "All records" : "Todos os registros");
+  const filterText = filterSummary || ui.filterSummary.textContent || (activeLanguage === "en" ? "All records" : "Todos os registros");
   const blob = createPdfBlob({ title, headers, rows, filterText, numericColumns, currencyColumns, dateColumns, pdfIdentityColumns });
   downloadBlob(blob, filename);
 }

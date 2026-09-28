@@ -165,3 +165,11 @@ test("itens sem giro e follow up reutilizam os filtros globais visíveis", () =>
   assert.ok(!noTurn.includes("nt-chip"));
   assert.ok(!followUp.includes("fu-chip"));
 });
+
+test("follow-up oferece exportação Excel/PDF pelo mesmo motor da Necessidade de Compra", () => {
+  assert.ok(followUp.includes('id="fuExportFormat"'));
+  assert.ok(followUp.includes('id="fuExportButton"'));
+  assert.ok(followUp.includes('exportReport(format, config)'));
+  assert.ok(app.includes("function exportExcelReport("));
+  assert.ok(app.includes("function exportPdfReport("));
+});

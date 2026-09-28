@@ -167,6 +167,28 @@
     return [...consolidated.values()];
   }
 
+
+  // Reutiliza o motor de exportação da Necessidade de Compra, sem limitar linhas à tela.
+  function buildFollowUpExportReport(records, filterSummary = "") {
+    const headers = ["Dias OF", "Faixa", "Criação OF", "Situação", "Filial", "Item", "SC", "OF", "Status SC", "Fornecedor", "Entrega prevista", "Solicitante", "Qtd. OF", "Entregue", "Pendente", "Valor pendente"];
+    const ordered = [...(records || [])].sort((left, right) => right.days - left.days);
+    return {
+      title: "Follow up de OFs",
+      filename: "follow-up-de-ofs.xls",
+      headers,
+      rows: ordered.map((row) => [
+        row.days, ageBucket(row.days), row.ofCreated, row.deliveryStatus, row.branch, row.item,
+        row.sc, row.of, row.scStatus, row.supplier, row.delivery, row.requester,
+        row.requested, row.delivered, row.quantity, row.value,
+      ]),
+      numericColumns: new Set([0, 12, 13, 14, 15]),
+      currencyColumns: new Set([15]),
+      dateColumns: new Set([2, 10]),
+      pdfIdentityColumns: [7, 5],
+      filterSummary,
+    };
+  }
+
   function install(windowObject) {
     if (windowObject.__almoxFollowUpInstalled) return;
     windowObject.__almoxFollowUpInstalled = true;
@@ -184,7 +206,7 @@
       if (document.getElementById("fuStyle")) return;
       const style = document.createElement("style");
       style.id = "fuStyle";
-      style.textContent = ".fu-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.fu-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:14px 0}.fu-card,.fu-panel{border:1px solid var(--border-color,#d8e0e8);background:var(--card-bg,#fff);border-radius:15px;padding:14px}.fu-card strong{display:block;font-size:1.3rem;margin-top:5px}.fu-table-wrap{overflow:auto;max-height:650px}.fu-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:1250px}.fu-table th,.fu-table td{padding:8px;border-bottom:1px solid var(--border-color,#e4e9ee);text-align:left}.fu-table th{position:sticky;top:0;background:var(--card-bg,#fff);z-index:2}.fu-risk{font-weight:800}.fu-card--treatment,.fu-row--treatment td{background:color-mix(in srgb,var(--red,#b42318) 8%,var(--card-bg,#fff))}.fu-card--treatment strong{color:var(--red,#b42318)}@media(max-width:900px){.fu-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.fu-grid{grid-template-columns:1fr}}";
+      style.textContent = ".fu-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.fu-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:14px 0}.fu-card,.fu-panel{border:1px solid var(--border-color,#d8e0e8);background:var(--card-bg,#fff);border-radius:15px;padding:14px}.fu-card strong{display:block;font-size:1.3rem;margin-top:5px}.fu-table-wrap{overflow:auto;max-height:650px}.fu-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:1250px}.fu-table th,.fu-table td{padding:8px;border-bottom:1px solid var(--border-color,#e4e9ee);text-align:left}.fu-table th{position:sticky;top:0;background:var(--card-bg,#fff);z-index:2}.fu-risk{font-weight:800}.fu-card--treatment,.fu-row--treatment td{background:color-mix(in srgb,var(--red,#b42318) 8%,var(--card-bg,#fff))}.fu-card--treatment strong{color:var(--red,#b42318)}.fu-export-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}.fu-export-heading h3{margin:0 0 4px;font-size:1rem}.fu-export-heading .export-control{margin-left:auto}@media(max-width:900px){.fu-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.fu-grid{grid-template-columns:1fr}}";
       document.head.appendChild(style);
     }
 
@@ -207,7 +229,7 @@
         page.id = "page-follow-up";
         page.dataset.pagePanel = "follow-up";
         page.className = "page-panel is-hidden";
-        page.innerHTML = '<div class="nt-head"><div><span class="eyebrow">Gestão de fornecimento</span><h2>Follow up</h2><p class="nt-muted">SCs com compra confirmada, OF não fechada e entrega total ou parcialmente pendente.</p></div><span id="fuStatus" class="context-label">Aguardando dados…</span></div><div id="fuKpis" class="fu-grid"></div><section class="embedded-filter-panel fu-filter-panel" aria-label="Filtros de follow up"><header class="embedded-filter-panel__header"><div><span class="eyebrow">Filtros da análise</span><h3>Refinar follow up</h3></div><button id="fuClear" class="button button--ghost" type="button">Limpar filtros</button></header><div class="embedded-filter-grid embedded-filter-grid--five"><label class="field"><span>Situação da entrega</span><select id="fuDeliverySelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as situações</option></select></label><label class="field"><span>Filial</span><select id="fuBranchSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as filiais</option></select></label><label class="field"><span>Fornecedor</span><select id="fuSupplierSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os fornecedores</option></select></label><label class="field"><span>Solicitante da SC</span><select id="fuRequesterSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os solicitantes</option></select></label><label class="field"><span>Tempo desde criação da OF</span><select id="fuAgeSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os períodos</option></select></label></div><label class="embedded-filter-search"><span>Pesquisar no follow up</span><input id="fuSearch" type="search" placeholder="Item, SC, OF, fornecedor ou solicitante"></label></section><div class="fu-panel"><div id="fuSummary" class="nt-muted"></div><div class="fu-table-wrap"><table class="fu-table"><thead><tr><th>Dias OF</th><th>Faixa</th><th>Criação OF</th><th>Situação</th><th>Filial</th><th>Item</th><th>SC</th><th>OF</th><th>Status SC</th><th>Fornecedor</th><th>Entrega prevista</th><th>Solicitante</th><th>Qtd. OF</th><th>Entregue</th><th>Pendente</th><th>Valor pendente</th></tr></thead><tbody id="fuBody"></tbody></table></div></div>';
+        page.innerHTML = '<div class="nt-head"><div><span class="eyebrow">Gestão de fornecimento</span><h2>Follow up</h2><p class="nt-muted">SCs com compra confirmada, OF não fechada e entrega total ou parcialmente pendente.</p></div><span id="fuStatus" class="context-label">Aguardando dados…</span></div><div id="fuKpis" class="fu-grid"></div><section class="embedded-filter-panel fu-filter-panel" aria-label="Filtros de follow up"><header class="embedded-filter-panel__header"><div><span class="eyebrow">Filtros da análise</span><h3>Refinar follow up</h3></div><button id="fuClear" class="button button--ghost" type="button">Limpar filtros</button></header><div class="embedded-filter-grid embedded-filter-grid--five"><label class="field"><span>Situação da entrega</span><select id="fuDeliverySelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as situações</option></select></label><label class="field"><span>Filial</span><select id="fuBranchSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as filiais</option></select></label><label class="field"><span>Fornecedor</span><select id="fuSupplierSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os fornecedores</option></select></label><label class="field"><span>Solicitante da SC</span><select id="fuRequesterSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os solicitantes</option></select></label><label class="field"><span>Tempo desde criação da OF</span><select id="fuAgeSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os períodos</option></select></label></div><label class="embedded-filter-search"><span>Pesquisar no follow up</span><input id="fuSearch" type="search" placeholder="Item, SC, OF, fornecedor ou solicitante"></label></section><div class="fu-panel"><div class="fu-export-heading"><div><h3>OFs em acompanhamento</h3><div id="fuSummary" class="nt-muted"></div></div><div class="export-control"><label><span>Formato</span><select id="fuExportFormat" aria-label="Formato da exportação do follow up"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="fuExportButton" class="button button--export" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div><div class="fu-table-wrap"><table class="fu-table"><thead><tr><th>Dias OF</th><th>Faixa</th><th>Criação OF</th><th>Situação</th><th>Filial</th><th>Item</th><th>SC</th><th>OF</th><th>Status SC</th><th>Fornecedor</th><th>Entrega prevista</th><th>Solicitante</th><th>Qtd. OF</th><th>Entregue</th><th>Pendente</th><th>Valor pendente</th></tr></thead><tbody id="fuBody"></tbody></table></div></div>';
         host.appendChild(page);
       }
       return true;
@@ -268,7 +290,32 @@
       render();
     }
 
+    function exportFiltered(format = "excel") {
+      if (!filtered.length) return;
+      if (typeof exportReport !== "function") {
+        windowObject.alert("A exportação ainda não está disponível. Recarregue o site.");
+        return;
+      }
+      const labels = { delivery: "Situação", branch: "Filial", supplier: "Fornecedor", requester: "Solicitante", age: "Tempo da OF" };
+      const selection = Object.entries(selected)
+        .filter(([, values]) => values.size)
+        .map(([key, values]) => `${labels[key]}: ${[...values].join(", ")}`);
+      const search = document.getElementById("fuSearch")?.value.trim();
+      if (search) selection.push(`Pesquisa: ${search}`);
+      const globalSummary = document.getElementById("filterSummary")?.textContent?.trim();
+      if (globalSummary) selection.unshift(globalSummary);
+      const config = buildFollowUpExportReport(filtered, selection.join(" · ") || "Todos os registros");
+      try {
+        exportReport(format, config);
+      } catch (error) {
+        console.error("Falha ao exportar follow up de OFs.", error);
+        windowObject.alert("Não foi possível exportar o follow up. Tente novamente.");
+      }
+    }
+
     function render() {
+      const button = document.getElementById("fuExportButton");
+      if (button) button.disabled = !filtered.length;
       const partial = filtered.filter((row) => row.deliveryStatus === DELIVERY_PARTIAL).length;
       const total = filtered.length - partial;
       const uniqueSc = new Set(filtered.map((row) => row.sc)).size;
@@ -326,6 +373,7 @@
       windowObject.addEventListener("hashchange", () => { if (windowObject.location.hash === "#follow-up") open(); });
       windowObject.addEventListener("almox-global-filters-applied", () => { if (!rows.length) return; if (windowObject.location.hash === "#follow-up") apply(); else dirty = true; });
       document.getElementById("fuSearch")?.addEventListener("input", apply);
+      document.getElementById("fuExportButton")?.addEventListener("click", () => exportFiltered(document.getElementById("fuExportFormat")?.value || "excel"));
       document.getElementById("fuClear")?.addEventListener("click", () => {
         Object.values(selected).forEach((values) => values.clear());
         const query = document.getElementById("fuSearch");
@@ -360,6 +408,7 @@
     followUpDeliveryState,
     isFollowUpRecord,
     buildFollowUpRows,
+    buildFollowUpExportReport,
     daysSince,
     formatDateBr,
     install,

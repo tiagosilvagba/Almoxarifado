@@ -15,6 +15,7 @@ const {
   isFollowUpRecord,
   followUpDeliveryState,
   buildFollowUpRows,
+  buildFollowUpExportReport,
   formatDateBr,
 } = require("../app/modules/follow-up.js");
 
@@ -77,4 +78,30 @@ test("follow-up exibe entrega prevista em dd/mm/aaaa sem inverter dia e mês", (
   assert.equal(formatDateBr("09/11/2026"), "09/11/2026");
   assert.equal(formatDateBr("2026-11-09"), "09/11/2026");
   assert.equal(formatDateBr(""), "—");
+});
+
+test("exportação do follow-up inclui o recorte completo, ordena e formata as datas e valores", () => {
+  const base = {
+    branch: "Filial A",
+    sc: { code: "100", status: "Compra confirmada", cancelled: "N" },
+    of: { code: "200", date: "01/09/2026", deliveryDate: "2026-10-09", closed: "N", requestedQuantity: 10, deliveredQuantity: 3, balance: 7, unitValue: 12 },
+  };
+  const filtered = buildFollowUpRows([
+    { code: "ABC", name: "Peça A", history: [base] },
+    { code: "DEF", name: "Peça B", history: [{ ...base, sc: { ...base.sc, code: "101" }, of: { ...base.of, code: "201", date: "15/09/2026", deliveryDate: "05/11/2026" } }] },
+  ], Date.UTC(2026, 8, 28));
+  const report = buildFollowUpExportReport(filtered, "Filial A · Entrega parcial");
+  assert.equal(report.filename, "follow-up-de-ofs.xls");
+  assert.equal(report.rows.length, 2);
+  assert.equal(report.headers.length, 16);
+  assert.equal(report.rows[0][7], "200");
+  assert.equal(report.rows[0][2], "01/09/2026");
+  assert.equal(report.rows[0][10], "09/10/2026");
+  assert.equal(report.rows[1][10], "05/11/2026");
+  assert.equal(report.rows[0][14], 7);
+  assert.equal(report.rows[0][15], 84);
+  assert.deepEqual([...report.dateColumns], [2, 10]);
+  assert.deepEqual([...report.currencyColumns], [15]);
+  assert.match(report.filterSummary, /Filial A/);
+  assert.equal(buildFollowUpExportReport([]).rows.length, 0);
 });
