@@ -3238,6 +3238,7 @@ function renderPurchaseNeeds() {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
     if (!(Number(need.netSuggested) > 0)) return false;
+    if (!(Number(need.netSuggested) > 0)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location.length && !location.includes(position.locationKey)) return false;
