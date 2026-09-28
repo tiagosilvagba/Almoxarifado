@@ -138,7 +138,7 @@
           deliveryStatus: followUpDeliveryState(of),
           supplier: of.supplier || "—",
           requester: sc.requesterName || "—",
-          delivery: of.deliveryDate || sc.deliveryDate || "",
+          delivery: formatDateBr(of.deliveryDate || sc.deliveryDate),
           ofCreated: formatDateBr(of.date),
           requested,
           delivered,
@@ -160,6 +160,7 @@
         current.unitValue = candidate.unitValue || current.unitValue;
         current.value = current.quantity * current.unitValue;
         current.deliveryStatus = current.delivered > 0 ? DELIVERY_PARTIAL : DELIVERY_TOTAL;
+        if (current.delivery === "—" && candidate.delivery !== "—") current.delivery = candidate.delivery;
         current.days = Math.max(current.days, candidate.days);
       }
     }

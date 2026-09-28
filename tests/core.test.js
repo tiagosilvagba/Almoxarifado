@@ -15,6 +15,7 @@ const {
   isFollowUpRecord,
   followUpDeliveryState,
   buildFollowUpRows,
+  formatDateBr,
 } = require("../app/modules/follow-up.js");
 
 test("numericMedian calcula amostras pares e ímpares", () => {
@@ -62,4 +63,18 @@ test("follow-up identifica entrega parcial e consolida recebimentos repetidos", 
   assert.equal(rows[0].quantity, 6);
   assert.equal(rows[0].value, 30);
   assert.equal(rows[0].deliveryStatus, DELIVERY_PARTIAL);
+});
+
+test("follow-up exibe entrega prevista em dd/mm/aaaa sem inverter dia e mês", () => {
+  const baseSc = { code: "100", status: "Compra confirmada", cancelled: "N", deliveryDate: "05/10/2026" };
+  const baseOf = { code: "200", closed: "N", requestedQuantity: 2, deliveredQuantity: 0, balance: 2 };
+  const rows = buildFollowUpRows([
+    { code: "ABC", history: [{ sc: baseSc, of: { ...baseOf, deliveryDate: "2026-09-28T00:00:00Z" } }] },
+    { code: "DEF", history: [{ sc: { ...baseSc, code: "101" }, of: { ...baseOf, code: "201" } }] },
+  ], Date.UTC(2026, 8, 28));
+  assert.equal(rows.find((row) => row.code === "ABC").delivery, "28/09/2026");
+  assert.equal(rows.find((row) => row.code === "DEF").delivery, "05/10/2026");
+  assert.equal(formatDateBr("09/11/2026"), "09/11/2026");
+  assert.equal(formatDateBr("2026-11-09"), "09/11/2026");
+  assert.equal(formatDateBr(""), "—");
 });

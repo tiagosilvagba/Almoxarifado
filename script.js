@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 10.7: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "10.7.21";
+const BOOTSTRAP_VERSION = "10.7.22";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -18,7 +18,7 @@ const MODULES = Object.freeze({
   area: "./app/modules/area-filter-active.js?v=7.9",
   noTurn: "./app/modules/itens-sem-giro.js?v=10.7.10",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
-  followUp: "./app/modules/follow-up.js?v=10.7.21",
+  followUp: "./app/modules/follow-up.js?v=10.7.22",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.5",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
