@@ -3237,6 +3237,7 @@ function renderPurchaseNeeds() {
   const visible = state.purchaseNeeds.filter((need) => {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
+    if (!(Number(need.netSuggested) > 0)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location.length && !location.includes(position.locationKey)) return false;
@@ -3550,7 +3551,7 @@ function exportMinMaxReviews(format = "excel") {
       review.currentMinimum, review.currentMaximum, review.averageMonthlyConsumption, review.monthCount, review.consideredMonthCount, review.outlierMonthCount,
       review.leadTimeDays, review.leadTimeSource === "real" ? "Histórico real" : "Referência estimada",
       review.leadSamples.length, review.leadSamples.join(" | "), review.recommendedMinimum, review.recommendedMaximum,
-      status, review.direction === "increase" ? "Elevar parâmetros" : "Reduzir parâmetros", review.referencePrice,
+      status, review.maximumStrategy === "preserve" ? "Elevar somente o mínimo; manter máximo" : review.direction === "increase" ? "Elevar parâmetros" : "Reduzir parâmetros", review.referencePrice,
       review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível",
       review.currentMinimumValue, review.recommendedMinimumValue, review.minimumValueImpact,
       review.currentMaximumValue, review.recommendedMaximumValue, review.maximumValueImpact,
@@ -4640,7 +4641,7 @@ function renderNextMinMaxReviewBatch() {
       <span class="item-card__address">Reposição: ${escapeHtml((review.position.replenishmentResponsibles || []).join(", ") || "Não informada")}</span>
       <span class="review-card__comparison">
         <span><small>Mín. atual · margem +20%</small><strong>${formatOptionalNumber(review.currentMinimum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMinimum)}</i></span>
-        <span><small>Máx. atual</small><strong>${formatOptionalNumber(review.currentMaximum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMaximum)}</i></span>
+        <span><small>${review.maximumStrategy === "preserve" ? "Máx. atual · manter" : "Máx. atual"}</small><strong>${formatOptionalNumber(review.currentMaximum)}</strong><i>→ ${formatOptionalNumber(review.recommendedMaximum)}</i></span>
       </span>
       <span class="report-card__meta"><span><small>Consumo médio/mês</small><strong>${numberFormatter.format(review.averageMonthlyConsumption)}</strong></span><span><small>Lead time</small><strong>${integerFormatter.format(review.leadTimeDays)} dias</strong></span></span>
       <span class="review-card__impact review-card__impact--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}"><small>Impacto estimado no máximo</small><strong>${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</strong>${review.outlierMonthCount ? `<i>${pluralize(review.outlierMonthCount, "anomalia excluída", "anomalias excluídas")}</i>` : ""}</span>
@@ -4686,7 +4687,7 @@ async function buildMinMaxReviews() {
         monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount, averageMonthlyConsumption,
         minimumWithoutSafetyMargin, minimumSafetyPercent,
         recommendedMinimum, recommendedMaximum, currentMinimumValue, recommendedMinimumValue,
-        minimumValueImpact, currentMaximumValue, recommendedMaximumValue, maximumValueImpact,
+        minimumValueImpact, currentMaximumValue, recommendedMaximumValue, maximumValueImpact, maximumStrategy,
       } = metrics;
       const enoughHistory = consideredMonthCount >= 2 && leadSamples.length > 0 && averageMonthlyConsumption > 0;
       const minIdeal = withinRecommendationRange(currentMinimum, recommendedMinimum);
@@ -4698,7 +4699,7 @@ async function buildMinMaxReviews() {
         item, position, consumption, monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount,
         averageMonthlyConsumption, leadTimeDays, minimumWithoutSafetyMargin, minimumSafetyPercent,
         leadTimeSource: leadSamples.length ? "real" : "estimated", leadSamples,
-        currentMinimum, currentMaximum, recommendedMinimum, recommendedMaximum, status,
+        currentMinimum, currentMaximum, recommendedMinimum, recommendedMaximum, maximumStrategy, status,
         referencePrice, referencePriceSource, currentMinimumValue, recommendedMinimumValue,
         minimumValueImpact, currentMaximumValue, recommendedMaximumValue, maximumValueImpact,
         direction: recommendedTotal >= currentTotal ? "increase" : "reduce",
@@ -4732,7 +4733,11 @@ function calculateMinMaxMetrics({ monthlyTotals = {}, leadTimeDays = 30, current
   const dailyConsumption = averageMonthlyConsumption / 30;
   const minimumWithoutSafetyMargin = dailyConsumption * leadTimeDays;
   const recommendedMinimum = Math.ceil(minimumWithoutSafetyMargin * MINIMUM_SAFETY_FACTOR);
-  const recommendedMaximum = Math.ceil(recommendedMinimum + averageMonthlyConsumption);
+  const calculatedMaximum = Math.ceil(recommendedMinimum + averageMonthlyConsumption);
+  const maximumStrategy = currentMinimum < recommendedMinimum && currentMaximum >= recommendedMinimum
+    ? "preserve"
+    : "recalculate";
+  const recommendedMaximum = maximumStrategy === "preserve" ? currentMaximum : calculatedMaximum;
   const hasReferencePrice = Number(referencePrice) > 0;
   const currentMinimumValue = hasReferencePrice ? currentMinimum * referencePrice : null;
   const recommendedMinimumValue = hasReferencePrice ? recommendedMinimum * referencePrice : null;
@@ -4740,7 +4745,7 @@ function calculateMinMaxMetrics({ monthlyTotals = {}, leadTimeDays = 30, current
   const recommendedMaximumValue = hasReferencePrice ? recommendedMaximum * referencePrice : null;
   return {
     monthlyAnalysis, monthCount, consideredMonthCount, outlierMonthCount, averageMonthlyConsumption,
-    minimumWithoutSafetyMargin, minimumSafetyPercent: 20,
+    minimumWithoutSafetyMargin, minimumSafetyPercent: 20, calculatedMaximum, maximumStrategy,
     recommendedMinimum, recommendedMaximum, currentMinimumValue, recommendedMinimumValue,
     minimumValueImpact: hasReferencePrice ? recommendedMinimumValue - currentMinimumValue : null,
     currentMaximumValue, recommendedMaximumValue,
@@ -4943,7 +4948,7 @@ function openMinMaxReviewModal(key) {
     <article><span>Mínimo atual</span><strong>${formatOptionalNumber(review.currentMinimum)}</strong></article>
     <article><span>Máximo atual</span><strong>${formatOptionalNumber(review.currentMaximum)}</strong></article>
     <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong><small>inclui margem preventiva de 20%</small></article>
-    <article><span>Máximo sugerido</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong></article>
+    <article><span>${review.maximumStrategy === "preserve" ? "Máximo mantido" : "Máximo sugerido"}</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong><small>${review.maximumStrategy === "preserve" ? "já suporta o mínimo seguro" : "cobertura para ciclo de reposição"}</small></article>
     <article><span>Próxima compra</span><strong>${escapeHtml(getOperationalInsight(item, position.branchCode, position).nextPurchase)}</strong></article>
     <article><span>Preço de referência</span><strong>${review.referencePrice > 0 ? currencyFormatter.format(review.referencePrice) : "Não disponível"}</strong><small>${review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível"}</small></article>
     <article class="review-impact-summary review-impact-summary--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}"><span>Impacto no estoque máximo</span><strong>${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</strong><small>${formatReferenceValue(review.currentMaximumValue, review.referencePrice)} → ${formatReferenceValue(review.recommendedMaximumValue, review.referencePrice)}</small></article>`;
@@ -6306,7 +6311,8 @@ function inventoryWorker() {
     const normalizedPartition = clean(partition).toUpperCase();
     const preparedPartitions = new Set(["AP", "99", "SS"]);
     const isSingleLetter = /^[A-Z]$/.test(normalizedPartition);
-    const isPreparedLocal = normalizedLocal === "101" || (/^\d+$/.test(normalizedLocal) && Number(normalizedLocal) > 599);
+    const isPreparedLocal = ["101", "150", "295", "298"].includes(normalizedLocal)
+      || (/^\d+$/.test(normalizedLocal) && Number(normalizedLocal) > 599);
     const isPreparedPartition = normalizedLocal === "299" && (preparedPartitions.has(normalizedPartition) || isSingleLetter);
     if (normalizedBranch === "704" && (isPreparedLocal || isPreparedPartition)) {
       return "ROLANDIA - ALM. PREPARADOS";
