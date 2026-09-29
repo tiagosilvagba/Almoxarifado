@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.7.21">
+<html lang="pt-BR" data-app-version="10.7.24">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
     <link rel="stylesheet" href="app/styles/app.css?v=10.7.8">
-    <script src="script.js?v=10.7.23" defer></script>
+    <script src="script.js?v=10.7.24" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -121,13 +121,19 @@
       </section>
 
       <section id="catalogContent" class="catalog-content" aria-label="Gestão do almoxarifado">
-        <div class="global-filter-bar">
+        <div class="global-filter-bar" aria-label="Contexto analítico">
           <button id="filterToggleButton" class="button button--filter" type="button" aria-expanded="false" aria-controls="globalFiltersPanel">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
             <span>Filtros</span>
             <span id="activeFilterCount" class="filter-count is-hidden">0</span>
           </button>
-          <span id="filterSummary" class="filter-summary">Todas as filiais · todos os itens</span>
+          <span id="filterSummary" class="filter-summary" aria-live="polite">Todas as filiais · todos os itens</span>
+          <div class="global-filter-bar__actions">
+            <button id="analysisFocusToggle" class="button button--analysis-focus" type="button" aria-pressed="false" title="Alternar modo foco de análise">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3m18 0v3a2 2 0 0 1-2 2h-3"/></svg>
+              <span>Modo foco</span>
+            </button>
+          </div>
         </div>
 
         <section id="globalFiltersPanel" class="filter-panel global-filters is-hidden" aria-labelledby="globalFilterTitle">
