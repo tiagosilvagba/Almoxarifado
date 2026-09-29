@@ -146,6 +146,7 @@ async function init() {
   initializeLanguage();
   initializeTheme();
   initializeDensity();
+  initializeAnalyticFocus();
   bindEvents();
   navigateToPage(pageFromHash(), false);
   await loadLocalPhotoCache();
@@ -161,7 +162,7 @@ function cacheUi() {
     "dashboardPriorityList", "dashboardExcessList", "procurementFunnel", "searchInput",
     "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter", "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter", "itemCodeFilter", "scStatusFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
-    "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount",
+    "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount", "analysisFocusToggle",
     "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState", "exportCatalogButton", "catalogExportFormat",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
     "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBranchBalances",
@@ -203,6 +204,8 @@ function bindEvents() {
   ui.themeSelect.addEventListener("change", () => applyTheme(ui.themeSelect.value, true));
   ui.languageToggle.addEventListener("click", () => applyLanguage(activeLanguage === "pt-BR" ? "en" : "pt-BR", true));
   ui.densityToggle.addEventListener("click", toggleDensity);
+  ui.analysisFocusToggle?.addEventListener("click", toggleAnalyticFocus);
+  document.addEventListener("keydown", handleAnalyticShortcuts);
   for (const select of [
     ui.branchFilter,
     ui.locationFilter,
@@ -1132,6 +1135,56 @@ function applyTheme(theme, persist) {
   } catch {
     // O tema continua ativo durante a sessão mesmo se o armazenamento estiver indisponível.
   }
+}
+
+function initializeAnalyticFocus() {
+  let enabled = false;
+  try {
+    enabled = localStorage.getItem("almoxarifado-analytic-focus") === "true";
+  } catch {
+    // O modo foco permanece disponível durante a sessão mesmo sem armazenamento.
+  }
+  setAnalyticFocus(enabled, false);
+}
+
+function setAnalyticFocus(enabled, persist = true) {
+  const active = Boolean(enabled);
+  document.body.classList.toggle("analytics-focus", active);
+  ui.analysisFocusToggle?.setAttribute("aria-pressed", String(active));
+  ui.analysisFocusToggle?.classList.toggle("is-active", active);
+  const label = ui.analysisFocusToggle?.querySelector("span");
+  if (label) label.textContent = active ? "Sair do foco" : "Modo foco";
+  if (!persist) return;
+  try {
+    localStorage.setItem("almoxarifado-analytic-focus", String(active));
+  } catch {
+    // Não interrompe a análise se o navegador bloquear armazenamento local.
+  }
+}
+
+function toggleAnalyticFocus() {
+  setAnalyticFocus(!document.body.classList.contains("analytics-focus"));
+}
+
+function handleAnalyticShortcuts(event) {
+  const target = event.target;
+  const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    if (ui.globalFiltersPanel.classList.contains("is-hidden")) toggleFilters();
+    else ui.searchInput.focus();
+    return;
+  }
+  if (event.key === "Escape" && !ui.globalFiltersPanel.classList.contains("is-hidden")) {
+    closeFilters(true);
+    return;
+  }
+  if (typing || !event.altKey || !/^[1-9]$/.test(event.key)) return;
+  const tab = ui.pageTabs[Number(event.key) - 1];
+  if (!tab) return;
+  event.preventDefault();
+  tab.focus();
+  navigateToPage(tab.dataset.page, true);
 }
 
 function pageFromHash() {
