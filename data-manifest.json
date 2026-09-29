@@ -16,14 +16,6 @@
     "download_url": "./01%20-%20Compras_Almox_Parte_01.CSV"
   },
   {
-    "name": "01 - Compras_Almox_Parte_02.CSV",
-    "path": "01 - Compras_Almox_Parte_02.CSV",
-    "type": "file",
-    "size": 24248993,
-    "sha": "6fa6be2f04c22110",
-    "download_url": "./01%20-%20Compras_Almox_Parte_02.CSV"
-  },
-  {
     "name": "01 - Compras_Almox_Parte_03.CSV",
     "path": "01 - Compras_Almox_Parte_03.CSV",
     "type": "file",
