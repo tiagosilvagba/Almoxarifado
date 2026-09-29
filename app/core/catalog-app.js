@@ -1656,7 +1656,7 @@ function scheduleFilteredPage(page, force = false) {
       panel?.removeAttribute("aria-busy");
       return;
     }
-    if ((page === "necessidade-compra" || page === "revisao-min-max") && !state.derivedIndicatorsReady) {
+    if ((page === "necessidade-compra" || page === "revisao-min-max" || page === "consumo") && !state.derivedIndicatorsReady) {
       await ensureDerivedIndicators();
       if (token !== state.pageRenderToken || pageFromHash() !== page) {
         panel?.removeAttribute("aria-busy");
@@ -1828,6 +1828,14 @@ async function handleWorkerMessage(event) {
 function hydrateDerivedIndicators(snapshot) {
   if (!snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.reviews) || !Array.isArray(snapshot.needs)) return false;
   const itemsByCode = new Map(state.items.map((item) => [item.code, item]));
+  // Não aceita um snapshot parcial: ele faria a aba Consumo aparentar que quase
+  // toda a movimentação sumiu, mesmo quando os registros brutos foram carregados.
+  const consumptionRecords = state.consumption?.records || [];
+  const recordsWithKnownItem = consumptionRecords.filter((record) => itemsByCode.has(normalizeCode(record?.code))).length;
+  const minimumExpectedReviews = recordsWithKnownItem >= 250
+    ? Math.max(25, Math.floor(recordsWithKnownItem * 0.1))
+    : 0;
+  if (minimumExpectedReviews && snapshot.reviews.length < minimumExpectedReviews) return false;
   const consumptionByPosition = new Map((state.consumption.records || []).map((record) => [
     `${normalizeCode(record.code)}::${record.branchCode}::${record.localCode}`,
     record,
@@ -1914,8 +1922,10 @@ async function ensureDerivedIndicators() {
     state.pageRenderRevision.delete("dashboard");
     state.pageRenderRevision.delete("necessidade-compra");
     state.pageRenderRevision.delete("revisao-min-max");
-    if (pageFromHash() === "dashboard") {
-      renderFilteredPage("dashboard", true);
+    state.pageRenderRevision.delete("consumo");
+    const activePage = pageFromHash();
+    if (activePage === "dashboard" || activePage === "consumo") {
+      renderFilteredPage(activePage, true);
     }
   })();
   try {
