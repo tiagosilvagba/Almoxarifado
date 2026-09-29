@@ -7,7 +7,7 @@ const CONFIG = Object.freeze({
   commitsApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/commits?per_page=20",
   replenishmentFile: "02 - Responsaveis_Reposição.CSV",
   consumoFile: "03 - Consumo.csv",
-  optimizedDataFile: "data/catalog.json.gz",
+  optimizedDataFile: "data/catalog.json.gz?v=10.7.25",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
   maxImages: 6,
