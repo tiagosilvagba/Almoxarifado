@@ -1828,6 +1828,8 @@ async function handleWorkerMessage(event) {
 function hydrateDerivedIndicators(snapshot) {
   if (!snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.reviews) || !Array.isArray(snapshot.needs)) return false;
   const itemsByCode = new Map(state.items.map((item) => [item.code, item]));
+  // Uma base operacional não pode aceitar uma revisão isolada como resultado completo.
+  if (state.items.length > 500 && snapshot.reviews.length < 25) return false;
   // Não aceita um snapshot parcial: ele faria a aba Consumo aparentar que quase
   // toda a movimentação sumiu, mesmo quando os registros brutos foram carregados.
   const consumptionRecords = state.consumption?.records || [];
@@ -5868,6 +5870,20 @@ function inventoryWorker() {
         progress("Carregando a base otimizada…", 12);
         const optimizedPayload = await fetchOptimizedPayload(optimizedDataUrl);
         if (optimizedPayload) {
+          // Proteção contra catálogo otimizado parcial: se poucos registros de
+          // consumo vierem junto de milhares de itens, atualiza somente o CSV de
+          // consumo e força a reconstrução da revisão de mín./máx.
+          const cachedConsumptionCount = Array.isArray(optimizedPayload.consumption?.records)
+            ? optimizedPayload.consumption.records.length
+            : 0;
+          if (optimizedPayload.items.length > 500 && cachedConsumptionCount < 25) {
+            progress("Atualizando a base de consumo…", 40);
+            const refreshedConsumption = parseConsumptionCsv(await fetchOptionalText(consumoUrl));
+            if ((refreshedConsumption.records || []).length > cachedConsumptionCount) {
+              optimizedPayload.consumption = refreshedConsumption;
+              delete optimizedPayload.derivedIndicators;
+            }
+          }
           progress("Base otimizada pronta. Preparando os indicadores…", 92);
           self.postMessage({ type: "complete", payload: optimizedPayload });
           return;
