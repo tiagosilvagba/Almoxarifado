@@ -2160,32 +2160,9 @@ async function prepareItems() {
     item.requesters = [...new Set((item.history || [])
       .map((record) => String(record.sc?.requesterName || "").trim())
       .filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
-    item.searchText = normalizeSearch([
-      item.code,
-      String(item.code || "").replace(/^0+(?=\d)/, ""),
-      item.name,
-      item.detailedName,
-      ...(item.categories || []),
-      ...(item.suppliers || []),
-      ...(item.replenishmentResponsibles || []),
-      ...(item.units || []),
-      // Permite localizar o item também pelo endereço físico de armazenagem.
-      // Os campos ficam no índice global de pesquisa e aceitam busca isolada
-      // (ex.: A3) ou combinada (ex.: AP A3 02).
-      ...(item.positions || []).flatMap((position) => [
-        position.partition,
-        position.shelf,
-        position.division,
-        [position.partition, position.shelf, position.division].filter(Boolean).join(" "),
-        position.localCode,
-        position.localName,
-      ]),
-      ...(item.history || []).flatMap((record) => [
-        record.sc?.code, record.sc?.status, record.sc?.requesterName, record.sc?.allocationCostCenter,
-        record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
-        record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
-      ]),
-    ].join(" "));
+    // A busca global é intencionalmente indexada apenas pelo código do item.
+    // SC, OF, NF, fornecedor e descrição não identificam nem redirecionam o item.
+    item.searchText = itemCodeSearchKey(item.code);
     state.itemByCode.set(item.code, item);
     if ((itemIndex + 1) % chunkSize === 0) await yieldForHeavyWork();
   }
@@ -2375,7 +2352,7 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
 
   if (item.flags.inactiveOnly) return false;
 
-  if (query && !searchTextMatches(item.searchText, query)) return false;
+  if (query && !itemCodeMatchesQuery(item.code, query)) return false;
   if (itemCode.length && !itemCode.includes(item.code)) return false;
   if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
   if (category.length && !category.some((value) => (item.categories || []).includes(value))) return false;
@@ -2489,7 +2466,7 @@ function applyFilters(renderCatalog = true) {
 
   state.filteredItems = hasActiveFilters ? state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
-    if (query && !searchTextMatches(item.searchText, query)) return false;
+    if (query && !itemCodeMatchesQuery(item.code, query)) return false;
     if (itemCode.length && !itemCode.includes(item.code)) return false;
     if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
@@ -3965,12 +3942,7 @@ function collectProcurementRows(shouldSort = true) {
 }
 
 function recordMatchesQuery(item, record, query) {
-  return searchTextMatches([
-    item.code, item.name, item.detailedName,
-    record.sc?.code, record.sc?.status, record.sc?.requesterName, record.sc?.allocationCostCenter,
-    record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
-    record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
-  ].join(" "), query);
+  return itemCodeMatchesQuery(item.code, query);
 }
 
 function recordMatchesRequester(record, requester) {
@@ -4008,7 +3980,7 @@ function itemMatchesTransactionFilters(item) {
   const suppliers = filterValues(ui.supplierFilter);
   const requesters = filterValues(ui.requesterFilter);
   const scStatuses = filterValues(ui.scStatusFilter);
-  if (query && !searchTextMatches(item.searchText, query)) return false;
+  if (query && !itemCodeMatchesQuery(item.code, query)) return false;
   if (itemCodes.length && !itemCodes.includes(item.code)) return false;
   if (classifications.length && !classifications.some((value) => itemMatchesCcuClassification(item, value))) return false;
   if (categories.length && !categories.some((value) => (item.categories || []).includes(value))) return false;
@@ -5824,12 +5796,13 @@ function normalizeSearch(value) {
     .trim();
 }
 
-function searchTextMatches(source, query) {
-  const normalizedQuery = normalizeSearch(query);
-  if (!normalizedQuery) return true;
-  const normalizedSource = normalizeSearch(source);
-  const compactSource = normalizedSource.replace(/\s+/g, "");
-  return normalizedQuery.split(" ").every((term) => normalizedSource.includes(term) || compactSource.includes(term));
+function itemCodeSearchKey(value) {
+  return normalizeSearch(value).replace(/\s+/g, "");
+}
+
+function itemCodeMatchesQuery(itemCode, query) {
+  const searchKey = itemCodeSearchKey(query);
+  return !searchKey || itemCodeSearchKey(itemCode).includes(searchKey);
 }
 
 function unique(values) {
