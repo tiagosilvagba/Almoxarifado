@@ -5782,8 +5782,9 @@ function renderProcessGroup(prefix, title, stage, fields) {
 }
 
 function normalizeCode(value) {
-  const clean = String(value ?? "").trim();
-  return /^\d+\.0$/.test(clean) ? clean.slice(0, -2) : clean;
+  let code = String(value ?? "").trim();
+  if (/^\d+\.0$/.test(code)) code = code.slice(0, -2);
+  return code.replace(/\./g, "");
 }
 
 function normalizeSearch(value) {
@@ -6204,7 +6205,12 @@ function inventoryWorker() {
         jsonBuffer = await new Response(stream).arrayBuffer();
       }
       const payload = JSON.parse(new TextDecoder("utf-8").decode(jsonBuffer));
-      return Array.isArray(payload?.items) ? payload : null;
+      if (!Array.isArray(payload?.items)) return null;
+      // Um cache criado antes da padronização pode manter códigos com ponto e
+      // quebrar a chave entre saldo, compras e consumo. Nessa situação, usa os
+      // CSVs originais, que são normalizados antes de qualquer consolidação.
+      if (payload.items.some((item) => normalizeItemCode(item?.code) !== clean(item?.code))) return null;
+      return payload;
     } catch {
       return null;
     }
@@ -6466,8 +6472,9 @@ function inventoryWorker() {
   }
 
   function normalizeItemCode(value) {
-    const code = clean(value);
-    return /^\d+\.0$/.test(code) ? code.slice(0, -2) : code;
+    let code = clean(value);
+    if (/^\d+\.0$/.test(code)) code = code.slice(0, -2);
+    return code.replace(/\./g, "");
   }
 
   function isEchoHeader(code) {
