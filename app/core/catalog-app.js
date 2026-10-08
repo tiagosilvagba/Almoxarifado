@@ -2162,6 +2162,7 @@ async function prepareItems() {
       .filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
     item.searchText = normalizeSearch([
       item.code,
+      String(item.code || "").replace(/^0+(?=\d)/, ""),
       item.name,
       item.detailedName,
       ...(item.categories || []),
@@ -2180,9 +2181,9 @@ async function prepareItems() {
         position.localName,
       ]),
       ...(item.history || []).flatMap((record) => [
-        record.sc?.code, record.sc?.status, record.sc?.requesterName,
-        record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierEmail,
-        record.rec?.invoice, record.rec?.series, record.rec?.supplier,
+        record.sc?.code, record.sc?.status, record.sc?.requesterName, record.sc?.allocationCostCenter,
+        record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
+        record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
       ]),
     ].join(" "));
     state.itemByCode.set(item.code, item);
@@ -2203,7 +2204,7 @@ function populateFilters() {
   const suppliers = new Set();
   const requesters = new Set();
   const replenishmentResponsibles = new Set();
-  const directPurchaseItems = new Map();
+  const itemCodes = new Map();
 
   for (const item of state.items) {
     if (item.flags.inactiveOnly) continue;
@@ -2212,9 +2213,7 @@ function populateFilters() {
     for (const supplier of item.suppliers || []) if (supplier) suppliers.add(supplier);
     for (const requester of item.requesters || []) if (requester) requesters.add(requester);
     for (const responsible of item.replenishmentResponsibles || []) if (responsible) replenishmentResponsibles.add(responsible);
-    if (itemIsWarehouseStockItem(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
-      directPurchaseItems.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
-    }
+    itemCodes.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
 
     for (const position of item.positions || []) {
       if (position.branchCode) {
@@ -2238,7 +2237,7 @@ function populateFilters() {
   fillSelect(ui.unitFilter, [...units].map((value) => [value, value]), "Todas as unidades");
   fillSelect(ui.supplierFilter, [...suppliers].map((value) => [value, value]), "Todos os fornecedores");
   fillSelect(ui.requesterFilter, [...requesters].map((value) => [value, value]), "Todos os solicitantes");
-  fillSelect(ui.itemCodeFilter, [...directPurchaseItems], "Todos os códigos");
+  fillSelect(ui.itemCodeFilter, [...itemCodes], "Todos os códigos");
 }
 
 function updateLocationFilter(select, branchKeys) {
@@ -2330,9 +2329,7 @@ function collectDependentOptions(targetFilterId) {
       continue;
     }
     if (targetFilterId === "itemCodeFilter") {
-      if (itemIsWarehouseStockItem(item) && (item.history || []).some((record) => record.sc?.code && !isWarehouseSc(record.sc))) {
-        options.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
-      }
+      options.set(item.code, [item.code, item.name].filter(Boolean).join(" · "));
       continue;
     }
 
@@ -2378,7 +2375,7 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
 
   if (item.flags.inactiveOnly) return false;
 
-  if (query && !item.searchText.includes(query)) return false;
+  if (query && !searchTextMatches(item.searchText, query)) return false;
   if (itemCode.length && !itemCode.includes(item.code)) return false;
   if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
   if (category.length && !category.some((value) => (item.categories || []).includes(value))) return false;
@@ -2492,7 +2489,7 @@ function applyFilters(renderCatalog = true) {
 
   state.filteredItems = hasActiveFilters ? state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
-    if (query && !item.searchText.includes(query)) return false;
+    if (query && !searchTextMatches(item.searchText, query)) return false;
     if (itemCode.length && !itemCode.includes(item.code)) return false;
     if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
@@ -2837,8 +2834,8 @@ async function buildPurchaseNeeds() {
       const grossSuggested = Math.max(target - position.quantity, 0);
       const coverage = allocatePurchaseCoverage(branchCommitments, grossSuggested);
       const netSuggested = Math.max(grossSuggested - coverage.total, 0);
-      // Mantém também as necessidades totalmente cobertas para que a tela consiga
-      // informar explicitamente "Compra já coberta" em vez de ocultar o processo.
+      // Necessidade de compra só existe quando a cobertura válida não atende a meta.
+      if (!(netSuggested > 0)) continue;
       const referencePrice = position.unitCost || latestPurchasePrice(item) || 0;
       const consumptionReview = consumptionByPosition.get(`${item.code}::${position.branchCode}::${position.localCode}`);
       needs.push({
@@ -3303,7 +3300,6 @@ function renderPurchaseNeeds() {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
     if (!(Number(need.netSuggested) > 0)) return false;
-    if (!(Number(need.netSuggested) > 0)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location.length && !location.includes(position.locationKey)) return false;
@@ -3465,6 +3461,7 @@ function getVisiblePurchaseNeeds() {
   return state.purchaseNeeds.filter((need) => {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
+    if (!(Number(need.netSuggested) > 0)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location.length && !location.includes(position.locationKey)) return false;
@@ -3968,12 +3965,12 @@ function collectProcurementRows(shouldSort = true) {
 }
 
 function recordMatchesQuery(item, record, query) {
-  return normalizeSearch([
+  return searchTextMatches([
     item.code, item.name, item.detailedName,
     record.sc?.code, record.sc?.status, record.sc?.requesterName, record.sc?.allocationCostCenter,
     record.of?.code, record.of?.status, record.of?.supplier, record.of?.supplierCode, record.of?.supplierEmail,
     record.rec?.invoice, record.rec?.series, record.rec?.supplier, record.rec?.supplierCode,
-  ].join(" ")).includes(query);
+  ].join(" "), query);
 }
 
 function recordMatchesRequester(record, requester) {
@@ -4011,7 +4008,7 @@ function itemMatchesTransactionFilters(item) {
   const suppliers = filterValues(ui.supplierFilter);
   const requesters = filterValues(ui.requesterFilter);
   const scStatuses = filterValues(ui.scStatusFilter);
-  if (query && !item.searchText.includes(query)) return false;
+  if (query && !searchTextMatches(item.searchText, query)) return false;
   if (itemCodes.length && !itemCodes.includes(item.code)) return false;
   if (classifications.length && !classifications.some((value) => itemMatchesCcuClassification(item, value))) return false;
   if (categories.length && !categories.some((value) => (item.categories || []).includes(value))) return false;
@@ -5822,8 +5819,17 @@ function normalizeSearch(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-BR")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function searchTextMatches(source, query) {
+  const normalizedQuery = normalizeSearch(query);
+  if (!normalizedQuery) return true;
+  const normalizedSource = normalizeSearch(source);
+  const compactSource = normalizedSource.replace(/\s+/g, "");
+  return normalizedQuery.split(" ").every((term) => normalizedSource.includes(term) || compactSource.includes(term));
 }
 
 function unique(values) {
