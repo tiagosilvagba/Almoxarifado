@@ -1192,7 +1192,7 @@ function pageForHash(hash) {
   // O índice rápido usa âncoras #instr-... dentro da aba Instruções.
   // Elas são seções, não páginas desconhecidas que devam abrir o Dashboard.
   if (/^instr-[a-z0-9-]+$/i.test(page)) return "instrucoes";
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "follow-up", "itens-sem-giro", "comparativo-mensal", "instrucoes"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "follow-up", "itens-sem-giro", "comparativo-mensal", "compras-fora-cc1500", "instrucoes"].includes(page)
     ? page
     : "dashboard";
 }
@@ -1297,7 +1297,7 @@ function animatePageEntry(panel) {
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = [...FILTERED_PAGE_IDS, "follow-up", "itens-sem-giro", "comparativo-mensal", "instrucoes"].includes(page) ? page : "dashboard";
+  const validPage = [...FILTERED_PAGE_IDS, "follow-up", "itens-sem-giro", "comparativo-mensal", "compras-fora-cc1500", "instrucoes"].includes(page) ? page : "dashboard";
   const root = document.documentElement;
   const previousPage = root.dataset.activePage || "";
 
@@ -2176,9 +2176,8 @@ async function prepareItems() {
     item.requesters = [...new Set((item.history || [])
       .map((record) => String(record.sc?.requesterName || "").trim())
       .filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
-    // A busca global é intencionalmente indexada apenas pelo código do item.
-    // SC, OF, NF, fornecedor e descrição não identificam nem redirecionam o item.
-    item.searchText = itemCodeSearchKey(item.code);
+    // Índice de busca construído uma só vez para evitar varredura do histórico a cada tecla.
+    buildItemGlobalSearchIndex(item);
     state.itemByCode.set(item.code, item);
     if ((itemIndex + 1) % chunkSize === 0) await yieldForHeavyWork();
   }
@@ -2368,7 +2367,7 @@ function itemMatchesDraftFilters(item, excludedFilterId, statusOverride) {
 
   if (item.flags.inactiveOnly) return false;
 
-  if (query && !itemCodeMatchesQuery(item.code, query)) return false;
+  if (query && !itemMatchesGlobalSearch(item, ui.searchInput.value)) return false;
   if (itemCode.length && !itemCode.includes(item.code)) return false;
   if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
   if (category.length && !category.some((value) => (item.categories || []).includes(value))) return false;
@@ -2482,7 +2481,7 @@ function applyFilters(renderCatalog = true) {
 
   state.filteredItems = hasActiveFilters ? state.items.filter((item) => {
     if (item.flags.inactiveOnly) return false;
-    if (query && !itemCodeMatchesQuery(item.code, query)) return false;
+    if (query && !itemMatchesGlobalSearch(item, ui.searchInput.value)) return false;
     if (itemCode.length && !itemCode.includes(item.code)) return false;
     if (ccuClassification.length && !ccuClassification.some((value) => itemMatchesCcuClassification(item, value))) return false;
     const matchingPositions = (item.positions || []).filter((position) => {
@@ -3958,7 +3957,7 @@ function collectProcurementRows(shouldSort = true) {
 }
 
 function recordMatchesQuery(item, record, query) {
-  return itemCodeMatchesQuery(item.code, query);
+  return itemMatchesGlobalSearch(item, ui.searchInput?.value || query);
 }
 
 function recordMatchesRequester(record, requester) {
@@ -3996,7 +3995,7 @@ function itemMatchesTransactionFilters(item) {
   const suppliers = filterValues(ui.supplierFilter);
   const requesters = filterValues(ui.requesterFilter);
   const scStatuses = filterValues(ui.scStatusFilter);
-  if (query && !itemCodeMatchesQuery(item.code, query)) return false;
+  if (query && !itemMatchesGlobalSearch(item, ui.searchInput.value)) return false;
   if (itemCodes.length && !itemCodes.includes(item.code)) return false;
   if (classifications.length && !classifications.some((value) => itemMatchesCcuClassification(item, value))) return false;
   if (categories.length && !categories.some((value) => (item.categories || []).includes(value))) return false;
@@ -5817,6 +5816,56 @@ function itemCodeSearchKey(value) {
   return normalizeSearch(value).replace(/\s+/g, "");
 }
 
+// Busca global: texto livre (todos os campos relevantes) e posição entre
+// parênteses, por exemplo "rolamento (A0)" ou "(AP 01 02)".
+function buildItemGlobalSearchIndex(item) {
+  const terms = [
+    item.code, itemCodeSearchKey(item.code), item.name, item.detailedName,
+    ...(item.suppliers || []), ...(item.requesters || []),
+    ...(item.replenishmentResponsibles || []),
+  ];
+  const positions = [];
+  for (const position of item.positions || []) {
+    const address = [position.partition, position.shelf, position.division].filter(Boolean).join(" ");
+    const values = [
+      position.branchCode, position.branchName, position.localCode, position.localName,
+      position.locationKey, position.partition, position.shelf, position.division,
+      ...(position.replenishmentResponsibles || []), ...(position.responsibleAreas || []),
+      address, [position.partition, position.shelf, position.division].filter(Boolean).join(""),
+    ];
+    const normalized = values.map(normalizeSearch).filter(Boolean);
+    positions.push(normalized);
+    terms.push(...values);
+  }
+  for (const record of item.history || []) {
+    terms.push(
+      record.sc?.code, record.sc?.requesterName, record.sc?.buyerName,
+      record.sc?.materialDescription, record.sc?.productName,
+      record.of?.code, record.of?.supplier, record.of?.buyerName, record.of?.productName,
+      record.rec?.invoice, record.rec?.supplier, record.rec?.productName,
+    );
+  }
+  item.searchText = terms.map(normalizeSearch).filter(Boolean).join(" | ");
+  item._positionSearchTerms = positions;
+  return item;
+}
+
+function itemMatchesGlobalSearch(item, query) {
+  const raw = String(query ?? "").trim();
+  if (!raw) return true;
+  const positional = [...raw.matchAll(/\(([^)]+)\)/g)].map((match) => normalizeSearch(match[1])).filter(Boolean);
+  // Mantém a busca por código pontuado: 243.370 deve localizar 243370.
+  const ordinary = raw.replace(/\([^)]*\)/g, " ").replace(/(\d)\.(?=\d)/g, "$1");
+  const tokens = normalizeSearch(ordinary).split(" ").filter(Boolean);
+  if (!item.searchText) buildItemGlobalSearchIndex(item);
+  if (!tokens.every((token) => item.searchText.includes(token))) return false;
+  if (!positional.length) return true;
+  return positional.every((phrase) => (item._positionSearchTerms || []).some(
+    (position) => position.some((value) => value.includes(phrase))
+      || position.join(" ").includes(phrase),
+  ));
+}
+
 function itemCodeMatchesQuery(itemCode, query) {
   const searchKey = itemCodeSearchKey(query);
   return !searchKey || itemCodeSearchKey(itemCode).includes(searchKey);
@@ -6029,6 +6078,7 @@ function inventoryWorker() {
           cancelled: scCancelled,
           costCenter: clean(get("SC - Centro Custo Aprovador")),
           requesterName: clean(get("SC - Nome Solicitante")),
+          buyerName: first(clean(get("SC - Nome Comprador")), clean(get("SC - Comprador")), clean(get("SC - Usuário Comprador"))),
           company: clean(get("SC - Empresa")),
           branchCode: clean(get("SC - Filial")),
           branchName: clean(get("SC - Descr. Filial")),
@@ -6054,6 +6104,7 @@ function inventoryWorker() {
           date: clean(get("OF - Data")),
           deliveryDate: clean(get("OF - Data Entrega")),
           supplier,
+          buyerName: first(clean(get("OF - Nome Comprador")), clean(get("OF - Comprador"))),
           requestedQuantity: parseNumber(get("OF - Qtd. Solicitada")),
           deliveredQuantity: parseNumber(get("OF - Qtd. Entregue")),
           unitValue: parseNumber(get("OF - Valor")),
@@ -6562,5 +6613,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { pageForHash, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
