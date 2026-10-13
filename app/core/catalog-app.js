@@ -5839,13 +5839,16 @@ function buildItemGlobalSearchIndex(item) {
   }
   for (const record of item.history || []) {
     terms.push(
-      record.sc?.code, record.sc?.requesterName, record.sc?.buyerName,
+      record.sc?.code, record.sc?.code ? `SC ${record.sc.code}` : "",
+      record.sc?.requesterName, record.sc?.buyerName,
       record.sc?.materialDescription, record.sc?.productName,
-      record.of?.code, record.of?.supplier, record.of?.buyerName, record.of?.productName,
-      record.rec?.invoice, record.rec?.supplier, record.rec?.productName,
+      record.of?.code, record.of?.code ? `OF ${record.of.code}` : "",
+      record.of?.supplier, record.of?.buyerName, record.of?.productName,
+      record.rec?.invoice, record.rec?.invoice ? `NF ${record.rec.invoice}` : "",
+      record.rec?.supplier, record.rec?.productName,
     );
   }
-  item.searchText = terms.map(normalizeSearch).filter(Boolean).join(" | ");
+  item.searchText = [...new Set(terms.map(normalizeSearch).filter(Boolean))].join(" | ");
   item._positionSearchTerms = positions;
   return item;
 }
