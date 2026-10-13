@@ -7,7 +7,7 @@ const CONFIG = Object.freeze({
   commitsApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/commits?per_page=20",
   replenishmentFile: "02 - Responsaveis_Reposição.CSV",
   consumoFile: "03 - Consumo.csv",
-  optimizedDataFile: "data/catalog.json.gz?v=10.7.25",
+  optimizedDataFile: "data/catalog.json.gz?v=10.7.32",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
   maxImages: 6,
@@ -6210,6 +6210,18 @@ function inventoryWorker() {
       // quebrar a chave entre saldo, compras e consumo. Nessa situação, usa os
       // CSVs originais, que são normalizados antes de qualquer consolidação.
       if (payload.items.some((item) => normalizeItemCode(item?.code) !== clean(item?.code))) return null;
+      // Reaplicar a classificação ao cache: a base compactada pode ter sido
+      // gerada antes de a repartição JF entrar no Alm. Preparados.
+      for (const item of payload.items) {
+        for (const position of item.positions || []) {
+          const branchName = resolveStockBranchName(
+            position.branchCode, position.localCode, position.partition, position.branchName,
+          );
+          if (branchName === position.branchName) continue;
+          position.branchName = branchName;
+          position.branchKey = `${position.branchCode}::branch::${branchName}`;
+        }
+      }
       return payload;
     } catch {
       return null;
@@ -6374,7 +6386,7 @@ function inventoryWorker() {
     const normalizedBranch = clean(branchCode);
     const normalizedLocal = clean(localCode);
     const normalizedPartition = clean(partition).toUpperCase();
-    const preparedPartitions = new Set(["AP", "99", "SS"]);
+    const preparedPartitions = new Set(["AP", "99", "SS", "JF"]);
     const isSingleLetter = /^[A-Z]$/.test(normalizedPartition);
     const isPreparedLocal = ["101", "150", "295", "298"].includes(normalizedLocal)
       || (/^\d+$/.test(normalizedLocal) && Number(normalizedLocal) > 599);
