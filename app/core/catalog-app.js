@@ -3368,8 +3368,11 @@ function renderNextPurchaseNeedBatch() {
   const start = state.purchaseNeedVisible;
   const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
   if (start >= end) return;
-  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map(({ item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, averageMonthlyConsumption, rupture, key, cavacoAlert, cavacoThreshold, cavacoOfBalance, cavacoSupplier }) => `<button class="report-card report-card--need${rupture && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map((need) => {
+    const { item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, averageMonthlyConsumption, rupture, key, cavacoAlert, cavacoThreshold, cavacoOfBalance, cavacoSupplier } = need;
+    const criterion = purchaseNeedPriorityLabel(need);
+    return `<button class="report-card report-card--need${(need.alexsandroCriterion === "Crítico" || rupture) && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : need.alexsandroCriterion === "Crítico" ? "status-pill--critical" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : need.alexsandroCriterion ? criterion : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
@@ -3378,8 +3381,9 @@ function renderNextPurchaseNeedBatch() {
     ${cavacoAlert
       ? `<span class="report-card__meta"><span><small>OFs</small><strong>${escapeHtml(ofCodes.join(", ") || "—")}</strong></span><span><small>Saldo somado das OFs</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-supplier-note"><strong>Fornecedor:</strong> ${escapeHtml(cavacoSupplier || "Não informado")}</span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo somado das OFs abertas deste fornecedor ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
       : `<span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}`}
+    ${need.alexsandroCriterion && netSuggested <= 0 ? '<span class="purchase-coverage-note"><strong>Reposição coberta por SC/OF · compra líquida zero</strong></span>' : ""}
     <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
-  </button>`).join(""));
+  </button>`; }).join(""));
   state.purchaseNeedVisible = end;
   ui.purchaseNeedVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visiblePurchaseNeeds.length)} necessidades`;
   ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.visiblePurchaseNeeds.length);
@@ -3422,13 +3426,13 @@ function openPurchaseNeedModal(key) {
     <div><dt>Divisão</dt><dd>${escapeHtml(position.division || "—")}</dd></div>
     <div><dt>Responsável pela reposição</dt><dd>${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informado")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
-    <div><dt>Prioridade</dt><dd>${cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"}</dd></div>
+    <div><dt>Prioridade</dt><dd>${escapeHtml(need.alexsandroCriterion || (cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"))}</dd></div>
     <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
     <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
     <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
     <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
     <div><dt>Observação</dt><dd>${cavacoAlert ? `As OFs ${escapeHtml(ofCodes.join(", ") || "—")} possuem saldo somado de ${numberFormatter.format(cavacoOfBalance)}, abaixo do gatilho operacional de ${numberFormatter.format(cavacoThreshold)} para o fornecedor.` : coveredQuantity > 0 ? `A compra líquida já desconta ${numberFormatter.format(coveredQuantity)} unidade(s) coberta(s) por ${escapeHtml(coverageSource)} com CCU Etq 1500. SCs que já possuem OF não são contadas novamente.` : "Não existe OF aberta nem SC ativa sem OF com CCU Etq 1500 para descontar desta necessidade. Compras diretas para outros centros de custo não são consideradas."}</dd></div>
-    <div><dt>Critério da sugestão</dt><dd>${cavacoAlert ? "Reposição especial pela diferença entre 200 e o saldo somado das OFs abertas do fornecedor" : position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo"}</dd></div>`;
+    <div><dt>Critério da sugestão</dt><dd>${escapeHtml(need.alexsandroCriterion ? purchaseNeedCriterionLabel(need) : cavacoAlert ? "Reposição especial pela diferença entre 200 e o saldo somado das OFs abertas do fornecedor" : position.maximum > 0 ? "Reposição até o máximo parametrizado" : "Máximo não informado; reposição até o mínimo")}</dd></div>`;
 
   if (typeof ui.purchaseNeedModal.showModal === "function") ui.purchaseNeedModal.showModal();
   else ui.purchaseNeedModal.setAttribute("open", "");
@@ -3580,10 +3584,10 @@ function buildPurchaseNeedsExportReport(needs, generatedAt = new Date(), reviews
       lead.ofToReceiptDays ?? "", lead.ofToReceiptSamples, suggestedPurchaseDeliveryDate(generatedAt, lead.days),
       target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource,
       ofCodes.join(" | "), scCodes.join(" | "), netSuggested, referencePrice, estimatedValue,
-      cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
+      purchaseNeedPriorityLabel(need),
       position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
-      cavacoAlert ? "Reposição especial por saldo de OF de Cavaco abaixo de 200" : position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
-      cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo",
+      purchaseNeedCriterionLabel(need),
+      cavacoAlert ? "Alerta Cavaco" : need.alexsandroCriterion === "Risco de ruptura" ? "Abaixo do máximo; no mínimo ou acima" : "Estoque abaixo do mínimo",
       cavacoAlert ? ofCodes.join(" | ") : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
       (position.replenishmentResponsibles || []).join(" | "),
     ];
