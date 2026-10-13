@@ -160,7 +160,9 @@ test("itens sem giro e follow up reutilizam os filtros globais visíveis", () =>
   }
   assert.ok(noTurn.includes("window.__almoxCreateMultiFilter?.(e)"));
   assert.ok(followUp.includes("windowObject.__almoxCreateMultiFilter?.(element)"));
-  assert.ok(followUp.includes("selected.requester.has(row.requester)"));
+  assert.ok(followUp.includes("function availableFollowUpValues("));
+  assert.ok(followUp.includes("chosen.has(followUpFilterValue(row, key))"));
+  assert.ok(followUp.includes("availableFollowUpValues(rows, selected, key, query, globalFilter)"));
   assert.ok(followUp.includes("sc.requesterName"));
   assert.ok(!noTurn.includes("nt-chip"));
   assert.ok(!followUp.includes("fu-chip"));
