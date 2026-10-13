@@ -8,6 +8,7 @@ const {
   isActionableOrAlexsandroNeed,
   purchaseNeedPriorityLabel,
   purchaseNeedCriterionLabel,
+  summarizePurchaseNeedStockRisk,
   buildPurchaseNeedsExportReport,
 } = require("../app/core/catalog-app.js");
 
@@ -88,4 +89,27 @@ test("Card, modal e exportação mantêm classificação, sem aumentar compra l�
   assert.equal(report.rows[1][col("Prioridade")],"Crítico");
   assert.equal(report.rows[1][col("Compra líquida")],30);
   assert.equal(report.rows[2][col("Prioridade")],"Abaixo do mínimo com saldo");
+});
+
+test("indicadores Rupturas e Risco de ruptura contam faixas distintas apenas no recorte visível", () => {
+  const getNeed = (quantity, min, max, extra = {}) => ({
+    position: { quantity, minimum: min, maximum: max },
+    ...extra,
+  });
+  const visible = [
+    getNeed(-3, 10, 40),
+    getNeed(0, 10, 40),
+    getNeed(4, 10, 40), // crítico abaixo do mínimo, mas não é ruptura física
+    getNeed(10, 10, 40), // limite mínimo incluso no risco
+    getNeed(11, 10, 40),
+    getNeed(39, 10, 40),
+    getNeed(40, 10, 40), // máximo alcançado
+    getNeed(50, 10, 40),
+    getNeed(12, 10, 40, { cavacoAlert: true }),
+    getNeed(20, 10, 0), // sem máximo parametrizado
+  ];
+  assert.deepEqual(summarizePurchaseNeedStockRisk(visible), { ruptures: 2, risk: 3 });
+  assert.deepEqual(summarizePurchaseNeedStockRisk([getNeed(15, 10, 20)]), { ruptures: 0, risk: 1 });
+  assert.deepEqual(summarizePurchaseNeedStockRisk([getNeed(10, 10, 10)]), { ruptures: 0, risk: 0 });
+  assert.deepEqual(summarizePurchaseNeedStockRisk([]), { ruptures: 0, risk: 0 });
 });
