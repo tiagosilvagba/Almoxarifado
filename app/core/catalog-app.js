@@ -3477,26 +3477,92 @@ function cavacoNeedMatchesProcessFilters(need) {
   return !query || recordMatchesQuery(need.item, record, query);
 }
 
-function exportPurchaseNeeds(format = "excel") {
-  const rows = getVisiblePurchaseNeeds().map(({ item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes, scCodes, netSuggested, referencePrice, estimatedValue, averageMonthlyConsumption, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance }) => [
-    item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
-    position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
-    position.shelf, position.division, position.quantity, position.minimum, position.maximum, averageMonthlyConsumption, target, suggested, openOfBalance,
-    pendingScQuantity, coveredQuantity, coverageSource, ofCodes.join(" | "), scCodes.join(" | "), netSuggested,
-    referencePrice, estimatedValue, cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
-    position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
-    cavacoAlert ? "Reposição especial por saldo de OF de Cavaco abaixo de 200" : position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
-    cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo", cavacoAlert ? ofCodes.join(" | ") : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
-    (position.replenishmentResponsibles || []).join(" | "),
-  ]);
-  exportReport(format, {
+// Prazo da reposição: prioriza o lead time real para o item/local; depois a
+// referência estimada do Min/Max; por último, o histórico de SC a recebimento.
+function purchaseNeedLeadTimeInfo(need, reviews = []) {
+  const item = need?.item;
+  const position = need?.position;
+  const empty = { days: null, source: "Sem histórico", scToOfDays: null, scToOfSamples: 0, ofToReceiptDays: null, ofToReceiptSamples: 0 };
+  if (!item) return empty;
+  const inBranch = calculateItemLeadTimeBreakdown(item, position?.branchCode || "");
+  const allBranches = calculateItemLeadTimeBreakdown(item);
+  const breakdown = {
+    scToOfDays: inBranch.scToOfDays ?? allBranches.scToOfDays,
+    scToOfSamples: inBranch.scToOfDays == null ? allBranches.scToOfSamples : inBranch.scToOfSamples,
+    ofToReceiptDays: inBranch.ofToReceiptDays ?? allBranches.ofToReceiptDays,
+    ofToReceiptSamples: inBranch.ofToReceiptDays == null ? allBranches.ofToReceiptSamples : inBranch.ofToReceiptSamples,
+  };
+  const matching = (reviews || []).filter((review) => review.item?.code === item.code && (
+    !position || !review.position || (
+      normalizeBranchCode(review.position.branchCode) === normalizeBranchCode(position.branchCode)
+      && String(review.position.localCode || "") === String(position.localCode || "")
+    )
+  ));
+  const valid = (values) => values.map(Number).filter((days) => Number.isFinite(days) && days >= 0 && days <= 730);
+  const real = valid(matching.filter((review) => review.leadTimeSource === "real").map((review) => review.leadTimeDays));
+  if (real.length) return { ...breakdown, days: median(real), source: "Histórico real" };
+  const estimated = valid(matching.map((review) => review.leadTimeDays));
+  if (estimated.length) return { ...breakdown, days: median(estimated), source: "Referência estimada" };
+  const history = calculateItemLeadTimes(item);
+  const scoped = valid(history.get(position?.branchCode) || []);
+  const general = valid(history.get("") || []);
+  if (scoped.length || general.length) {
+    return { ...breakdown, days: median(scoped.length ? scoped : general), source: "Histórico real" };
+  }
+  return { ...empty, ...breakdown };
+}
+
+function formatReportDateBr(date) {
+  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return "";
+  return [String(date.getDate()).padStart(2, "0"), String(date.getMonth() + 1).padStart(2, "0"), date.getFullYear()].join("/");
+}
+
+function suggestedPurchaseDeliveryDate(reportDate, leadDays) {
+  if (!(reportDate instanceof Date) || !Number.isFinite(reportDate.getTime())) return "";
+  if (!Number.isFinite(leadDays) || leadDays < 0 || leadDays > 730) return "";
+  const due = new Date(Date.UTC(reportDate.getFullYear(), reportDate.getMonth(), reportDate.getDate() + Math.ceil(leadDays)));
+  return [String(due.getUTCDate()).padStart(2, "0"), String(due.getUTCMonth() + 1).padStart(2, "0"), due.getUTCFullYear()].join("/");
+}
+
+function buildPurchaseNeedsExportReport(needs, generatedAt = new Date(), reviews = []) {
+  const reportDate = formatReportDateBr(generatedAt);
+  const rows = (needs || []).map((need) => {
+    const { item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes = [], scCodes = [], netSuggested, referencePrice, estimatedValue, averageMonthlyConsumption, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance } = need;
+    const lead = purchaseNeedLeadTimeInfo(need, reviews);
+    return [
+      item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
+      position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
+      position.shelf, position.division, position.quantity, position.minimum, position.maximum, averageMonthlyConsumption,
+      reportDate, lead.days ?? "", lead.source, lead.scToOfDays ?? "", lead.scToOfSamples,
+      lead.ofToReceiptDays ?? "", lead.ofToReceiptSamples, suggestedPurchaseDeliveryDate(generatedAt, lead.days),
+      target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource,
+      ofCodes.join(" | "), scCodes.join(" | "), netSuggested, referencePrice, estimatedValue,
+      cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture && netSuggested > 0 ? "Ruptura" : netSuggested <= 0 ? "Compra já coberta" : "Abaixo do mínimo com saldo",
+      position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
+      cavacoAlert ? "Reposição especial por saldo de OF de Cavaco abaixo de 200" : position.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo",
+      cavacoAlert ? "Alerta Cavaco" : "Estoque abaixo do mínimo",
+      cavacoAlert ? ofCodes.join(" | ") : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
+      (position.replenishmentResponsibles || []).join(" | "),
+    ];
+  });
+  return {
     title: "Necessidade de Compra",
     filename: "necessidade-de-compra.xls",
-    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Consumo médio mensal", "Meta", "Necessidade bruta", "Saldo coberto por OF aberta · CCU 1500", "Quantidade coberta por SC sem OF · CCU 1500", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério", "Tipo de pendência", "OF Cavaco", "Limite Cavaco", "Saldo OF Cavaco", "Responsáveis pela reposição"],
+    generatedAt,
+    headers: ["Código", "Descrição", "Descrição detalhada", "Categorias", "Unidades", "Código filial", "Filial", "Tipo local", "Código local", "Local de estoque", "Prateleira", "Divisão", "Saldo atual", "Mínimo", "Máximo", "Consumo médio mensal",
+      "Data do relatório", "Lead Time Total (dias)", "Origem Lead Time", "SC → OF (dias)", "Amostras SC → OF", "OF → Recebimento (dias)", "Amostras OF → Recebimento", "Data sugerida de entrega",
+      "Meta", "Necessidade bruta", "Saldo coberto por OF aberta · CCU 1500", "Quantidade coberta por SC sem OF · CCU 1500", "Cobertura total", "Origem da cobertura", "Números das OFs", "Números das SCs sem OF", "Compra líquida", "Preço de referência", "Valor estimado da compra", "Prioridade", "Previsão de consumo", "Custo unitário", "Valor em estoque", "Fornecedores", "Critério", "Tipo de pendência", "OF Cavaco", "Limite Cavaco", "Saldo OF Cavaco", "Responsáveis pela reposição"],
     rows,
-    numericColumns: new Set([12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 28, 29, 30, 35, 36]),
-    currencyColumns: new Set([25, 26, 29, 30]),
-  });
+    numericColumns: new Set([12, 13, 14, 15, 17, 19, 20, 21, 22, 24, 25, 26, 27, 28, 32, 33, 34, 36, 37, 38, 43, 44]),
+    currencyColumns: new Set([33, 34, 37, 38]),
+    dateColumns: new Set([16, 23]),
+    filterSummary: "Data-base: " + reportDate + ". Entrega sugerida = data-base + lead time total (dias corridos, arredondados para cima). Sem prazo conhecido: data não estimada.",
+  };
+}
+
+function exportPurchaseNeeds(format = "excel") {
+  // Fixar a data-base no instante do clique, para todo o relatório.
+  exportReport(format, buildPurchaseNeedsExportReport(getVisiblePurchaseNeeds(), new Date(), state.minMaxReviews));
 }
 
 function exportCatalog(format = "excel") {
@@ -3647,7 +3713,7 @@ function localizeReport({ title, headers, rows }) {
   };
 }
 
-function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), filterSummary = "" }) {
+function exportExcelReport({ title, filename, headers, rows, numericColumns = new Set(), currencyColumns = new Set(), dateColumns = new Set(), filterSummary = "", generatedAt = new Date() }) {
   ({ title, headers, rows } = localizeReport({ title, headers, rows }));
   const styles = getComputedStyle(document.documentElement);
   const headerColor = cssColorToHex(styles.getPropertyValue("--navy-800"), "123A63");
@@ -3682,7 +3748,7 @@ function exportExcelReport({ title, filename, headers, rows, numericColumns = ne
     </Styles>
     <Worksheet ss:Name="${escapeXml(title.slice(0, 31))}"><Table>${columns}
       <Row ss:Height="34"><Cell ss:StyleID="Title" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(title)} · ${escapeXml(translateUiText("Gestão de Almoxarifado"))} · ${APP_VERSION}</Data></Cell></Row>
-      <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} ${activeLanguage === "en" ? "records" : "registros"} · ${activeLanguage === "en" ? "Exported on" : "Exportado em"} ${escapeXml(new Date().toLocaleString(activeLanguage === "en" ? "en-US" : "pt-BR"))}</Data></Cell></Row>
+      <Row ss:Height="24"><Cell ss:StyleID="Subtitle" ss:MergeAcross="${headers.length - 1}"><Data ss:Type="String">${escapeXml(filterText)} · ${rows.length} ${activeLanguage === "en" ? "records" : "registros"} · ${activeLanguage === "en" ? "Exported on" : "Exportado em"} ${escapeXml(generatedAt.toLocaleString(activeLanguage === "en" ? "en-US" : "pt-BR"))}</Data></Cell></Row>
       <Row ss:Height="8"></Row><Row ss:Height="30">${headers.map((header, index) => cell(header, index, true)).join("")}</Row>${dataRows}
     </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios></WorksheetOptions></Worksheet>
   </Workbook>`;
@@ -6616,5 +6682,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
