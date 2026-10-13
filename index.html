@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.7.36">
+<html lang="pt-BR" data-app-version="10.7.37">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
     <link rel="stylesheet" href="app/styles/app.css?v=10.7.35">
-    <script src="script.js?v=10.7.36" defer></script>
+    <script src="script.js?v=10.7.37" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -149,10 +149,10 @@
 
           <div class="filters-grid">
             <label class="field field--search">
-              <span>Código, descrição, SC, OF ou NF</span>
+              <span>Código, descrição, SC, OF, comprador, responsável ou posição ( )</span>
               <span class="field__control">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-                <input id="searchInput" type="search" autocomplete="off" placeholder="Digite o código do item">
+                <input id="searchInput" type="search" autocomplete="off" placeholder="Código, descrição, OF, SC, comprador ou (posição)">
               </span>
             </label>
             <p class="multi-filter-hint">Escolha um ou vários critérios. As alterações só serão aplicadas ao clicar em “Concluir e fechar”.</p>
@@ -603,7 +603,7 @@
               <article id="instr-filtros" class="instruction-section">
                 <span class="instruction-section__number">03</span>
                 <div><h3>Filtros globais</h3><p>Os filtros afetam todas as análises relacionadas e permitem selecionar várias opções no mesmo campo. Dentro do painel, as opções são dependentes e se ajustam dinamicamente às seleções realizadas. Os resultados da página só são recalculados ao clicar em <strong>Concluir e fechar</strong>, evitando lentidão.</p>
-                <div class="instruction-grid"><section><h4>Pesquisa</h4><p>Localiza código, descrição, SC, OF, nota fiscal, fornecedor, solicitante e informações relacionadas.</p></section><section><h4>Estrutura</h4><p>Filial, local de estoque, responsável pela reposição, categoria e unidade.</p></section><section><h4>Compras</h4><p>Fornecedor, solicitante da SC, situação da SC/entrega e classificação pelo CCU da etiqueta.</p></section><section><h4>Estoque</h4><p>Código do item em compra direta, situação do estoque e opção de saldo positivo.</p></section></div>
+                <div class="instruction-grid"><section><h4>Pesquisa</h4><p>Localiza código do item, descrição, SC, OF, comprador, responsável pela reposição e posição do item (informe o endereço entre parênteses), além de nota fiscal, fornecedor e solicitante.</p></section><section><h4>Estrutura</h4><p>Filial, local de estoque, responsável pela reposição, categoria e unidade.</p></section><section><h4>Compras</h4><p>Fornecedor, solicitante da SC, situação da SC/entrega e classificação pelo CCU da etiqueta.</p></section><section><h4>Estoque</h4><p>Código do item em compra direta, situação do estoque e opção de saldo positivo.</p></section></div>
                 <ul><li><strong>CCU 1500:</strong> compra destinada à entrada no almoxarifado.</li><li><strong>CCU diferente de 1500:</strong> compra direta para o centro de custo da área.</li><li><strong>Compra direta de item de estoque:</strong> compra fora do CCU 1500 de item que possui saldo positivo ou mínimo/máximo cadastrado.</li><li><strong>Situações do estoque:</strong> zerado parametrizado, abaixo do mínimo, acima do máximo, dentro da faixa, saldo sem parâmetros, negativo ou local a ajustar.</li><li><strong>Fechar sem concluir:</strong> restaura o recorte anteriormente aplicado.</li></ul></div>
               </article>
 
