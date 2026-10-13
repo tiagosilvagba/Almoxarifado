@@ -3526,9 +3526,12 @@ function suggestedPurchaseDeliveryDate(reportDate, leadDays) {
 
 function buildPurchaseNeedsExportReport(needs, generatedAt = new Date(), reviews = []) {
   const reportDate = formatReportDateBr(generatedAt);
+  const leadCache = new Map();
   const rows = (needs || []).map((need) => {
     const { item, position, target, suggested, openOfBalance, pendingScQuantity, coveredQuantity, coverageSource, ofCodes = [], scCodes = [], netSuggested, referencePrice, estimatedValue, averageMonthlyConsumption, rupture, cavacoAlert, cavacoThreshold, cavacoOfBalance } = need;
-    const lead = purchaseNeedLeadTimeInfo(need, reviews);
+    const leadKey = [item.code, position.branchCode, position.localCode].join("::");
+    if (!leadCache.has(leadKey)) leadCache.set(leadKey, purchaseNeedLeadTimeInfo(need, reviews));
+    const lead = leadCache.get(leadKey);
     return [
       item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
       position.branchCode, position.branchName, position.localType, position.localCode, position.localName,
@@ -3562,7 +3565,10 @@ function buildPurchaseNeedsExportReport(needs, generatedAt = new Date(), reviews
 
 function exportPurchaseNeeds(format = "excel") {
   // Fixar a data-base no instante do clique, para todo o relatório.
-  exportReport(format, buildPurchaseNeedsExportReport(getVisiblePurchaseNeeds(), new Date(), state.minMaxReviews));
+  const report = buildPurchaseNeedsExportReport(getVisiblePurchaseNeeds(), new Date(), state.minMaxReviews);
+  const appliedFilters = ui.filterSummary?.textContent?.trim();
+  if (appliedFilters) report.filterSummary = appliedFilters + " · " + report.filterSummary;
+  exportReport(format, report);
 }
 
 function exportCatalog(format = "excel") {
