@@ -22,6 +22,7 @@
     return Boolean(sc?.code && record?.of?.code && clean(sc.allocationCostCenter)
       && !isWarehouseCcu(sc.allocationCostCenter) && !isCancelled(sc.cancelled)
       && !isCancelled(record?.of?.cancelled)
+      && !/cancelad/.test(normalize(sc.status))
       && !/cancelad/.test(normalize(record?.of?.status)));
   }
 
@@ -34,8 +35,8 @@
     ].filter(Boolean).join(" / ");
   }
 
-  // Cruzamento estrito: mesmo código do item e mesma filial da OF.
-  // O histórico mostra a COMPRA, mas não prova a origem física do saldo.
+  // Relaciona sempre o mesmo código e filial da OF; saldos dos almoxarifados
+  // lógicos são separados mesmo quando ambos usam o código 704.
   function buildDirectPurchaseStockRows(items) {
     const result = new Map();
     for (const item of items || []) {
@@ -44,59 +45,69 @@
       for (const position of item.positions || []) {
         const branch = branchCode(position.branchCode);
         if (!branch) continue;
-        if (!stock.has(branch)) stock.set(branch, { quantity: 0, value: 0, names: new Set(), addresses: new Set(), responsibles: new Set() });
-        const bucket = stock.get(branch);
+        const name = clean(position.branchName) || branch;
+        const groupKey = `${branch}::${normalize(name)}`;
+        if (!stock.has(groupKey)) stock.set(groupKey, {
+          branchCode: branch, branchName: name, quantity: 0, value: 0,
+          addresses: new Set(), responsibles: new Set(),
+        });
+        const bucket = stock.get(groupKey);
         bucket.quantity += number(position.quantity);
         bucket.value += number(position.stockValue);
-        if (position.branchName) bucket.names.add(position.branchName);
-        if (position.quantity > 0) bucket.addresses.add(formatAddress(position));
+        if (number(position.quantity) > 0) bucket.addresses.add(formatAddress(position));
         for (const person of position.replenishmentResponsibles || []) if (person) bucket.responsibles.add(person);
       }
+      const positiveStocks = [...stock.values()].filter((bucket) => bucket.quantity > 0);
+      if (!positiveStocks.length) continue;
       for (const record of item.history || []) {
         if (!isConfirmedOutsideWarehousePurchase(record)) continue;
         const sc = record.sc;
         const of = record.of;
         const branch = branchCode(of.deliveryBranchCode || sc.branchCode || record.branchCode);
-        const bucket = stock.get(branch);
-        if (!bucket || bucket.quantity <= 0) continue;
         const ccu = clean(sc.allocationCostCenter);
-        const key = [clean(item.code).replace(/\./g, ""), branch, clean(sc.code), clean(sc.sequence), clean(of.code), ccu].join("::");
-        if (!result.has(key)) {
-          const names = [...bucket.names];
-          result.set(key, {
-            code: clean(item.code).replace(/\./g, ""),
-            item: clean(item.name || item.detailedName),
-            branchCode: branch,
-            branch: names[0] || branch,
-            branchNames: names.join(" / "),
-            stockQuantity: bucket.quantity,
-            stockValue: bucket.value,
-            addresses: [...bucket.addresses].filter(Boolean).join(" | "),
-            responsibles: [...bucket.responsibles].join(", "),
-            sc: clean(sc.code),
-            of: clean(of.code),
-            ccu,
-            supplier: clean(of.supplier || record.rec?.supplier),
-            requester: clean(sc.requesterName),
-            buyer: clean(sc.buyerName || of.buyerName),
-            ofDate: clean(of.date),
-            requested: number(of.requestedQuantity),
-            delivered: number(of.deliveredQuantity),
-            invoice: clean(record.rec?.invoice),
-          });
-        } else {
-          const old = result.get(key);
-          old.requested = Math.max(old.requested, number(of.requestedQuantity));
-          old.delivered = Math.max(old.delivered, number(of.deliveredQuantity));
-          if (!old.invoice) old.invoice = clean(record.rec?.invoice);
-          if (!old.supplier) old.supplier = clean(of.supplier || record.rec?.supplier);
-          if (!old.buyer) old.buyer = clean(sc.buyerName || of.buyerName);
+        for (const bucket of positiveStocks) {
+          if (bucket.branchCode !== branch) continue;
+          const key = [
+            clean(item.code).replace(/\./g, ""), branch, normalize(bucket.branchName),
+            clean(sc.code), clean(sc.sequence), clean(of.code), ccu,
+          ].join("::");
+          if (!result.has(key)) {
+            result.set(key, {
+              code: clean(item.code).replace(/\./g, ""),
+              item: clean(item.name || item.detailedName),
+              branchCode: branch,
+              branch: bucket.branchName,
+              branchNames: bucket.branchName,
+              stockQuantity: bucket.quantity,
+              stockValue: bucket.value,
+              addresses: [...bucket.addresses].filter(Boolean).join(" | "),
+              responsibles: [...bucket.responsibles].join(", "),
+              sc: clean(sc.code),
+              of: clean(of.code),
+              ccu,
+              supplier: clean(of.supplier || record.rec?.supplier),
+              requester: clean(sc.requesterName),
+              buyer: clean(sc.buyerName || of.buyerName),
+              ofDate: clean(of.date),
+              requested: number(of.requestedQuantity),
+              delivered: number(of.deliveredQuantity),
+              invoice: clean(record.rec?.invoice),
+            });
+          } else {
+            const old = result.get(key);
+            old.requested = Math.max(old.requested, number(of.requestedQuantity));
+            old.delivered = Math.max(old.delivered, number(of.deliveredQuantity));
+            if (!old.invoice) old.invoice = clean(record.rec?.invoice);
+            if (!old.supplier) old.supplier = clean(of.supplier || record.rec?.supplier);
+            if (!old.buyer) old.buyer = clean(sc.buyerName || of.buyerName);
+          }
         }
       }
     }
     return [...result.values()].sort((a, b) =>
       a.code.localeCompare(b.code, "pt-BR", { numeric: true })
       || a.branchCode.localeCompare(b.branchCode, "pt-BR", { numeric: true })
+      || a.branch.localeCompare(b.branch, "pt-BR")
       || a.sc.localeCompare(b.sc, "pt-BR", { numeric: true }));
   }
 
@@ -105,7 +116,7 @@
     const stocks = new Map();
     for (const row of rows || []) {
       codes.add(row.code);
-      const key = `${row.code}::${row.branchCode}`;
+      const key = `${row.code}::${row.branchCode}::${normalize(row.branch)}`;
       if (!stocks.has(key)) stocks.set(key, { quantity: row.stockQuantity, value: row.stockValue });
     }
     return {
@@ -162,6 +173,7 @@
         tab.setAttribute("aria-controls", `page-${PAGE}`);
         tab.textContent = "Compras fora CC 1500";
         nav.insertBefore(tab, nav.querySelector('[data-page="instrucoes"]'));
+        if (typeof decorateNavigationTabs === "function") decorateNavigationTabs();
       }
       if (!document.getElementById(`page-${PAGE}`)) {
         const page = document.createElement("section");
