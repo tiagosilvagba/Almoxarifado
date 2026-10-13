@@ -1,7 +1,7 @@
 "use strict";
 
 /* Bootstrap estável 2.0 — carrega diretamente a aplicação-base funcional. */
-const ALMOX_BASE = "./app/core/catalog-app.js?v=10.7.32";
+const ALMOX_BASE = "./app/core/catalog-app.js?v=10.7.33";
 const ALMOX_BASE_FALLBACK = ALMOX_BASE;
 const CURRENT_VERSION_LABEL = window.__ALMOX_VERSION_LABEL__ || "Versão 10.7";
 const CUSTOM_THEMES = [
@@ -62,6 +62,15 @@ function forceResponsiveNavigation() {
   const nav = navWrap?.querySelector(".app-nav");
   const main = document.querySelector("main.main-content");
   if (!navWrap || !nav) return;
+
+  // Enquanto a tela de carregamento estiver ativa, o menu não pode
+  // aparecer por cima dela, mesmo com estilos inline !important.
+  if (document.body.classList.contains("app-booting")) {
+    setImportantStyle(navWrap, "display", "none");
+    setImportantStyle(navWrap, "visibility", "hidden");
+    setImportantStyle(navWrap, "pointer-events", "none");
+    return;
+  }
 
   if (navWrap.parentElement !== document.body) document.body.appendChild(navWrap);
   navWrap.dataset.detachedNavigation = "true";
@@ -140,6 +149,16 @@ function forceResponsiveNavigation() {
 
 function installNavigationRepair() {
   forceResponsiveNavigation();
+  // A reconstrução da navegação só ocorre quando a base estiver pronta.
+  // Também restaura corretamente o menu no mobile (sem estilos inline de desktop).
+  if (document.body.classList.contains("app-booting")) {
+    const readyObserver = new MutationObserver(() => {
+      if (document.body.classList.contains("app-booting")) return;
+      readyObserver.disconnect();
+      forceResponsiveNavigation();
+    });
+    readyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  }
   let timer = null;
   window.addEventListener("resize", () => {
     window.clearTimeout(timer);
