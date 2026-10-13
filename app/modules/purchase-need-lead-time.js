@@ -126,45 +126,13 @@
     };
   }
 
+  // Um único cálculo serve aos cards e ao Excel da Necessidade de Compra.
   function lead(row) {
-    const item = row?.item;
-    const position = row?.position;
-    if (!item) return { days: null, source: "sem histórico" };
-
-    const appState = getState();
-    const reviews = Array.isArray(appState?.minMaxReviews) ? appState.minMaxReviews : [];
-    const matching = reviews.filter((review) => review.item?.code === item.code && (
-      !position
-      || !review.position
-      || (String(review.position.branchCode || "") === String(position.branchCode || "")
-        && String(review.position.localCode || "") === String(position.localCode || ""))
-    ));
-
-    let values = matching
-      .filter((review) => review.leadTimeSource === "real")
-      .map((review) => Number(review.leadTimeDays))
-      .filter(Number.isFinite);
-    if (values.length) return { days: median(values), source: "histórico real" };
-
-    values = matching.map((review) => Number(review.leadTimeDays)).filter(Number.isFinite);
-    if (values.length) return { days: median(values), source: "referência estimada" };
-
-    const stages = stageLead(row);
-    if (stages.total.days != null) return { days: stages.total.days, source: "histórico real" };
-
-    const insightFn = typeof getOperationalInsight === "function"
-      ? getOperationalInsight
-      : (typeof operationalInsightsForItem === "function" ? operationalInsightsForItem : null);
-    if (insightFn) {
-      try {
-        const insight = insightFn(item, position?.branchCode, position ? [position] : undefined);
-        if (insight?.leadTimeDays != null) {
-          return { days: Number(insight.leadTimeDays), source: insight.leadTimeSource || "histórico" };
-        }
-      } catch {}
+    if (typeof purchaseNeedLeadTimeInfo === "function") {
+      const info = purchaseNeedLeadTimeInfo(row, getState()?.minMaxReviews || []);
+      return { days: info.days, source: info.source };
     }
-
-    return { days: null, source: "sem histórico" };
+    return { days: null, source: "Sem histórico" };
   }
 
   function formatDays(value) {
@@ -230,71 +198,8 @@
     }
   }
 
-  function patchExport() {
-    if (typeof exportPurchaseNeeds !== "function" || exportPurchaseNeeds.__leadTimePatched) return false;
-    const original = exportPurchaseNeeds;
-
-    exportPurchaseNeeds = function patchedExportPurchaseNeeds(format = "excel") {
-      if (format !== "excel" && format !== "xlsx") return original(format);
-      const appState = getState();
-      const visible = typeof getVisiblePurchaseNeeds === "function"
-        ? getVisiblePurchaseNeeds()
-        : (appState?.visiblePurchaseNeeds || []);
-      if (!visible.length) return original(format);
-
-      const old = window.downloadExcelWorkbook;
-      if (typeof old !== "function") return original(format);
-
-      window.__purchaseNeedLeadTimeExportActive = true;
-      window.downloadExcelWorkbook = function patchedDownload(headers, rows, filename, ...rest) {
-        try {
-          const idx = Math.max(0, headers.findIndex((header) => /consumo/i.test(String(header))) + 1);
-          const nextHeaders = [...headers];
-          nextHeaders.splice(
-            idx,
-            0,
-            "Lead Time Total (dias)",
-            "Origem Lead Time",
-            "SC → OF (dias)",
-            "Amostras SC → OF",
-            "OF → Recebimento (dias)",
-            "Amostras OF → Recebimento",
-          );
-
-          const nextRows = rows.map((rowValues, index) => {
-            const values = [...rowValues];
-            const purchaseRow = visible[index];
-            const totalLead = lead(purchaseRow);
-            const stages = stageLead(purchaseRow);
-            values.splice(
-              idx,
-              0,
-              totalLead.days == null ? "" : totalLead.days,
-              totalLead.source,
-              stages.scToOf.days == null ? "" : stages.scToOf.days,
-              stages.scToOf.samples,
-              stages.ofToReceipt.days == null ? "" : stages.ofToReceipt.days,
-              stages.ofToReceipt.samples,
-            );
-            return values;
-          });
-          return old(nextHeaders, nextRows, filename, ...rest);
-        } finally {
-          window.downloadExcelWorkbook = old;
-          window.__purchaseNeedLeadTimeExportActive = false;
-        }
-      };
-
-      try {
-        return original(format);
-      } finally {
-        if (window.downloadExcelWorkbook !== old) window.downloadExcelWorkbook = old;
-      }
-    };
-
-    exportPurchaseNeeds.__leadTimePatched = true;
-    return true;
-  }
+  // A exportação de Excel/PDF agora está integrada diretamente ao núcleo.
+  // O interceptador antigo de downloadExcelWorkbook não é mais necessário.
 
   function style() {
     if (document.getElementById("purchaseNeedLeadTimeStyle")) return;
@@ -370,7 +275,6 @@
 
   function init() {
     style();
-    patchExport();
 
     const host = document.getElementById("purchaseNeedTableWrap");
     if (host) {
@@ -394,7 +298,6 @@
 
     let tries = 0;
     const timer = setInterval(() => {
-      patchExport();
       decorateAll(host || document);
       decorateModal();
       if (++tries > 30) clearInterval(timer);
