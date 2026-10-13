@@ -8,6 +8,7 @@ const {
   generationDaysBetween,
   isWarehouseSc,
   isClosedOf,
+  inventoryWorker,
 } = require("../app/core/catalog-app.js");
 const {
   DELIVERY_TOTAL,
@@ -104,4 +105,48 @@ test("exportação do follow-up inclui o recorte completo, ordena e formata as d
   assert.deepEqual([...report.currencyColumns], [15]);
   assert.match(report.filterSummary, /Filial A/);
   assert.equal(buildFollowUpExportReport([]).rows.length, 0);
+});
+
+test("filial 704 e local 299 classificam repartição JF em Alm. Preparados, inclusive no cache", async () => {
+  const abAves = "ROLANDIA - AB. AVES";
+  const position = (branchCode, localCode, partition) => ({
+    branchCode, localCode, partition,
+    branchName: abAves,
+    branchKey: `${branchCode}::branch::${abAves}`,
+    locationKey: `${branchCode}::${localCode}`,
+  });
+  const positions = [
+    position("704", "299", "JF"),
+    position("704", "299", "AP"),
+    position("704", "299", "XX"),
+    position("705", "299", "JF"),
+    position("704", "300", "JF"),
+    position("704", "295", "XX"),
+  ];
+  const payload = { items: [{ code: "123456", positions }], consumption: { records: [] } };
+  const encoded = new TextEncoder().encode(JSON.stringify(payload));
+  const oldFetch = global.fetch;
+  const oldSelf = global.self;
+  const messages = [];
+  try {
+    global.fetch = async () => ({ ok: true, arrayBuffer: async () => encoded.buffer });
+    global.self = { postMessage: (message) => messages.push(message) };
+    inventoryWorker();
+    await global.self.onmessage({ data: { optimizedDataUrl: "https://example.test/catalog.json" } });
+    const result = messages.find((message) => message.type === "complete")?.payload;
+    assert.ok(result, "o catálogo otimizado deve ser carregado");
+    const resolved = result.items[0].positions;
+    assert.equal(resolved[0].branchName, "ROLANDIA - ALM. PREPARADOS");
+    assert.equal(resolved[0].branchKey, "704::branch::ROLANDIA - ALM. PREPARADOS");
+    assert.equal(resolved[1].branchName, "ROLANDIA - ALM. PREPARADOS");
+    assert.equal(resolved[2].branchName, abAves);
+    assert.equal(resolved[3].branchName, abAves);
+    assert.equal(resolved[4].branchName, abAves);
+    assert.equal(resolved[5].branchName, "ROLANDIA - ALM. PREPARADOS");
+    assert.equal(resolved[0].locationKey, "704::299");
+  } finally {
+    global.fetch = oldFetch;
+    if (oldSelf === undefined) delete global.self;
+    else global.self = oldSelf;
+  }
 });
