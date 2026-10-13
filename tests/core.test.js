@@ -16,6 +16,9 @@ const {
   isFollowUpRecord,
   followUpDeliveryState,
   buildFollowUpRows,
+  followUpStockBalance,
+  filterFollowUpRows,
+  availableFollowUpValues,
   buildFollowUpExportReport,
   formatDateBr,
 } = require("../app/modules/follow-up.js");
@@ -94,15 +97,17 @@ test("exportação do follow-up inclui o recorte completo, ordena e formata as d
   const report = buildFollowUpExportReport(filtered, "Filial A · Entrega parcial");
   assert.equal(report.filename, "follow-up-de-ofs.xls");
   assert.equal(report.rows.length, 2);
-  assert.equal(report.headers.length, 16);
-  assert.equal(report.rows[0][7], "200");
+  assert.equal(report.headers.length, 17);
+  assert.equal(report.headers[6], "Saldo atual");
+  assert.equal(report.rows[0][6], null);
+  assert.equal(report.rows[0][8], "200");
   assert.equal(report.rows[0][2], "01/09/2026");
-  assert.equal(report.rows[0][10], "09/10/2026");
-  assert.equal(report.rows[1][10], "05/11/2026");
-  assert.equal(report.rows[0][14], 7);
-  assert.equal(report.rows[0][15], 84);
-  assert.deepEqual([...report.dateColumns], [2, 10]);
-  assert.deepEqual([...report.currencyColumns], [15]);
+  assert.equal(report.rows[0][11], "09/10/2026");
+  assert.equal(report.rows[1][11], "05/11/2026");
+  assert.equal(report.rows[0][15], 7);
+  assert.equal(report.rows[0][16], 84);
+  assert.deepEqual([...report.dateColumns], [2, 11]);
+  assert.deepEqual([...report.currencyColumns], [16]);
   assert.match(report.filterSummary, /Filial A/);
   assert.equal(buildFollowUpExportReport([]).rows.length, 0);
 });
@@ -149,4 +154,58 @@ test("filial 704 e local 299 classificam repartição JF em Alm. Preparados, inc
     if (oldSelf === undefined) delete global.self;
     else global.self = oldSelf;
   }
+});
+
+test("follow-up apresenta saldo atual apenas da filial da OF e respeita zeros", () => {
+  const item = {
+    code: "243370", name: "Peça teste",
+    positions: [
+      { branchCode: "704", localCode: "101", quantity: 12 },
+      { branchCode: "0704", localCode: "299", quantity: 3 },
+      { branchCode: "705", localCode: "299", quantity: 900 },
+    ],
+    history: [
+      {
+        branch: "ROLANDIA", branchCode: "704",
+        sc: { code: "100", status: "Compra confirmada", branchCode: "704" },
+        of: { code: "200", deliveryBranchCode: "704", balance: 5, closed: "N", unitValue: 10 },
+      },
+    ],
+  };
+  const row = buildFollowUpRows([item])[0];
+  assert.equal(row.stockBalance, 15);
+  assert.equal(row.quantity, 5);
+  assert.equal(followUpStockBalance(item, { branchCode: "705" }), 900);
+  assert.equal(followUpStockBalance(item, { branchCode: "706" }), null);
+  assert.equal(followUpStockBalance({ positions: [{ branchCode: "704", quantity: 0 }] }, { branchCode: "704" }), 0);
+  assert.equal(followUpStockBalance({ positions: [] }, { branchCode: "704" }), null);
+  assert.equal(followUpStockBalance(item, { of: { deliveryBranchCode: "705" }, branchCode: "704" }), 900);
+  const report = buildFollowUpExportReport([row]);
+  assert.equal(report.rows[0][6], 15);
+  assert.ok(report.numericColumns.has(6));
+});
+
+test("flags do follow-up são dinâmicos e o fornecedor acompanha os outros filtros", () => {
+  const data = [
+    { branch: "704", supplier: "Fornecedor A", requester: "João", deliveryStatus: DELIVERY_TOTAL, days: 4, item: "100" },
+    { branch: "704", supplier: "Fornecedor B", requester: "João", deliveryStatus: DELIVERY_PARTIAL, days: 40, item: "200" },
+    { branch: "705", supplier: "Fornecedor C", requester: "Maria", deliveryStatus: DELIVERY_TOTAL, days: 8, item: "300" },
+  ];
+  const selected = {
+    branch: new Set(["704"]), supplier: new Set(), delivery: new Set(), requester: new Set(), age: new Set(),
+  };
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier"), ["Fornecedor A", "Fornecedor B"]);
+  selected.delivery.add(DELIVERY_TOTAL);
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier"), ["Fornecedor A"]);
+  selected.supplier.add("Fornecedor A");
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier"), ["Fornecedor A"]);
+  assert.deepEqual(availableFollowUpValues(data, selected, "branch"), ["704"]);
+  assert.deepEqual(filterFollowUpRows(data, selected).map((row) => row.item), ["100"]);
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier", "200"), []);
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier", "", (row) => row.branch !== "704"), []);
+  selected.delivery.clear();
+  selected.branch.clear();
+  selected.supplier.clear();
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier", "200"), ["Fornecedor B"]);
+  assert.deepEqual(availableFollowUpValues(data, selected, "supplier", "", (row) => row.branch === "705"), ["Fornecedor C"]);
 });
