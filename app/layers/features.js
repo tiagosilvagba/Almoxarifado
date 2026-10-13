@@ -1,7 +1,7 @@
 "use strict";
 
 /* Bootstrap 2.0 — preserva a aplicação estável e adiciona melhorias incrementais. */
-const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=10.7.36";
+const ALMOX_STABLE_APP = "./app/layers/compat-v2.js?v=10.7.37";
 const ALMOX_STABLE_FALLBACK = ALMOX_STABLE_APP;
 const MONTHLY_COMPARISON_MODULE = "./app/modules/comparativo-mensal-core.js?v=10.7.10";
 const MONTHLY_COMPARISON_FALLBACK = MONTHLY_COMPARISON_MODULE;
@@ -17,6 +17,7 @@ const NAV_ICONS = Object.freeze({
   "tempo-geracao-of": '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   consumo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/><path d="M2 19h20"/></svg>',
   "revisao-min-max": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M4 17h16M14 7l2-2 2 2-2 2-2-2ZM8 17l2-2 2 2-2 2-2-2Z"/></svg>',
+  "compras-fora-cc1500": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM8 10h8M8 14h4"/><circle cx="18" cy="17" r="3"/><path d="m17 16 2 2"/></svg>',
   instrucoes: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>'
 });
 
