@@ -2790,6 +2790,44 @@ function handleChartFilter(event) {
   handleAutomaticFilter(branch ? "branchFilter" : "stockStatusFilter");
 }
 
+// Regra exclusiva dos locais sob reposição de Alexsandro. Com saldo abaixo
+// do máximo, a posição continua visível mesmo coberta por OF/SC.
+function alexsandroPurchaseCriterion(position) {
+  if (!(position?.replenishmentResponsibles || []).some((name) =>
+    /^alexsandro(?:\s|$)/.test(normalizeSearch(name)))) return "";
+  const maximum = Number(position.maximum);
+  const minimum = Number(position.minimum);
+  const quantity = Number(position.quantity);
+  if (!Number.isFinite(maximum) || maximum <= 0
+    || !Number.isFinite(quantity) || quantity >= maximum) return "";
+  return Number.isFinite(minimum) && quantity < minimum ? "Crítico" : "Risco de ruptura";
+}
+
+function isPurchaseNeedEligiblePosition(position, hasPurchaseCoverage) {
+  return Boolean(alexsandroPurchaseCriterion(position)
+    || (position?.minimum > 0 && position.quantity < position.minimum)
+    || hasPurchaseCoverage);
+}
+
+function isActionableOrAlexsandroNeed(need) {
+  return Number(need?.netSuggested) > 0 || Boolean(need?.alexsandroCriterion);
+}
+
+function purchaseNeedPriorityLabel(need) {
+  if (need?.cavacoAlert) return "Especial — saldo da OF de Cavaco abaixo de 200";
+  if (need?.alexsandroCriterion) return need.alexsandroCriterion;
+  if (need?.rupture) return "Ruptura";
+  if (Number(need?.netSuggested) <= 0) return "Compra já coberta";
+  return "Abaixo do mínimo com saldo";
+}
+
+function purchaseNeedCriterionLabel(need) {
+  if (need?.cavacoAlert) return "Reposição especial por saldo de OF de Cavaco abaixo de 200";
+  if (need?.alexsandroCriterion === "Crítico") return "Crítico — saldo abaixo do mínimo; repor até o máximo";
+  if (need?.alexsandroCriterion === "Risco de ruptura") return "Risco de ruptura — saldo entre mínimo e máximo; repor até o máximo";
+  return need?.position?.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo";
+}
+
 async function buildPurchaseNeeds() {
   const needs = [];
   const consumptionByPosition = new Map(state.minMaxReviews.map((review) => [
@@ -2822,12 +2860,13 @@ async function buildPurchaseNeeds() {
       // A posição entra na análise quando está abaixo do mínimo OU quando já existe
       // compra em andamento. Assim uma OF/SC válida nunca fica invisível e evita
       // uma nova compra sem descontar primeiro a cobertura existente.
-      if (!(position.minimum > 0 && position.quantity < position.minimum) && !hasPurchaseCoverage) continue;
+      if (!isPurchaseNeedEligiblePosition(position, hasPurchaseCoverage)) continue;
       const grossSuggested = Math.max(target - position.quantity, 0);
       const coverage = allocatePurchaseCoverage(branchCommitments, grossSuggested);
       const netSuggested = Math.max(grossSuggested - coverage.total, 0);
-      // Necessidade de compra só existe quando a cobertura válida não atende a meta.
-      if (!(netSuggested > 0)) continue;
+      // Alexsandro: manter posição em análise mesmo com compra 100% coberta.
+      const alexsandroCriterion = alexsandroPurchaseCriterion(position);
+      if (!(netSuggested > 0) && !alexsandroCriterion) continue;
       const referencePrice = position.unitCost || latestPurchasePrice(item) || 0;
       const consumptionReview = consumptionByPosition.get(`${item.code}::${position.branchCode}::${position.localCode}`);
       needs.push({
@@ -2844,6 +2883,7 @@ async function buildPurchaseNeeds() {
           : coverage.ofQuantity > 0 ? "OF"
             : coverage.scQuantity > 0 ? "SC" : "Sem cobertura",
         netSuggested,
+        alexsandroCriterion,
         referencePrice,
         estimatedValue: netSuggested * referencePrice,
         averageMonthlyConsumption: consumptionReview?.averageMonthlyConsumption ?? null,
@@ -3291,7 +3331,7 @@ function renderPurchaseNeeds() {
   const visible = state.purchaseNeeds.filter((need) => {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
-    if (!(Number(need.netSuggested) > 0)) return false;
+    if (!isActionableOrAlexsandroNeed(need)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location.length && !location.includes(position.locationKey)) return false;
@@ -3453,7 +3493,7 @@ function getVisiblePurchaseNeeds() {
   return state.purchaseNeeds.filter((need) => {
     const { item, position } = need;
     if (!filteredCodes.has(item.code)) return false;
-    if (!(Number(need.netSuggested) > 0)) return false;
+    if (!isActionableOrAlexsandroNeed(need)) return false;
     if (!cavacoNeedMatchesProcessFilters(need)) return false;
     if (!positionMatchesBranch(position, branch)) return false;
     if (location.length && !location.includes(position.locationKey)) return false;
@@ -6688,5 +6728,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
