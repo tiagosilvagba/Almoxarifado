@@ -98,15 +98,16 @@ test("exportação do follow-up inclui o recorte completo, ordena e formata as d
   assert.equal(report.filename, "follow-up-de-ofs.xls");
   assert.equal(report.rows.length, 2);
   assert.equal(report.headers.length, 17);
-  assert.equal(report.headers[6], "Saldo atual");
-  assert.equal(report.rows[0][6], null);
-  assert.equal(report.rows[0][8], "200");
+  assert.equal(report.headers[12], "Saldo atual");
+  assert.equal(report.headers[13], "Qtd. OF");
+  assert.equal(report.rows[0][12], null);
+  assert.equal(report.rows[0][7], "200");
   assert.equal(report.rows[0][2], "01/09/2026");
-  assert.equal(report.rows[0][11], "09/10/2026");
-  assert.equal(report.rows[1][11], "05/11/2026");
+  assert.equal(report.rows[0][10], "09/10/2026");
+  assert.equal(report.rows[1][10], "05/11/2026");
   assert.equal(report.rows[0][15], 7);
   assert.equal(report.rows[0][16], 84);
-  assert.deepEqual([...report.dateColumns], [2, 11]);
+  assert.deepEqual([...report.dateColumns], [2, 10]);
   assert.deepEqual([...report.currencyColumns], [16]);
   assert.match(report.filterSummary, /Filial A/);
   assert.equal(buildFollowUpExportReport([]).rows.length, 0);
@@ -181,8 +182,8 @@ test("follow-up apresenta saldo atual apenas da filial da OF e respeita zeros", 
   assert.equal(followUpStockBalance({ positions: [] }, { branchCode: "704" }), null);
   assert.equal(followUpStockBalance(item, { of: { deliveryBranchCode: "705" }, branchCode: "704" }), 900);
   const report = buildFollowUpExportReport([row]);
-  assert.equal(report.rows[0][6], 15);
-  assert.ok(report.numericColumns.has(6));
+  assert.equal(report.rows[0][12], 15);
+  assert.ok(report.numericColumns.has(12));
 });
 
 test("flags do follow-up são dinâmicos e o fornecedor acompanha os outros filtros", () => {
