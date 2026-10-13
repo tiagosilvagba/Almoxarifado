@@ -66,6 +66,36 @@
     return [item?.code, sc.code, sc.sequence || "sem-seq", of.code].map(normalize).join("::");
   }
 
+  // O saldo atual pertence à base de estoque, não ao saldo pendente da OF.
+  // Restringe sempre à filial da entrega; sem vínculo confiável mantém "—".
+  function followUpStockBalance(item, record) {
+    const positions = item?.positions || [];
+    if (!positions.length) return null;
+    const canonicalCode = (value) => {
+      const text = String(value ?? "").trim();
+      return /^\d+$/.test(text) ? text.replace(/^0+(?=\d)/, "") : text.toUpperCase();
+    };
+    const candidates = [
+      record?.of?.deliveryBranchCode,
+      record?.branchCode,
+      record?.sc?.branchCode,
+    ].map(canonicalCode).filter(Boolean);
+    let scoped = [];
+    if (candidates.length) {
+      for (const code of candidates) {
+        scoped = positions.filter((position) => canonicalCode(position.branchCode) === code);
+        if (scoped.length) break;
+      }
+    } else {
+      const branchName = normalize(record?.branch || record?.branchName || record?.of?.deliveryBranchName);
+      if (branchName) scoped = positions.filter((position) => normalize(position.branchName) === branchName);
+    }
+    if (!scoped.length) return null;
+    const known = scoped.filter((position) => position.quantity !== null
+      && position.quantity !== undefined && position.quantity !== "" && Number.isFinite(Number(position.quantity)));
+    return known.length ? known.reduce((sum, position) => sum + Number(position.quantity), 0) : null;
+  }
+
   function parseSourceDate(value) {
     const text = String(value ?? "").trim();
     if (!text) return null;
@@ -128,9 +158,10 @@
         const candidate = {
           key,
           branch: record.branch || record.branchName || record.branchCode || "—",
-          branchCode: record.branchCode || sc.branchCode || "",
+          branchCode: of.deliveryBranchCode || record.branchCode || sc.branchCode || "",
           code: item.code || "",
           item: `${item.code || ""} · ${item.name || item.detailedName || ""}`,
+          stockBalance: followUpStockBalance(item, record),
           sc: sc.code || "",
           of: of.code || "",
           scStatus: sc.status || "—",
@@ -157,6 +188,7 @@
         current.requested = Math.max(current.requested, candidate.requested);
         current.delivered = Math.max(current.delivered, candidate.delivered);
         current.quantity = Math.max(current.quantity, candidate.quantity);
+        if (current.stockBalance === null) current.stockBalance = candidate.stockBalance;
         current.unitValue = candidate.unitValue || current.unitValue;
         current.value = current.quantity * current.unitValue;
         current.deliveryStatus = current.delivered > 0 ? DELIVERY_PARTIAL : DELIVERY_TOTAL;
@@ -170,7 +202,7 @@
 
   // Reutiliza o motor de exportação da Necessidade de Compra, sem limitar linhas à tela.
   function buildFollowUpExportReport(records, filterSummary = "") {
-    const headers = ["Dias OF", "Faixa", "Criação OF", "Situação", "Filial", "Item", "SC", "OF", "Status SC", "Fornecedor", "Entrega prevista", "Solicitante", "Qtd. OF", "Entregue", "Pendente", "Valor pendente"];
+    const headers = ["Dias OF", "Faixa", "Criação OF", "Situação", "Filial", "Item", "Saldo atual", "SC", "OF", "Status SC", "Fornecedor", "Entrega prevista", "Solicitante", "Qtd. OF", "Entregue", "Pendente", "Valor pendente"];
     const ordered = [...(records || [])].sort((left, right) => right.days - left.days);
     return {
       title: "Follow up de OFs",
@@ -178,15 +210,50 @@
       headers,
       rows: ordered.map((row) => [
         row.days, ageBucket(row.days), row.ofCreated, row.deliveryStatus, row.branch, row.item,
-        row.sc, row.of, row.scStatus, row.supplier, row.delivery, row.requester,
+        row.stockBalance, row.sc, row.of, row.scStatus, row.supplier, row.delivery, row.requester,
         row.requested, row.delivered, row.quantity, row.value,
       ]),
-      numericColumns: new Set([0, 12, 13, 14, 15]),
-      currencyColumns: new Set([15]),
-      dateColumns: new Set([2, 10]),
-      pdfIdentityColumns: [7, 5],
+      numericColumns: new Set([0, 6, 13, 14, 15, 16]),
+      currencyColumns: new Set([16]),
+      dateColumns: new Set([2, 11]),
+      pdfIdentityColumns: [8, 5],
       filterSummary,
     };
+  }
+
+  const FOLLOW_UP_FILTERS = Object.freeze([
+    { key: "delivery", id: "fuDeliverySelect", label: "Todas as situações" },
+    { key: "branch", id: "fuBranchSelect", label: "Todas as filiais" },
+    { key: "supplier", id: "fuSupplierSelect", label: "Todos os fornecedores" },
+    { key: "requester", id: "fuRequesterSelect", label: "Todos os solicitantes" },
+    { key: "age", id: "fuAgeSelect", label: "Todos os períodos" },
+  ]);
+
+  function followUpFilterValue(row, key) {
+    return key === "delivery" ? row.deliveryStatus
+      : key === "age" ? ageBucket(row.days)
+        : row[key];
+  }
+
+  // Filtros cruzados: o fornecedor usa o conjunto que passou pelos outros filtros,
+  // mas ignora a própria marcação para permitir selecionar vários fornecedores.
+  function filterFollowUpRows(records, selected = {}, query = "", globalFilter = null, excludeKey = "") {
+    const search = normalize(query);
+    return (records || []).filter((row) => {
+      if (typeof globalFilter === "function" && !globalFilter(row)) return false;
+      if (search && !normalize(`${row.item} ${row.sc} ${row.of} ${row.supplier} ${row.requester} ${row.scStatus} ${row.ofStatus}`).includes(search)) return false;
+      return FOLLOW_UP_FILTERS.every(({ key }) => {
+        if (key === excludeKey) return true;
+        const chosen = selected[key];
+        return !chosen?.size || chosen.has(followUpFilterValue(row, key));
+      });
+    });
+  }
+
+  function availableFollowUpValues(records, selected, key, query = "", globalFilter = null) {
+    const scoped = filterFollowUpRows(records, selected, query, globalFilter, key);
+    return [...new Set(scoped.map((row) => followUpFilterValue(row, key)).filter(Boolean))]
+      .sort((a, b) => String(a).localeCompare(String(b), "pt-BR", { numeric: true, sensitivity: "base" }));
   }
 
   function install(windowObject) {
@@ -201,12 +268,13 @@
     const selected = { delivery: new Set(), branch: new Set(), supplier: new Set(), requester: new Set(), age: new Set() };
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
     const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+    const filterOptionCache = new Map();
 
     function styles() {
       if (document.getElementById("fuStyle")) return;
       const style = document.createElement("style");
       style.id = "fuStyle";
-      style.textContent = ".fu-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.fu-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:14px 0}.fu-card,.fu-panel{border:1px solid var(--border-color,#d8e0e8);background:var(--card-bg,#fff);border-radius:15px;padding:14px}.fu-card strong{display:block;font-size:1.3rem;margin-top:5px}.fu-table-wrap{overflow:auto;max-height:650px}.fu-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:1250px}.fu-table th,.fu-table td{padding:8px;border-bottom:1px solid var(--border-color,#e4e9ee);text-align:left}.fu-table th{position:sticky;top:0;background:var(--card-bg,#fff);z-index:2}.fu-risk{font-weight:800}.fu-card--treatment,.fu-row--treatment td{background:color-mix(in srgb,var(--red,#b42318) 8%,var(--card-bg,#fff))}.fu-card--treatment strong{color:var(--red,#b42318)}.fu-export-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}.fu-export-heading h3{margin:0 0 4px;font-size:1rem}.fu-export-heading .export-control{margin-left:auto}@media(max-width:900px){.fu-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.fu-grid{grid-template-columns:1fr}}";
+      style.textContent = ".fu-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.fu-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:14px 0}.fu-card,.fu-panel{border:1px solid var(--border-color,#d8e0e8);background:var(--card-bg,#fff);border-radius:15px;padding:14px}.fu-card strong{display:block;font-size:1.3rem;margin-top:5px}.fu-table-wrap{overflow:auto;max-height:650px}.fu-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:1360px}.fu-table th,.fu-table td{padding:8px;border-bottom:1px solid var(--border-color,#e4e9ee);text-align:left}.fu-table th{position:sticky;top:0;background:var(--card-bg,#fff);z-index:2}.fu-risk{font-weight:800}.fu-card--treatment,.fu-row--treatment td{background:color-mix(in srgb,var(--red,#b42318) 8%,var(--card-bg,#fff))}.fu-card--treatment strong{color:var(--red,#b42318)}.fu-export-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}.fu-export-heading h3{margin:0 0 4px;font-size:1rem}.fu-export-heading .export-control{margin-left:auto}@media(max-width:900px){.fu-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.fu-grid{grid-template-columns:1fr}}";
       document.head.appendChild(style);
     }
 
@@ -229,7 +297,7 @@
         page.id = "page-follow-up";
         page.dataset.pagePanel = "follow-up";
         page.className = "page-panel is-hidden";
-        page.innerHTML = '<div class="nt-head"><div><span class="eyebrow">Gestão de fornecimento</span><h2>Follow up</h2><p class="nt-muted">SCs com compra confirmada, OF não fechada e entrega total ou parcialmente pendente.</p></div><span id="fuStatus" class="context-label">Aguardando dados…</span></div><div id="fuKpis" class="fu-grid"></div><section class="embedded-filter-panel fu-filter-panel" aria-label="Filtros de follow up"><header class="embedded-filter-panel__header"><div><span class="eyebrow">Filtros da análise</span><h3>Refinar follow up</h3></div><button id="fuClear" class="button button--ghost" type="button">Limpar filtros</button></header><div class="embedded-filter-grid embedded-filter-grid--five"><label class="field"><span>Situação da entrega</span><select id="fuDeliverySelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as situações</option></select></label><label class="field"><span>Filial</span><select id="fuBranchSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as filiais</option></select></label><label class="field"><span>Fornecedor</span><select id="fuSupplierSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os fornecedores</option></select></label><label class="field"><span>Solicitante da SC</span><select id="fuRequesterSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os solicitantes</option></select></label><label class="field"><span>Tempo desde criação da OF</span><select id="fuAgeSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os períodos</option></select></label></div><label class="embedded-filter-search"><span>Pesquisar no follow up</span><input id="fuSearch" type="search" placeholder="Item, SC, OF, fornecedor ou solicitante"></label></section><div class="fu-panel"><div class="fu-export-heading"><div><h3>OFs em acompanhamento</h3><div id="fuSummary" class="nt-muted"></div></div><div class="export-control"><label><span>Formato</span><select id="fuExportFormat" aria-label="Formato da exportação do follow up"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="fuExportButton" class="button button--export" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div><div class="fu-table-wrap"><table class="fu-table"><thead><tr><th>Dias OF</th><th>Faixa</th><th>Criação OF</th><th>Situação</th><th>Filial</th><th>Item</th><th>SC</th><th>OF</th><th>Status SC</th><th>Fornecedor</th><th>Entrega prevista</th><th>Solicitante</th><th>Qtd. OF</th><th>Entregue</th><th>Pendente</th><th>Valor pendente</th></tr></thead><tbody id="fuBody"></tbody></table></div></div>';
+        page.innerHTML = '<div class="nt-head"><div><span class="eyebrow">Gestão de fornecimento</span><h2>Follow up</h2><p class="nt-muted">SCs com compra confirmada, OF não fechada e entrega total ou parcialmente pendente.</p></div><span id="fuStatus" class="context-label">Aguardando dados…</span></div><div id="fuKpis" class="fu-grid"></div><section class="embedded-filter-panel fu-filter-panel" aria-label="Filtros de follow up"><header class="embedded-filter-panel__header"><div><span class="eyebrow">Filtros da análise</span><h3>Refinar follow up</h3></div><button id="fuClear" class="button button--ghost" type="button">Limpar filtros</button></header><div class="embedded-filter-grid embedded-filter-grid--five"><label class="field"><span>Situação da entrega</span><select id="fuDeliverySelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as situações</option></select></label><label class="field"><span>Filial</span><select id="fuBranchSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todas as filiais</option></select></label><label class="field"><span>Fornecedor</span><select id="fuSupplierSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os fornecedores</option></select></label><label class="field"><span>Solicitante da SC</span><select id="fuRequesterSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os solicitantes</option></select></label><label class="field"><span>Tempo desde criação da OF</span><select id="fuAgeSelect" multiple hidden data-filter-source="true" aria-hidden="true" tabindex="-1"><option value="">Todos os períodos</option></select></label></div><label class="embedded-filter-search"><span>Pesquisar no follow up</span><input id="fuSearch" type="search" placeholder="Item, SC, OF, fornecedor ou solicitante"></label></section><div class="fu-panel"><div class="fu-export-heading"><div><h3>OFs em acompanhamento</h3><div id="fuSummary" class="nt-muted"></div></div><div class="export-control"><label><span>Formato</span><select id="fuExportFormat" aria-label="Formato da exportação do follow up"><option value="excel">Excel</option><option value="pdf">PDF</option></select></label><button id="fuExportButton" class="button button--export" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Exportar</button></div></div><div class="fu-table-wrap"><table class="fu-table"><thead><tr><th>Dias OF</th><th>Faixa</th><th>Criação OF</th><th>Situação</th><th>Filial</th><th>Item</th><th>Saldo atual</th><th>SC</th><th>OF</th><th>Status SC</th><th>Fornecedor</th><th>Entrega prevista</th><th>Solicitante</th><th>Qtd. OF</th><th>Entregue</th><th>Pendente</th><th>Valor pendente</th></tr></thead><tbody id="fuBody"></tbody></table></div></div>';
         host.appendChild(page);
       }
       return true;
@@ -237,10 +305,21 @@
 
     function filterSelect(id, key, values, allLabel) {
       const element = document.getElementById(id);
-      if (!element) return;
+      if (!element) return false;
       const available = new Set(values.filter(Boolean));
-      for (const value of [...selected[key]]) if (!available.has(value)) selected[key].delete(value);
-      element.innerHTML = `<option value="">${escapeHtml(allLabel)}</option>${[...available].map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+      let invalidated = false;
+      for (const value of [...selected[key]]) {
+        if (!available.has(value)) {
+          selected[key].delete(value);
+          invalidated = true;
+        }
+      }
+      // Evita redesenhar as flags quando as opções não mudaram.
+      const signature = JSON.stringify([allLabel, values]);
+      if (filterOptionCache.get(id) !== signature) {
+        element.innerHTML = `<option value="">${escapeHtml(allLabel)}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+        filterOptionCache.set(id, signature);
+      }
       for (const option of element.options) option.selected = option.value ? selected[key].has(option.value) : !selected[key].size;
       if (!element.dataset.followUpBound) {
         element.dataset.followUpBound = "true";
@@ -252,6 +331,20 @@
         windowObject.__almoxCreateMultiFilter?.(element);
       }
       windowObject.__almoxSyncMultiFilter?.(element);
+      return invalidated;
+    }
+
+    function updateDynamicFilters(query, globalFilter) {
+      // Reavalia o universo de cada flag a partir dos demais filtros ativos.
+      // Repete apenas quando uma seleção se tornou inválida no novo recorte.
+      for (let pass = 0; pass < FOLLOW_UP_FILTERS.length + 1; pass++) {
+        let invalidated = false;
+        for (const { id, key, label } of FOLLOW_UP_FILTERS) {
+          const values = availableFollowUpValues(rows, selected, key, query, globalFilter);
+          invalidated = filterSelect(id, key, values, label) || invalidated;
+        }
+        if (!invalidated) break;
+      }
     }
 
     function refresh() {
@@ -265,28 +358,18 @@
       }
       rows = buildFollowUpRows(items);
       lastItems = items;
-      filterSelect("fuDeliverySelect", "delivery", [DELIVERY_TOTAL, DELIVERY_PARTIAL], "Todas as situações");
-      filterSelect("fuBranchSelect", "branch", [...new Set(rows.map((row) => row.branch))].sort(), "Todas as filiais");
-      filterSelect("fuSupplierSelect", "supplier", [...new Set(rows.map((row) => row.supplier))].sort(), "Todos os fornecedores");
-      filterSelect("fuRequesterSelect", "requester", [...new Set(rows.map((row) => row.requester))].sort(), "Todos os solicitantes");
-      filterSelect("fuAgeSelect", "age", ["0–15 dias", "16–30 dias", "31–45 dias", "46–60 dias", "61–75 dias", "76–90 dias", ">90 dias · tratativa"], "Todos os períodos");
+      filterOptionCache.clear();
       apply();
-      dirty = false;
-      if (status) status.textContent = `${filtered.length.toLocaleString("pt-BR")} registros no recorte atual`;
     }
 
     function apply() {
       dirty = false;
-      const query = normalize(document.getElementById("fuSearch")?.value);
-      filtered = rows.filter((row) => (
-        (!windowObject.__almoxGlobalRowFilter || windowObject.__almoxGlobalRowFilter(row))
-        && (!selected.delivery.size || selected.delivery.has(row.deliveryStatus))
-        && (!selected.branch.size || selected.branch.has(row.branch))
-        && (!selected.supplier.size || selected.supplier.has(row.supplier))
-        && (!selected.requester.size || selected.requester.has(row.requester))
-        && (!selected.age.size || selected.age.has(ageBucket(row.days)))
-        && (!query || normalize(`${row.item} ${row.sc} ${row.of} ${row.supplier} ${row.requester} ${row.scStatus} ${row.ofStatus}`).includes(query))
-      ));
+      const query = document.getElementById("fuSearch")?.value || "";
+      const globalFilter = windowObject.__almoxGlobalRowFilter;
+      updateDynamicFilters(query, globalFilter);
+      filtered = filterFollowUpRows(rows, selected, query, globalFilter);
+      const status = document.getElementById("fuStatus");
+      if (status) status.textContent = `${filtered.length.toLocaleString("pt-BR")} registros no recorte atual`;
       render();
     }
 
@@ -326,8 +409,8 @@
       document.getElementById("fuBody").innerHTML = [...filtered]
         .sort((left, right) => right.days - left.days)
         .slice(0, windowObject.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches ? 400 : 1200)
-        .map((row) => `<tr class="${row.days > 90 ? "fu-row--treatment" : ""}"><td class="fu-risk">${row.days}</td><td><strong>${escapeHtml(ageBucket(row.days))}</strong></td><td>${escapeHtml(row.ofCreated || "—")}</td><td><strong>${escapeHtml(row.deliveryStatus)}</strong></td><td>${escapeHtml(row.branch)}</td><td>${escapeHtml(row.item)}</td><td>${escapeHtml(row.sc || "—")}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(row.scStatus)}</td><td>${escapeHtml(row.supplier)}</td><td>${escapeHtml(row.delivery || "—")}</td><td>${escapeHtml(row.requester)}</td><td>${number.format(row.requested)}</td><td>${number.format(row.delivered)}</td><td>${number.format(row.quantity)}</td><td>${row.value ? money.format(row.value) : "—"}</td></tr>`)
-        .join("") || '<tr><td colspan="16">Nenhuma SC com compra confirmada e entrega pendente.</td></tr>';
+        .map((row) => `<tr class="${row.days > 90 ? "fu-row--treatment" : ""}"><td class="fu-risk">${row.days}</td><td><strong>${escapeHtml(ageBucket(row.days))}</strong></td><td>${escapeHtml(row.ofCreated || "—")}</td><td><strong>${escapeHtml(row.deliveryStatus)}</strong></td><td>${escapeHtml(row.branch)}</td><td>${escapeHtml(row.item)}</td><td>${row.stockBalance === null ? "—" : number.format(row.stockBalance)}</td><td>${escapeHtml(row.sc || "—")}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(row.scStatus)}</td><td>${escapeHtml(row.supplier)}</td><td>${escapeHtml(row.delivery || "—")}</td><td>${escapeHtml(row.requester)}</td><td>${number.format(row.requested)}</td><td>${number.format(row.delivered)}</td><td>${number.format(row.quantity)}</td><td>${row.value ? money.format(row.value) : "—"}</td></tr>`)
+        .join("") || '<tr><td colspan="17">Nenhuma SC com compra confirmada e entrega pendente.</td></tr>';
     }
 
     function open() {
@@ -408,6 +491,9 @@
     followUpDeliveryState,
     isFollowUpRecord,
     buildFollowUpRows,
+    followUpStockBalance,
+    filterFollowUpRows,
+    availableFollowUpValues,
     buildFollowUpExportReport,
     daysSince,
     formatDateBr,
