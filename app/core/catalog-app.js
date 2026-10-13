@@ -168,7 +168,7 @@ function cacheUi() {
     "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBranchBalances",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
-    "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedRisk", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
+    "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedRisk", "purchaseNeedAnalyze", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
     "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount",
     "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "purchaseNeedExportFormat", "exportPendingScButton", "pendingScExportFormat", "exportProcurementButton", "procurementExportFormat",
     "purchaseNeedModal", "purchaseModalClose",
@@ -2800,7 +2800,10 @@ function alexsandroPurchaseCriterion(position) {
   const quantity = Number(position.quantity);
   if (!Number.isFinite(maximum) || maximum <= 0
     || !Number.isFinite(quantity) || quantity >= maximum) return "";
-  return Number.isFinite(minimum) && quantity < minimum ? "Crítico" : "Risco de ruptura";
+  // Ruptura tem prioridade. Mínimo exato pertence a "Analisar", sem
+  // sobreposição e sem deixar posição sem classificação.
+  if (quantity <= 0) return "Ruptura";
+  return Number.isFinite(minimum) && quantity < minimum ? "Risco de ruptura" : "Analisar";
 }
 
 function isPurchaseNeedEligiblePosition(position, hasPurchaseCoverage) {
@@ -2818,13 +2821,15 @@ function purchaseNeedPriorityLabel(need) {
   if (need?.alexsandroCriterion) return need.alexsandroCriterion;
   if (need?.rupture) return "Ruptura";
   if (Number(need?.netSuggested) <= 0) return "Compra já coberta";
+  if (Number(need?.position?.quantity) > 0 && Number(need?.position?.quantity) < Number(need?.position?.minimum)) return "Risco de ruptura";
   return "Abaixo do mínimo com saldo";
 }
 
 function purchaseNeedCriterionLabel(need) {
   if (need?.cavacoAlert) return "Reposição especial por saldo de OF de Cavaco abaixo de 200";
-  if (need?.alexsandroCriterion === "Crítico") return "Crítico — saldo abaixo do mínimo; repor até o máximo";
-  if (need?.alexsandroCriterion === "Risco de ruptura") return "Risco de ruptura — saldo entre mínimo e máximo; repor até o máximo";
+  if (need?.alexsandroCriterion === "Ruptura") return "Ruptura — saldo zerado ou negativo; repor até o máximo";
+  if (need?.alexsandroCriterion === "Risco de ruptura") return "Risco de ruptura — saldo positivo abaixo do mínimo; repor até o máximo";
+  if (need?.alexsandroCriterion === "Analisar") return "Analisar — saldo no mínimo ou acima dele, mas abaixo do máximo; avaliar reposição";
   return need?.position?.maximum > 0 ? "Reposição até o máximo" : "Reposição até o mínimo";
 }
 
@@ -3322,13 +3327,14 @@ function collectPendingScRows() {
   return [...rowsByKey.values()];
 }
 
-// O indicador acompanha as mesmas linhas efetivamente visíveis na Necessidade
-// de Compra, inclusive a nova regra exclusiva dos locais de Alexsandro.
-// Ruptura é saldo <= 0; risco é mínimo <= saldo < máximo, em dias com
-// limites parametrizados. Alertas especiais de OF/Cavaco não entram na conta.
+// Indicadores sobre as posições já filtradas da Necessidade de Compra.
+// Ruptura: saldo <= 0; Risco: 0 < saldo < mínimo; Analisar: mínimo <= saldo < máximo.
+// O saldo exatamente igual ao mínimo entra em Analisar. Alertas especiais de
+// OF/Cavaco não representam posições e não são contabilizados nos indicadores.
 function summarizePurchaseNeedStockRisk(needs) {
   let ruptures = 0;
   let risk = 0;
+  let analyze = 0;
   for (const need of needs || []) {
     if (need?.cavacoAlert || !need?.position) continue;
     const quantity = Number(need.position.quantity);
@@ -3337,12 +3343,14 @@ function summarizePurchaseNeedStockRisk(needs) {
     if (!Number.isFinite(quantity)) continue;
     if (quantity <= 0) {
       ruptures += 1;
-    } else if (Number.isFinite(minimum) && Number.isFinite(maximum)
-      && maximum > 0 && quantity >= minimum && quantity < maximum) {
+    } else if (Number.isFinite(minimum) && minimum > 0 && quantity < minimum) {
       risk += 1;
+    } else if (Number.isFinite(minimum) && Number.isFinite(maximum)
+      && maximum > minimum && quantity >= minimum && quantity < maximum) {
+      analyze += 1;
     }
   }
-  return { ruptures, risk };
+  return { ruptures, risk, analyze };
 }
 
 function renderPurchaseNeeds() {
@@ -3365,12 +3373,13 @@ function renderPurchaseNeeds() {
 
   const itemCodes = new Set(visible.map(({ item }) => item.code));
   const withoutMaximum = visible.filter(({ position, cavacoAlert }) => !cavacoAlert && !(position.maximum > 0)).length;
-  const { ruptures, risk } = summarizePurchaseNeedStockRisk(visible);
+  const { ruptures, risk, analyze } = summarizePurchaseNeedStockRisk(visible);
   const estimatedValue = visible.reduce((sum, need) => sum + need.estimatedValue, 0);
   ui.purchaseNeedItems.textContent = integerFormatter.format(itemCodes.size);
   ui.purchaseNeedPositions.textContent = integerFormatter.format(visible.length);
   ui.purchaseNeedRuptures.textContent = integerFormatter.format(ruptures);
   ui.purchaseNeedRisk.textContent = integerFormatter.format(risk);
+  ui.purchaseNeedAnalyze.textContent = integerFormatter.format(analyze);
   ui.purchaseNeedEstimated.textContent = compactCurrencyFormatter.format(estimatedValue);
   ui.purchaseNeedEstimated.title = currencyFormatter.format(estimatedValue);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
@@ -3395,8 +3404,8 @@ function renderNextPurchaseNeedBatch() {
   ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map((need) => {
     const { item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, averageMonthlyConsumption, rupture, key, cavacoAlert, cavacoThreshold, cavacoOfBalance, cavacoSupplier } = need;
     const criterion = purchaseNeedPriorityLabel(need);
-    return `<button class="report-card report-card--need${(need.alexsandroCriterion === "Crítico" || rupture) && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : need.alexsandroCriterion === "Crítico" ? "status-pill--critical" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : need.alexsandroCriterion ? criterion : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+    return `<button class="report-card report-card--need${(need.alexsandroCriterion === "Risco de ruptura" || rupture) && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : (need.alexsandroCriterion === "Ruptura" || need.alexsandroCriterion === "Risco de ruptura") ? "status-pill--critical" : need.alexsandroCriterion === "Analisar" ? "status-pill--need" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : need.alexsandroCriterion ? criterion : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
@@ -3450,7 +3459,7 @@ function openPurchaseNeedModal(key) {
     <div><dt>Divisão</dt><dd>${escapeHtml(position.division || "—")}</dd></div>
     <div><dt>Responsável pela reposição</dt><dd>${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informado")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
-    <div><dt>Prioridade</dt><dd>${escapeHtml(need.alexsandroCriterion || (cavacoAlert ? "Especial — saldo da OF de Cavaco abaixo de 200" : rupture ? "Crítica — posição em ruptura" : "Atenção — saldo positivo abaixo do mínimo"))}</dd></div>
+    <div><dt>Prioridade</dt><dd>${escapeHtml(purchaseNeedPriorityLabel(need))}</dd></div>
     <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
     <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
     <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
@@ -3611,7 +3620,7 @@ function buildPurchaseNeedsExportReport(needs, generatedAt = new Date(), reviews
       purchaseNeedPriorityLabel(need),
       position.forecast, position.unitCost, position.stockValue, (item.suppliers || []).join(" | "),
       purchaseNeedCriterionLabel(need),
-      cavacoAlert ? "Alerta Cavaco" : need.alexsandroCriterion === "Risco de ruptura" ? "Abaixo do máximo; no mínimo ou acima" : "Estoque abaixo do mínimo",
+      cavacoAlert ? "Alerta Cavaco" : need.alexsandroCriterion === "Analisar" ? "Entre mínimo e máximo" : need.alexsandroCriterion === "Risco de ruptura" ? "Saldo positivo abaixo do mínimo" : need.alexsandroCriterion === "Ruptura" ? "Saldo zerado ou negativo" : "Estoque abaixo do mínimo",
       cavacoAlert ? ofCodes.join(" | ") : "", cavacoAlert ? cavacoThreshold : "", cavacoAlert ? cavacoOfBalance : "",
       (position.replenishmentResponsibles || []).join(" | "),
     ];
