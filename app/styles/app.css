@@ -6207,3 +6207,12 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid 
 @media (prefers-reduced-motion:reduce){
   .metric,.report-card-grid > *,.procurement-card,.fu-card,.page-panel[aria-busy="true"]{transition:none}
 }
+
+/* A navegação pode ser destacada do cabeçalho e receber z-index inline elevado.
+ * A tela de inicialização deve cobrir tudo até o aplicativo estar pronto. */
+.startup-screen { z-index: 2147483647 !important; }
+body.app-booting .app-nav-wrap {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
