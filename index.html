@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.7.37">
+<html lang="pt-BR" data-app-version="10.7.38">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
     <link rel="stylesheet" href="app/styles/app.css?v=10.7.35">
-    <script src="script.js?v=10.7.37" defer></script>
+    <script src="script.js?v=10.7.38" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -625,7 +625,7 @@
                 <span class="instruction-section__number">06</span>
                 <div><h3>Necessidade de compra</h3><p>Uma posição entra como pendência quando possui mínimo positivo, o saldo está abaixo do mínimo e a necessidade líquida final é maior que zero.</p>
                 <div class="instruction-formulas"><div><span>Meta de reposição</span><code>máximo cadastrado; se não existir, mínimo cadastrado</code></div><div><span>Necessidade bruta</span><code>máx(meta − saldo atual; 0)</code></div><div><span>Cobertura existente</span><code>saldo de OF aberta no CCU 1500 + SC ativa sem OF no CCU 1500, inclusive aguardando aprovação</code></div><div><span>Compra líquida</span><code>máx(necessidade bruta − cobertura existente; 0)</code></div><div><span>Valor estimado</span><code>compra líquida × preço de referência</code></div></div>
-                <ul><li>Se a compra líquida for zero, o item não é exibido como pendência.</li><li>OF fechada não cobre a necessidade; ela permanece disponível somente para históricos e cálculo de lead time.</li><li>SC ou OF fora do CCU 1500 não reduz a compra do almoxarifado.</li><li>Quando há OF + SC, os documentos precisam ser processos distintos; os números de ambos são mantidos.</li><li>Dentro da mesma SC e do mesmo item, sequências diferentes são somadas. Se a <strong>SC - Seq.</strong> se repetir, a linha é considerada apenas uma vez.</li><li>O preço de referência usa primeiro o custo do estoque e, se indisponível, o preço de compra mais recente.</li><li>Os cards mostram saldo, mínimo e máximo cadastrados, consumo médio mensal sem anomalias, cobertura, compra líquida, endereço e responsável. O mesmo consumo integra a exportação completa.</li></ul>
+                <ul><li>Se a compra líquida for zero, o item não é exibido como pendência.</li><li>OF fechada não cobre a necessidade; ela permanece disponível somente para históricos e cálculo de lead time.</li><li>SC ou OF fora do CCU 1500 não reduz a compra do almoxarifado.</li><li>Quando há OF + SC, os documentos precisam ser processos distintos; os números de ambos são mantidos.</li><li>Dentro da mesma SC e do mesmo item, sequências diferentes são somadas. Se a <strong>SC - Seq.</strong> se repetir, a linha é considerada apenas uma vez.</li><li>O preço de referência usa primeiro o custo do estoque e, se indisponível, o preço de compra mais recente.</li><li>Os cards mostram saldo, mínimo e máximo cadastrados, consumo médio mensal sem anomalias, cobertura, compra líquida, endereço e responsável. O mesmo consumo integra a exportação completa.</li><li>O Excel de reposição registra a <strong>data em que o relatório foi gerado</strong> e calcula uma <strong>data sugerida de entrega</strong> para cada item somando seu lead time total em dias corridos. A origem do lead time e as etapas SC → OF e OF → recebimento aparecem em colunas próprias; sem prazo conhecido, a sugestão permanece em branco.</li></ul>
                 <aside class="instruction-alert"><strong>Alerta especial de Cavaco</strong><span>As OFs abertas de Cavaco são consolidadas por fornecedor e filial. O card especial só é gerado quando a soma dos saldos fica abaixo de 200. Necessidade = 200 − saldo somado das OFs. O fornecedor e os números das OFs são exibidos.</span></aside></div>
               </article>
 
