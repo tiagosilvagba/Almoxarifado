@@ -1187,11 +1187,18 @@ function handleAnalyticShortcuts(event) {
   navigateToPage(tab.dataset.page, true);
 }
 
-function pageFromHash() {
-  const page = window.location.hash.replace(/^#/, "");
+function pageForHash(hash) {
+  const page = String(hash || "").replace(/^#/, "");
+  // O índice rápido usa âncoras #instr-... dentro da aba Instruções.
+  // Elas são seções, não páginas desconhecidas que devam abrir o Dashboard.
+  if (/^instr-[a-z0-9-]+$/i.test(page)) return "instrucoes";
   return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "follow-up", "itens-sem-giro", "comparativo-mensal", "instrucoes"].includes(page)
     ? page
     : "dashboard";
+}
+
+function pageFromHash() {
+  return pageForHash(window.location.hash);
 }
 
 const FILTERED_PAGE_IDS = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max"];
@@ -1297,6 +1304,15 @@ function navigateToPage(page, updateHash) {
   root.dataset.activePage = validPage;
   synchronizePageNavigation(validPage);
   const activePanel = ui.pagePanels.find((panel) => panel.dataset.pagePanel === validPage);
+
+  // Depois de tornar a aba visível, posiciona a seção solicitada pelo índice.
+  // Funciona também ao entrar por um link direto #instr-... ou voltar no histórico.
+  if (validPage === "instrucoes" && /^#instr-[a-z0-9-]+$/i.test(window.location.hash)) {
+    const section = document.getElementById(window.location.hash.slice(1));
+    if (section?.closest("#page-instrucoes")) {
+      window.requestAnimationFrame(() => section.scrollIntoView({ block: "start", behavior: "auto" }));
+    }
+  }
 
   if (previousPage === validPage && (!updateHash || window.location.hash === `#${validPage}`)) {
     if (state.items.length) scheduleMobilePageWarmup();
@@ -6546,5 +6562,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { pageForHash, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
