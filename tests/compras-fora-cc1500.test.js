@@ -93,3 +93,27 @@ test("auditoria cruza código e filial, não duplica recebimentos e não mistura
   assert.deepEqual(metrics, { codes: 1, orders: 3, stockQuantity: 11, stockValue: 490 });
   assert.equal(pageForHash("#compras-fora-cc1500"), "compras-fora-cc1500");
 });
+
+test("auditoria distingue Alm. Preparados e Abate Aves mesmo na filial 704", () => {
+  const item = {
+    code: "407919", name: "Engrenagem",
+    positions: [
+      { branchCode: "704", branchName: "ROLANDIA - ALM. PREPARADOS", quantity: 20, stockValue: 600, localCode: "299", partition: "JF" },
+      { branchCode: "704", branchName: "ROLANDIA - AB. AVES", quantity: 5, stockValue: 200, localCode: "300" },
+    ],
+    history: [{
+      sc: { code: "SC-8", allocationCostCenter: "2000", cancelled: "N" },
+      of: { code: "OF-9", deliveryBranchCode: "704", requestedQuantity: 10 },
+    }],
+  };
+  const rows = buildDirectPurchaseStockRows([item]);
+  assert.equal(rows.length, 2);
+  const prep = rows.find((row) => row.branch.includes("PREPARADOS"));
+  const aves = rows.find((row) => row.branch.includes("AB. AVES"));
+  assert.equal(prep.stockQuantity, 20);
+  assert.equal(aves.stockQuantity, 5);
+  assert.match(prep.addresses, /Rep\. JF/);
+  assert.deepEqual(summarizeDirectPurchaseStock(rows), {
+    codes: 1, orders: 2, stockQuantity: 25, stockValue: 800,
+  });
+});
