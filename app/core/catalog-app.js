@@ -2958,7 +2958,14 @@ async function buildPurchaseNeeds() {
   state.purchaseNeeds = needs.sort((a, b) => {
     if (a.cavacoAlert !== b.cavacoAlert) return a.cavacoAlert ? -1 : 1;
     if (a.cavacoAlert && b.cavacoAlert && a.cavacoOfBalance !== b.cavacoOfBalance) return a.cavacoOfBalance - b.cavacoOfBalance;
-    if (a.rupture !== b.rupture) return a.rupture ? -1 : 1;
+    // Priorização operacional sem alterar quantidades líquidas de compra:
+    // ruptura > risco > analisar > demais pendências.
+    const rank = (need) => {
+      const priority = purchaseNeedPriorityLabel(need);
+      return priority === "Ruptura" ? 0 : priority === "Risco de ruptura" ? 1 : priority === "Analisar" ? 2 : 3;
+    };
+    const priorityDiff = rank(a) - rank(b);
+    if (priorityDiff) return priorityDiff;
     if (a.estimatedValue !== b.estimatedValue) return b.estimatedValue - a.estimatedValue;
     const codeOrder = a.item.code.localeCompare(b.item.code, "pt-BR", { numeric: true, sensitivity: "base" });
     if (codeOrder) return codeOrder;
@@ -3404,8 +3411,8 @@ function renderNextPurchaseNeedBatch() {
   ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.visiblePurchaseNeeds.slice(start, end).map((need) => {
     const { item, position, netSuggested, coveredQuantity, coverageSource, ofCodes, scCodes, estimatedValue, averageMonthlyConsumption, rupture, key, cavacoAlert, cavacoThreshold, cavacoOfBalance, cavacoSupplier } = need;
     const criterion = purchaseNeedPriorityLabel(need);
-    return `<button class="report-card report-card--need${(need.alexsandroCriterion === "Risco de ruptura" || rupture) && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
-    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : (need.alexsandroCriterion === "Ruptura" || need.alexsandroCriterion === "Risco de ruptura") ? "status-pill--critical" : need.alexsandroCriterion === "Analisar" ? "status-pill--need" : netSuggested <= 0 ? "status-pill--success" : rupture ? "status-pill--critical" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : need.alexsandroCriterion ? criterion : netSuggested <= 0 ? "Compra já coberta" : rupture ? "Ruptura" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
+    return `<button class="report-card report-card--need${(criterion === "Risco de ruptura" || criterion === "Ruptura") && netSuggested > 0 ? " is-critical" : ""}${cavacoAlert ? " is-cavaco-alert" : ""}" type="button" data-purchase-need-key="${escapeHtml(key)}">
+    <span class="report-card__top"><span class="status-pill ${cavacoAlert ? "status-pill--cavaco" : (criterion === "Ruptura" || criterion === "Risco de ruptura") ? "status-pill--critical" : criterion === "Analisar" ? "status-pill--need" : netSuggested <= 0 ? "status-pill--success" : "status-pill--need"}">${cavacoAlert ? "Cavaco · OF abaixo de 200" : criterion === "Ruptura" || criterion === "Risco de ruptura" || criterion === "Analisar" ? criterion : netSuggested <= 0 ? "Compra já coberta" : `Comprar ${numberFormatter.format(netSuggested)}`}</span><span>${escapeHtml((item.units || []).join(", ") || "—")}</span></span>
     <strong class="report-card__title">${escapeHtml(item.name)}</strong>
     <span class="report-card__code">Código ${escapeHtml(item.code)}</span>
     <span class="item-card__address">${escapeHtml(`Repartição ${position.partition || "—"} · Prateleira ${position.shelf || "—"} · Divisão ${position.division || "—"}`)}</span>
