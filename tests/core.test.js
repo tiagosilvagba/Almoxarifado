@@ -9,6 +9,7 @@ const {
   isWarehouseSc,
   isClosedOf,
   inventoryWorker,
+  pageForHash,
 } = require("../app/core/catalog-app.js");
 const {
   DELIVERY_TOTAL,
@@ -209,4 +210,20 @@ test("flags do follow-up são dinâmicos e o fornecedor acompanha os outros filt
   selected.supplier.clear();
   assert.deepEqual(availableFollowUpValues(data, selected, "supplier", "200"), ["Fornecedor B"]);
   assert.deepEqual(availableFollowUpValues(data, selected, "supplier", "", (row) => row.branch === "705"), ["Fornecedor C"]);
+});
+
+test("índice rápido de Instruções não redireciona para Dashboard", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+  const anchors = [...html.matchAll(/<a href="#(instr-[a-z0-9-]+)">/g)].map((match) => match[1]);
+  assert.equal(anchors.length, 13, "as 13 entradas do índice precisam estar presentes");
+  for (const anchor of anchors) {
+    assert.match(html, new RegExp('id="' + anchor + '"'), "destino inexistente: " + anchor);
+    assert.equal(pageForHash("#" + anchor), "instrucoes", "aba incorreta para " + anchor);
+  }
+  assert.equal(pageForHash("#instrucoes"), "instrucoes");
+  assert.equal(pageForHash("#dashboard"), "dashboard");
+  assert.equal(pageForHash("#follow-up"), "follow-up");
+  assert.equal(pageForHash("#codigo-desconhecido"), "dashboard");
 });
