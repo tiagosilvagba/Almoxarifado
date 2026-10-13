@@ -6216,3 +6216,46 @@ body.app-booting .app-nav-wrap {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* v10.7.42 — Reposição: indicadores prioritários visíveis no primeiro
+ * viewport do celular; não esconder cartões nem criar rolagem horizontal. */
+#page-necessidade-compra .need-summary--replenishment > article {
+  min-width: 0;
+}
+#page-necessidade-compra .need-summary--replenishment > article small {
+  display: block;
+  margin-top: 5px;
+  font-size: .71rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  opacity: .78;
+}
+@media (max-width: 720px) {
+  #page-necessidade-compra .need-summary--replenishment {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100%;
+    min-width: 0;
+  }
+  #page-necessidade-compra .need-summary--replenishment > article {
+    display: block !important;
+    visibility: visible !important;
+    min-height: 88px !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+  #page-necessidade-compra .need-summary--replenishment > article strong {
+    margin-top: 7px;
+    font-size: clamp(1.25rem, 5vw, 1.65rem) !important;
+  }
+  #page-necessidade-compra .need-summary--replenishment > article span {
+    font-size: .76rem;
+    line-height: 1.25;
+  }
+  #page-necessidade-compra .need-summary--replenishment > article small {
+    font-size: .67rem;
+  }
+}
