@@ -316,11 +316,17 @@
       }
       // Evita redesenhar as flags quando as opções não mudaram.
       const signature = JSON.stringify([allLabel, values]);
-      if (filterOptionCache.get(id) !== signature) {
+      const selectionSignature = JSON.stringify([...selected[key]].sort());
+      const previous = filterOptionCache.get(id);
+      const optionChanged = !previous || previous.signature !== signature;
+      const selectionChanged = !previous || previous.selectionSignature !== selectionSignature;
+      if (optionChanged) {
         element.innerHTML = `<option value="">${escapeHtml(allLabel)}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
-        filterOptionCache.set(id, signature);
       }
-      for (const option of element.options) option.selected = option.value ? selected[key].has(option.value) : !selected[key].size;
+      if (optionChanged || selectionChanged) {
+        for (const option of element.options) option.selected = option.value ? selected[key].has(option.value) : !selected[key].size;
+      }
+      filterOptionCache.set(id, { signature, selectionSignature });
       if (!element.dataset.followUpBound) {
         element.dataset.followUpBound = "true";
         element.addEventListener("change", () => {
@@ -330,7 +336,7 @@
         });
         windowObject.__almoxCreateMultiFilter?.(element);
       }
-      windowObject.__almoxSyncMultiFilter?.(element);
+      if (optionChanged || selectionChanged) windowObject.__almoxSyncMultiFilter?.(element);
       return invalidated;
     }
 
