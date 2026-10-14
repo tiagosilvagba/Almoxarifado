@@ -9,6 +9,7 @@ on:
       - "tools/build_manifest.py"
       - "tools/build_catalog.mjs"
       - "tools/build_consumption.py"
+      - "tools/build_stock_history.mjs"
       - "consumo-mensal/**"
       - "03 - Consumo_*.csv"
       - "03 - Consumo_*.CSV"
@@ -21,7 +22,7 @@ permissions:
 
 concurrency:
   group: data-manifest
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   manifest:
@@ -42,15 +43,17 @@ jobs:
         run: python tools/build_consumption.py
       - name: Gerar base compactada
         run: node tools/build_catalog.mjs
+      - name: Registrar histórico permanente de estoque
+        run: node tools/build_stock_history.mjs
       - name: Publicar bases atualizadas
         run: |
-          if [ -z "$(git status --porcelain -- data-manifest.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json)" ]; then
+          if [ -z "$(git status --porcelain -- data-manifest.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json data/historico-estoque)" ]; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data-manifest.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json
-          git commit -m "Atualiza bases otimizadas"
+          git add data-manifest.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json data/historico-estoque
+          git commit -m "Atualiza bases otimizadas e guarda histórico permanente de estoque"
 
           for attempt in 1 2 3; do
             git fetch origin main
