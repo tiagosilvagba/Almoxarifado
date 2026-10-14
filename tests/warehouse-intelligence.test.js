@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments, pageForHash } = require("../app/core/catalog-app.js");
 const {
-  monthForOrder, analyzeWarehouseIntelligence, buildIntelligenceExport, planForFinding,
+  monthForOrder, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding,
 } = require("../app/modules/inteligencia-almoxarifado.js");
 
 const helpers = { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments };
@@ -150,4 +150,53 @@ test("nova aba está integrada ao bootstrap e aos estados de navegação", () =>
   assert.ok(html.includes('id="wiResults"'));
   assert.match(script, /MODULES\.intelligence/);
   assert.equal(pageForHash("#inteligencia-almoxarifado"), "inteligencia-almoxarifado");
+});
+
+test("análise em lotes produz os mesmos achados da análise original e cede controle ao navegador", async () => {
+  const inputs = Array.from({ length: 137 }, (_, index) => {
+    const code = String(10000 + index);
+    if (index % 4 === 0) return item(code, [position(0)]);
+    if (index % 4 === 1) return item(code, [position(20, 30)], [
+      record("OF" + code + "1", "01/10/2026", 10),
+      record("OF" + code + "2", "10/10/2026", 12),
+    ]);
+    if (index % 4 === 2) return item(code, [position(10, 20)], [
+      record("OF" + code, "12/10/2026", 50),
+    ]);
+    return item(code, [position(35, 40)]);
+  });
+  const direct = analyzeWarehouseIntelligence(inputs, helpers);
+  let yielded = 0;
+  const progress = [];
+  const batched = await analyzeWarehouseIntelligenceInBatches(inputs, helpers, {}, {
+    batchSize: 25,
+    yieldStep: async () => { yielded += 1; },
+    progress: (done, total) => progress.push([done, total]),
+  });
+  assert.deepEqual(batched, direct);
+  assert.equal(yielded, 5);
+  assert.deepEqual(progress.at(-1), [137, 137]);
+  assert.equal(progress[0][0], 25);
+});
+
+test("navegação pode cancelar análise parcial sem entregar resultados incompletos", async () => {
+  const inputs = Array.from({ length: 65 }, (_, i) => item(String(i + 5000), [position(0)]));
+  let scanned = 0;
+  const result = await analyzeWarehouseIntelligenceInBatches(inputs, helpers, {}, {
+    batchSize: 25,
+    progress: (done) => { scanned = done; },
+    cancelled: () => scanned >= 25,
+    yieldStep: async () => {},
+  });
+  assert.equal(result, null);
+  assert.equal(scanned, 25);
+});
+
+test("aba Inteligência tem ícone no mobile e não recria lista de itens para cada anomalia", () => {
+  const core = fs.readFileSync(path.join(__dirname, "../app/modules/inteligencia-almoxarifado.js"), "utf8");
+  const features = fs.readFileSync(path.join(__dirname, "../app/layers/features.js"), "utf8");
+  assert.match(features, /"inteligencia-almoxarifado": '<svg/);
+  assert.match(core, /visibleFilter\(f, context\)/);
+  assert.match(core, /itemCodes: new Set\(\(st\?\.filteredItems/);
+  assert.match(core, /analyzeWarehouseIntelligenceInBatches\(sourceItems/);
 });
