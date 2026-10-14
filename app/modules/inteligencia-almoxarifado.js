@@ -1,0 +1,414 @@
+"use strict";
+
+(function initWarehouseIntelligence(root, factory) {
+  const api = factory();
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  if (root?.document) api.install(root);
+})(typeof window !== "undefined" ? window : null, () => {
+  const PAGE = "inteligencia-almoxarifado";
+  const clean = (x) => String(x ?? "").trim();
+  const branch = (x) => clean(x).replace(/^0+(?=\d)/, "");
+  const code = (x) => clean(x).replace(/\./g, "");
+  const num = (x) => Number.isFinite(Number(x)) ? Number(x) : 0;
+  const escapeHtml = (s) => clean(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+  const dateBr = (value) => {
+    const text = clean(value);
+    const match = text.match(/^(\d{4})-(\d\d)-(\d\d)/);
+    return match ? match[3] + "/" + match[2] + "/" + match[1] : text;
+  };
+  function monthForOrder(value) {
+    const raw = clean(value);
+    const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    const br = raw.match(/^(\d{1,2})[/.\\-](\d{1,2})[/.\\-](\d{4})/);
+    let yyyy, mm, dd;
+    if (iso) [yyyy, mm, dd] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+    else if (br) [yyyy, mm, dd] = [Number(br[3]), Number(br[2]), Number(br[1])];
+    else if (/^\d{5}(?:\.\d+)?$/.test(raw)) {
+      const d = new Date(Date.UTC(1899, 11, 30) + Math.trunc(Number(raw)) * 86400000);
+      [yyyy, mm, dd] = [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
+    } else return "";
+    const valid = new Date(Date.UTC(yyyy, mm - 1, dd));
+    if (valid.getUTCFullYear() !== yyyy || valid.getUTCMonth() + 1 !== mm || valid.getUTCDate() !== dd) return "";
+    return String(yyyy).padStart(4, "0") + "-" + String(mm).padStart(2, "0");
+  }
+
+  function planForFinding(finding) {
+    const where = [
+      "Item " + finding.code,
+      finding.branchCode ? "filial " + finding.branchCode : "",
+      finding.localCode ? "local " + finding.localCode : "",
+    ].filter(Boolean).join(" · ");
+    const owner = finding.responsibles?.join(", ") || "Supervisor do Almoxarifado";
+    const cost = Number.isFinite(finding.estimatedImpact)
+      ? currency.format(finding.estimatedImpact) + " (estimativa; não representa perda contabilizada)"
+      : "A apurar com o comprador; sem valor confiável na base";
+    if (finding.type === "repeat") return {
+      what: "Revisar " + finding.count + " OFs distintas do mesmo item e competência; propor consolidação dos próximos pedidos.",
+      why: "Entender o motivo da compra fracionada e reduzir retrabalho, urgências e fretes sem necessidade.",
+      where,
+      when: "Priorizar na próxima revisão diária; propor conclusão em até 2 dias úteis.",
+      who: owner + " e comprador responsável",
+      how: "Conferir OFs " + finding.ofCodes.join(", ") + ", SCs relacionadas, consumo real, lead time e mínimo/máximo; negociar programação de entregas e registrar causa encontrada.",
+      howMuch: cost,
+    };
+    if (finding.type === "excess") return {
+      what: "Revisar volume emitido/em aberto e adequar a reposição ao máximo parametrizado.",
+      why: "Avaliar capital imobilizado e risco de excesso, considerando compromissos já existentes.",
+      where,
+      when: "Avaliar antes de emitir outra SC ou confirmar alteração na OF; sugerido até 1 dia útil.",
+      who: owner + " e comprador responsável",
+      how: "Validar máximo, saldo, consumo, OFs/SCs do CCU 1500 e pedidos do mês; checar sazonalidade/compra estratégica antes de negociar redução, reagendamento ou cancelamento.",
+      howMuch: cost,
+    };
+    return {
+      what: "Regularizar item com saldo zerado/negativo sem reposição válida identificada.",
+      why: "Evitar parada operacional e restabelecer a disponibilidade de material essencial.",
+      where,
+      when: "Verificar imediatamente na rotina de hoje; definir prazo de atendimento conforme criticidade operacional.",
+      who: owner + " e comprador local / manutenção solicitante",
+      how: "Conferir estoque físico e endereços, validar requisições, buscar transferência entre locais/filiais e criar ou agilizar SC/OF para CCU 1500 conforme aprovação.",
+      howMuch: cost,
+    };
+  }
+
+  function analyzeWarehouseIntelligence(items, helpers = {}, options = {}) {
+    const findRepeated = helpers.buildRepeatedPurchasesByMonth;
+    const commitmentsFor = helpers.getItemPurchaseCommitments;
+    if (typeof findRepeated !== "function" || typeof commitmentsFor !== "function") {
+      throw new Error("Regras centrais de compras ainda indisponíveis.");
+    }
+    const findings = [];
+    const factor = Number.isFinite(options.excessFactor) && options.excessFactor > 1
+      ? options.excessFactor : 1.2;
+    const repeated = findRepeated(items);
+    for (const group of repeated) {
+      const count = group.orders.length;
+      findings.push({
+        key: "repeat::" + group.key,
+        type: "repeat", severity: count >= 3 ? "alta" : "media",
+        code: group.code, name: group.name, branchCode: branch(group.branchCode),
+        localCode: "", month: group.month, count,
+        title: count + " OFs emitidas no mesmo mês",
+        evidence: group.orders.map((x) => x.code + " (" + x.date + ")").join(" · "),
+        ofCodes: group.orders.map((x) => x.code),
+        quantity: group.totalQuantity,
+        estimatedImpact: group.knownAmountCount === count ? group.knownAmount : null,
+        responsibles: [],
+        detail: "OFs distintas; recebimentos repetidos não são novas compras.",
+      });
+    }
+    for (const item of items || []) {
+      if (!item?.code || item.flags?.inactiveOnly) continue;
+      const byBranch = new Map();
+      const commitments = commitmentsFor(item);
+      for (const pos of item.positions || []) {
+        const b = branch(pos.branchCode);
+        if (!b) continue;
+        if (!byBranch.has(b)) byBranch.set(b, { positions: [], max: 0, stock: 0, names: new Set() });
+        const group = byBranch.get(b);
+        group.positions.push(pos);
+        if (Number(pos.maximum) > 0) group.max += Number(pos.maximum);
+        group.stock += num(pos.quantity);
+        for (const person of pos.replenishmentResponsibles || []) if (person) group.names.add(person);
+      }
+      const ordersByBranchMonth = new Map();
+      const seen = new Map();
+      for (const record of item.history || []) {
+        const of = record.of;
+        const sc = record.sc;
+        if (!of?.code || !/^0*1500(?:[.,]0+)?$/.test(clean(sc?.allocationCostCenter))
+          || /cancelad|anulad/i.test(clean(of.status) + " " + clean(sc?.status))
+          || /^(?:s|sim|1|true|yes)$/i.test(clean(sc?.cancelled))
+          || /^(?:s|sim|1|true|yes)$/i.test(clean(of.cancelled))) continue;
+        const b = branch(sc?.destinationBranch || of.deliveryBranchCode || sc?.branchCode || record.branchCode);
+        const month = monthForOrder(of.date);
+        if (!b || !month || !byBranch.has(b)) continue;
+        const k = b + "::" + month + "::" + clean(of.code);
+        // A mesma OF pode repetir-se em linhas de recebimento. Usar a maior
+        // quantidade declarada, sem multiplicar o pedido por nota fiscal.
+        const qty = of.requestedQuantity == null || of.requestedQuantity === "" ? null : Number(of.requestedQuantity);
+        if (!(Number.isFinite(qty) && qty >= 0)) continue;
+        const old = seen.get(k);
+        if (old === undefined || qty > old) seen.set(k, qty);
+      }
+      for (const [k, qty] of seen) {
+        const [b, month] = k.split("::");
+        const bk = b + "::" + month;
+        if (!ordersByBranchMonth.has(bk)) ordersByBranchMonth.set(bk, { branchCode: b, month, quantity: 0 });
+        ordersByBranchMonth.get(bk).quantity += qty;
+      }
+      for (const [b, bucket] of byBranch) {
+        const pool = commitments.get(b);
+        const openOf = (pool?.ofs || []).reduce((sum, row) => sum + Math.max(0, num(row.remaining)), 0);
+        const openSc = (pool?.scs || []).reduce((sum, row) => sum + Math.max(0, num(row.remaining)), 0);
+        const incoming = openOf + openSc;
+        const ownerList = [...bucket.names];
+        const configured = bucket.positions.filter((p) => num(p.maximum) > 0);
+        const configuredStock = configured.reduce((sum, p) => sum + num(p.quantity), 0);
+        const max = bucket.max;
+        const expected = configuredStock + incoming;
+        const latestMonthly = [...ordersByBranchMonth.values()]
+          .filter((entry) => entry.branchCode === b)
+          .sort((a, c) => c.month.localeCompare(a.month))[0];
+        const exceedsInbound = max > 0 && incoming > 0 && expected > max * factor;
+        const exceedsIssued = max > 0 && latestMonthly && latestMonthly.quantity > max * factor;
+        if (exceedsInbound || exceedsIssued) {
+          const monthlyExcess = exceedsIssued ? Math.max(0, latestMonthly.quantity - max) : 0;
+          const projectedExcess = exceedsInbound ? Math.max(0, expected - max) : 0;
+          const overshoot = Math.max(monthlyExcess, projectedExcess);
+          const referencePrice = configured.find((p) => num(p.unitCost) > 0)?.unitCost || 0;
+          const reasons = [];
+          if (exceedsInbound) reasons.push("Saldo " + number.format(configuredStock)
+            + " + pendências OF/SC " + number.format(incoming)
+            + " = " + number.format(expected) + " frente ao máximo " + number.format(max));
+          if (exceedsIssued) reasons.push("OFs do mês " + latestMonthly.month
+            + " somam " + number.format(latestMonthly.quantity) + " frente ao máximo " + number.format(max));
+          findings.push({
+            key: "excess::" + code(item.code) + "::" + b,
+            type: "excess", severity: overshoot > max ? "alta" : "media",
+            code: code(item.code), name: item.name || item.detailedName || code(item.code),
+            branchCode: b, localCode: "", month: latestMonthly?.month || "",
+            count: 1, title: "Compra potencialmente acima do máximo",
+            evidence: reasons.join(" · "), ofCodes: (pool?.ofs || []).map((x) => x.code),
+            quantity: overshoot, referenceMaximum: max,
+            estimatedImpact: referencePrice > 0 ? overshoot * referencePrice : null,
+            responsibles: ownerList,
+            detail: "Limiar de alerta: acima de " + Math.round((factor - 1) * 100)
+              + "% do máximo; validar compras estratégicas e o rateio entre locais antes de agir.",
+          });
+        }
+        // Não afirmar "sem reposição" se há OF/SC em curso na mesma filial.
+        if (incoming > 0) continue;
+        for (const pos of bucket.positions) {
+          if (!(num(pos.quantity) <= 0 && (num(pos.minimum) > 0 || num(pos.maximum) > 0))) continue;
+          const suggested = Math.max(num(pos.maximum) || num(pos.minimum), 0);
+          const price = num(pos.unitCost);
+          findings.push({
+            key: "zero::" + code(item.code) + "::" + b + "::" + clean(pos.localCode)
+              + "::" + clean(pos.partition),
+            type: "zero", severity: "critica",
+            code: code(item.code), name: item.name || item.detailedName || code(item.code),
+            branchCode: b, localCode: clean(pos.localCode), month: "",
+            count: 1, title: "Saldo zerado sem reposição identificada",
+            evidence: "Saldo " + number.format(pos.quantity) + " · mínimo " + number.format(pos.minimum)
+              + " · máximo " + number.format(pos.maximum)
+              + " · OF/SC em aberto do CCU 1500: 0",
+            ofCodes: [], quantity: suggested, estimatedImpact: price > 0 ? suggested * price : null,
+            responsibles: (pos.replenishmentResponsibles || []).filter(Boolean),
+            detail: "Revisar também pedidos sem CCU identificado e transferências: ausência de registro válido não prova ausência de ação fora do sistema.",
+          });
+        }
+      }
+    }
+    const rank = { critica: 0, alta: 1, media: 2 };
+    findings.sort((a, b) => rank[a.severity] - rank[b.severity]
+      || b.month.localeCompare(a.month) || a.code.localeCompare(b.code, "pt-BR", { numeric: true }));
+    for (const finding of findings) finding.plan = planForFinding(finding);
+    const summary = {
+      repeated: findings.filter((row) => row.type === "repeat").length,
+      excess: findings.filter((row) => row.type === "excess").length,
+      zero: findings.filter((row) => row.type === "zero").length,
+      critical: findings.filter((row) => row.severity === "critica").length,
+      total: findings.length,
+    };
+    return { findings, summary, analyzedItems: (items || []).length };
+  }
+
+  function buildIntelligenceExport(rows) {
+    const headers = [
+      "Anomalia", "Prioridade", "Código", "Item", "Filial", "Local", "Mês OF",
+      "Evidência", "OFs", "Quantidade envolvida", "Impacto estimado (R$)",
+      "5W2H - O quê", "5W2H - Por quê", "5W2H - Onde", "5W2H - Quando",
+      "5W2H - Quem", "5W2H - Como", "5W2H - Quanto", "Observações",
+    ];
+    return {
+      title: "Inteligência do Almoxarifado - Plano 5W2H",
+      filename: "inteligencia-almoxarifado-5w2h.xls",
+      headers,
+      rows: (rows || []).map((f) => [
+        f.type === "repeat" ? "OFs repetidas no mês" : f.type === "excess" ? "Compras acima do máximo" : "Zerado sem reposição",
+        f.severity, f.code, f.name, f.branchCode, f.localCode, f.month, f.evidence,
+        f.ofCodes.join(" | "), f.quantity, f.estimatedImpact,
+        f.plan.what, f.plan.why, f.plan.where, f.plan.when,
+        f.plan.who, f.plan.how, f.plan.howMuch, f.detail,
+      ]),
+      numericColumns: new Set([9, 10]), currencyColumns: new Set([10]),
+      pdfIdentityColumns: [2, 3, 4],
+      filterSummary: "Anomalias sugeridas por regras: OFs distintas por mês, limite 20% acima do máximo e saldo <= 0 sem cobertura de OF/SC identificada no CCU 1500. Plano 5W2H proposto para validação, sem execução automática.",
+    };
+  }
+
+  function install(win) {
+    if (win.__almoxIntelligenceInstalled) return;
+    win.__almoxIntelligenceInstalled = true;
+    const { document } = win;
+    let lastItems = null;
+    let engineResult = null;
+    let visibleRows = [];
+    let batch = 45;
+    let dataRevision = -1;
+    let dirty = true;
+    const esc = escapeHtml;
+    const text = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    const helpers = () => ({
+      buildRepeatedPurchasesByMonth: typeof buildRepeatedPurchasesByMonth === "function" ? buildRepeatedPurchasesByMonth : null,
+      getItemPurchaseCommitments: typeof getItemPurchaseCommitments === "function" ? getItemPurchaseCommitments : null,
+    });
+    const currentState = () => typeof state !== "undefined" ? state : win.__almoxState;
+    const pane = () => document.getElementById("page-" + PAGE);
+    const isCurrent = () => win.location.hash === "#" + PAGE;
+
+    function selected(id) { return document.getElementById(id)?.value || ""; }
+    function visibleFilter(f) {
+      const st = currentState();
+      const itemCodes = new Set((st?.filteredItems || st?.items || []).map((item) => code(item.code)));
+      if (!itemCodes.has(f.code)) return false;
+      if (typeof win.__almoxGlobalRowFilter === "function" && !win.__almoxGlobalRowFilter({
+        code: f.code, branchCode: f.branchCode, localCode: f.localCode,
+      })) return false;
+      const type = selected("wiType");
+      const severity = selected("wiSeverity");
+      const branchChoice = selected("wiBranch");
+      const month = selected("wiMonth");
+      const query = selected("wiSearch").toLocaleLowerCase("pt-BR").trim();
+      if (type && f.type !== type) return false;
+      if (severity && f.severity !== severity) return false;
+      if (branchChoice && f.branchCode !== branchChoice) return false;
+      if (month && f.month !== month) return false;
+      if (query && ![f.code, f.name, f.branchCode, f.localCode, f.evidence, f.ofCodes.join(" "), f.title]
+        .join(" ").toLocaleLowerCase("pt-BR").includes(query)) return false;
+      return true;
+    }
+    function options(id, values, all) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const previous = el.value;
+      el.replaceChildren(new Option(all, ""), ...values.map((value) =>
+        new Option(value.replace(/^(\d{4})-(\d{2})$/, "$2/$1"), value)));
+      if (values.includes(previous)) el.value = previous;
+    }
+    function cards(rows) {
+      const summary = {
+        repeat: rows.filter((x) => x.type === "repeat").length,
+        excess: rows.filter((x) => x.type === "excess").length,
+        zero: rows.filter((x) => x.type === "zero").length,
+      };
+      const el = document.getElementById("wiKpis");
+      if (!el) return;
+      el.innerHTML = [
+        ["Compras repetidas", summary.repeat, "repeat"],
+        ["Acima do máximo", summary.excess, "excess"],
+        ["Zerados sem reposição", summary.zero, "zero"],
+        ["Anomalias no recorte", rows.length, "all"],
+      ].map(([label, value, type]) =>
+        '<article class="wi-kpi"><span>' + esc(label) + '</span><strong>' + number.format(value)
+        + '</strong><small>' + (type === "all" ? "Com plano 5W2H" : "Clique no filtro de tipo para consultar")
+        + '</small></article>').join("");
+    }
+    const typeTitle = (type) => type === "repeat" ? "Compra repetida no mês"
+      : type === "excess" ? "Compra acima do máximo" : "Estoque zerado sem reposição";
+    function card(f) {
+      const p = f.plan;
+      const cells = [
+        ["O quê?", p.what], ["Por quê?", p.why], ["Onde?", p.where],
+        ["Quando?", p.when], ["Quem?", p.who], ["Como?", p.how], ["Quanto?", p.howMuch],
+      ];
+      return '<article class="wi-issue wi-issue--' + esc(f.severity) + '">'
+        + '<div class="wi-issue__top"><span class="wi-priority">' + esc(f.severity.toUpperCase())
+        + '</span><span class="wi-issue__type">' + esc(typeTitle(f.type)) + '</span></div>'
+        + '<strong class="wi-issue__name">' + esc(f.name) + '</strong>'
+        + '<span class="wi-issue__codes">Item ' + esc(f.code) + ' · Filial ' + esc(f.branchCode)
+        + (f.localCode ? ' · Local ' + esc(f.localCode) : "")
+        + (f.month ? ' · Mês ' + esc(f.month.slice(5) + "/" + f.month.slice(0, 4)) : "")
+        + '</span><p class="wi-issue__evidence">' + esc(f.evidence) + '</p>'
+        + '<div class="wi-issue__stats"><span>Qtde. envolvida: <strong>' + number.format(f.quantity)
+        + '</strong></span><span>Impacto potencial: <strong>' + (f.estimatedImpact == null ? "A apurar" : currency.format(f.estimatedImpact))
+        + '</strong></span></div>'
+        + '<details><summary>Ver plano de ação 5W2H</summary><dl class="wi-plan">'
+        + cells.map(([label, v]) => '<div><dt>' + esc(label) + '</dt><dd>' + esc(v) + '</dd></div>').join("")
+        + '</dl><p class="wi-issue__note">' + esc(f.detail) + '</p></details></article>';
+    }
+    function renderBatch() {
+      const host = document.getElementById("wiResults");
+      if (!host) return;
+      const until = Math.min(batch, visibleRows.length);
+      host.innerHTML = visibleRows.slice(0, until).map(card).join("")
+        || '<p class="wi-empty">Nenhuma anomalia corresponde aos filtros atuais. Isso não dispensa a verificação operacional do estoque.</p>';
+      const more = document.getElementById("wiMore");
+      if (more) more.hidden = until >= visibleRows.length;
+      text("wiCount", "Exibindo " + number.format(until) + " de " + number.format(visibleRows.length) + " ocorrências");
+    }
+    function applyFilters() {
+      if (!engineResult) return;
+      visibleRows = engineResult.findings.filter(visibleFilter);
+      cards(visibleRows);
+      batch = 45;
+      renderBatch();
+      text("wiStatus", number.format(visibleRows.length) + " anomalias no recorte · " + number.format(engineResult.analyzedItems) + " itens analisados");
+      document.getElementById("wiExport").disabled = !visibleRows.length;
+      dirty = false;
+    }
+    function refresh(force = false) {
+      const st = currentState();
+      if (!st?.items?.length) {
+        text("wiStatus", "Aguardando saldo, compras e consumo carregarem…");
+        if (isCurrent()) win.setTimeout(() => refresh(), 800);
+        return;
+      }
+      if (force || st.items !== lastItems || !engineResult) {
+        text("wiStatus", "Analisando OFs, parâmetros e cobertura de reposição…");
+        try {
+          engineResult = analyzeWarehouseIntelligence(st.items, helpers());
+          lastItems = st.items;
+        } catch (error) {
+          text("wiStatus", "Falha na análise: " + error.message);
+          return;
+        }
+        const f = engineResult.findings;
+        options("wiBranch", [...new Set(f.map((x) => x.branchCode))].filter(Boolean).sort(), "Todas as filiais");
+        options("wiMonth", [...new Set(f.map((x) => x.month))].filter(Boolean).sort().reverse(), "Todas as competências");
+      }
+      dataRevision = st.filterRevision;
+      applyFilters();
+    }
+    function open() {
+      if (!pane()) return;
+      // Os controles e a navegação base são responsáveis por ativar a página.
+      if (isCurrent()) win.requestAnimationFrame(() => refresh());
+    }
+    function init() {
+      if (!pane()) { win.setTimeout(init, 200); return; }
+      document.querySelector('.app-nav__tab[data-page="' + PAGE + '"]')
+        ?.addEventListener("click", () => win.setTimeout(open, 40));
+      win.addEventListener("hashchange", open);
+      win.addEventListener("almox-global-filters-applied", () => {
+        if (isCurrent()) refresh();
+        else dirty = true;
+      });
+      ["wiType", "wiSeverity", "wiBranch", "wiMonth", "wiSearch"].forEach((id) =>
+        document.getElementById(id)?.addEventListener(id === "wiSearch" ? "input" : "change", applyFilters));
+      document.getElementById("wiClear")?.addEventListener("click", () => {
+        ["wiType", "wiSeverity", "wiBranch", "wiMonth", "wiSearch"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
+        applyFilters();
+      });
+      document.getElementById("wiMore")?.addEventListener("click", () => {
+        batch += 45;
+        renderBatch();
+      });
+      document.getElementById("wiExport")?.addEventListener("click", () => {
+        if (!visibleRows.length || typeof exportReport !== "function") return;
+        exportReport("excel", buildIntelligenceExport(visibleRows));
+      });
+      if (isCurrent()) open();
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+    else init();
+  }
+  return { monthForOrder, planForFinding, analyzeWarehouseIntelligence, buildIntelligenceExport, install };
+});
