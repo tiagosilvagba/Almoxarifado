@@ -78,6 +78,13 @@ test("gerador persiste versões separadas e não cria duplicatas sem mudança de
     const later = JSON.parse(zlib.gunzipSync(await fs.readFile(path.join(root, second.entry.path))).toString());
     assert.equal(earlier.rows[0][0], "243370");
     assert.equal(compareSnapshots(earlier, later)[0].deltaQty, 8);
+    // Reverter a uma assinatura já vista NÃO apaga a nova data da captura.
+    await writeCatalog(10);
+    await manifest("hash1");
+    const restored = await buildStockHistory({ root, at: "2026-12-04T16:00:00.000Z" });
+    assert.equal(restored.created, true);
+    const restoredIndex = JSON.parse(await fs.readFile(path.join(root, "data", "historico-estoque", "index.json")));
+    assert.equal(restoredIndex.entries.length, 3);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
