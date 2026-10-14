@@ -3480,7 +3480,7 @@ function purchaseNeedMaterialType(need) {
     const label = normalizeSearch(raw || "").toUpperCase();
     const matches = PURCHASE_MATERIAL_FAMILIES.map(([name, pattern], i) => ({ name, index: label.search(pattern), i }))
       .filter((row) => row.index >= 0).sort((a,b) => a.index-b.index || a.i-b.i);
-    if (matches.length) return { name: matches[0].name, source, details: categories };
+    if (matches.length) return { name: matches[0].name, source, details: categories.slice(1) };
   }
   return { name: "Outros materiais / classificar", source: "Família não identificada", details: categories };
 }
