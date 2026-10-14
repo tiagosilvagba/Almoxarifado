@@ -3542,8 +3542,10 @@ function buildRepeatedPurchasesByMonth(items) {
       });
       const group = candidates.get(key);
       const ofCode = String(of.code).trim();
-      const quantity = Number(of.requestedQuantity);
-      const unitValue = Number(of.unitValue);
+      const quantity = of.requestedQuantity === null || of.requestedQuantity === undefined || of.requestedQuantity === ""
+        ? NaN : Number(of.requestedQuantity);
+      const unitValue = of.unitValue === null || of.unitValue === undefined || of.unitValue === ""
+        ? NaN : Number(of.unitValue);
       const amount = Number.isFinite(quantity) && quantity > 0 && Number.isFinite(unitValue) && unitValue > 0
         ? quantity * unitValue : null;
       const order = {
@@ -4125,7 +4127,7 @@ function buildMaterialGroupedPurchaseExport(needs, generatedAt = new Date(), rev
   report.numericColumns = shiftIndexes(report.numericColumns);
   report.currencyColumns = shiftIndexes(report.currencyColumns);
   report.dateColumns = shiftIndexes(report.dateColumns);
-  report.filterSummary += " · Agrupado pelo grupo/categoria principal do cadastro; cada posição aparece somente uma vez. Somente compra líquida positiva; alertas de Cavaco e posições já cobertas ficam na visão Por item.";
+  report.filterSummary += " · Famílias identificadas por nome/descrição do material; cadastro apenas como apoio. Cada posição aparece uma única vez. Somente compra líquida positiva; alertas de Cavaco e posições já cobertas ficam na visão Por item.";
   return report;
 }
 
