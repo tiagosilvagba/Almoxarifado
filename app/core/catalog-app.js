@@ -3471,34 +3471,42 @@ function groupPurchaseNeedsByMaterialType(needs) {
 }
 
 function setPurchaseNeedView(view) {
-  if (!["item", "supplier"].includes(view) || state.purchaseNeedView === view) return;
+  if (!["item", "supplier", "material"].includes(view) || state.purchaseNeedView === view) return;
   state.purchaseNeedView = view;
   renderPurchaseNeedView();
 }
 
 function renderPurchaseNeedView() {
-  const grouped = state.purchaseNeedView === "supplier";
+  const grouped = state.purchaseNeedView !== "item";
+  const material = state.purchaseNeedView === "material";
   ui.purchaseNeedViewItem.setAttribute("aria-pressed", String(!grouped));
-  ui.purchaseNeedViewSupplier.setAttribute("aria-pressed", String(grouped));
+  ui.purchaseNeedViewSupplier.setAttribute("aria-pressed", String(state.purchaseNeedView === "supplier"));
+  ui.purchaseNeedViewMaterial.setAttribute("aria-pressed", String(material));
   ui.purchaseNeedViewItem.classList.toggle("is-active", !grouped);
-  ui.purchaseNeedViewSupplier.classList.toggle("is-active", grouped);
+  ui.purchaseNeedViewSupplier.classList.toggle("is-active", state.purchaseNeedView === "supplier");
+  ui.purchaseNeedViewMaterial.classList.toggle("is-active", material);
   const visible = state.visiblePurchaseNeeds;
-  state.purchaseSupplierGroups = grouped ? groupPurchaseNeedsBySupplier(visible) : [];
+  state.purchaseSupplierGroups = state.purchaseNeedView === "supplier" ? groupPurchaseNeedsBySupplier(visible) : [];
+  state.purchaseMaterialGroups = material ? groupPurchaseNeedsByMaterialType(visible) : [];
+  const groups = material ? state.purchaseMaterialGroups : state.purchaseSupplierGroups;
   const excludedCovered = visible.filter((need) => !need.cavacoAlert && !(need.netSuggested > 0)).length;
   const excludedCavaco = visible.filter((need) => need.cavacoAlert).length;
   ui.purchaseNeedSupplierNote.classList.toggle("is-hidden", !grouped);
   if (grouped) {
     ui.purchaseNeedSupplierNote.textContent =
-      "Sugestões de fornecedor com base no histórico; confirmar antes de criar a SC. Apenas compras líquidas positivas. "
+      (material
+        ? "Tipos de material agrupados pela categoria principal do cadastro. Uma sugestão por posição."
+        : "Sugestões de fornecedor com base no histórico; confirmar antes de criar a SC.")
+      + " Apenas compras líquidas positivas. "
       + [excludedCovered ? `${excludedCovered} posição(ões) já coberta(s)` : "", excludedCavaco ? `${excludedCavaco} alerta(s) especial(is) de Cavaco` : ""]
         .filter(Boolean).join(" e ").concat(excludedCovered || excludedCavaco ? " permanecem na visão Por item." : "");
   }
   ui.purchaseNeedResultCount.textContent = grouped
-    ? `${integerFormatter.format(state.purchaseSupplierGroups.length)} grupo(s) de fornecedor · ${integerFormatter.format(state.purchaseSupplierGroups.reduce((sum, group) => sum + group.entries.length, 0))} sugestões líquidas`
+    ? `${integerFormatter.format(groups.length)} ${material ? "tipo(s) de material" : "grupo(s) de fornecedor"} · ${integerFormatter.format(groups.reduce((sum, group) => sum + group.entries.length, 0))} sugestões líquidas`
     : `${pluralize(visible.length, "pendência", "pendências")} exibida${visible.length === 1 ? "" : "s"}`;
   state.purchaseNeedVisible = 0;
   ui.purchaseNeedTableWrap.replaceChildren();
-  const count = grouped ? state.purchaseSupplierGroups.length : visible.length;
+  const count = grouped ? groups.length : visible.length;
   if (!count) {
     ui.purchaseNeedTableWrap.innerHTML = grouped
       ? '<div class="table-empty">Nenhuma sugestão líquida para agrupar. Veja os itens já cobertos e os alertas na visão Por item.</div>'
@@ -3547,6 +3555,43 @@ function renderNextPurchaseSupplierBatch() {
   ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.purchaseSupplierGroups.length);
 }
 
+function renderNextPurchaseMaterialBatch() {
+  const batch = 12;
+  const start = state.purchaseNeedVisible;
+  const end = Math.min(start + batch, state.purchaseMaterialGroups.length);
+  if (start >= end) return;
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.purchaseMaterialGroups.slice(start, end).map((group) => `
+    <article class="supplier-need-group material-need-group">
+      <details>
+        <summary class="supplier-need-group__heading">
+          <span class="supplier-need-group__heading-main"><strong>${escapeHtml(group.materialType)}</strong>
+            <small>${integerFormatter.format(group.itemCodes.size)} itens · ${integerFormatter.format(group.entries.length)} posições</small>
+            <small>${escapeHtml([...group.sources].join(" · "))}</small>
+          </span>
+          <span class="supplier-need-group__heading-stats"><strong>${currencyFormatter.format(group.estimatedValue)}</strong>
+            <small>${group.ruptures ? `${group.ruptures} rupturas · ` : ""}${group.risks ? `${group.risks} em risco · ` : ""}Abrir itens <span aria-hidden="true">▾</span></small>
+          </span>
+        </summary>
+        <div class="supplier-need-group__items">
+        ${group.entries.map(({ need, classification }) => `
+          <button type="button" class="supplier-need-row" data-purchase-need-key="${escapeHtml(need.key)}">
+            <span class="supplier-need-row__identity"><strong>${escapeHtml(need.item.code)} · ${escapeHtml(need.item.name)}</strong>
+              <small>Filial ${escapeHtml(need.position.branchCode)} · Local ${escapeHtml(need.position.localCode)} · ${escapeHtml(purchaseNeedPriorityLabel(need))}</small>
+              <small>${escapeHtml(classification.details.length ? `Subgrupo/classe: ${classification.details.join(" · ")}` : classification.source)}</small>
+            </span>
+            <span class="supplier-need-row__numbers">
+              <strong>${numberFormatter.format(need.netSuggested)} ${escapeHtml((need.item.units || []).join(", ") || "un.")}</strong>
+              <small>${currencyFormatter.format(need.estimatedValue)}</small>
+            </span>
+          </button>`).join("")}
+        </div>
+      </details>
+    </article>`).join(""));
+  state.purchaseNeedVisible = end;
+  ui.purchaseNeedVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.purchaseMaterialGroups.length)} tipos de material`;
+  ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.purchaseMaterialGroups.length);
+}
+
 function renderPurchaseNeeds() {
   const branch = filterValues(ui.branchFilter);
   const location = filterValues(ui.locationFilter);
@@ -3583,6 +3628,7 @@ function renderPurchaseNeeds() {
 
 function renderNextPurchaseNeedBatch() {
   if (state.purchaseNeedView === "supplier") return renderNextPurchaseSupplierBatch();
+  if (state.purchaseNeedView === "material") return renderNextPurchaseMaterialBatch();
   const start = state.purchaseNeedVisible;
   const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
   if (start >= end) return;
