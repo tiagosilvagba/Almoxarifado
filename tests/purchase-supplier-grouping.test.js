@@ -70,12 +70,12 @@ test("agrupa uma única vez por posição, exclui coberturas e Cavaco sem modifi
   const needs = [a,b,c,covered,cavaco,unknown];
   const groups = groupPurchaseNeedsBySupplier(needs);
   assert.equal(groups.length, 2);
-  assert.equal(groups[0].supplier, "AÇOS BRASIL");
-  assert.equal(groups[0].entries.length, 3);
-  assert.equal(groups[0].itemCodes.size, 2);
-  assert.equal(groups[0].estimatedValue, 260);
-  assert.equal(groups[1].supplier, "Fornecedor a definir");
-  assert.equal(groups[1].estimatedValue, 35);
+  assert.equal(groups[0].supplier, "Fornecedor a definir");
+  assert.equal(groups[0].estimatedValue, 35);
+  assert.equal(groups[1].supplier, "AÇOS BRASIL");
+  assert.equal(groups[1].entries.length, 3);
+  assert.equal(groups[1].itemCodes.size, 2);
+  assert.equal(groups[1].estimatedValue, 260);
   assert.equal(groups.flatMap((g) => g.entries).length, 4);
   assert.equal(covered.netSuggested, 0);
   assert.equal(cavaco.netSuggested, 100);
@@ -95,11 +95,12 @@ test("exportação Por fornecedor mantém colunas originais, datas Excel e rastr
   assert.equal(report.headers[0], "Fornecedor sugerido");
   assert.equal(report.headers[1], "Origem da sugestão");
   const col = (name) => report.headers.indexOf(name);
-  assert.equal(report.rows[0][col("Fornecedor sugerido")], "Fornecedor 1");
-  assert.equal(report.rows[0][col("Código")], "243370");
-  assert.equal(report.rows[0][col("Compra líquida")], 15);
+  assert.equal(report.rows[0][col("Fornecedor sugerido")], "Fornecedor a definir");
+  assert.equal(report.rows[0][col("Código")], "243372");
   assert.equal(report.rows[1][col("Fornecedor sugerido")], "Fornecedor 1");
-  assert.equal(report.rows[2][col("Fornecedor sugerido")], "Fornecedor a definir");
+  assert.equal(report.rows[1][col("Código")], "243370");
+  assert.equal(report.rows[1][col("Compra líquida")], 15);
+  assert.equal(report.rows[2][col("Fornecedor sugerido")], "Fornecedor 1");
   assert.equal(report.rows.reduce((n,row)=> n + Number(row[col("Valor estimado da compra")]),0),342);
   assert.ok(report.numericColumns.has(col("Compra líquida")));
   assert.ok(report.currencyColumns.has(col("Valor estimado da compra")));
@@ -117,4 +118,58 @@ test("botões móveis Por item/Por fornecedor existem e continuam alcançáveis 
   assert.match(html, /id="purchaseNeedViewSupplier"[^>]*aria-pressed="false"/);
   assert.match(css, /\.supplier-need-group__heading:focus-visible/);
   assert.match(css, /@media \(max-width: 720px\)/);
+});
+
+test("Fornecedor a definir reúne ausentes, placeholders e múltiplos fornecedores num único card", () => {
+  const noSupplier = mockNeed("100", "704", "1", 2, 10, [], []);
+  const placeholder = mockNeed("101", "704", "2", 3, 15, [hist("Não informado")], ["Fornecedor não informado"]);
+  const multiple = mockNeed("102", "704", "3", 4, 20, [], ["Fornecedor Alfa", "Fornecedor Beta"]);
+  const valid = mockNeed("103", "704", "4", 5, 10, [hist("Fornecedor Confiável")], ["Fornecedor Confiável"]);
+  const group = groupPurchaseNeedsBySupplier([noSupplier, placeholder, multiple, valid]);
+  assert.equal(group.length, 2);
+  assert.equal(group[0].key, "__a_definir__");
+  assert.equal(group[0].supplier, "Fornecedor a definir");
+  assert.equal(group[0].itemCodes.size, 3);
+  assert.equal(group[0].entries.length, 3);
+  assert.equal(group[0].estimatedValue, 145);
+  assert.equal(group[1].supplier, "Fornecedor Confiável");
+  assert.equal(group[1].itemCodes.size, 1);
+  assert.match(suggestPurchaseNeedSupplier(placeholder).source, /Sem fornecedor/);
+});
+
+test("Ordena os cards dos fornecedores crescentemente pelo número de ITENS distintos, não pelo valor ou pelas posições", () => {
+  const needs = [
+    mockNeed("01", "704", "1", 20, 100, [hist("Fornecedor 3")]),
+    mockNeed("02", "704", "1", 8, 2, [hist("Fornecedor 3")]),
+    mockNeed("03", "704", "1", 9, 2, [hist("Fornecedor 3")]),
+    mockNeed("04", "704", "1", 1, 2000, [hist("Fornecedor 1")]),
+    mockNeed("04", "704", "2", 5, 2000, [hist("Fornecedor 1")]),
+    mockNeed("05", "704", "1", 10, 2, [hist("Fornecedor 2")]),
+    mockNeed("06", "704", "1", 10, 2, [hist("Fornecedor 2")]),
+    mockNeed("07", "704", "1", 1, 1, [], []),
+    mockNeed("08", "704", "1", 1, 1, [], []),
+  ];
+  const groups = groupPurchaseNeedsBySupplier(needs);
+  assert.deepEqual(groups.map((g) => g.supplier), [
+    "Fornecedor a definir", "Fornecedor 1", "Fornecedor 2", "Fornecedor 3"
+  ]);
+  assert.deepEqual(groups.slice(1).map((g) => g.itemCodes.size), [1, 2, 3]);
+  assert.equal(groups[1].entries.length, 2, "Duas posições do mesmo código valem um item");
+  assert.equal(groups[1].estimatedValue, 12000, "Valor não interfere na ordenação");
+  const report = buildSupplierGroupedPurchaseExport(needs, new Date(2026, 9, 14), []);
+  assert.deepEqual([...new Set(report.rows.map((r) => r[0]))], groups.map((g) => g.supplier));
+});
+
+test("O card sem fornecedor permanece na primeira página mesmo com mais de 12 fornecedores", () => {
+  const needs = [];
+  for (let n = 0; n < 30; n++) {
+    needs.push(mockNeed(String(n + 100), "704", "1", 1, 3, [hist("Fornecedor " + n)]));
+  }
+  needs.push(mockNeed("999", "704", "99", 10, 2, [], []));
+  const groups = groupPurchaseNeedsBySupplier(needs);
+  assert.equal(groups.length, 31);
+  assert.equal(groups[0].supplier, "Fornecedor a definir");
+  assert.ok(groups.slice(1).every((g) => g.itemCodes.size === 1));
+  const js = fs.readFileSync(path.join(__dirname, "../app/core/catalog-app.js"), "utf8");
+  assert.match(js, /group\.key === "__a_definir__" \? " supplier-need-group--unassigned"/);
 });
