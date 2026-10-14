@@ -56,16 +56,27 @@ Na aba **Necessidade de Compra**, selecione **Por fornecedor** para ver as suges
 - O Excel/PDF segue a visão selecionada. **Por fornecedor** gera a planilha com nome e origem do fornecedor sugerido, sem perder as informações originais de lead time, cobertura e valor.
 - **Atenção:** o agrupamento não emite SC, não escolhe definitivamente o fornecedor e não modifica saldos ou regras de compra. O comprador deve confirmar fornecedor, valor e condições antes de gerar a solicitação.
 
-## Necessidade de compra: agrupamento por tipo de material
+## Necessidade de compra: tipos de material por descrição
 
-Na página **Necessidade de Compra**, selecione **Por tipo de material** para agrupar as mesmas sugestões por **grupo/categoria principal do cadastro do item**. A visualização original **Por item** e a opção **Por fornecedor** permanecem disponíveis.
+Selecione **Por tipo de material** na Necessidade de Compra. O sistema reconhece a família física da peça a partir do **nome e da descrição detalhada**, usando o cadastro apenas como apoio quando a descrição não identifica o material. Exemplos: **Rolamentos, Sensores, Correias, Válvulas, Motores, Redutores, Bombas, Parafusos, Filtros, Polias, Mangueiras e Instrumentos de medição**.
 
-- Os grupos apresentam quantidade de itens distintos, posições, valores estimados e ocorrências de ruptura e risco de ruptura. Clique no grupo para ver código, descrição, filial, local, quantidade líquida e detalhes de classificação.
-- Caso o item possua também subgrupo e classe, eles são exibidos no detalhe. Cada posição é somada somente ao grupo principal, evitando contagem dupla.
-- Itens sem classificação aparecem em **Sem categoria informada**, sem inventar tipos a partir da descrição.
-- Como na visão Por fornecedor, apenas necessidades com **compra líquida positiva** são agrupadas; itens totalmente cobertos por SC/OF e alertas especiais de Cavaco continuam na visão Por item.
-- Ao exportar Excel ou PDF, a visão ativa é respeitada. O relatório inclui tipo de material e subgrupo/classe, preservando todos os campos originais de consumo, lead time, cobertura, quantidades e valores.
-- O agrupamento respeita todos os filtros já aplicados ao relatório e **não altera nenhum cálculo de estoque ou compras**.
+- Um item pertence somente a uma família, sem duplicação de consumo, posições, cobertura ou valores.
+- Quando não há família identificável, o item fica em **Outros materiais / classificar**, sem inventar classificação.
+- Apresenta itens distintos, posições e compra líquida estimada; permite detalhar cada necessidade.
+- Agrupa apenas compras líquidas positivas, respeitando todos os filtros; itens cobertos e alertas especiais de Cavaco permanecem em **Por item**.
+- Excel e PDF respeitam a visão selecionada e conservam as colunas de compra existentes.
+
+## Necessidade de compra: itens comprados mais de uma vez no mês
+
+A opção **Compras repetidas no mês** é uma **auditoria histórica de OFs**, independente de o item precisar de reposição hoje.
+
+- Considera **mesmo código do item + mesma filial da OF + mesma competência**; registra ocorrências com **duas ou mais OFs distintas** naquele mês.
+- Usa a data da OF para o mês, sem misturar SCs ainda sem OF nem contar pedidos cancelados.
+- Mesmo quando uma OF aparece em várias linhas de recebimento/notas, ela é contada **uma única vez**. Não multiplica valores ou quantidades.
+- Possui seleção de competência, mostra número e data de cada OF, fornecedor, SC, CCU e valor estimado quando houver informação confiável.
+- Permite abrir o item e exportar as OFs em Excel/PDF, incluindo **Data OF no formato dd/mm/aaaa**.
+- Aplica filtros do catálogo e de filial, local e responsável. Como o histórico informa a filial da OF, não é possível determinar pelo histórico um local físico de estoque específico quando há mais de um local na mesma filial.
+- Não altera os saldos, indicadores de rupturas, compras líquidas, sugestões de fornecedor nem a lógica de reposição.
 
 ## Desempenho
 
