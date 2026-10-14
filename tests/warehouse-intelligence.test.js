@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments, pageForHash } = require("../app/core/catalog-app.js");
 const {
-  monthForOrder, stockArea, analyzeMinMaxObsolescence, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding,
+  monthForOrder, stockArea, analyzeMinMaxObsolescence, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding, pdcaForFinding,
 } = require("../app/modules/inteligencia-almoxarifado.js");
 
 const helpers = { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments };
@@ -275,4 +275,76 @@ test("aba inteligência oferece filtro de parâmetros obsoletos, ícone e módul
   assert.match(html, /value="parameter">Mínimo\/máximo/);
   assert.match(features, /"inteligencia-almoxarifado": '<svg/);
   assert.match(script, /inteligencia-almoxarifado\.js\?v=10\.7\./);
+});
+
+test("PDCA individual: Planejar, Executar, Verificar e Agir nas quatro anomalias", () => {
+  const findings = [
+    { type:"repeat", code:"123", branchCode:"704", localCode:"299", month:"2026-10", count:3, ofCodes:["OF1","OF2","OF3"], responsibles:["Alexsandro"], estimatedImpact:120, severity:"alta" },
+    { type:"excess", code:"234", branchCode:"704", localCode:"7", quantity:80, responsibles:[], estimatedImpact:100, severity:"media" },
+    { type:"parameter", code:"345", branchCode:"704", localCode:"299", currentMinimum:10, currentMaximum:80, suggestedMinimum:20, suggestedMaximum:50, consideredMonthCount:5, leadTimeDays:30, leadTimeSource:"estimated", responsibles:["Cristiane"], severity:"alta" },
+    { type:"zero", code:"456", branchCode:"704", localCode:"5", projected:false, quantity:50, responsibles:[], severity:"critica" },
+  ];
+  for(const finding of findings) {
+    const pdca = pdcaForFinding(finding);
+    assert.deepEqual(Object.keys(pdca),["owner","status","plan","do","check","act","indicator","baseline","target","reviewWhen","where"]);
+    for(const part of ["plan","do","check","act","indicator","baseline","target","reviewWhen","status"]){
+      assert.equal(typeof pdca[part], "string", part);
+      assert.ok(pdca[part].length > 5, part);
+    }
+    assert.match(pdca.status, /Proposto/);
+    assert.match(pdca.where, new RegExp(finding.code));
+    assert.ok(!/concluído|executado com sucesso/i.test(pdca.status));
+  }
+  assert.match(pdcaForFinding(findings[0]).check, /OFs distintas/);
+  assert.match(pdcaForFinding(findings[1]).check, /estoque projetado/);
+  assert.match(pdcaForFinding(findings[2]).target, /mín/);
+  assert.match(pdcaForFinding(findings[3]).do, /contagem física/);
+});
+
+test("PDCA integrado em todos os achados e exportado sem afetar 5W2H nem colunas existentes", () => {
+  const output = analyze([
+    item("501",[position(0)]),
+    item("502",[position(15,20)],[record("OF1","10/10/2026",5),record("OF2","13/10/2026",5)]),
+    item("503",[position(10,20)],[record("OF3","14/10/2026",40)]),
+  ]);
+  for(const finding of output.findings) {
+    assert.ok(finding.plan);
+    assert.ok(finding.pdca);
+    assert.equal(finding.pdca.status.startsWith("Proposto"),true);
+    assert.ok(finding.pdca.check);
+    assert.ok(finding.pdca.target);
+  }
+  const report=buildIntelligenceExport(output.findings);
+  const index=(value)=>report.headers.indexOf(value);
+  for(const label of ["PDCA - P (Planejar)","PDCA - D (Executar)","PDCA - C (Verificar)","PDCA - A (Agir / padronizar)","PDCA - Indicador","PDCA - Situação inicial","PDCA - Meta","PDCA - Prazo da verificação","PDCA - Responsável","PDCA - Status"]) {
+    assert.ok(index(label)>=0,label);
+  }
+  assert.equal(index("5W2H - O quê"),11);
+  assert.equal(index("Área de estoque"),27);
+  assert.equal(report.rows.length,output.findings.length);
+  assert.ok(report.currencyColumns.has(index("Impacto estimado (R$)")));
+  for(let i=0;i<output.findings.length;i++){
+    const pdca=output.findings[i].pdca;
+    assert.equal(report.rows[i][index("PDCA - P (Planejar)")],pdca.plan);
+    assert.equal(report.rows[i][index("PDCA - D (Executar)")],pdca.do);
+    assert.equal(report.rows[i][index("PDCA - C (Verificar)")],pdca.check);
+    assert.equal(report.rows[i][index("PDCA - A (Agir / padronizar)")],pdca.act);
+    assert.equal(report.rows[i][index("PDCA - Meta")],pdca.target);
+    assert.equal(report.rows[i][index("PDCA - Status")],pdca.status);
+  }
+  assert.match(report.filename,/pdca/);
+});
+
+test("Interface da Inteligência permite PDCA expansível em tela pequena e exportação dupla", () => {
+  const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8");
+  const script=fs.readFileSync(path.join(__dirname,"../app/modules/inteligencia-almoxarifado.js"),"utf8");
+  const css=fs.readFileSync(path.join(__dirname,"../app/styles/inteligencia.css"),"utf8");
+  assert.match(html,/planos 5W2H \+ PDCA/);
+  assert.match(html,/Exportar Excel 5W2H \+ PDCA/);
+  assert.match(script,/Ver ciclo PDCA/);
+  assert.match(script,/wi-pdca__stages/);
+  assert.match(css,/\.wi-pdca__stages/);
+  assert.match(script,/batch = 16/);
+  assert.match(script,/renderedCount = 0/);
+  assert.match(script,/insertAdjacentHTML\("beforeend", visibleRows.slice\(renderedCount, until\)/);
 });
