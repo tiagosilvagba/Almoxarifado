@@ -56,6 +56,17 @@ Na aba **Necessidade de Compra**, selecione **Por fornecedor** para ver as suges
 - O Excel/PDF segue a visão selecionada. **Por fornecedor** gera a planilha com nome e origem do fornecedor sugerido, sem perder as informações originais de lead time, cobertura e valor.
 - **Atenção:** o agrupamento não emite SC, não escolhe definitivamente o fornecedor e não modifica saldos ou regras de compra. O comprador deve confirmar fornecedor, valor e condições antes de gerar a solicitação.
 
+## Necessidade de compra: agrupamento por tipo de material
+
+Na página **Necessidade de Compra**, selecione **Por tipo de material** para agrupar as mesmas sugestões por **grupo/categoria principal do cadastro do item**. A visualização original **Por item** e a opção **Por fornecedor** permanecem disponíveis.
+
+- Os grupos apresentam quantidade de itens distintos, posições, valores estimados e ocorrências de ruptura e risco de ruptura. Clique no grupo para ver código, descrição, filial, local, quantidade líquida e detalhes de classificação.
+- Caso o item possua também subgrupo e classe, eles são exibidos no detalhe. Cada posição é somada somente ao grupo principal, evitando contagem dupla.
+- Itens sem classificação aparecem em **Sem categoria informada**, sem inventar tipos a partir da descrição.
+- Como na visão Por fornecedor, apenas necessidades com **compra líquida positiva** são agrupadas; itens totalmente cobertos por SC/OF e alertas especiais de Cavaco continuam na visão Por item.
+- Ao exportar Excel ou PDF, a visão ativa é respeitada. O relatório inclui tipo de material e subgrupo/classe, preservando todos os campos originais de consumo, lead time, cobertura, quantidades e valores.
+- O agrupamento respeita todos os filtros já aplicados ao relatório e **não altera nenhum cálculo de estoque ou compras**.
+
 ## Desempenho
 
 Os arquivos de compras são processados sequencialmente dentro de um Web Worker. Apenas uma parte permanece como texto na memória durante a consolidação, evitando o pico provocado pelo carregamento simultâneo de todas as bases.
