@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 10.7: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "10.7.49";
+const BOOTSTRAP_VERSION = "10.7.50";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -11,7 +11,7 @@ const IS_MOBILE_DEVICE = IS_IOS
   || window.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches;
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=10.7.49",
+  base: "./app/layers/features.js?v=10.7.50",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
@@ -21,7 +21,7 @@ const MODULES = Object.freeze({
   followUp: "./app/modules/follow-up.js?v=10.7.35",
   outsideCcu: "./app/modules/compras-fora-cc1500.js?v=10.7.43",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.40",
-  intelligence: "./app/modules/inteligencia-almoxarifado.js?v=10.7.49",
+  intelligence: "./app/modules/inteligencia-almoxarifado.js?v=10.7.50",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
