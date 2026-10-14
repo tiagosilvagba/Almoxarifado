@@ -34,16 +34,22 @@ function need(code, categories, net, price = 10, extra = {}) {
   };
 }
 
-test("o tipo de material usa exclusivamente a categoria principal, preservando subgrupo/classe", () => {
+test("o tipo de material identifica a família real da peça e preserva subgrupo/classe", () => {
   const first = need("243370", ["Materiais Elétricos", "Motores", "Baixa tensão"], 10);
   assert.deepEqual(purchaseNeedMaterialType(first), {
-    name: "Materiais Elétricos", source: "Grupo/categoria do cadastro",
+    name: "Motores", source: "Cadastro",
     details: ["Motores", "Baixa tensão"],
   });
   assert.deepEqual(purchaseNeedMaterialType(need("1", [], 10)), {
-    name: "Sem categoria informada", source: "Sem classificação cadastrada", details: [],
+    name: "Outros materiais / classificar", source: "Família não identificada", details: [],
   });
-  assert.equal(purchaseNeedMaterialType(need("1", ["", "Peças Mecânicas"], 10)).name, "Peças Mecânicas");
+  assert.equal(purchaseNeedMaterialType(need("1", ["", "Peças Mecânicas", "Rolamentos"], 10)).name, "Rolamentos");
+  const named = need("567", ["Materiais Elétricos"], 10);
+  named.item.name = "Sensor indutivo M12";
+  assert.equal(purchaseNeedMaterialType(named).name, "Sensores");
+  assert.equal(purchaseNeedMaterialType(named).source, "Nome do item");
+  named.item.name = "Rolamento 6204 com sensor integrado";
+  assert.equal(purchaseNeedMaterialType(named).name, "Rolamentos");
 });
 
 test("agrupa sem multiplicar categorias e não sugere compras já cobertas ou Cavaco", () => {
@@ -60,7 +66,7 @@ test("agrupa sem multiplicar categorias e não sugere compras já cobertas ou Ca
   assert.equal(groups[0].entries.length, 3);
   assert.equal(groups[0].itemCodes.size, 2);
   assert.equal(groups[0].estimatedValue, 130);
-  assert.equal(groups[1].materialType, "Sem categoria informada");
+  assert.equal(groups[1].materialType, "Outros materiais / classificar");
   assert.equal(groups[1].estimatedValue, 32);
   assert.equal(groups.flatMap((group)=>group.entries).length, 4);
   assert.equal(groups[0].entries[0].classification.details.length, 2);
@@ -74,13 +80,13 @@ test("não mistura faixas e mantém o recorte de filtro recebido", () => {
   const risk = need("102", ["Peças"], 10, 10, {position: {
     branchCode:"704",localCode:"299",quantity:3,minimum:10,maximum:30
   }});
-  const outside = need("103", ["EPI"], 10);
+  const outside = need("103", ["EPI", "Luvas"], 10);
   const current = groupPurchaseNeedsByMaterialType([rupture, risk]);
   assert.equal(current.length,1);
   assert.equal(current[0].itemCodes.size,2);
   assert.equal(current[0].ruptures,1);
   assert.equal(current[0].risks,1);
-  assert.equal(groupPurchaseNeedsByMaterialType([outside])[0].materialType,"EPI");
+  assert.equal(groupPurchaseNeedsByMaterialType([outside])[0].materialType,"Equipamentos de proteção");
 });
 
 test("exportação Por tipo preserva dados da compra, valor total e células de data do Excel", () => {
@@ -101,14 +107,14 @@ test("exportação Por tipo preserva dados da compra, valor total e células de 
   assert.equal(report.rows[0][col("Subgrupo / classe")], "Manuais");
   assert.equal(report.rows[0][col("Compra líquida")],5);
   assert.equal(report.rows[1][col("Compra líquida")],3);
-  assert.equal(report.rows[2][col("Tipo de material")], "Sem categoria informada");
+  assert.equal(report.rows[2][col("Tipo de material")], "Outros materiais / classificar");
   assert.equal(report.rows.reduce((sum,row)=>sum+Number(row[col("Valor estimado da compra")]),0),210);
   assert.ok(report.numericColumns.has(col("Compra líquida")));
   assert.ok(report.currencyColumns.has(col("Valor estimado da compra")));
   assert.ok(report.dateColumns.has(col("Data do relatório")));
   assert.ok(report.dateColumns.has(col("Data sugerida de entrega")));
   assert.equal(report.rows[0][col("Data do relatório")], "14/10/2026");
-  assert.match(report.filterSummary, /categoria/);
+  assert.match(report.filterSummary, /categoria|material/);
 });
 
 test("nova opção existe em mobile e não há aspas extras na chamada ao script", () => {
