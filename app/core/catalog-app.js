@@ -3457,7 +3457,7 @@ const PURCHASE_MATERIAL_FAMILIES = Object.freeze([
   ["Sensores", /\b(?:SENSOR(?:ES)?|FOTOCELULA(?:S)?|ENCODER(?:S)?)\b/],
   ["Correias", /\b(?:CORREIA(?:S)?|BELTS?)\b/],
   ["Válvulas", /\b(?:VALVULA(?:S)?)\b/],
-  ["Redutores", /\b(?:MOTOREDUTOR(?:ES)?|REDUTOR(?:ES)?)\b/],
+  ["Redutores", /\b(?:MOTOREDUTOR(?:ES)?|MOTORREDUTOR(?:ES)?|REDUTOR(?:ES)?)\b/],
   ["Motores", /\b(?:MOTOR(?:ES)?)\b/],
   ["Bombas", /\b(?:BOMBA(?:S)?)\b/],
   ["Mangueiras", /\b(?:MANGUEIRA(?:S)?)\b/],
@@ -3541,8 +3541,15 @@ function buildRepeatedPurchasesByMonth(items) {
         || /cancelad|anulad/i.test(String(sc?.status || ""))
         || /^(?:s|sim|1|true|yes)$/i.test(String(sc?.cancelled || "").trim())
         || /^(?:s|sim|1|true|yes)$/i.test(String(of.cancelled || "").trim())) continue;
+      const normalizedOfDate = formatDate(of.date, "");
+      const dateFields = normalizedOfDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       const timestamp = dateTimestamp(of.date);
-      if (!(timestamp > 0)) continue;
+      // Não usar datas impossíveis (ex.: 31/02) nem inventar competência.
+      if (!dateFields || !(timestamp > 0)) continue;
+      const verifiedDate = new Date(timestamp);
+      if (verifiedDate.getUTCDate() !== Number(dateFields[1])
+        || verifiedDate.getUTCMonth() + 1 !== Number(dateFields[2])
+        || verifiedDate.getUTCFullYear() !== Number(dateFields[3])) continue;
       const branchCode = normalizeBranchCode(of.deliveryBranchCode || sc?.destinationBranch || sc?.branchCode || record.branchCode || "");
       if (!branchCode) continue; // filial indeterminada: não forçar vínculo
       const month = new Date(timestamp).toISOString().slice(0, 7);
@@ -3560,7 +3567,7 @@ function buildRepeatedPurchasesByMonth(items) {
       const amount = Number.isFinite(quantity) && quantity > 0 && Number.isFinite(unitValue) && unitValue > 0
         ? quantity * unitValue : null;
       const order = {
-        code: ofCode, date: formatDate(of.date, ""),
+        code: ofCode, date: normalizedOfDate,
         timestamp, supplier: String(of.supplier || record.rec?.supplier || "").trim(),
         sc: String(sc?.code || "").trim(), quantity: Number.isFinite(quantity) && quantity >= 0 ? quantity : null,
         unitValue: Number.isFinite(unitValue) && unitValue > 0 ? unitValue : null,
