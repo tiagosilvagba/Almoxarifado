@@ -106,6 +106,23 @@ test("falta de máximo não é tratada como excesso, e filial diferente não se 
   assert.equal(findings.some((r) => r.type === "excess"), false);
 });
 
+test("projeção de zerar em menos de 30 dias sem cobertura é alta, não ruptura já ocorrida", () => {
+  const input = item("760", [position(5, 40, 10, "299")]);
+  const consumption = { records: [{
+    code: "760", branchCode: "704", localCode: "299",
+    monthlyTotals: { "08/2026": 20, "09/2026": 22, "10/2026": 19 },
+  }] };
+  const result = analyzeWarehouseIntelligence([input], helpers, { consumption });
+  const finding = result.findings.find((f) => f.type === "zero");
+  assert.ok(finding);
+  assert.equal(finding.projected, true);
+  assert.equal(finding.severity, "alta");
+  assert.ok(finding.coverageDays > 0 && finding.coverageDays < 30);
+  assert.match(finding.plan.what, /Antecipar reposição/);
+  const covered = item("760",[position(5, 40, 10, "299")], [record("OFNEW","14/10/2026",10,10)]);
+  assert.equal(analyzeWarehouseIntelligence([covered], helpers, { consumption }).findings.some((f)=>f.type==="zero"), false);
+});
+
 test("cada anomalia possui 7 campos 5W2H e exportação fiel", () => {
   const inputs = [
     item("501",[position(0)]),
