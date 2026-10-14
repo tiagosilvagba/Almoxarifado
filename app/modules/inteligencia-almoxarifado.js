@@ -557,10 +557,13 @@
         ? "Revisão de mínimo/máximo" : "Zerado ou risco de zerar";
     function card(f) {
       const p = f.plan;
+      const pdca = f.pdca || pdcaForFinding(f);
       const cells = [
         ["O quê?", p.what], ["Por quê?", p.why], ["Onde?", p.where],
         ["Quando?", p.when], ["Quem?", p.who], ["Como?", p.how], ["Quanto?", p.howMuch],
       ];
+      const pdcaStages = [["P · Planejar", pdca.plan], ["D · Executar", pdca.do], ["C · Verificar", pdca.check], ["A · Agir e padronizar", pdca.act]];
+      const pdcaMeasures = [["Indicador", pdca.indicator], ["Situação inicial", pdca.baseline], ["Meta", pdca.target], ["Quando verificar", pdca.reviewWhen], ["Responsável", pdca.owner], ["Situação do plano", pdca.status]];
       return '<article class="wi-issue wi-issue--' + esc(f.severity) + '">'
         + '<div class="wi-issue__top"><span class="wi-priority">' + esc(f.severity.toUpperCase())
         + '</span><span class="wi-issue__type">' + esc(typeTitle(f.type)) + '</span></div>'
@@ -573,9 +576,16 @@
         + '<div class="wi-issue__stats"><span>Qtde. envolvida: <strong>' + number.format(f.quantity)
         + '</strong></span><span>Impacto potencial: <strong>' + (f.estimatedImpact == null ? "A apurar" : currency.format(f.estimatedImpact))
         + '</strong></span></div>'
-        + '<details><summary>Ver plano de ação 5W2H</summary><dl class="wi-plan">'
+        + '<details class="wi-5w2h"><summary>Ver plano de ação 5W2H</summary><dl class="wi-plan">'
         + cells.map(([label, v]) => '<div><dt>' + esc(label) + '</dt><dd>' + esc(v) + '</dd></div>').join("")
-        + '</dl><p class="wi-issue__note">' + esc(f.detail) + '</p></details></article>';
+        + '</dl><p class="wi-issue__note">' + esc(f.detail) + '</p></details>'
+        + '<details class="wi-pdca"><summary>Ver ciclo PDCA · metas e acompanhamento</summary>'
+        + '<p class="wi-issue__note">Ciclo proposto, não executado. Os resultados precisam ser conferidos pela equipe.</p>'
+        + '<dl class="wi-plan wi-pdca__stages">'
+        + pdcaStages.map(([label, v]) => '<div><dt>' + esc(label) + '</dt><dd>' + esc(v) + '</dd></div>').join("")
+        + '</dl><dl class="wi-plan wi-pdca__measures">'
+        + pdcaMeasures.map(([label, v]) => '<div><dt>' + esc(label) + '</dt><dd>' + esc(v) + '</dd></div>').join("")
+        + '</dl></details></article>';
     }
     function renderBatch() {
       const host = document.getElementById("wiResults");
