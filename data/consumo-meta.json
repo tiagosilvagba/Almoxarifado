@@ -1,0 +1,19 @@
+{
+  "format": "consumo-consolidado-v1",
+  "legacyFile": "03 - Consumo.csv",
+  "legacyMonthsPreserved": [
+    "abr",
+    "fev",
+    "jan",
+    "jul",
+    "jun",
+    "mai",
+    "mar"
+  ],
+  "monthlyFiles": [],
+  "replacedLegacyMonths": [],
+  "sourceRows": 19149,
+  "consolidatedRows": 19149,
+  "consolidatedMonths": 7,
+  "sha256": "5342457f2320c1073a5f3feee025cefc5fec46eadf31736e772cae8f77aea52e"
+}
