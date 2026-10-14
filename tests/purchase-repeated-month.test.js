@@ -58,6 +58,8 @@ test("separa compras por item, mês e filial e exclui OFs canceladas ou sem data
     order("OF7", "21/10/2026", "704", { cancelled: true }),
     order("OF8", "22/10/2026", "704", { status: "Cancelada" }),
     order("OF9", "", "704"),
+    order("OF10", "31/02/2026", "704"), // data inválida
+    order("OF11", "31/02/2026", "704"), // jamais pode criar março fictício
   ];
   const groups = buildRepeatedPurchasesByMonth([item("111", history), item("222", [
     order("OF15", "14/10/2026")
