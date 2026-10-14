@@ -462,7 +462,9 @@
       title: "Inteligência do Almoxarifado - Planos 5W2H e PDCA",
       filename: "inteligencia-almoxarifado-5w2h-pdca.xls",
       headers,
-      rows: (rows || []).map((f) => [
+      rows: (rows || []).map((f) => {
+        const pdca = f.pdca || pdcaForFinding(f);
+        return [
         f.type === "repeat" ? "OFs repetidas no mês" : f.type === "excess" ? "Compras acima do máximo"
           : f.type === "parameter" ? "Mínimo/máximo obsoletos" : "Zerado sem reposição",
         f.severity, f.code, f.name, f.branchCode, f.localCode, f.month, f.evidence,
@@ -473,12 +475,11 @@
         f.averageMonthlyConsumption ?? "", f.consideredMonthCount ?? "", f.leadTimeDays ?? "",
         f.leadTimeSource === "real" ? "Histórico real" : f.leadTimeSource === "estimated" ? "Referência estimada" : "",
         f.stockArea || "",
-        (f.pdca || pdcaForFinding(f)).plan, (f.pdca || pdcaForFinding(f)).do,
-        (f.pdca || pdcaForFinding(f)).check, (f.pdca || pdcaForFinding(f)).act,
-        (f.pdca || pdcaForFinding(f)).indicator, (f.pdca || pdcaForFinding(f)).baseline,
-        (f.pdca || pdcaForFinding(f)).target, (f.pdca || pdcaForFinding(f)).reviewWhen,
-        (f.pdca || pdcaForFinding(f)).owner, (f.pdca || pdcaForFinding(f)).status,
-      ]),
+        pdca.plan, pdca.do, pdca.check, pdca.act,
+        pdca.indicator, pdca.baseline, pdca.target, pdca.reviewWhen,
+        pdca.owner, pdca.status,
+        ];
+      }),
       numericColumns: new Set([9, 10, 19, 20, 21, 22, 23, 24, 25]), currencyColumns: new Set([10]),
       pdfIdentityColumns: [2, 3, 4],
       filterSummary: "Anomalias sugeridas: OFs distintas por competência, 20% acima do máximo, saldo sem cobertura CCU 1500, e mínimo/máximo com desvio relevante perante 3+ meses históricos. Lead time estimado: 30 dias se não houver prazo real. Planos 5W2H e PDCA propostos, com metas de acompanhamento; não registram execução, aprovação ou resultado efetivo.",
