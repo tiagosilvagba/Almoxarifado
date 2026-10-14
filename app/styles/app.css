@@ -6386,3 +6386,37 @@ body.app-booting .app-nav-wrap {
   #page-necessidade-compra .supplier-need-row { align-items: stretch; flex-direction: column; gap: 7px; }
   #page-necessidade-compra .supplier-need-row__numbers { display: flex; text-align: left; gap: 10px; }
 }
+
+/* v10.7.46 — terceira visão de compra por tipo de material.
+ * Preserva os estilos existentes dos grupos por fornecedor e dos cards. */
+#page-necessidade-compra .purchase-need-view-switch {
+  align-items: stretch;
+}
+#page-necessidade-compra .purchase-need-view-switch__button {
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+#page-necessidade-compra .material-need-group {
+  border-left: 4px solid var(--blue-500, #2086d2);
+}
+@media (max-width: 720px) {
+  #page-necessidade-compra .purchase-need-view-switch {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  #page-necessidade-compra .purchase-need-view-switch__button {
+    min-width: 0;
+    min-height: 46px;
+    padding: 9px 5px;
+    font-size: .76rem;
+    letter-spacing: -.01em;
+  }
+}
+@media (max-width: 360px) {
+  #page-necessidade-compra .purchase-need-view-switch {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #page-necessidade-compra #purchaseNeedViewMaterial {
+    grid-column: 1 / -1;
+  }
+}
