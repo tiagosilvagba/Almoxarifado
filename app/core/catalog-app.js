@@ -7126,8 +7126,10 @@ function inventoryWorker() {
   }
 
   function resolveStockBranchName(branchCode, localCode, partition, originalName) {
-    const normalizedBranch = clean(branchCode);
-    const normalizedLocal = clean(localCode);
+    const rawBranch = clean(branchCode);
+    const normalizedBranch = /^\d+$/.test(rawBranch) ? String(Number(rawBranch)) : rawBranch;
+    const rawLocal = clean(localCode);
+    const normalizedLocal = /^\d+$/.test(rawLocal) ? String(Number(rawLocal)) : rawLocal;
     const normalizedPartition = clean(partition).toUpperCase();
     const preparedPartitions = new Set(["AP", "99", "SS", "JF"]);
     const isSingleLetter = /^[A-Z]$/.test(normalizedPartition);
