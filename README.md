@@ -80,6 +80,20 @@ A opção **Compras repetidas no mês** é uma **auditoria histórica de OFs**, 
 - Aplica filtros do catálogo e de filial, local e responsável. Como o histórico informa a filial da OF, não é possível determinar pelo histórico um local físico de estoque específico quando há mais de um local na mesma filial.
 - Não altera os saldos, indicadores de rupturas, compras líquidas, sugestões de fornecedor nem a lógica de reposição.
 
+## Inteligência do Almoxarifado e planos 5W2H
+
+A aba **Inteligência** é calculada localmente com a base de saldo, compras, consumo e parâmetros já carregada no Dashboard. Quando o GitHub Actions publica um novo catálogo, o navegador utiliza a nova base na próxima atualização do site, sem modificar solicitações ou ordens.
+
+Ela identifica três famílias de anomalias:
+
+1. **OFs repetidas no mesmo mês:** pelo menos duas OFs distintas para o mesmo código de item e filial na competência da data de emissão. Linhas repetidas por recebimentos da mesma OF não contam como novas compras.
+2. **Volume de compras acima do máximo:** soma de OFs emitidas no mês mais recente daquele item/filial ou projeção de saldo com OF/SC em aberto para o CCU 1500 superior a **120% do máximo cadastrado** (limiar preventivo de 20%). O alerta exige conferência de sazonalidade, compras estratégicas e rateio entre locais.
+3. **Zerados sem reposição e risco de zerar:** posições com saldo ≤ 0 ou cobertura estimada em até **30 dias** com base no consumo mensal ajustado, quando não foi identificada OF/SC em aberto para a filial e o CCU 1500. Registros de compras fora desse centro de custo não são contados automaticamente como cobertura do almoxarifado.
+
+Cada ocorrência recebe um **5W2H específico (O quê, Por quê, Onde, Quando, Quem, Como, Quanto)**, com prioridade, evidências e valor potencial estimado quando há preço disponível. Os prazos e responsáveis apresentados são *recomendações a validar*, não tarefas executadas. O sistema não cria SCs, não cancela OFs e não altera parâmetros.
+
+Filtros: tipo, prioridade, filial, competência, pesquisa e filtros globais; exportação Excel com o plano completo. O motor e seus testes ficam em `app/modules/inteligencia-almoxarifado.js` e `tests/warehouse-intelligence.test.js`.
+
 ## Desempenho
 
 Os arquivos de compras são processados sequencialmente dentro de um Web Worker. Apenas uma parte permanece como texto na memória durante a consolidação, evitando o pico provocado pelo carregamento simultâneo de todas as bases.
