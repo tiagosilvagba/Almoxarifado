@@ -10,6 +10,9 @@
   const branch = (x) => clean(x).replace(/^0+(?=\d)/, "");
   const code = (x) => clean(x).replace(/\./g, "");
   const num = (x) => Number.isFinite(Number(x)) ? Number(x) : 0;
+  const stockArea = (pos) => branch(pos?.branchCode) === "704"
+    && /^\d+$/.test(clean(pos?.localCode)) && Number(pos.localCode) > 599
+    ? "ROLANDIA - ALM. PREPARADOS" : clean(pos?.branchName);
   const escapeHtml = (s) => clean(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -131,7 +134,7 @@
         + "::" + clean(pos.partition || ""),
       type: "parameter", severity: isInconsistent || shortage ? "alta" : "media",
       code: code(item.code), name: item.name || item.detailedName || code(item.code),
-      branchCode: branch(pos.branchCode), localCode: clean(pos.localCode), month: "",
+      branchCode: branch(pos.branchCode), localCode: clean(pos.localCode), stockArea: stockArea(pos), month: "",
       title: kind, obsolescenceKind: hasNoConsumption ? "no-consumption" : "deviation",
       evidence: "Consumo médio ajustado: " + number.format(avg) + "/mês (" + good.length + " competências válidas)"
         + " · lead time " + number.format(leadDays) + " dias"
@@ -300,7 +303,7 @@
             type: "zero", severity: isZero ? "critica" : "alta",
             projected, coverageDays,
             code: code(item.code), name: item.name || item.detailedName || code(item.code),
-            branchCode: b, localCode: clean(pos.localCode), month: "",
+            branchCode: b, localCode: clean(pos.localCode), stockArea: stockArea(pos), month: "",
             count: 1, title: isZero ? "Saldo zerado sem reposição identificada"
               : "Risco de zerar em " + number.format(coverageDays) + " dias sem reposição",
             evidence: "Saldo " + number.format(stock) + " · mínimo " + number.format(pos.minimum)
@@ -382,21 +385,28 @@
       "Evidência", "OFs", "Quantidade envolvida", "Impacto estimado (R$)",
       "5W2H - O quê", "5W2H - Por quê", "5W2H - Onde", "5W2H - Quando",
       "5W2H - Quem", "5W2H - Como", "5W2H - Quanto", "Observações",
+      "Mínimo atual", "Máximo atual", "Mínimo referência", "Máximo referência",
+      "Consumo médio/mês", "Meses válidos", "Lead time (dias)", "Origem lead time", "Área de estoque",
     ];
     return {
       title: "Inteligência do Almoxarifado - Plano 5W2H",
       filename: "inteligencia-almoxarifado-5w2h.xls",
       headers,
       rows: (rows || []).map((f) => [
-        f.type === "repeat" ? "OFs repetidas no mês" : f.type === "excess" ? "Compras acima do máximo" : "Zerado sem reposição",
+        f.type === "repeat" ? "OFs repetidas no mês" : f.type === "excess" ? "Compras acima do máximo"
+          : f.type === "parameter" ? "Mínimo/máximo obsoletos" : "Zerado sem reposição",
         f.severity, f.code, f.name, f.branchCode, f.localCode, f.month, f.evidence,
         f.ofCodes.join(" | "), f.quantity, f.estimatedImpact,
         f.plan.what, f.plan.why, f.plan.where, f.plan.when,
         f.plan.who, f.plan.how, f.plan.howMuch, f.detail,
+        f.currentMinimum ?? "", f.currentMaximum ?? "", f.suggestedMinimum ?? "", f.suggestedMaximum ?? "",
+        f.averageMonthlyConsumption ?? "", f.consideredMonthCount ?? "", f.leadTimeDays ?? "",
+        f.leadTimeSource === "real" ? "Histórico real" : f.leadTimeSource === "estimated" ? "Referência estimada" : "",
+        f.stockArea || "",
       ]),
-      numericColumns: new Set([9, 10]), currencyColumns: new Set([10]),
+      numericColumns: new Set([9, 10, 19, 20, 21, 22, 23, 24, 25]), currencyColumns: new Set([10]),
       pdfIdentityColumns: [2, 3, 4],
-      filterSummary: "Anomalias sugeridas por regras: OFs distintas por mês, limite 20% acima do máximo e saldo <= 0 sem cobertura de OF/SC identificada no CCU 1500. Plano 5W2H proposto para validação, sem execução automática.",
+      filterSummary: "Anomalias sugeridas: OFs distintas por competência, 20% acima do máximo, saldo sem cobertura CCU 1500, e mínimo/máximo com desvio relevante perante 3+ meses históricos. Lead time estimado: 30 dias se não houver prazo real. Plano 5W2H proposto sem alteração automática.",
     };
   }
 
@@ -452,6 +462,7 @@
         repeat: rows.filter((x) => x.type === "repeat").length,
         excess: rows.filter((x) => x.type === "excess").length,
         zero: rows.filter((x) => x.type === "zero").length,
+        parameter: rows.filter((x) => x.type === "parameter").length,
       };
       const el = document.getElementById("wiKpis");
       if (!el) return;
@@ -459,6 +470,7 @@
         ["Compras repetidas", summary.repeat, "repeat"],
         ["Acima do máximo", summary.excess, "excess"],
         ["Zerados / risco de zerar", summary.zero, "zero"],
+        ["Mín./máx. obsoletos", summary.parameter, "parameter"],
         ["Anomalias no recorte", rows.length, "all"],
       ].map(([label, value, type]) =>
         '<article class="wi-kpi"><span>' + esc(label) + '</span><strong>' + number.format(value)
@@ -466,7 +478,8 @@
         + '</small></article>').join("");
     }
     const typeTitle = (type) => type === "repeat" ? "Compra repetida no mês"
-      : type === "excess" ? "Compra acima do máximo" : "Zerado ou risco de zerar";
+      : type === "excess" ? "Compra acima do máximo" : type === "parameter"
+        ? "Revisão de mínimo/máximo" : "Zerado ou risco de zerar";
     function card(f) {
       const p = f.plan;
       const cells = [
@@ -479,6 +492,7 @@
         + '<strong class="wi-issue__name">' + esc(f.name) + '</strong>'
         + '<span class="wi-issue__codes">Item ' + esc(f.code) + ' · Filial ' + esc(f.branchCode)
         + (f.localCode ? ' · Local ' + esc(f.localCode) : "")
+        + (f.stockArea ? ' · ' + esc(f.stockArea) : "")
         + (f.month ? ' · Mês ' + esc(f.month.slice(5) + "/" + f.month.slice(0, 4)) : "")
         + '</span><p class="wi-issue__evidence">' + esc(f.evidence) + '</p>'
         + '<div class="wi-issue__stats"><span>Qtde. envolvida: <strong>' + number.format(f.quantity)
@@ -549,8 +563,9 @@
           ...helpers(),
           analyzeMonthlyConsumption: typeof analyzeMonthlyConsumption === "function"
             ? analyzeMonthlyConsumption : null,
-        }, { consumption: st.consumption }, {
-          batchSize: win.matchMedia?.("(max-width:900px), (pointer:coarse)")?.matches ? 75 : 220,
+        }, { consumption: st.consumption, reviews: st.minMaxReviews || [] }, {
+          // Lotes pequenos evitam longas tarefas em aparelhos móveis.
+          batchSize: win.matchMedia?.("(max-width:900px), (pointer:coarse)")?.matches ? 20 : 65,
           cancelled: () => version !== analysisVersion || !isCurrent()
             || currentState()?.items !== sourceItems,
           progress: (done, total) => {
@@ -624,5 +639,5 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
     else init();
   }
-  return { monthForOrder, planForFinding, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, install };
+  return { monthForOrder, stockArea, analyzeMinMaxObsolescence, planForFinding, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, install };
 });
