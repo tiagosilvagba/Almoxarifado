@@ -1,19 +1,20 @@
 {
   "format": "consumo-consolidado-v1",
   "legacyFile": "03 - Consumo.csv",
+  "legacyYearForAbbreviatedMonths": 2026,
   "legacyMonthsPreserved": [
-    "abr",
-    "fev",
-    "jan",
-    "jul",
-    "jun",
-    "mai",
-    "mar"
+    "01/2026",
+    "02/2026",
+    "03/2026",
+    "04/2026",
+    "05/2026",
+    "06/2026",
+    "07/2026"
   ],
   "monthlyFiles": [],
   "replacedLegacyMonths": [],
   "sourceRows": 19149,
   "consolidatedRows": 19149,
   "consolidatedMonths": 7,
-  "sha256": "5342457f2320c1073a5f3feee025cefc5fec46eadf31736e772cae8f77aea52e"
+  "sha256": "ff3b15bef3b5f16309b89fe170720aff5ab2888bd4f1a75b4f46b7557c963782"
 }
