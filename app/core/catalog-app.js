@@ -8,7 +8,7 @@ const CONFIG = Object.freeze({
   replenishmentFile: "02 - Responsaveis_Reposição.CSV",
   consumoFile: "data/consumo-consolidado.csv?v=10.7.44",
   consumoFallbackFile: "03 - Consumo.csv",
-  optimizedDataFile: "data/catalog.json.gz?v=10.7.44",
+  optimizedDataFile: "data/catalog.json.gz?v=10.7.51",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
   maxImages: 6,
