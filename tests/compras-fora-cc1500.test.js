@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { buildItemGlobalSearchIndex, itemMatchesGlobalSearch, pageForHash } = require("../app/core/catalog-app.js");
-const { isConfirmedOutsideWarehousePurchase, buildDirectPurchaseStockRows, summarizeDirectPurchaseStock } = require("../app/modules/compras-fora-cc1500.js");
+const { isConfirmedOutsideWarehousePurchase, formatOfDateBr, buildDirectPurchaseStockRows, summarizeDirectPurchaseStock } = require("../app/modules/compras-fora-cc1500.js");
 
 test("pesquisa global encontra descrição, item pontuado, SC, OF, comprador e reposição", () => {
   const item = {
@@ -116,4 +116,40 @@ test("auditoria distingue Alm. Preparados e Abate Aves mesmo na filial 704", () 
   assert.deepEqual(summarizeDirectPurchaseStock(rows), {
     codes: 1, orders: 2, stockQuantity: 25, stockValue: 800,
   });
+});
+
+test("Data OF respeita dd/mm/aaaa para datas brasileiras, ISO, Excel e horários", () => {
+  assert.equal(formatOfDateBr("14/10/2026"), "14/10/2026");
+  assert.equal(formatOfDateBr("2/1/2026 07:34"), "02/01/2026");
+  assert.equal(formatOfDateBr("2026-10-14"), "14/10/2026");
+  assert.equal(formatOfDateBr("2026-10-14T23:45:00Z"), "14/10/2026");
+  assert.equal(formatOfDateBr("2026-10-14 00:00:00"), "14/10/2026");
+  assert.equal(formatOfDateBr("14.10.2026"), "14/10/2026");
+  assert.equal(formatOfDateBr("14-10-2026"), "14/10/2026");
+  assert.equal(formatOfDateBr("14/10/26"), "14/10/2026");
+  assert.equal(formatOfDateBr("45292"), "01/01/2024");
+  assert.equal(formatOfDateBr("45292.5"), "01/01/2024");
+  assert.equal(formatOfDateBr(""), "");
+  assert.equal(formatOfDateBr("31/02/2026"), "");
+  assert.equal(formatOfDateBr("2026-13-14"), "");
+});
+
+test("Na auditoria cada OF conserva sua data normalizada ao montar as linhas", () => {
+  const item = {
+    code: "243370", name: "Rolamento",
+    positions: [{branchCode:"704",branchName:"Almoxarifado",quantity:10,stockValue:100}],
+    history: [
+      {sc:{code:"100",sequence:"1",allocationCostCenter:"2000"},of:{code:"200",date:"2026-10-14T23:25:00Z",deliveryBranchCode:"704"}},
+      {sc:{code:"101",sequence:"1",allocationCostCenter:"2000"},of:{code:"201",date:"14/10/2026 08:00",deliveryBranchCode:"704"}},
+      {sc:{code:"102",sequence:"1",allocationCostCenter:"2000"},of:{code:"202",date:"45292",deliveryBranchCode:"704"}},
+      {sc:{code:"103",sequence:"1",allocationCostCenter:"2000"},of:{code:"203",date:"",deliveryBranchCode:"704"}},
+      {sc:{code:"103",sequence:"1",allocationCostCenter:"2000"},of:{code:"203",date:"14.10.2026",deliveryBranchCode:"704"}},
+    ],
+  };
+  const rows=buildDirectPurchaseStockRows([item]);
+  assert.equal(rows.length,4);
+  assert.equal(rows.find((row)=>row.of==="200").ofDate,"14/10/2026");
+  assert.equal(rows.find((row)=>row.of==="201").ofDate,"14/10/2026");
+  assert.equal(rows.find((row)=>row.of==="202").ofDate,"01/01/2024");
+  assert.equal(rows.find((row)=>row.of==="203").ofDate,"14/10/2026");
 });
