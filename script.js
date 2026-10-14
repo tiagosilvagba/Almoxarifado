@@ -21,6 +21,7 @@ const MODULES = Object.freeze({
   followUp: "./app/modules/follow-up.js?v=10.7.35",
   outsideCcu: "./app/modules/compras-fora-cc1500.js?v=10.7.43",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.40",
+  intelligence: "./app/modules/inteligencia-almoxarifado.js?v=10.7.49",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
@@ -111,6 +112,7 @@ function exposeAppState(attempt = 0) {
     [MODULES.followUp, "follow up"],
     [MODULES.outsideCcu, "auditoria compras fora CCU 1500"],
     [MODULES.purchaseLeadTime, "lead time de reposição"],
+    [MODULES.intelligence, "inteligência do almoxarifado"],
     [MODULES.imageViewer, "visualizador de fotos"],
   ]) {
     await optional(src, name);
