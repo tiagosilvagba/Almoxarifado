@@ -728,8 +728,11 @@
           dataRevision = currentState()?.filterRevision ?? -1;
           applyFilters();
         }).catch((error) => {
-          if (version === analysisVersion && isCurrent())
-            showFailure("Falha na análise: " + (error?.message || String(error)));
+          if (version === analysisVersion) {
+            // Uma falha real não pode disparar sucessivos reprocessamentos automáticos.
+            refreshAfterRunning = false;
+            if (isCurrent()) showFailure("Falha na análise: " + (error?.message || String(error)));
+          }
         }).finally(() => {
           if (version === analysisVersion) {
             analysisPromise = null;
