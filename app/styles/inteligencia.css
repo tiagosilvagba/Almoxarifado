@@ -46,3 +46,18 @@
 @media(max-width:1050px){.wi-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.wi-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.wi-page{padding-inline:0;overflow-x:hidden}.wi-header{gap:10px}.wi-kpis{gap:8px}.wi-kpi{padding:12px;min-height:90px}.wi-kpi strong{font-size:1.45rem}.wi-panel{padding:12px}.wi-results{grid-template-columns:1fr;gap:9px}.wi-issue{padding:13px}.wi-filters{gap:9px}.wi-filters label.wi-search{grid-column:1/-1}.wi-heading .button{width:100%}}
 @media(max-width:410px){.wi-filters{grid-template-columns:1fr}.wi-filters label.wi-search{grid-column:auto}.wi-issue__stats{grid-template-columns:1fr 1fr}}
+
+/* PDCA: quatro etapas separadas do 5W2H e métricas verificáveis.
+ * Não indica execução real: todos os ciclos começam como "Proposto". */
+.wi-pdca>summary { border-left: 4px solid var(--blue-500,#2086d2); }
+.wi-pdca__stages>div { border-left: 3px solid var(--blue-500,#2086d2); }
+.wi-pdca__stages>div:nth-child(2) { border-left-color: #b47d18; }
+.wi-pdca__stages>div:nth-child(3) { border-left-color: #21816b; }
+.wi-pdca__stages>div:nth-child(4) { border-left-color: #7756aa; }
+.wi-pdca__measures { padding-top: 10px; border-top: 1px solid var(--border-color,#d8e0e8); }
+.wi-pdca__measures>div:first-child { border-left: 3px solid var(--blue-500,#2086d2); }
+.wi-pdca__measures>div:last-child { border-left: 3px solid #b47d18; }
+.wi-pdca__measures dt, .wi-pdca__stages dt { overflow-wrap: anywhere; }
+@media(min-width:800px) {
+  .wi-pdca__measures { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
