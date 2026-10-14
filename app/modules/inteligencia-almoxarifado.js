@@ -87,9 +87,10 @@
       throw new Error("Regras centrais de compras ainda indisponíveis.");
     }
     const findings = [];
-    const consumptionMap = new Map((options.consumption?.records || []).map((row) => [
-      code(row.code) + "::" + branch(row.branchCode) + "::" + clean(row.localCode), row,
-    ]));
+    const consumptionMap = options.consumptionMap instanceof Map
+      ? options.consumptionMap : new Map((options.consumption?.records || []).map((row) => [
+        code(row.code) + "::" + branch(row.branchCode) + "::" + clean(row.localCode), row,
+      ]));
     const horizonDays = Number.isFinite(options.horizonDays) && options.horizonDays > 0
       ? Math.min(90, options.horizonDays) : 30;
     const analyzeConsumption = typeof helpers.analyzeMonthlyConsumption === "function"
@@ -251,6 +252,48 @@
     return { findings, summary, analyzedItems: (items || []).length };
   }
 
+  // Processar em lotes libera o navegador entre grupos de itens e impede
+  // a longa tarefa síncrona que bloqueava a navegação no celular.
+  // Cada item pertence a um lote: OFs repetidas não se duplicam na junção.
+  async function analyzeWarehouseIntelligenceInBatches(items, helpers = {}, options = {}, controls = {}) {
+    const all = Array.isArray(items) ? items : [];
+    const batchSize = Math.max(25, Math.min(400, Math.floor(Number(controls.batchSize) || 120)));
+    const consumptionMap = new Map((options.consumption?.records || []).map((row) => [
+      code(row.code) + "::" + branch(row.branchCode) + "::" + clean(row.localCode), row,
+    ]));
+    const findings = [];
+    for (let start = 0; start < all.length; start += batchSize) {
+      if (controls.cancelled?.()) return null;
+      const end = Math.min(start + batchSize, all.length);
+      const result = analyzeWarehouseIntelligence(all.slice(start, end), helpers, {
+        ...options, consumptionMap,
+      });
+      findings.push(...result.findings);
+      controls.progress?.(end, all.length);
+      if (end < all.length) {
+        await (controls.yieldStep
+          ? controls.yieldStep()
+          : new Promise((resolve) => setTimeout(resolve, 0)));
+      }
+    }
+    if (controls.cancelled?.()) return null;
+    const rank = { critica: 0, alta: 1, media: 2 };
+    findings.sort((a, b) => rank[a.severity] - rank[b.severity]
+      || b.month.localeCompare(a.month)
+      || a.code.localeCompare(b.code, "pt-BR", { numeric: true }));
+    return {
+      findings,
+      summary: {
+        repeated: findings.filter((row) => row.type === "repeat").length,
+        excess: findings.filter((row) => row.type === "excess").length,
+        zero: findings.filter((row) => row.type === "zero").length,
+        critical: findings.filter((row) => row.severity === "critica").length,
+        total: findings.length,
+      },
+      analyzedItems: all.length,
+    };
+  }
+
   function buildIntelligenceExport(rows) {
     const headers = [
       "Anomalia", "Prioridade", "Código", "Item", "Filial", "Local", "Mês OF",
@@ -285,6 +328,9 @@
     let batch = 45;
     let dataRevision = -1;
     let dirty = true;
+    let analysisPromise = null;
+    let analysisItems = null;
+    let analysisVersion = 0;
     const esc = escapeHtml;
     const text = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     const helpers = () => ({
@@ -296,18 +342,12 @@
     const isCurrent = () => win.location.hash === "#" + PAGE;
 
     function selected(id) { return document.getElementById(id)?.value || ""; }
-    function visibleFilter(f) {
-      const st = currentState();
-      const itemCodes = new Set((st?.filteredItems || st?.items || []).map((item) => code(item.code)));
-      if (!itemCodes.has(f.code)) return false;
+    function visibleFilter(f, context) {
+      if (!context.itemCodes.has(f.code)) return false;
       if (typeof win.__almoxGlobalRowFilter === "function" && !win.__almoxGlobalRowFilter({
         code: f.code, branchCode: f.branchCode, localCode: f.localCode,
       })) return false;
-      const type = selected("wiType");
-      const severity = selected("wiSeverity");
-      const branchChoice = selected("wiBranch");
-      const month = selected("wiMonth");
-      const query = selected("wiSearch").toLocaleLowerCase("pt-BR").trim();
+      const { type, severity, branchChoice, month, query } = context;
       if (type && f.type !== type) return false;
       if (severity && f.severity !== severity) return false;
       if (branchChoice && f.branchCode !== branchChoice) return false;
@@ -377,7 +417,18 @@
     }
     function applyFilters() {
       if (!engineResult) return;
-      visibleRows = engineResult.findings.filter(visibleFilter);
+      // Criar o conjunto uma única vez por aplicação de filtros — antes ele
+      // era reconstruído para cada ocorrência (itens × anomalias).
+      const st = currentState();
+      const context = {
+        itemCodes: new Set((st?.filteredItems || st?.items || []).map((item) => code(item.code))),
+        type: selected("wiType"),
+        severity: selected("wiSeverity"),
+        branchChoice: selected("wiBranch"),
+        month: selected("wiMonth"),
+        query: selected("wiSearch").toLocaleLowerCase("pt-BR").trim(),
+      };
+      visibleRows = engineResult.findings.filter((finding) => visibleFilter(finding, context));
       cards(visibleRows);
       batch = 45;
       renderBatch();
@@ -393,20 +444,54 @@
         return;
       }
       if (force || st.items !== lastItems || !engineResult) {
+        if (analysisPromise && analysisItems === st.items && !force) return;
+        const sourceItems = st.items;
+        const version = ++analysisVersion;
+        analysisItems = sourceItems;
+        engineResult = null;
+        const exportButton = document.getElementById("wiExport");
+        if (exportButton) exportButton.disabled = true;
+        const host = document.getElementById("wiResults");
+        if (host) host.innerHTML = '<p class="wi-empty">Preparando a inteligência em etapas, sem bloquear o Dashboard…</p>';
         text("wiStatus", "Analisando OFs, parâmetros e cobertura de reposição…");
-        try {
-          engineResult = analyzeWarehouseIntelligence(st.items, {
-            ...helpers(),
-            analyzeMonthlyConsumption: typeof analyzeMonthlyConsumption === "function" ? analyzeMonthlyConsumption : null,
-          }, { consumption: st.consumption });
-          lastItems = st.items;
-        } catch (error) {
-          text("wiStatus", "Falha na análise: " + error.message);
-          return;
-        }
-        const f = engineResult.findings;
-        options("wiBranch", [...new Set(f.map((x) => x.branchCode))].filter(Boolean).sort(), "Todas as filiais");
-        options("wiMonth", [...new Set(f.map((x) => x.month))].filter(Boolean).sort().reverse(), "Todas as competências");
+        // A análise leva tempo, mas os lotes permitem tocar no menu e nos filtros
+        // sem congelar a interface. Abandonar a aba interrompe lotes pendentes.
+        analysisPromise = analyzeWarehouseIntelligenceInBatches(sourceItems, {
+          ...helpers(),
+          analyzeMonthlyConsumption: typeof analyzeMonthlyConsumption === "function"
+            ? analyzeMonthlyConsumption : null,
+        }, { consumption: st.consumption }, {
+          batchSize: win.matchMedia?.("(max-width:900px), (pointer:coarse)")?.matches ? 75 : 220,
+          cancelled: () => version !== analysisVersion || !isCurrent()
+            || currentState()?.items !== sourceItems,
+          progress: (done, total) => {
+            if (version === analysisVersion && isCurrent()) {
+              text("wiStatus", "Analisando dados… " + Math.round(done / total * 100) + "%");
+            }
+          },
+          yieldStep: () => new Promise((resolve) =>
+            win.setTimeout(resolve, 0)),
+        }).then((result) => {
+          if (!result || version !== analysisVersion || !isCurrent()) return;
+          engineResult = result;
+          lastItems = sourceItems;
+          const findings = result.findings;
+          options("wiBranch", [...new Set(findings.map((x) => x.branchCode))]
+            .filter(Boolean).sort(), "Todas as filiais");
+          options("wiMonth", [...new Set(findings.map((x) => x.month))]
+            .filter(Boolean).sort().reverse(), "Todas as competências");
+          dataRevision = currentState()?.filterRevision ?? -1;
+          applyFilters();
+        }).catch((error) => {
+          if (version === analysisVersion && isCurrent())
+            text("wiStatus", "Falha na análise: " + (error?.message || String(error)));
+        }).finally(() => {
+          if (version === analysisVersion) {
+            analysisPromise = null;
+            analysisItems = null;
+          }
+        });
+        return;
       }
       dataRevision = st.filterRevision;
       applyFilters();
@@ -447,5 +532,5 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
     else init();
   }
-  return { monthForOrder, planForFinding, analyzeWarehouseIntelligence, buildIntelligenceExport, install };
+  return { monthForOrder, planForFinding, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, install };
 });
