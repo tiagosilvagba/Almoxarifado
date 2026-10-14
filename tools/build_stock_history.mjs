@@ -103,8 +103,11 @@ export async function buildStockHistory({
   try { index = JSON.parse(await fs.readFile(indexFile, "utf8")); }
   catch (error) { if (error.code !== "ENOENT") throw error; }
   if (!Array.isArray(index.entries)) throw new Error("Índice de histórico inválido.");
-  if (index.entries.some((entry) => entry.sourceDigest === signature.digest)) {
-    console.log("Histórico: fontes inalteradas, sem nova captura.");
+  // Só comparar com a ÚLTIMA captura: se o usuário restaurar uma base antiga,
+  // isso é uma nova atualização operacional e deve ganhar outra data histórica.
+  const latest = index.entries[index.entries.length - 1];
+  if (latest?.sourceDigest === signature.digest) {
+    console.log("Histórico: fontes inalteradas desde a última captura.");
     return { created: false, entry: null };
   }
 
