@@ -64,10 +64,16 @@
       howMuch: cost,
     };
     return {
-      what: "Regularizar item com saldo zerado/negativo sem reposição válida identificada.",
-      why: "Evitar parada operacional e restabelecer a disponibilidade de material essencial.",
+      what: finding.projected
+        ? "Antecipar reposição do item que poderá zerar antes de receber nova compra."
+        : "Regularizar item com saldo zerado/negativo sem reposição válida identificada.",
+      why: finding.projected
+        ? "Prevenir a ruptura apontada pela cobertura estimada de consumo, sujeita à confirmação operacional."
+        : "Evitar parada operacional e restabelecer a disponibilidade de material essencial.",
       where,
-      when: "Verificar imediatamente na rotina de hoje; definir prazo de atendimento conforme criticidade operacional.",
+      when: finding.projected
+        ? "Revisar hoje e programar solução antes dos " + number.format(finding.coverageDays) + " dias estimados de cobertura."
+        : "Verificar imediatamente na rotina de hoje; definir prazo de atendimento conforme criticidade operacional.",
       who: owner + " e comprador local / manutenção solicitante",
       how: "Conferir estoque físico e endereços, validar requisições, buscar transferência entre locais/filiais e criar ou agilizar SC/OF para CCU 1500 conforme aprovação.",
       howMuch: cost,
@@ -81,6 +87,14 @@
       throw new Error("Regras centrais de compras ainda indisponíveis.");
     }
     const findings = [];
+    const consumptionMap = new Map((options.consumption?.records || []).map((row) => [
+      code(row.code) + "::" + branch(row.branchCode) + "::" + clean(row.localCode), row,
+    ]));
+    const horizonDays = Number.isFinite(options.horizonDays) && options.horizonDays > 0
+      ? Math.min(90, options.horizonDays) : 30;
+    const analyzeConsumption = typeof helpers.analyzeMonthlyConsumption === "function"
+      ? helpers.analyzeMonthlyConsumption : (monthlyTotals) => Object.entries(monthlyTotals || {})
+        .map(([month, value]) => ({ month, value: num(value), isOutlier: false }));
     const factor = Number.isFinite(options.excessFactor) && options.excessFactor > 1
       ? options.excessFactor : 1.2;
     const repeated = findRepeated(items);
@@ -180,25 +194,45 @@
               + "% do máximo; validar compras estratégicas e o rateio entre locais antes de agir.",
           });
         }
-        // Não afirmar "sem reposição" se há OF/SC em curso na mesma filial.
+        // Sem cobertura validada do CCU 1500, detectar estoque já zerado e
+        // risco de acabar em até 30 dias calculado pela média mensal sem anomalias.
+        // A projeção é estimativa, não previsão de falta garantida.
         if (incoming > 0) continue;
         for (const pos of bucket.positions) {
-          if (!(num(pos.quantity) <= 0 && (num(pos.minimum) > 0 || num(pos.maximum) > 0))) continue;
-          const suggested = Math.max(num(pos.maximum) || num(pos.minimum), 0);
+          if (!(num(pos.minimum) > 0 || num(pos.maximum) > 0)) continue;
+          const stock = num(pos.quantity);
+          const isZero = stock <= 0;
+          let coverageDays = null;
+          if (!isZero) {
+            const row = consumptionMap.get(code(item.code) + "::" + b + "::" + clean(pos.localCode));
+            const goodMonths = analyzeConsumption(row?.monthlyTotals || {})
+              .filter((entry) => !entry.isOutlier && Number(entry.value) > 0);
+            const average = goodMonths.length
+              ? goodMonths.reduce((sum, entry) => sum + num(entry.value), 0) / goodMonths.length
+              : 0;
+            coverageDays = average > 0 ? stock * 30 / average : null;
+          }
+          const projected = !isZero && coverageDays !== null && coverageDays <= horizonDays;
+          if (!isZero && !projected) continue;
+          const suggested = Math.max((num(pos.maximum) || num(pos.minimum)) - stock, 0);
           const price = num(pos.unitCost);
           findings.push({
             key: "zero::" + code(item.code) + "::" + b + "::" + clean(pos.localCode)
               + "::" + clean(pos.partition),
-            type: "zero", severity: "critica",
+            type: "zero", severity: isZero ? "critica" : "alta",
+            projected, coverageDays,
             code: code(item.code), name: item.name || item.detailedName || code(item.code),
             branchCode: b, localCode: clean(pos.localCode), month: "",
-            count: 1, title: "Saldo zerado sem reposição identificada",
-            evidence: "Saldo " + number.format(pos.quantity) + " · mínimo " + number.format(pos.minimum)
+            count: 1, title: isZero ? "Saldo zerado sem reposição identificada"
+              : "Risco de zerar em " + number.format(coverageDays) + " dias sem reposição",
+            evidence: "Saldo " + number.format(stock) + " · mínimo " + number.format(pos.minimum)
               + " · máximo " + number.format(pos.maximum)
+              + (projected ? " · cobertura estimada " + number.format(coverageDays) + " dias" : "")
               + " · OF/SC em aberto do CCU 1500: 0",
             ofCodes: [], quantity: suggested, estimatedImpact: price > 0 ? suggested * price : null,
             responsibles: (pos.replenishmentResponsibles || []).filter(Boolean),
-            detail: "Revisar também pedidos sem CCU identificado e transferências: ausência de registro válido não prova ausência de ação fora do sistema.",
+            detail: (projected ? "Prazo projetado por média mensal histórica, sem previsão de entrega. " : "")
+              + "Revisar pedidos sem CCU identificado e transferências: ausência de registro válido não prova ausência de ação fora do sistema.",
           });
         }
       }
@@ -301,15 +335,15 @@
       el.innerHTML = [
         ["Compras repetidas", summary.repeat, "repeat"],
         ["Acima do máximo", summary.excess, "excess"],
-        ["Zerados sem reposição", summary.zero, "zero"],
+        ["Zerados / risco de zerar", summary.zero, "zero"],
         ["Anomalias no recorte", rows.length, "all"],
       ].map(([label, value, type]) =>
         '<article class="wi-kpi"><span>' + esc(label) + '</span><strong>' + number.format(value)
-        + '</strong><small>' + (type === "all" ? "Com plano 5W2H" : "Clique no filtro de tipo para consultar")
+        + '</strong><small>' + (type === "all" ? "Com plano 5W2H" : "Ocorrências identificadas")
         + '</small></article>').join("");
     }
     const typeTitle = (type) => type === "repeat" ? "Compra repetida no mês"
-      : type === "excess" ? "Compra acima do máximo" : "Estoque zerado sem reposição";
+      : type === "excess" ? "Compra acima do máximo" : "Zerado ou risco de zerar";
     function card(f) {
       const p = f.plan;
       const cells = [
@@ -361,7 +395,10 @@
       if (force || st.items !== lastItems || !engineResult) {
         text("wiStatus", "Analisando OFs, parâmetros e cobertura de reposição…");
         try {
-          engineResult = analyzeWarehouseIntelligence(st.items, helpers());
+          engineResult = analyzeWarehouseIntelligence(st.items, {
+            ...helpers(),
+            analyzeMonthlyConsumption: typeof analyzeMonthlyConsumption === "function" ? analyzeMonthlyConsumption : null,
+          }, { consumption: st.consumption });
           lastItems = st.items;
         } catch (error) {
           text("wiStatus", "Falha na análise: " + error.message);
