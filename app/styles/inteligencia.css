@@ -4,7 +4,7 @@
 .wi-header h2{font-size:clamp(1.45rem,2.8vw,2.1rem);margin:.3rem 0}
 .wi-header p{max-width:900px;line-height:1.6;color:var(--muted,#5b6b7e);margin:4px 0}
 #wiStatus{max-width:100%;overflow-wrap:anywhere}
-.wi-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0 20px}
+.wi-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:12px 0 20px}
 .wi-kpi,.wi-panel{background:var(--surface,var(--card-bg,#fff));border:1px solid var(--border-color,#d8e0e8);border-radius:16px;box-shadow:0 5px 18px rgba(15,23,42,.04)}
 .wi-kpi{padding:18px;display:grid;gap:5px;min-width:0}
 .wi-kpi>span{font-size:.86rem;font-weight:750}
