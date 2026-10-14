@@ -18,6 +18,7 @@ const NAV_ICONS = Object.freeze({
   consumo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/><path d="M2 19h20"/></svg>',
   "revisao-min-max": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M4 17h16M14 7l2-2 2 2-2 2-2-2ZM8 17l2-2 2 2-2 2-2-2Z"/></svg>',
   "compras-fora-cc1500": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM8 10h8M8 14h4"/><circle cx="18" cy="17" r="3"/><path d="m17 16 2 2"/></svg>',
+  "inteligencia-almoxarifado": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h4l3-6 4 3 4-9 3 2"/><path d="M4 21h16M3 3h18"/><circle cx="18" cy="5" r="1"/></svg>',
   instrucoes: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>'
 });
 
