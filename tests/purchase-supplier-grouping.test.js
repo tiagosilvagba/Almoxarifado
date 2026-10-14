@@ -137,7 +137,7 @@ test("Fornecedor a definir reúne ausentes, placeholders e múltiplos fornecedor
   assert.match(suggestPurchaseNeedSupplier(placeholder).source, /Sem fornecedor/);
 });
 
-test("Ordena os cards dos fornecedores crescentemente pelo número de ITENS distintos, não pelo valor ou pelas posições", () => {
+test("Ordena fornecedores do MAIOR para o MENOR em itens distintos e mantém o grupo não identificado visível", () => {
   const needs = [
     mockNeed("01", "704", "1", 20, 100, [hist("Fornecedor 3")]),
     mockNeed("02", "704", "1", 8, 2, [hist("Fornecedor 3")]),
@@ -151,11 +151,11 @@ test("Ordena os cards dos fornecedores crescentemente pelo número de ITENS dist
   ];
   const groups = groupPurchaseNeedsBySupplier(needs);
   assert.deepEqual(groups.map((g) => g.supplier), [
-    "Fornecedor a definir", "Fornecedor 1", "Fornecedor 2", "Fornecedor 3"
+    "Fornecedor a definir", "Fornecedor 3", "Fornecedor 2", "Fornecedor 1"
   ]);
-  assert.deepEqual(groups.slice(1).map((g) => g.itemCodes.size), [1, 2, 3]);
-  assert.equal(groups[1].entries.length, 2, "Duas posições do mesmo código valem um item");
-  assert.equal(groups[1].estimatedValue, 12000, "Valor não interfere na ordenação");
+  assert.deepEqual(groups.slice(1).map((g) => g.itemCodes.size), [3, 2, 1]);
+  assert.equal(groups[3].entries.length, 2, "Duas posições do mesmo código valem um item");
+  assert.equal(groups[3].estimatedValue, 12000, "Valor não interfere na ordenação");
   const report = buildSupplierGroupedPurchaseExport(needs, new Date(2026, 9, 14), []);
   assert.deepEqual([...new Set(report.rows.map((r) => r[0]))], groups.map((g) => g.supplier));
 });
