@@ -54,6 +54,22 @@
       how: "Conferir OFs " + finding.ofCodes.join(", ") + ", SCs relacionadas, consumo real, lead time e mínimo/máximo; negociar programação de entregas e registrar causa encontrada.",
       howMuch: cost,
     };
+    if (finding.type === "parameter") return {
+      what: "Revisar e submeter à aprovação os limites mínimo e máximo do item; não modificar automaticamente o cadastro.",
+      why: finding.obsolescenceKind === "no-consumption"
+        ? "Parâmetros possivelmente desatualizados: não há consumo nos meses conhecidos. Confirmar criticidade, reserva técnica e sazonalidade."
+        : "Parâmetros cadastrados divergem da referência calculada sobre consumo histórico e prazo de reposição.",
+      where,
+      when: finding.severity === "alta" ? "Priorizar em até 2 dias úteis após conferência física."
+        : "Revisar na próxima análise semanal de parâmetros.",
+      who: owner + " · PCM/Manutenção e comprador local",
+      how: "Conferir os meses históricos e possíveis perdas de dados; validar lead time, lote mínimo, sazonalidade e criticidade. Comparar mín. "
+        + number.format(finding.currentMinimum) + " / máx. " + number.format(finding.currentMaximum)
+        + " com as referências mín. " + number.format(finding.suggestedMinimum)
+        + " / máx. " + number.format(finding.suggestedMaximum)
+        + "; documentar decisão e solicitar alteração cadastral apenas após aprovação.",
+      howMuch: cost,
+    };
     if (finding.type === "excess") return {
       what: "Revisar volume emitido/em aberto e adequar a reposição ao máximo parametrizado.",
       why: "Avaliar capital imobilizado e risco de excesso, considerando compromissos já existentes.",
@@ -80,6 +96,57 @@
     };
   }
 
+  // Sugestão comparativa: parâmetro registrado x consumo por posição.
+  // Mínimo = média diária x lead time x 1,2 (margem de segurança);
+  // Máximo = mínimo sugerido + um mês de consumo.
+  // Só indica obsolescência com pelo menos 3 competências válidas.
+  function analyzeMinMaxObsolescence(item, pos, consumption, review, helpers = {}) {
+    const analyzed = (typeof helpers.analyzeMonthlyConsumption === "function"
+      ? helpers.analyzeMonthlyConsumption(consumption?.monthlyTotals || {})
+      : Object.entries(consumption?.monthlyTotals || {}).map(([month, value]) => (
+        { month, value: Math.max(0, num(value)), isOutlier: false })));
+    const good = analyzed.filter((x) => !x.isOutlier && Number.isFinite(Number(x.value)));
+    if (good.length < 3) return null;
+    const avg = good.reduce((acc, x) => acc + Math.max(0, num(x.value)), 0) / good.length;
+    const currentMin = num(pos.minimum), currentMax = num(pos.maximum);
+    const isInconsistent = currentMax > 0 && currentMin > currentMax;
+    const hasNoConsumption = avg === 0 && currentMax > 0;
+    const leadReal = review?.leadTimeSource === "real" && num(review?.leadTimeDays) > 0;
+    const leadDays = leadReal ? Number(review.leadTimeDays) : 30;
+    const suggestedMin = Math.ceil(avg / 30 * leadDays * 1.2);
+    const suggestedMax = Math.ceil(suggestedMin + avg);
+    const significant = (current, target) => Math.abs(current - target) >= Math.max(2, target * .25);
+    if (!isInconsistent && !hasNoConsumption
+      && !significant(currentMin, suggestedMin) && !significant(currentMax, suggestedMax)) return null;
+    const shortage = currentMin < suggestedMin || currentMax < suggestedMax;
+    const kind = isInconsistent ? "Parâmetros inconsistentes" : hasNoConsumption
+      ? "Sem consumo com máximo cadastrado" : shortage ? "Mínimo/máximo possivelmente baixos"
+      : "Mínimo/máximo possivelmente elevados";
+    const detail = (leadReal ? "Prazo real do histórico. " : "Prazo estimado de 30 dias; confirmar com compras. ")
+      + "Somente sugestão para análise; considerar sazonalidade, estoque estratégico, lotes mínimos e criticidade."
+      + (hasNoConsumption ? " Não reduzir ou zerar parâmetros sem confirmar que o histórico representa todo o período." : "");
+    const delta = Math.abs(currentMax - suggestedMax);
+    return {
+      key: "parameter::" + code(item.code) + "::" + branch(pos.branchCode) + "::" + clean(pos.localCode)
+        + "::" + clean(pos.partition || ""),
+      type: "parameter", severity: isInconsistent || shortage ? "alta" : "media",
+      code: code(item.code), name: item.name || item.detailedName || code(item.code),
+      branchCode: branch(pos.branchCode), localCode: clean(pos.localCode), month: "",
+      title: kind, obsolescenceKind: hasNoConsumption ? "no-consumption" : "deviation",
+      evidence: "Consumo médio ajustado: " + number.format(avg) + "/mês (" + good.length + " competências válidas)"
+        + " · lead time " + number.format(leadDays) + " dias"
+        + " · mínimo atual " + number.format(currentMin) + " / referência " + number.format(suggestedMin)
+        + " · máximo atual " + number.format(currentMax) + " / referência " + number.format(suggestedMax),
+      detail, ofCodes: [], count: 1, quantity: delta,
+      responsibles: (pos.replenishmentResponsibles || []).filter(Boolean),
+      estimatedImpact: num(pos.unitCost) > 0 ? delta * num(pos.unitCost) : null,
+      currentMinimum: currentMin, currentMaximum: currentMax,
+      suggestedMinimum: suggestedMin, suggestedMaximum: suggestedMax,
+      averageMonthlyConsumption: avg, consideredMonthCount: good.length,
+      leadTimeDays: leadDays, leadTimeSource: leadReal ? "real" : "estimated",
+    };
+  }
+
   function analyzeWarehouseIntelligence(items, helpers = {}, options = {}) {
     const findRepeated = helpers.buildRepeatedPurchasesByMonth;
     const commitmentsFor = helpers.getItemPurchaseCommitments;
@@ -91,6 +158,11 @@
       ? options.consumptionMap : new Map((options.consumption?.records || []).map((row) => [
         code(row.code) + "::" + branch(row.branchCode) + "::" + clean(row.localCode), row,
       ]));
+    const reviewMap = options.reviewMap instanceof Map ? options.reviewMap : new Map(
+      (options.reviews || []).filter((r) => r.item && r.position).map((r) => [
+        code(r.item.code) + "::" + branch(r.position.branchCode) + "::" + clean(r.position.localCode), r,
+      ])
+    );
     const horizonDays = Number.isFinite(options.horizonDays) && options.horizonDays > 0
       ? Math.min(90, options.horizonDays) : 30;
     const analyzeConsumption = typeof helpers.analyzeMonthlyConsumption === "function"
@@ -117,6 +189,11 @@
     }
     for (const item of items || []) {
       if (!item?.code || item.flags?.inactiveOnly) continue;
+      for (const pos of item.positions || []) {
+        const rowKey = code(item.code) + "::" + branch(pos.branchCode) + "::" + clean(pos.localCode);
+        const review = analyzeMinMaxObsolescence(item, pos, consumptionMap.get(rowKey), reviewMap.get(rowKey), helpers);
+        if (review) findings.push(review);
+      }
       const byBranch = new Map();
       const commitments = commitmentsFor(item);
       for (const pos of item.positions || []) {
@@ -246,6 +323,7 @@
       repeated: findings.filter((row) => row.type === "repeat").length,
       excess: findings.filter((row) => row.type === "excess").length,
       zero: findings.filter((row) => row.type === "zero").length,
+      parameter: findings.filter((row) => row.type === "parameter").length,
       critical: findings.filter((row) => row.severity === "critica").length,
       total: findings.length,
     };
@@ -261,12 +339,15 @@
     const consumptionMap = new Map((options.consumption?.records || []).map((row) => [
       code(row.code) + "::" + branch(row.branchCode) + "::" + clean(row.localCode), row,
     ]));
+    const reviewMap = new Map((options.reviews || []).filter((r) => r.item && r.position).map((r) => [
+      code(r.item.code) + "::" + branch(r.position.branchCode) + "::" + clean(r.position.localCode), r,
+    ]));
     const findings = [];
     for (let start = 0; start < all.length; start += batchSize) {
       if (controls.cancelled?.()) return null;
       const end = Math.min(start + batchSize, all.length);
       const result = analyzeWarehouseIntelligence(all.slice(start, end), helpers, {
-        ...options, consumptionMap,
+        ...options, consumptionMap, reviewMap,
       });
       findings.push(...result.findings);
       controls.progress?.(end, all.length);
@@ -287,6 +368,7 @@
         repeated: findings.filter((row) => row.type === "repeat").length,
         excess: findings.filter((row) => row.type === "excess").length,
         zero: findings.filter((row) => row.type === "zero").length,
+        parameter: findings.filter((row) => row.type === "parameter").length,
         critical: findings.filter((row) => row.severity === "critica").length,
         total: findings.length,
       },
