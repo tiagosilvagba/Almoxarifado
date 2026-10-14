@@ -89,6 +89,8 @@ const state = {
   purchaseNeeds: [],
   visiblePurchaseNeeds: [],
   purchaseNeedVisible: 0,
+  purchaseNeedView: "item",
+  purchaseSupplierGroups: [],
   purchaseNeedByKey: new Map(),
   activePurchaseNeed: null,
   pendingScRows: [],
@@ -170,7 +172,7 @@ function cacheUi() {
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedRisk", "purchaseNeedAnalyze", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
-    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount",
+    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedSupplierNote",
     "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "purchaseNeedExportFormat", "exportPendingScButton", "pendingScExportFormat", "exportProcurementButton", "procurementExportFormat",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
@@ -283,6 +285,8 @@ function bindEvents() {
     if (trigger) openPendingScModal(trigger.dataset.pendingScKey);
   });
   ui.purchaseNeedLoadMore.addEventListener("click", renderNextPurchaseNeedBatch);
+  ui.purchaseNeedViewItem.addEventListener("click", () => setPurchaseNeedView("item"));
+  ui.purchaseNeedViewSupplier.addEventListener("click", () => setPurchaseNeedView("supplier"));
   ui.pendingScLoadMore.addEventListener("click", renderNextPendingScBatch);
   ui.exportCatalogButton.addEventListener("click", () => exportCatalog(ui.catalogExportFormat.value));
   ui.exportPurchaseNeedButton.addEventListener("click", () => exportPurchaseNeeds(ui.purchaseNeedExportFormat.value));
@@ -3362,6 +3366,143 @@ function summarizePurchaseNeedStockRisk(needs) {
   return { ruptures, risk, analyze };
 }
 
+// A visão de fornecedores nunca muda a regra de compra: utiliza somente
+// necessidades líquidas já apuradas e filtradas na visão original.
+function suggestPurchaseNeedSupplier(need) {
+  const item = need?.item || {};
+  const position = need?.position || {};
+  const branch = normalizeBranchCode(position.branchCode);
+  const history = [];
+  for (const record of item.history || []) {
+    const of = record?.of;
+    const name = String(of?.supplier || record?.rec?.supplier || "").trim();
+    if (!of?.code || !name || /cancelad/i.test(String(of.status || "")) || /cancelad/i.test(String(record.sc?.status || ""))
+      || /^(s|sim|yes|true|1)$/i.test(String(record.sc?.cancelled || "").trim())) continue;
+    const deliveryBranch = normalizeBranchCode(of.deliveryBranchCode || record.sc?.destinationBranch || record.sc?.branchCode || record.branchCode || "");
+    if (!branch || !deliveryBranch || deliveryBranch !== branch) continue;
+    history.push({
+      name,
+      timestamp: dateTimestamp(of.date) || dateTimestamp(record.rec?.entryDate) || Number(record.sortKey) || 0,
+      code: String(of.code),
+    });
+  }
+  history.sort((a, b) => b.timestamp - a.timestamp || b.code.localeCompare(a.code, "pt-BR", { numeric: true }));
+  const alternatives = [...new Set((item.suppliers || []).map((name) => String(name).trim()).filter(Boolean))];
+  if (history.length) {
+    return { name: history[0].name, source: "Última OF na mesma filial", alternatives };
+  }
+  // Com mais de um fornecedor e sem histórico da filial não há como escolher
+  // com segurança. A confirmação é feita pelo comprador, fora do sistema.
+  if (alternatives.length === 1) {
+    return { name: alternatives[0], source: "Fornecedor único no histórico; confirmar", alternatives };
+  }
+  return { name: "Fornecedor a definir", source: alternatives.length ? "Múltiplos fornecedores; confirmar" : "Sem fornecedor identificado", alternatives };
+}
+
+function groupPurchaseNeedsBySupplier(needs) {
+  const groups = new Map();
+  for (const need of needs || []) {
+    // Cavaco indica saldo de OF, não uma nova SC. Compra já coberta também
+    // não pode aparecer como sugestão de solicitação ao comprador.
+    if (need?.cavacoAlert || !(Number(need?.netSuggested) > 0)) continue;
+    const suggestion = suggestPurchaseNeedSupplier(need);
+    const key = suggestion.name === "Fornecedor a definir" ? "__a_definir__" : normalizeSearch(suggestion.name);
+    if (!groups.has(key)) groups.set(key, {
+      key, supplier: suggestion.name, entries: [], itemCodes: new Set(),
+      estimatedValue: 0, ruptures: 0, risks: 0, sources: new Set(),
+    });
+    const group = groups.get(key);
+    group.entries.push({ need, suggestion });
+    group.itemCodes.add(need.item.code);
+    group.estimatedValue += Number(need.estimatedValue) || 0;
+    group.sources.add(suggestion.source);
+    const priority = purchaseNeedPriorityLabel(need);
+    if (priority === "Ruptura") group.ruptures += 1;
+    if (priority === "Risco de ruptura") group.risks += 1;
+  }
+  return [...groups.values()].sort((a, b) => {
+    if ((a.key === "__a_definir__") !== (b.key === "__a_definir__")) return a.key === "__a_definir__" ? 1 : -1;
+    return b.estimatedValue - a.estimatedValue || a.supplier.localeCompare(b.supplier, "pt-BR", { sensitivity: "base" });
+  });
+}
+
+function setPurchaseNeedView(view) {
+  if (!["item", "supplier"].includes(view) || state.purchaseNeedView === view) return;
+  state.purchaseNeedView = view;
+  renderPurchaseNeedView();
+}
+
+function renderPurchaseNeedView() {
+  const grouped = state.purchaseNeedView === "supplier";
+  ui.purchaseNeedViewItem.setAttribute("aria-pressed", String(!grouped));
+  ui.purchaseNeedViewSupplier.setAttribute("aria-pressed", String(grouped));
+  ui.purchaseNeedViewItem.classList.toggle("is-active", !grouped);
+  ui.purchaseNeedViewSupplier.classList.toggle("is-active", grouped);
+  const visible = state.visiblePurchaseNeeds;
+  state.purchaseSupplierGroups = grouped ? groupPurchaseNeedsBySupplier(visible) : [];
+  const excludedCovered = visible.filter((need) => !need.cavacoAlert && !(need.netSuggested > 0)).length;
+  const excludedCavaco = visible.filter((need) => need.cavacoAlert).length;
+  ui.purchaseNeedSupplierNote.classList.toggle("is-hidden", !grouped);
+  if (grouped) {
+    ui.purchaseNeedSupplierNote.textContent =
+      "Sugestões de fornecedor com base no histórico; confirmar antes de criar a SC. Apenas compras líquidas positivas. "
+      + [excludedCovered ? `${excludedCovered} posição(ões) já coberta(s)` : "", excludedCavaco ? `${excludedCavaco} alerta(s) especial(is) de Cavaco` : ""]
+        .filter(Boolean).join(" e ").concat(excludedCovered || excludedCavaco ? " permanecem na visão Por item." : "");
+  }
+  ui.purchaseNeedResultCount.textContent = grouped
+    ? `${integerFormatter.format(state.purchaseSupplierGroups.length)} grupo(s) de fornecedor · ${integerFormatter.format(state.purchaseSupplierGroups.reduce((sum, group) => sum + group.entries.length, 0))} sugestões líquidas`
+    : `${pluralize(visible.length, "pendência", "pendências")} exibida${visible.length === 1 ? "" : "s"}`;
+  state.purchaseNeedVisible = 0;
+  ui.purchaseNeedTableWrap.replaceChildren();
+  const count = grouped ? state.purchaseSupplierGroups.length : visible.length;
+  if (!count) {
+    ui.purchaseNeedTableWrap.innerHTML = grouped
+      ? '<div class="table-empty">Nenhuma sugestão líquida para agrupar. Veja os itens já cobertos e os alertas na visão Por item.</div>'
+      : '<div class="table-empty">Nenhuma necessidade de compra corresponde à busca informada.</div>';
+    ui.purchaseNeedLoadMore.classList.add("is-hidden");
+    ui.purchaseNeedVisibleCount.textContent = "";
+    return;
+  }
+  renderNextPurchaseNeedBatch();
+}
+
+function renderNextPurchaseSupplierBatch() {
+  const batch = 12;
+  const start = state.purchaseNeedVisible;
+  const end = Math.min(start + batch, state.purchaseSupplierGroups.length);
+  if (start >= end) return;
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.purchaseSupplierGroups.slice(start, end).map((group) => `
+    <article class="supplier-need-group">
+      <details>
+        <summary class="supplier-need-group__heading">
+          <span class="supplier-need-group__heading-main"><strong>${escapeHtml(group.supplier)}</strong>
+            <small>${integerFormatter.format(group.itemCodes.size)} itens · ${integerFormatter.format(group.entries.length)} posições</small>
+            <small>${escapeHtml([...group.sources].join(" · "))}</small>
+          </span>
+          <span class="supplier-need-group__heading-stats"><strong>${currencyFormatter.format(group.estimatedValue)}</strong>
+            <small>${group.ruptures ? `${group.ruptures} rupturas · ` : ""}${group.risks ? `${group.risks} em risco · ` : ""}Abrir itens <span aria-hidden="true">▾</span></small>
+          </span>
+        </summary>
+        <div class="supplier-need-group__items">
+        ${group.entries.map(({ need, suggestion }) => `
+          <button type="button" class="supplier-need-row" data-purchase-need-key="${escapeHtml(need.key)}">
+            <span class="supplier-need-row__identity"><strong>${escapeHtml(need.item.code)} · ${escapeHtml(need.item.name)}</strong>
+              <small>Filial ${escapeHtml(need.position.branchCode)} · Local ${escapeHtml(need.position.localCode)} · ${escapeHtml(purchaseNeedPriorityLabel(need))}</small>
+              <small>${escapeHtml(suggestion.source)}</small>
+            </span>
+            <span class="supplier-need-row__numbers">
+              <strong>${numberFormatter.format(need.netSuggested)} ${escapeHtml((need.item.units || []).join(", ") || "un.")}</strong>
+              <small>${currencyFormatter.format(need.estimatedValue)}</small>
+            </span>
+          </button>`).join("")}
+        </div>
+      </details>
+    </article>`).join(""));
+  state.purchaseNeedVisible = end;
+  ui.purchaseNeedVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.purchaseSupplierGroups.length)} grupos de fornecedor`;
+  ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.purchaseSupplierGroups.length);
+}
+
 function renderPurchaseNeeds() {
   const branch = filterValues(ui.branchFilter);
   const location = filterValues(ui.locationFilter);
@@ -3392,21 +3533,12 @@ function renderPurchaseNeeds() {
   ui.purchaseNeedEstimated.textContent = compactCurrencyFormatter.format(estimatedValue);
   ui.purchaseNeedEstimated.title = currencyFormatter.format(estimatedValue);
   ui.purchaseNeedWithoutMax.textContent = integerFormatter.format(withoutMaximum);
-  ui.purchaseNeedResultCount.textContent = `${pluralize(visible.length, "pendência", "pendências")} exibida${visible.length === 1 ? "" : "s"}`;
   state.visiblePurchaseNeeds = visible;
-  state.purchaseNeedVisible = 0;
-
-  if (!visible.length) {
-    ui.purchaseNeedTableWrap.innerHTML = `<div class="table-empty">Nenhuma necessidade de compra corresponde à busca informada.</div>`;
-    ui.purchaseNeedLoadMore.classList.add("is-hidden");
-    ui.purchaseNeedVisibleCount.textContent = "";
-    return;
-  }
-  ui.purchaseNeedTableWrap.replaceChildren();
-  renderNextPurchaseNeedBatch();
+  renderPurchaseNeedView();
 }
 
 function renderNextPurchaseNeedBatch() {
+  if (state.purchaseNeedView === "supplier") return renderNextPurchaseSupplierBatch();
   const start = state.purchaseNeedVisible;
   const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
   if (start >= end) return;
@@ -6775,5 +6907,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
