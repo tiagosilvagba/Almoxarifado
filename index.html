@@ -103,6 +103,7 @@
           <a class="app-nav__tab" href="#tempo-geracao-of" data-page="tempo-geracao-of" role="tab" aria-selected="false" aria-controls="page-tempo-geracao-of">Tempo de geração de OF</a>
           <a class="app-nav__tab" href="#consumo" data-page="consumo" role="tab" aria-selected="false" aria-controls="page-consumo">Consumo</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
+          <a class="app-nav__tab" href="#inteligencia-almoxarifado" data-page="inteligencia-almoxarifado" role="tab" aria-selected="false" aria-controls="page-inteligencia-almoxarifado">Inteligência</a>
           <a class="app-nav__tab" href="#instrucoes" data-page="instrucoes" role="tab" aria-selected="false" aria-controls="page-instrucoes">Instruções</a>
         </nav>
       </div>
@@ -567,6 +568,49 @@
               <span id="reviewVisibleCount" class="visible-count"></span>
             </div>
           </div>
+        </section>
+
+        <section id="page-inteligencia-almoxarifado" class="page-panel is-hidden wi-page" data-page-panel="inteligencia-almoxarifado" aria-labelledby="wiTitle">
+          <header class="page-header wi-header">
+            <div>
+              <span class="eyebrow">Monitoramento preventivo · compras e estoque</span>
+              <h2 id="wiTitle">Inteligência do Almoxarifado</h2>
+              <p>Identifique comportamentos fora do esperado e consulte planos de ação 5W2H para apoiar a gestão. Nenhuma sugestão altera automaticamente SC, OF ou parâmetros.</p>
+            </div>
+            <span id="wiStatus" class="context-label" role="status" aria-live="polite">Aguardando análise dos dados…</span>
+          </header>
+          <div id="wiKpis" class="wi-kpis" aria-label="Resumo das anomalias"></div>
+          <section class="wi-panel" aria-label="Filtros da inteligência">
+            <div class="wi-heading">
+              <div>
+                <h3>Investigar anomalias</h3>
+                <p>Os filtros combinam o recorte global do Dashboard com os critérios específicos desta aba.</p>
+              </div>
+              <button type="button" id="wiClear" class="button button--secondary">Limpar filtros da inteligência</button>
+            </div>
+            <div class="wi-filters">
+              <label><span>Tipo de anomalia</span><select id="wiType"><option value="">Todas as anomalias</option><option value="repeat">Compras repetidas no mês</option><option value="excess">Compras acima do máximo</option><option value="zero">Zerados sem reposição</option></select></label>
+              <label><span>Prioridade</span><select id="wiSeverity"><option value="">Todas as prioridades</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Média</option></select></label>
+              <label><span>Filial</span><select id="wiBranch"><option value="">Todas as filiais</option></select></label>
+              <label><span>Mês de emissão da OF</span><select id="wiMonth"><option value="">Todas as competências</option></select></label>
+              <label class="wi-search"><span>Pesquisar</span><input id="wiSearch" type="search" placeholder="Código, item, filial, OF ou evidência" autocomplete="off"></label>
+            </div>
+          </section>
+          <section class="wi-panel" aria-label="Anomalias detectadas e planos de ação">
+            <div class="wi-heading">
+              <div>
+                <h3>Ocorrências e plano de ação 5W2H</h3>
+                <p>Análise de apoio à decisão. Prioridades e prazos são propostas e devem ser validados pela gestão.</p>
+              </div>
+              <button id="wiExport" class="button button--export" type="button" disabled>Exportar Excel 5W2H</button>
+            </div>
+            <div id="wiResults" class="wi-results" aria-live="polite"></div>
+            <div class="wi-footer">
+              <span id="wiCount" class="visible-count"></span>
+              <button type="button" id="wiMore" class="button button--secondary" hidden>Carregar mais ocorrências</button>
+            </div>
+          </section>
+          <p class="wi-disclaimer">Critérios: duas ou mais OFs distintas no mesmo mês, alerta de compra/projeção superior a 120% do máximo e saldo zerado sem OF/SC em aberto identificada no CCU 1500 da filial. As evidências devem ser conferidas antes da execução das ações.</p>
         </section>
 
         <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">
