@@ -15,7 +15,7 @@
   const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const idCode = (value) => String(value ?? "").trim().replace(/\./g, "");
   const normalBranch = (v) => String(v ?? "").replace(/^0+(?=\d)/, "");
-  const keyOf = (row) => [idCode(row[0]), normalBranch(row[2]), row[3], row[4], row[5], row[6]]
+  const keyOf = (row) => [idCode(row[0]), normalBranch(row[2]), normalBranch(row[3]), row[4], row[5], row[6]]
     .map((x) => String(x ?? "").trim()).join("::");
   const signed = (value, formatter = nf) => (value > 0 ? "+" : "") + formatter.format(value);
   const ts = (iso) => new Intl.DateTimeFormat("pt-BR", {
@@ -222,6 +222,13 @@
       const a = entries.find((x) => x.id === idA), b = entries.find((x) => x.id === idB);
       if (!a || !b) return;
       if (a.date >= b.date) {
+        token++;
+        selectedRows = [];
+        filteredRows = [];
+        if ($("shBody")) $("shBody").replaceChildren();
+        if ($("shKpis")) $("shKpis").replaceChildren();
+        if ($("shExport")) $("shExport").disabled = true;
+        if ($("shCount")) $("shCount").textContent = "";
         status("Selecione primeiro a data mais antiga, depois a mais recente.");
         return;
       }
@@ -252,6 +259,11 @@
         entries = Array.isArray(index.entries)
           ? index.entries.filter((e) => e && e.id && e.path && e.date).sort((a, b) => a.date.localeCompare(b.date))
           : [];
+        selectedRows = []; filteredRows = []; rendered = 0;
+        if ($("shBody")) $("shBody").replaceChildren();
+        if ($("shKpis")) $("shKpis").replaceChildren();
+        if ($("shCount")) $("shCount").textContent = "";
+        if ($("shExport")) $("shExport").disabled = true;
         setOptions();
         loaded = true;
         if (!entries.length) {
