@@ -3381,6 +3381,12 @@ function summarizePurchaseNeedStockRisk(needs) {
 
 // A visão de fornecedores nunca muda a regra de compra: utiliza somente
 // necessidades líquidas já apuradas e filtradas na visão original.
+function hasIdentifiedPurchaseSupplier(value) {
+  const label = normalizeSearch(String(value ?? "")).replace(/[._-]+/g, " ").trim();
+  if (!label || /^[\s/\-]+$/.test(label)) return false;
+  return !/^(?:(?:fornecedor|forn)\s+)?(?:nao informado|nao identificado|nao cadastrado|a definir|sem cadastro|sem fornecedor|indefinido|desconhecido|nao consta|n\/a)$/.test(label);
+}
+
 function suggestPurchaseNeedSupplier(need) {
   const item = need?.item || {};
   const position = need?.position || {};
@@ -3389,7 +3395,7 @@ function suggestPurchaseNeedSupplier(need) {
   for (const record of item.history || []) {
     const of = record?.of;
     const name = String(of?.supplier || record?.rec?.supplier || "").trim();
-    if (!of?.code || !name || /cancelad/i.test(String(of.status || "")) || /cancelad/i.test(String(record.sc?.status || ""))
+    if (!of?.code || !hasIdentifiedPurchaseSupplier(name) || /cancelad/i.test(String(of.status || "")) || /cancelad/i.test(String(record.sc?.status || ""))
       || /^(s|sim|yes|true|1)$/i.test(String(record.sc?.cancelled || "").trim())) continue;
     const deliveryBranch = normalizeBranchCode(of.deliveryBranchCode || record.sc?.destinationBranch || record.sc?.branchCode || record.branchCode || "");
     if (!branch || !deliveryBranch || deliveryBranch !== branch) continue;
@@ -3400,7 +3406,7 @@ function suggestPurchaseNeedSupplier(need) {
     });
   }
   history.sort((a, b) => b.timestamp - a.timestamp || b.code.localeCompare(a.code, "pt-BR", { numeric: true }));
-  const alternatives = [...new Set((item.suppliers || []).map((name) => String(name).trim()).filter(Boolean))];
+  const alternatives = [...new Set((item.suppliers || []).map((name) => String(name).trim()).filter(hasIdentifiedPurchaseSupplier))];
   if (history.length) {
     return { name: history[0].name, source: "Última OF na mesma filial", alternatives };
   }
@@ -3434,8 +3440,13 @@ function groupPurchaseNeedsBySupplier(needs) {
     if (priority === "Risco de ruptura") group.risks += 1;
   }
   return [...groups.values()].sort((a, b) => {
-    if ((a.key === "__a_definir__") !== (b.key === "__a_definir__")) return a.key === "__a_definir__" ? 1 : -1;
-    return b.estimatedValue - a.estimatedValue || a.supplier.localeCompare(b.supplier, "pt-BR", { sensitivity: "base" });
+    // Fornecedor a definir no primeiro card: mesmo com muitos fornecedores,
+    // todas as pendências sem origem confiável continuam visíveis.
+    if ((a.key === "__a_definir__") !== (b.key === "__a_definir__")) return a.key === "__a_definir__" ? -1 : 1;
+    // Demais fornecedores em ordem crescente pelo número de itens únicos.
+    return a.itemCodes.size - b.itemCodes.size
+      || a.entries.length - b.entries.length
+      || a.supplier.localeCompare(b.supplier, "pt-BR", { sensitivity: "base" });
   });
 }
 
@@ -3680,7 +3691,7 @@ function renderPurchaseNeedView() {
       ? "Auditoria histórica de compras: mesma peça (código), mesma filial e mesmo mês, com duas ou mais OFs distintas. Linhas de recebimento repetidas não duplicam compras. Apura todas as OFs históricas, inclusive de itens sem necessidade de reposição atual. Filial da OF não identifica local físico específico."
       : (material
         ? "Famílias identificadas pelo nome/descrição da peça (rolamentos, sensores, correias etc.). Itens sem identificação ficam em Outros materiais / classificar."
-        : "Fornecedores sugeridos pelo histórico; confirmar com o comprador antes de gerar a SC.")
+        : "Fornecedores sugeridos pelo histórico; confirmar com o comprador antes de gerar a SC. O card Fornecedor a definir reúne os itens sem identificação segura e fica primeiro; os demais cards são classificados por quantidade crescente de itens distintos.")
         + " Apenas compras líquidas positivas. "
         + [excludedCovered ? excludedCovered + " posição(ões) já coberta(s)" : "",
           excludedCavaco ? excludedCavaco + " alerta(s) especial(is) de Cavaco" : ""]
@@ -3746,12 +3757,12 @@ function renderNextPurchaseSupplierBatch() {
   const end = Math.min(start + batch, state.purchaseSupplierGroups.length);
   if (start >= end) return;
   ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", state.purchaseSupplierGroups.slice(start, end).map((group) => `
-    <article class="supplier-need-group">
+    <article class="supplier-need-group${group.key === "__a_definir__" ? " supplier-need-group--unassigned" : ""}">
       <details>
         <summary class="supplier-need-group__heading">
           <span class="supplier-need-group__heading-main"><strong>${escapeHtml(group.supplier)}</strong>
             <small>${integerFormatter.format(group.itemCodes.size)} itens · ${integerFormatter.format(group.entries.length)} posições</small>
-            <small>${escapeHtml([...group.sources].join(" · "))}</small>
+            <small>${group.key === "__a_definir__" ? "Itens sem fornecedor identificado ou com múltiplos fornecedores possíveis · validar antes da SC" : escapeHtml([...group.sources].join(" · "))}</small>
           </span>
           <span class="supplier-need-group__heading-stats"><strong>${currencyFormatter.format(group.estimatedValue)}</strong>
             <small>${group.ruptures ? `${group.ruptures} rupturas · ` : ""}${group.risks ? `${group.risks} em risco · ` : ""}Abrir itens <span aria-hidden="true">▾</span></small>
