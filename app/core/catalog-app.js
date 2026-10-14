@@ -3781,9 +3781,34 @@ function buildPurchaseNeedsExportReport(needs, generatedAt = new Date(), reviews
   };
 }
 
+function buildSupplierGroupedPurchaseExport(needs, generatedAt = new Date(), reviews = []) {
+  const groups = groupPurchaseNeedsBySupplier(needs);
+  const entries = groups.flatMap((group) => group.entries);
+  const report = buildPurchaseNeedsExportReport(entries.map(({ need }) => need), generatedAt, reviews);
+  report.title = "Solicitações sugeridas por fornecedor";
+  report.filename = "necessidade-de-compra-por-fornecedor.xls";
+  report.headers = ["Fornecedor sugerido", "Origem da sugestão", ...report.headers];
+  report.rows = report.rows.map((row, index) => [
+    entries[index].suggestion.name,
+    entries[index].suggestion.source,
+    ...row,
+  ]);
+  const shiftIndexes = (set) => new Set([...set].map((index) => index + 2));
+  report.numericColumns = shiftIndexes(report.numericColumns);
+  report.currencyColumns = shiftIndexes(report.currencyColumns);
+  report.dateColumns = shiftIndexes(report.dateColumns);
+  report.filterSummary += " · Agrupado por fornecedor sugerido: confirmar com comprador. Somente compra líquida positiva; alertas de Cavaco e posições já cobertas ficam na visão Por item.";
+  return report;
+}
+
 function exportPurchaseNeeds(format = "excel") {
-  // Fixar a data-base no instante do clique, para todo o relatório.
-  const report = buildPurchaseNeedsExportReport(getVisiblePurchaseNeeds(), new Date(), state.minMaxReviews);
+  // Reaproveitar a exportação original quando Por item; a visão Por fornecedor
+  // usa a mesma base e adiciona somente duas colunas de rastreabilidade.
+  const generatedAt = new Date();
+  const visible = getVisiblePurchaseNeeds();
+  const report = state.purchaseNeedView === "supplier"
+    ? buildSupplierGroupedPurchaseExport(visible, generatedAt, state.minMaxReviews)
+    : buildPurchaseNeedsExportReport(visible, generatedAt, state.minMaxReviews);
   const appliedFilters = ui.filterSummary?.textContent?.trim();
   if (appliedFilters) report.filterSummary = appliedFilters + " · " + report.filterSummary;
   exportReport(format, report);
@@ -6907,5 +6932,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
