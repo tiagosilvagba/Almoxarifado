@@ -3428,16 +3428,50 @@ function groupPurchaseNeedsBySupplier(needs) {
   });
 }
 
-// O grupo vem da primeira categoria cadastrada no saldo (grupo, subgrupo,
-// classe). Uma necessidade pertence a um único tipo de material.
+// Reconhece famílias pela peça descrita (não pelo grupo contábil genérico).
+// Em caso de várias palavras, prevalece a primeira no nome do item.
+const PURCHASE_MATERIAL_FAMILIES = Object.freeze([
+  ["Rolamentos", /\b(?:ROLAMENT(?:O|OS)|BEARINGS?)\b/],
+  ["Sensores", /\b(?:SENSOR(?:ES)?|FOTOCELULA(?:S)?|ENCODER(?:S)?)\b/],
+  ["Correias", /\b(?:CORREIA(?:S)?|BELTS?)\b/],
+  ["Válvulas", /\b(?:VALVULA(?:S)?)\b/],
+  ["Redutores", /\b(?:MOTOREDUTOR(?:ES)?|REDUTOR(?:ES)?)\b/],
+  ["Motores", /\b(?:MOTOR(?:ES)?)\b/],
+  ["Bombas", /\b(?:BOMBA(?:S)?)\b/],
+  ["Mangueiras", /\b(?:MANGUEIRA(?:S)?)\b/],
+  ["Tubos e conexões", /\b(?:TUBO(?:S)?|CONEX(?:AO|OES)|NIPLE(?:S)?)\b/],
+  ["Filtros", /\b(?:FILTRO(?:S)?|ELEMENTO FILTRANTE)\b/],
+  ["Parafusos", /\b(?:PARAFUSO(?:S)?|PRISIONEIRO(?:S)?)\b/],
+  ["Porcas e arruelas", /\b(?:PORCA(?:S)?|ARRUELA(?:S)?)\b/],
+  ["Retentores e vedações", /\b(?:RETENTOR(?:ES)?|VEDAC(?:AO|OES)|GAXETA(?:S)?|O.?RING)\b/],
+  ["Buchas", /\b(?:BUCHA(?:S)?)\b/],
+  ["Polias", /\b(?:POLIA(?:S)?)\b/],
+  ["Correntes", /\b(?:CORRENTE(?:S)?)\b/],
+  ["Engrenagens", /\b(?:ENGRENAGEM|ENGRENAGENS|PINHAO)\b/],
+  ["Acoplamentos", /\b(?:ACOPLAMENTO(?:S)?)\b/],
+  ["Cilindros e atuadores", /\b(?:CILINDRO(?:S)?|ATUADOR(?:ES)?)\b/],
+  ["Disjuntores e contatores", /\b(?:DISJUNTOR(?:ES)?|CONTATOR(?:ES)?)\b/],
+  ["Relés e temporizadores", /\b(?:RELE(?:S)?|TEMPORIZADOR(?:ES)?)\b/],
+  ["Cabos elétricos", /\b(?:CABO(?:S)?|FIO(?:S)?)\b/],
+  ["Fusíveis", /\b(?:FUSIVEL|FUSIVEIS)\b/],
+  ["Placas e componentes eletrônicos", /\b(?:PLACA(?:S)?|MODULO(?:S)?|INVERSOR(?:ES)?|CLP)\b/],
+  ["Instrumentos de medição", /\b(?:MANOMETRO(?:S)?|TERMOMETRO(?:S)?|PRESSOSTATO(?:S)?|TRANSMISSOR(?:ES)?)\b/],
+  ["Óleos e lubrificantes", /\b(?:OLEO(?:S)?|LUBRIFICANTE(?:S)?|GRAXA(?:S)?)\b/],
+  ["Ferramentas", /\b(?:FERRAMENTA(?:S)?|ALICATE(?:S)?|BROCA(?:S)?)\b/],
+  ["Fixadores e abraçadeiras", /\b(?:ABRACADEIRA(?:S)?|REBITE(?:S)?)\b/],
+  ["Equipamentos de proteção", /\b(?:LUVA(?:S)?|CAPACETE(?:S)?|OCULOS)\b/],
+]);
 function purchaseNeedMaterialType(need) {
-  const categories = (need?.item?.categories || [])
-    .map((value) => String(value ?? "").trim()).filter(Boolean);
-  return {
-    name: categories[0] || "Sem categoria informada",
-    source: categories.length ? "Grupo/categoria do cadastro" : "Sem classificação cadastrada",
-    details: categories.slice(1),
-  };
+  const item = need?.item || {};
+  const categories = (item.categories || []).map((x) => String(x ?? "").trim()).filter(Boolean);
+  const sources = [["Nome do item", item.name], ["Descrição detalhada", item.detailedName], ...categories.map((c) => ["Cadastro", c])];
+  for (const [source, raw] of sources) {
+    const label = normalizeSearch(raw || "").toUpperCase();
+    const matches = PURCHASE_MATERIAL_FAMILIES.map(([name, pattern], i) => ({ name, index: label.search(pattern), i }))
+      .filter((row) => row.index >= 0).sort((a,b) => a.index-b.index || a.i-b.i);
+    if (matches.length) return { name: matches[0].name, source, details: categories };
+  }
+  return { name: "Outros materiais / classificar", source: "Família não identificada", details: categories };
 }
 
 function groupPurchaseNeedsByMaterialType(needs) {
@@ -3447,7 +3481,7 @@ function groupPurchaseNeedsByMaterialType(needs) {
     // quando o cadastro possui grupo, subgrupo e classe.
     if (need?.cavacoAlert || !(Number(need?.netSuggested) > 0)) continue;
     const classification = purchaseNeedMaterialType(need);
-    const key = classification.name === "Sem categoria informada"
+    const key = classification.name === "Outros materiais / classificar"
       ? "__sem_categoria__" : normalizeSearch(classification.name);
     if (!groups.has(key)) groups.set(key, {
       key, materialType: classification.name, entries: [], itemCodes: new Set(),
