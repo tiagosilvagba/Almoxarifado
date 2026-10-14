@@ -61,6 +61,23 @@ class ConsumptionBuildTests(unittest.TestCase):
             self.assertEqual((root / "data" / "consumo-consolidado.csv").read_bytes(), first)
             self.assertEqual(json.loads((root / "data" / "consumo-meta.json").read_text(encoding="utf-8"))["consolidatedMonths"], 2)
 
+    def test_legacy_abbreviated_month_is_replaced_by_same_month_of_2026(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_csv(root / "03 - Consumo.csv", [
+                ["407919", "704", "Filial", "299", "Peças", "jan", "100"],
+                ["407919", "704", "Filial", "299", "Peças", "fev", "20"],
+            ])
+            write_csv(root / "consumo-mensal" / "2026-01.csv", [
+                ["407919", "704", "Filial", "299", "Peças", "jan", "12"],
+            ])
+            meta = build(root)
+            rows = read_merged(root)
+            self.assertEqual(meta["replacedLegacyMonths"], ["01/2026"])
+            self.assertEqual(meta["legacyMonthsPreserved"], ["02/2026"])
+            self.assertEqual([(r["mÊs"], r["Qt Movimento"]) for r in rows],
+                             [("01/2026", "12"), ("02/2026", "20")])
+
     def test_filename_supplies_month_when_csv_has_no_month(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
