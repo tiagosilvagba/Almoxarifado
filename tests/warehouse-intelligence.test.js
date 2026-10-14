@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments, pageForHash } = require("../app/core/catalog-app.js");
 const {
-  monthForOrder, stockArea, analyzeMinMaxObsolescence, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding, pdcaForFinding,
+  monthForOrder, stockArea, analyzeMinMaxObsolescence, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding, pdcaForFinding, install,
 } = require("../app/modules/inteligencia-almoxarifado.js");
 
 const helpers = { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments };
@@ -347,4 +347,55 @@ test("Interface da Inteligência permite PDCA expansível em tela pequena e expo
   assert.match(script,/batch = 16/);
   assert.match(script,/renderedCount = 0/);
   assert.match(script,/insertAdjacentHTML\("beforeend", visibleRows.slice\(renderedCount, until\)/);
+});
+
+
+test("Inteligência abre via pushState e troca espera permanente por diagnóstico com nova tentativa", () => {
+  let onPageMutation = null;
+  const status = { textContent: "Aguardando análise dos dados…" };
+  const results = { children: [], replaceChildren(...nodes) { this.children = nodes; } };
+  const doc = {
+    readyState: "complete",
+    documentElement: { dataset: { activePage: "dashboard" } },
+    getElementById(id) {
+      return ({
+        "page-inteligencia-almoxarifado": {},
+        wiStatus: status,
+        wiResults: results,
+      })[id] || null;
+    },
+    querySelector() { return { addEventListener() {} }; },
+    createElement() { return { addEventListener() {} }; },
+  };
+  const win = {
+    document: doc,
+    location: { hash: "#dashboard" },
+    __almoxState: { items: [], derivedIndicatorsReady: true },
+    addEventListener() {},
+    requestAnimationFrame(fn) { fn(); },
+    MutationObserver: class {
+      constructor(callback) { onPageMutation = callback; }
+      observe() {}
+    },
+  };
+  install(win);
+  assert.equal(status.textContent, "Aguardando análise dos dados…");
+  assert.equal(typeof onPageMutation, "function");
+  doc.documentElement.dataset.activePage = "inteligencia-almoxarifado";
+  win.location.hash = "#inteligencia-almoxarifado";
+  onPageMutation();
+  assert.match(status.textContent, /base de itens não ficou disponível/i);
+  assert.equal(results.children.length, 2);
+  assert.match(results.children[1].textContent, /Tentar analisar novamente/);
+});
+
+test("bootstrap de Inteligência aponta para versão atual e exibe falhas de carga", () => {
+  const bootstrap = fs.readFileSync(path.join(__dirname, "../script.js"), "utf8");
+  const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+  const moduleSource = fs.readFileSync(path.join(__dirname, "../app/modules/inteligencia-almoxarifado.js"), "utf8");
+  assert.match(bootstrap, /inteligencia-almoxarifado\\.js\\?v=10\\.7\\.53/);
+  assert.match(html, /script\\.js\\?v=10\\.7\\.53/);
+  assert.match(bootstrap, /Não foi possível carregar o módulo de Inteligência/);
+  assert.match(moduleSource, /attributeFilter: \\["data-active-page"\\]/);
+  assert.match(moduleSource, /refreshAfterRunning = false;\\s+if \\(isCurrent\\(\\)\\) showFailure/);
 });
