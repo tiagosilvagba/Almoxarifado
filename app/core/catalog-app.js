@@ -91,6 +91,7 @@ const state = {
   purchaseNeedVisible: 0,
   purchaseNeedView: "item",
   purchaseSupplierGroups: [],
+  purchaseMaterialGroups: [],
   purchaseNeedByKey: new Map(),
   activePurchaseNeed: null,
   pendingScRows: [],
@@ -172,7 +173,7 @@ function cacheUi() {
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedRisk", "purchaseNeedAnalyze", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
-    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedSupplierNote",
+    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedViewMaterial", "purchaseNeedSupplierNote",
     "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "purchaseNeedExportFormat", "exportPendingScButton", "pendingScExportFormat", "exportProcurementButton", "procurementExportFormat",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
@@ -287,6 +288,7 @@ function bindEvents() {
   ui.purchaseNeedLoadMore.addEventListener("click", renderNextPurchaseNeedBatch);
   ui.purchaseNeedViewItem.addEventListener("click", () => setPurchaseNeedView("item"));
   ui.purchaseNeedViewSupplier.addEventListener("click", () => setPurchaseNeedView("supplier"));
+  ui.purchaseNeedViewMaterial.addEventListener("click", () => setPurchaseNeedView("material"));
   ui.pendingScLoadMore.addEventListener("click", renderNextPendingScBatch);
   ui.exportCatalogButton.addEventListener("click", () => exportCatalog(ui.catalogExportFormat.value));
   ui.exportPurchaseNeedButton.addEventListener("click", () => exportPurchaseNeeds(ui.purchaseNeedExportFormat.value));
@@ -3423,6 +3425,48 @@ function groupPurchaseNeedsBySupplier(needs) {
   return [...groups.values()].sort((a, b) => {
     if ((a.key === "__a_definir__") !== (b.key === "__a_definir__")) return a.key === "__a_definir__" ? 1 : -1;
     return b.estimatedValue - a.estimatedValue || a.supplier.localeCompare(b.supplier, "pt-BR", { sensitivity: "base" });
+  });
+}
+
+// O grupo vem da primeira categoria cadastrada no saldo (grupo, subgrupo,
+// classe). Uma necessidade pertence a um único tipo de material.
+function purchaseNeedMaterialType(need) {
+  const categories = (need?.item?.categories || [])
+    .map((value) => String(value ?? "").trim()).filter(Boolean);
+  return {
+    name: categories[0] || "Sem categoria informada",
+    source: categories.length ? "Grupo/categoria do cadastro" : "Sem classificação cadastrada",
+    details: categories.slice(1),
+  };
+}
+
+function groupPurchaseNeedsByMaterialType(needs) {
+  const groups = new Map();
+  for (const need of needs || []) {
+    // Usar somente a compra líquida positiva; nunca duplicar a sugestão
+    // quando o cadastro possui grupo, subgrupo e classe.
+    if (need?.cavacoAlert || !(Number(need?.netSuggested) > 0)) continue;
+    const classification = purchaseNeedMaterialType(need);
+    const key = classification.name === "Sem categoria informada"
+      ? "__sem_categoria__" : normalizeSearch(classification.name);
+    if (!groups.has(key)) groups.set(key, {
+      key, materialType: classification.name, entries: [], itemCodes: new Set(),
+      estimatedValue: 0, ruptures: 0, risks: 0, sources: new Set(),
+    });
+    const group = groups.get(key);
+    group.entries.push({ need, classification });
+    group.itemCodes.add(need.item.code);
+    group.estimatedValue += Number(need.estimatedValue) || 0;
+    group.sources.add(classification.source);
+    const priority = purchaseNeedPriorityLabel(need);
+    if (priority === "Ruptura") group.ruptures += 1;
+    if (priority === "Risco de ruptura") group.risks += 1;
+  }
+  return [...groups.values()].sort((a, b) => {
+    if ((a.key === "__sem_categoria__") !== (b.key === "__sem_categoria__"))
+      return a.key === "__sem_categoria__" ? 1 : -1;
+    return b.estimatedValue - a.estimatedValue
+      || a.materialType.localeCompare(b.materialType, "pt-BR", { sensitivity: "base" });
   });
 }
 
@@ -6932,5 +6976,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
