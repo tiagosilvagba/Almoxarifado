@@ -3601,51 +3601,138 @@ function buildRepeatedPurchasesExportReport(groups, generatedAt = new Date()) {
 }
 
 function setPurchaseNeedView(view) {
-  if (!["item", "supplier", "material"].includes(view) || state.purchaseNeedView === view) return;
+  if (!["item", "supplier", "material", "repeat"].includes(view) || state.purchaseNeedView === view) return;
   state.purchaseNeedView = view;
   renderPurchaseNeedView();
 }
 
+function visibleRepeatedPurchaseGroups() {
+  if (state.purchaseRepeatCacheItems !== state.items) {
+    state.purchaseRepeatCache = buildRepeatedPurchasesByMonth(state.items);
+    state.purchaseRepeatCacheItems = state.items;
+  }
+  const codes = new Set(state.filteredItems.map((item) => item.code));
+  const branch = filterValues(ui.branchFilter);
+  const locations = filterValues(ui.locationFilter);
+  const responsibles = filterValues(ui.replenishmentResponsibleFilter);
+  const suppliers = filterValues(ui.supplierFilter);
+  return state.purchaseRepeatCache.filter((group) => {
+    if (!codes.has(group.code)) return false;
+    // O histórico da OF identifica a filial, não o local de estoque específico.
+    if (branch.length && !branch.some((selected) => branchCodeFromFilter(selected) === group.branchCode)) return false;
+    if (suppliers.length && !group.orders.some((order) => suppliers.some((value) =>
+      normalizeSearch(value) === normalizeSearch(order.supplier)))) return false;
+    if (branch.length || locations.length || responsibles.length) {
+      const matches = (group.item.positions || []).some((position) =>
+        normalizeBranchCode(position.branchCode) === group.branchCode
+        && positionMatchesBranch(position, branch)
+        && (!locations.length || locations.includes(position.locationKey))
+        && positionMatchesReplenishmentResponsible(position, responsibles));
+      if (!matches) return false;
+    }
+    return true;
+  });
+}
+
 function renderPurchaseNeedView() {
-  const grouped = state.purchaseNeedView !== "item";
-  const material = state.purchaseNeedView === "material";
-  ui.purchaseNeedViewItem.setAttribute("aria-pressed", String(!grouped));
-  ui.purchaseNeedViewSupplier.setAttribute("aria-pressed", String(state.purchaseNeedView === "supplier"));
-  ui.purchaseNeedViewMaterial.setAttribute("aria-pressed", String(material));
-  ui.purchaseNeedViewItem.classList.toggle("is-active", !grouped);
-  ui.purchaseNeedViewSupplier.classList.toggle("is-active", state.purchaseNeedView === "supplier");
-  ui.purchaseNeedViewMaterial.classList.toggle("is-active", material);
+  const view = state.purchaseNeedView;
+  const supplier = view === "supplier";
+  const material = view === "material";
+  const repeat = view === "repeat";
+  const grouped = supplier || material;
+  for (const [button, selected] of [
+    [ui.purchaseNeedViewItem, view === "item"],
+    [ui.purchaseNeedViewSupplier, supplier],
+    [ui.purchaseNeedViewMaterial, material],
+    [ui.purchaseNeedViewRepeat, repeat],
+  ]) {
+    button.setAttribute("aria-pressed", String(selected));
+    button.classList.toggle("is-active", selected);
+  }
+  ui.purchaseNeedRepeatControls.classList.toggle("is-hidden", !repeat);
   const visible = state.visiblePurchaseNeeds;
-  state.purchaseSupplierGroups = state.purchaseNeedView === "supplier" ? groupPurchaseNeedsBySupplier(visible) : [];
+  state.purchaseSupplierGroups = supplier ? groupPurchaseNeedsBySupplier(visible) : [];
   state.purchaseMaterialGroups = material ? groupPurchaseNeedsByMaterialType(visible) : [];
   const groups = material ? state.purchaseMaterialGroups : state.purchaseSupplierGroups;
+  state.purchaseRepeatedGroups = [];
+  if (repeat) {
+    const scoped = visibleRepeatedPurchaseGroups();
+    const availableMonths = [...new Set(scoped.map((group) => group.month))].sort().reverse();
+    if (state.purchaseRepeatMonth && !availableMonths.includes(state.purchaseRepeatMonth)) state.purchaseRepeatMonth = "";
+    ui.purchaseNeedRepeatMonth.replaceChildren(
+      new Option("Todas as competências", ""),
+      ...availableMonths.map((month) => new Option(formatRepeatedPurchaseMonth(month), month))
+    );
+    ui.purchaseNeedRepeatMonth.value = state.purchaseRepeatMonth;
+    state.purchaseRepeatedGroups = state.purchaseRepeatMonth
+      ? scoped.filter((group) => group.month === state.purchaseRepeatMonth) : scoped;
+  }
   const excludedCovered = visible.filter((need) => !need.cavacoAlert && !(need.netSuggested > 0)).length;
   const excludedCavaco = visible.filter((need) => need.cavacoAlert).length;
-  ui.purchaseNeedSupplierNote.classList.toggle("is-hidden", !grouped);
-  if (grouped) {
-    ui.purchaseNeedSupplierNote.textContent =
-      (material
-        ? "Tipos de material agrupados pela categoria principal do cadastro. Uma sugestão por posição."
-        : "Sugestões de fornecedor com base no histórico; confirmar antes de criar a SC.")
-      + " Apenas compras líquidas positivas. "
-      + [excludedCovered ? `${excludedCovered} posição(ões) já coberta(s)` : "", excludedCavaco ? `${excludedCavaco} alerta(s) especial(is) de Cavaco` : ""]
-        .filter(Boolean).join(" e ").concat(excludedCovered || excludedCavaco ? " permanecem na visão Por item." : "");
+  ui.purchaseNeedSupplierNote.classList.toggle("is-hidden", !(grouped || repeat));
+  if (grouped || repeat) {
+    ui.purchaseNeedSupplierNote.textContent = repeat
+      ? "Auditoria histórica de compras: mesma peça (código), mesma filial e mesmo mês, com duas ou mais OFs distintas. Linhas de recebimento repetidas não duplicam compras. Apura todas as OFs históricas, inclusive de itens sem necessidade de reposição atual. Filial da OF não identifica local físico específico."
+      : (material
+        ? "Famílias identificadas pelo nome/descrição da peça (rolamentos, sensores, correias etc.). Itens sem identificação ficam em Outros materiais / classificar."
+        : "Fornecedores sugeridos pelo histórico; confirmar com o comprador antes de gerar a SC.")
+        + " Apenas compras líquidas positivas. "
+        + [excludedCovered ? excludedCovered + " posição(ões) já coberta(s)" : "",
+          excludedCavaco ? excludedCavaco + " alerta(s) especial(is) de Cavaco" : ""]
+          .filter(Boolean).join(" e ").concat(excludedCovered || excludedCavaco ? " permanecem na visão Por item." : "");
   }
-  ui.purchaseNeedResultCount.textContent = grouped
-    ? `${integerFormatter.format(groups.length)} ${material ? "tipo(s) de material" : "grupo(s) de fornecedor"} · ${integerFormatter.format(groups.reduce((sum, group) => sum + group.entries.length, 0))} sugestões líquidas`
-    : `${pluralize(visible.length, "pendência", "pendências")} exibida${visible.length === 1 ? "" : "s"}`;
+  ui.purchaseNeedResultCount.textContent = repeat
+    ? integerFormatter.format(state.purchaseRepeatedGroups.length) + " itens/filiais/meses com compras repetidas · "
+      + integerFormatter.format(state.purchaseRepeatedGroups.reduce((sum, group) => sum + group.orders.length, 0)) + " OFs distintas"
+    : grouped
+      ? integerFormatter.format(groups.length) + " " + (material ? "tipo(s) de material" : "grupo(s) de fornecedor") + " · "
+        + integerFormatter.format(groups.reduce((sum, group) => sum + group.entries.length, 0)) + " sugestões líquidas"
+      : pluralize(visible.length, "pendência", "pendências") + " exibida" + (visible.length === 1 ? "" : "s");
   state.purchaseNeedVisible = 0;
   ui.purchaseNeedTableWrap.replaceChildren();
-  const count = grouped ? groups.length : visible.length;
+  const count = repeat ? state.purchaseRepeatedGroups.length : grouped ? groups.length : visible.length;
   if (!count) {
-    ui.purchaseNeedTableWrap.innerHTML = grouped
-      ? '<div class="table-empty">Nenhuma sugestão líquida para agrupar. Veja os itens já cobertos e os alertas na visão Por item.</div>'
-      : '<div class="table-empty">Nenhuma necessidade de compra corresponde à busca informada.</div>';
+    ui.purchaseNeedTableWrap.innerHTML = '<div class="table-empty">' +
+      (repeat ? "Nenhuma compra repetida corresponde ao período e aos filtros selecionados."
+        : grouped ? "Nenhuma sugestão líquida para agrupar. Consulte os itens já cobertos na visão Por item."
+          : "Nenhuma necessidade de compra corresponde à busca informada.") + "</div>";
     ui.purchaseNeedLoadMore.classList.add("is-hidden");
     ui.purchaseNeedVisibleCount.textContent = "";
     return;
   }
   renderNextPurchaseNeedBatch();
+}
+
+function renderNextRepeatedPurchaseBatch() {
+  const start = state.purchaseNeedVisible;
+  const end = Math.min(start + 12, state.purchaseRepeatedGroups.length);
+  if (start >= end) return;
+  const html = state.purchaseRepeatedGroups.slice(start, end).map((group) =>
+    '<article class="supplier-need-group repeated-need-group"><details><summary class="supplier-need-group__heading">' +
+      '<span class="supplier-need-group__heading-main"><strong>' + escapeHtml(group.code) + ' · ' + escapeHtml(group.name) + '</strong>' +
+      '<small>Filial ' + escapeHtml(group.branchCode) + ' · ' + escapeHtml(formatRepeatedPurchaseMonth(group.month)) + '</small>' +
+      '<small>' + integerFormatter.format(group.suppliers.length) + ' fornecedor(es)</small></span>' +
+      '<span class="supplier-need-group__heading-stats"><strong>' + integerFormatter.format(group.orders.length) + ' OFs</strong>' +
+      '<small>' + (group.knownAmountCount ? currencyFormatter.format(group.knownAmount) + ' estimados' : 'Sem preço informado') +
+      ' · Ver histórico ▾</small></span></summary><div class="supplier-need-group__items">' +
+      group.orders.map((order) =>
+        '<div class="supplier-need-row purchase-repeat-of-row">' +
+          '<span class="supplier-need-row__identity"><strong>OF ' + escapeHtml(order.code) + ' · ' + escapeHtml(order.date) + '</strong>' +
+          '<small>SC ' + escapeHtml(order.sc || "—") + ' · ' + escapeHtml(order.supplier || "Fornecedor não informado") + '</small>' +
+          '<small>CCU ' + escapeHtml(order.ccu || "Não informado") + '</small></span>' +
+          '<span class="supplier-need-row__numbers"><strong>' +
+            (order.quantity == null ? "Qtd. não informada" : numberFormatter.format(order.quantity) + ' un.') + '</strong>' +
+          '<small>' + (order.amount == null ? "Valor não informado" : currencyFormatter.format(order.amount) + ' estimados') +
+          '</small></span></div>'
+      ).join("") +
+      '<button type="button" class="button button--secondary purchase-repeat-item-button" data-repeat-item="' +
+      escapeHtml(group.code) + '">Abrir histórico completo do item</button></div></details></article>'
+  ).join("");
+  ui.purchaseNeedTableWrap.insertAdjacentHTML("beforeend", html);
+  state.purchaseNeedVisible = end;
+  ui.purchaseNeedVisibleCount.textContent = "Exibindo " + integerFormatter.format(end) + " de "
+    + integerFormatter.format(state.purchaseRepeatedGroups.length) + " ocorrências de compra repetida";
+  ui.purchaseNeedLoadMore.classList.toggle("is-hidden", end >= state.purchaseRepeatedGroups.length);
 }
 
 function renderNextPurchaseSupplierBatch() {
@@ -3759,6 +3846,7 @@ function renderPurchaseNeeds() {
 function renderNextPurchaseNeedBatch() {
   if (state.purchaseNeedView === "supplier") return renderNextPurchaseSupplierBatch();
   if (state.purchaseNeedView === "material") return renderNextPurchaseMaterialBatch();
+  if (state.purchaseNeedView === "repeat") return renderNextRepeatedPurchaseBatch();
   const start = state.purchaseNeedVisible;
   const end = Math.min(start + CONFIG.reportBatch, state.visiblePurchaseNeeds.length);
   if (start >= end) return;
@@ -4046,11 +4134,13 @@ function exportPurchaseNeeds(format = "excel") {
   // usa a mesma base e adiciona somente duas colunas de rastreabilidade.
   const generatedAt = new Date();
   const visible = getVisiblePurchaseNeeds();
-  const report = state.purchaseNeedView === "supplier"
-    ? buildSupplierGroupedPurchaseExport(visible, generatedAt, state.minMaxReviews)
-    : state.purchaseNeedView === "material"
-      ? buildMaterialGroupedPurchaseExport(visible, generatedAt, state.minMaxReviews)
-      : buildPurchaseNeedsExportReport(visible, generatedAt, state.minMaxReviews);
+  const report = state.purchaseNeedView === "repeat"
+    ? buildRepeatedPurchasesExportReport(state.purchaseRepeatedGroups, generatedAt)
+    : state.purchaseNeedView === "supplier"
+      ? buildSupplierGroupedPurchaseExport(visible, generatedAt, state.minMaxReviews)
+      : state.purchaseNeedView === "material"
+        ? buildMaterialGroupedPurchaseExport(visible, generatedAt, state.minMaxReviews)
+        : buildPurchaseNeedsExportReport(visible, generatedAt, state.minMaxReviews);
   const appliedFilters = ui.filterSummary?.textContent?.trim();
   if (appliedFilters) report.filterSummary = appliedFilters + " · " + report.filterSummary;
   exportReport(format, report);
