@@ -51,11 +51,13 @@ self.onmessage({
     commitsApiUrl: "",
     comprasFallbackUrl: "",
     replenishmentUrl: `${BASE_URL}02%20-%20Responsaveis_Reposi%C3%A7%C3%A3o.CSV`,
-    consumoUrl: `${BASE_URL}03%20-%20Consumo.csv`,
+    consumoUrl: `${BASE_URL}data/consumo-consolidado.csv`,
+    consumoFallbackUrl: `${BASE_URL}03%20-%20Consumo.csv`,
   },
 });
 
 const payload = await workerResult;
+const consumptionMetadata = await fs.readFile(path.join(OUTPUT_DIR, "consumo-meta.json"), "utf8").then(JSON.parse).catch(() => null);
 payload.baseUpdatedAt ||= new Date().toISOString();
 process.stdout.write("Pré-calculando indicadores derivados...\n");
 payload.derivedIndicators = await precomputeDerivedIndicators(payload);
@@ -71,6 +73,9 @@ await fs.writeFile(path.join(OUTPUT_DIR, "catalog-meta.json"), `${JSON.stringify
   comprasRows: payload.comprasRows,
   comprasFiles: payload.comprasFiles,
   consumptionRows: payload.consumption?.rowCount || 0,
+  consumptionUniquePositions: payload.consumption?.records?.length || 0,
+  consumptionMonths: consumptionMetadata?.consolidatedMonths || 0,
+  consumptionMonthlyFiles: consumptionMetadata?.monthlyFiles || [],
   derivedReviews: payload.derivedIndicators?.reviews?.length || 0,
   derivedPurchaseNeeds: payload.derivedIndicators?.needs?.length || 0,
   uncompressedBytes: Buffer.byteLength(json),
