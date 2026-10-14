@@ -91,7 +91,7 @@ def parse_quantity(value: str, source: Path, line: int) -> Decimal:
         raise ValueError(f"{source.name}, linha {line}: quantidade não finita")
     return amount
 
-def load_rows(path: Path, *, monthly: bool) -> tuple[list[dict], set[str]]:
+def load_rows(path: Path, *, monthly: bool, legacy_year: int = 2026) -> tuple[list[dict], set[str]]:
     raw = path.read_bytes()
     try:
         text = raw.decode("utf-8-sig")
@@ -122,6 +122,11 @@ def load_rows(path: Path, *, monthly: bool) -> tuple[list[dict], set[str]]:
             continue
         raw_month = get("month")
         month = month_key(raw_month) or expected_month
+        # O legado 03 - Consumo.csv traz "jan", "fev" ... sem ano. A base
+        # original pertence a 2026; isso evita somar novamente jan/2026
+        # caso um arquivo mensal mais recente substitua a competência.
+        if not monthly and not month and key(raw_month) in MONTH_NAMES:
+            month = f"{MONTH_NAMES[key(raw_month)]:02d}/{legacy_year}"
         if not month:
             if monthly:
                 raise ValueError(f"{path.name}, linha {line}: informe a competência no CSV ou no nome do arquivo")
@@ -158,12 +163,12 @@ def write_if_changed(path: Path, data: bytes) -> None:
     if not path.exists() or path.read_bytes() != data:
         path.write_bytes(data)
 
-def build(root: Path) -> dict:
+def build(root: Path, legacy_year: int = 2026) -> dict:
     legacy_path = root / "03 - Consumo.csv"
     monthly = monthly_files(root)
     if not legacy_path.exists() and not monthly:
         raise ValueError("Não há 03 - Consumo.csv nem arquivos em consumo-mensal/")
-    legacy_rows, legacy_months = load_rows(legacy_path, monthly=False) if legacy_path.exists() else ([], set())
+    legacy_rows, legacy_months = load_rows(legacy_path, monthly=False, legacy_year=legacy_year) if legacy_path.exists() else ([], set())
     monthly_inputs = []
     month_owners = {}
     for file in monthly:
@@ -200,6 +205,7 @@ def build(root: Path) -> dict:
     meta = {
         "format": "consumo-consolidado-v1",
         "legacyFile": legacy_path.name if legacy_path.exists() else None,
+        "legacyYearForAbbreviatedMonths": legacy_year if legacy_path.exists() else None,
         "legacyMonthsPreserved": sorted(legacy_months - selected),
         "monthlyFiles": [{"file": month_owners[month], "month": month} for month in sorted(selected)],
         "replacedLegacyMonths": sorted(legacy_months & selected),
@@ -215,9 +221,10 @@ def build(root: Path) -> dict:
 if __name__ == "__main__":
     cli = argparse.ArgumentParser()
     cli.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    cli.add_argument("--legacy-year", type=int, default=2026, help="Ano dos meses abreviados do arquivo legado")
     args = cli.parse_args()
     try:
-        summary = build(args.root.resolve())
+        summary = build(args.root.resolve(), legacy_year=args.legacy_year)
         print(f"Consumo: {summary['consolidatedRows']} linhas únicas; {summary['consolidatedMonths']} competências; {len(summary['monthlyFiles'])} arquivos mensais.")
     except ValueError as error:
         cli.exit(1, f"Erro ao consolidar consumo: {error}\n")
