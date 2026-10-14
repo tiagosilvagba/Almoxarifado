@@ -99,6 +99,70 @@
     };
   }
 
+  // O PDCA é um roteiro proposto, nunca uma execução ou verificação
+  // concluída. O indicador e a meta tornam a etapa Check mensurável.
+  function pdcaForFinding(finding) {
+    const owner = (finding.responsibles || []).filter(Boolean).join(", ") || "Supervisor do Almoxarifado";
+    const base = "Item " + finding.code + (finding.branchCode ? " · filial " + finding.branchCode : "")
+      + (finding.localCode ? " · local " + finding.localCode : "");
+    const common = { owner, status: "Proposto — execução e resultados não registrados" };
+    if (finding.type === "repeat") return {
+      ...common,
+      plan: "Identificar por que " + finding.count + " OFs do item foram emitidas na competência " + finding.month
+        + "; conferir origem das SCs, consumo, urgências, lote mínimo e entregas programadas.",
+      do: "Reunir almoxarifado e comprador, verificar OFs " + (finding.ofCodes || []).join(", ")
+        + ", propor uma programação consolidada e documentar exceções justificadas.",
+      check: "Na próxima competência, confrontar o número de OFs distintas, as SCs e o atendimento ao consumo; validar se houve redução sem ruptura.",
+      act: "Se confirmado o ganho, incorporar calendário de compras e parâmetros de ressuprimento; caso contrário, reavaliar causas e repetir o ciclo.",
+      indicator: "Quantidade de OFs distintas do mesmo item/filial por mês",
+      baseline: String(finding.count) + " OFs nesta competência",
+      target: "Até 1 OF/mês quando a consolidação for tecnicamente viável, sem criar rupturas",
+      reviewWhen: "Fechamento do próximo mês",
+      where: base,
+    };
+    if (finding.type === "excess") return {
+      ...common,
+      plan: "Validar o máximo cadastrado e o total de saldo mais SCs/OFs em aberto; identificar compra estratégica, lote mínimo ou demanda excepcional.",
+      do: "Conferir saldo físico, pedidos e rateios; negociar com Compras reprogramação, redução ou cancelamento somente após aprovação formal.",
+      check: "Recalcular o estoque projetado após as ações e comparar com o máximo; acompanhar recebimentos e capital potencialmente excedente.",
+      act: "Padronizar a revisão de compras abertas antes de novas SCs; ajustar a política de abastecimento se o excesso se repetir.",
+      indicator: "Saldo físico + reposição válida em aberto / máximo cadastrado",
+      baseline: "Alerta: " + number.format(finding.quantity) + " unidades potencialmente acima do máximo",
+      target: "Projeção <= máximo aprovado ou exceção estratégica documentada",
+      reviewWhen: "Após a revisão dos pedidos e em cada novo recebimento",
+      where: base,
+    };
+    if (finding.type === "parameter") return {
+      ...common,
+      plan: "Verificar se mínimo e máximo estão desatualizados com base nas " + finding.consideredMonthCount
+        + " competências válidas, consumo ajustado e lead time " + number.format(finding.leadTimeDays)
+        + " dias (" + (finding.leadTimeSource === "real" ? "real" : "estimado") + ").",
+      do: "Conferir histórico, sazonalidade, sobressalentes críticos, lote mínimo e consumo previsto com PCM/Manutenção; submeter nova parametrização à aprovação.",
+      check: "Comparar cobertura, rupturas e capital em estoque antes e depois da eventual mudança. Confirmar se as referências sugeridas se mostram adequadas.",
+      act: "Após validação, atualizar procedimentos de revisão periódica e registrar premissas; se houver desvio, revisar margem, horizonte ou dados.",
+      indicator: "Desvio dos parâmetros frente à referência validada e número de rupturas",
+      baseline: "Atual: mín. " + number.format(finding.currentMinimum) + " / máx. " + number.format(finding.currentMaximum),
+      target: "Referência a validar: mín. " + number.format(finding.suggestedMinimum)
+        + " / máx. " + number.format(finding.suggestedMaximum) + "; sem agravar rupturas",
+      reviewWhen: "30 dias após eventual alteração aprovada",
+      where: base,
+    };
+    return {
+      ...common,
+      plan: finding.projected
+        ? "Avaliar consumo, criticidade e prazo até a falta estimada (" + number.format(finding.coverageDays) + " dias)."
+        : "Identificar causa do saldo zerado, urgência operacional e falta de SC/OF válida identificada.",
+      do: "Realizar contagem física, investigar transferências e requisições; mobilizar comprador e manutenção para transferência ou compra aprovada.",
+      check: "Confirmar reposição efetiva, saldo físico, atendimento às requisições e a cobertura calculada após a intervenção.",
+      act: "Implantar gatilhos de antecipação, revisão do mínimo e alerta de pedidos sem cobertura; revisar o plano se a falta persistir.",
+      indicator: "Saldo disponível, pedidos em aberto e dias de cobertura",
+      baseline: finding.projected ? number.format(finding.coverageDays) + " dias de cobertura estimada" : "Saldo zerado/negativo",
+      target: "Saldo disponível positivo e reposição programada com cobertura compatível com lead time",
+      reviewWhen: finding.projected ? "Antes da data prevista de falta e após o recebimento" : "Conferência diária até normalizar",
+      where: base,
+    };
+  }
+
   // Sugestão comparativa: parâmetro registrado x consumo por posição.
   // Mínimo = média diária x lead time x 1,2 (margem de segurança);
   // Máximo = mínimo sugerido + um mês de consumo.
@@ -321,7 +385,10 @@
     const rank = { critica: 0, alta: 1, media: 2 };
     findings.sort((a, b) => rank[a.severity] - rank[b.severity]
       || b.month.localeCompare(a.month) || a.code.localeCompare(b.code, "pt-BR", { numeric: true }));
-    for (const finding of findings) finding.plan = planForFinding(finding);
+    for (const finding of findings) {
+      finding.plan = planForFinding(finding);
+      finding.pdca = pdcaForFinding(finding);
+    }
     const summary = {
       repeated: findings.filter((row) => row.type === "repeat").length,
       excess: findings.filter((row) => row.type === "excess").length,
@@ -639,5 +706,5 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
     else init();
   }
-  return { monthForOrder, stockArea, analyzeMinMaxObsolescence, planForFinding, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, install };
+  return { monthForOrder, stockArea, analyzeMinMaxObsolescence, planForFinding, pdcaForFinding, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, install };
 });
