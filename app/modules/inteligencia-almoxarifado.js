@@ -501,6 +501,8 @@
     let analysisItems = null;
     let analysisVersion = 0;
     let refreshAfterRunning = false;
+    let waitingAttempts = 0;
+    let dataWaitTimer = null;
     const esc = escapeHtml;
     const text = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     const helpers = () => ({
@@ -509,7 +511,29 @@
     });
     const currentState = () => typeof state !== "undefined" ? state : win.__almoxState;
     const pane = () => document.getElementById("page-" + PAGE);
-    const isCurrent = () => win.location.hash === "#" + PAGE;
+    // A navegação principal utiliza history.pushState: ela NÃO dispara hashchange.
+    // Priorizar o estado real da página e observar sua alteração.
+    const isCurrent = () => {
+      const activePage = document.documentElement?.dataset?.activePage;
+      return activePage ? activePage === PAGE : win.location.hash === "#" + PAGE;
+    };
+    function showFailure(message) {
+      text("wiStatus", message);
+      const host = document.getElementById("wiResults");
+      if (!host) return;
+      const explanation = document.createElement("p");
+      explanation.className = "wi-empty";
+      explanation.textContent = message;
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "button button--ghost";
+      retry.textContent = "Tentar analisar novamente";
+      retry.addEventListener("click", () => {
+        waitingAttempts = 0;
+        refresh(true);
+      });
+      host.replaceChildren(explanation, retry);
+    }
 
     function selected(id) { return document.getElementById(id)?.value || ""; }
     function visibleFilter(f, context) {
@@ -634,11 +658,24 @@
     }
     function refresh(force = false) {
       const st = currentState();
-      if (!st?.items?.length) {
-        text("wiStatus", "Aguardando saldo, compras e consumo carregarem…");
-        if (isCurrent()) win.setTimeout(() => refresh(), 800);
+      if (!Array.isArray(st?.items) || !st.items.length) {
+        if (dataWaitTimer) win.clearTimeout(dataWaitTimer);
+        dataWaitTimer = null;
+        if (waitingAttempts >= 35 || st?.derivedIndicatorsReady) {
+          showFailure("A base de itens não ficou disponível para a Inteligência. Verifique o carregamento e tente novamente.");
+        } else {
+          text("wiStatus", "Aguardando os itens do catálogo carregarem…");
+          if (isCurrent()) dataWaitTimer = win.setTimeout(() => {
+            dataWaitTimer = null;
+            waitingAttempts += 1;
+            refresh();
+          }, 700);
+        }
         return;
       }
+      if (dataWaitTimer) win.clearTimeout(dataWaitTimer);
+      dataWaitTimer = null;
+      waitingAttempts = 0;
       if (force || st.items !== lastItems || !engineResult) {
         if (analysisPromise && analysisItems === st.items && !force) {
           // Reabertura após sair da aba: a execução anterior pode ter
@@ -658,23 +695,28 @@
         text("wiStatus", "Analisando OFs, parâmetros e cobertura de reposição…");
         // A análise leva tempo, mas os lotes permitem tocar no menu e nos filtros
         // sem congelar a interface. Abandonar a aba interrompe lotes pendentes.
-        analysisPromise = analyzeWarehouseIntelligenceInBatches(sourceItems, {
-          ...helpers(),
-          analyzeMonthlyConsumption: typeof analyzeMonthlyConsumption === "function"
-            ? analyzeMonthlyConsumption : null,
-        }, { consumption: st.consumption, reviews: st.minMaxReviews || [] }, {
-          // Lotes pequenos evitam longas tarefas em aparelhos móveis.
-          batchSize: win.matchMedia?.("(max-width:900px), (pointer:coarse)")?.matches ? 20 : 65,
-          cancelled: () => version !== analysisVersion || !isCurrent()
-            || currentState()?.items !== sourceItems,
-          progress: (done, total) => {
-            if (version === analysisVersion && isCurrent()) {
-              text("wiStatus", "Analisando dados… " + Math.round(done / total * 100) + "%");
-            }
-          },
-          yieldStep: () => new Promise((resolve) =>
-            win.setTimeout(resolve, 0)),
-        }).then((result) => {
+        // Liberar ao menos um quadro de pintura antes do primeiro lote de cálculos.
+        // Uma falha nesta etapa também entra no catch e exibe opção de nova tentativa.
+        analysisPromise = new Promise((resolve) => win.setTimeout(resolve, 30))
+          .then(() => {
+            if (version !== analysisVersion || !isCurrent()
+              || currentState()?.items !== sourceItems) return null;
+            return analyzeWarehouseIntelligenceInBatches(sourceItems, {
+              ...helpers(),
+              analyzeMonthlyConsumption: typeof analyzeMonthlyConsumption === "function"
+                ? analyzeMonthlyConsumption : null,
+            }, { consumption: st.consumption, reviews: st.minMaxReviews || [] }, {
+              batchSize: win.matchMedia?.("(max-width:900px), (pointer:coarse)")?.matches ? 20 : 65,
+              cancelled: () => version !== analysisVersion || !isCurrent()
+                || currentState()?.items !== sourceItems,
+              progress: (done, total) => {
+                if (version === analysisVersion && isCurrent()) {
+                  text("wiStatus", "Analisando dados… " + Math.round(done / total * 100) + "%");
+                }
+              },
+              yieldStep: () => new Promise((resolve) => win.setTimeout(resolve, 0)),
+            });
+          }).then((result) => {
           if (!result || version !== analysisVersion || !isCurrent()) return;
           engineResult = result;
           lastItems = sourceItems;
@@ -687,7 +729,7 @@
           applyFilters();
         }).catch((error) => {
           if (version === analysisVersion && isCurrent())
-            text("wiStatus", "Falha na análise: " + (error?.message || String(error)));
+            showFailure("Falha na análise: " + (error?.message || String(error)));
         }).finally(() => {
           if (version === analysisVersion) {
             analysisPromise = null;
@@ -712,6 +754,13 @@
       document.querySelector('.app-nav__tab[data-page="' + PAGE + '"]')
         ?.addEventListener("click", () => win.setTimeout(open, 40));
       win.addEventListener("hashchange", open);
+      win.addEventListener("popstate", open);
+      win.addEventListener("pageshow", open);
+      if (typeof win.MutationObserver === "function") {
+        new win.MutationObserver(() => open()).observe(document.documentElement, {
+          attributes: true, attributeFilter: ["data-active-page"],
+        });
+      }
       win.addEventListener("almox-global-filters-applied", () => {
         if (isCurrent()) refresh();
         else dirty = true;
