@@ -6,8 +6,9 @@ const CONFIG = Object.freeze({
   comprasApi: "data-manifest.json",
   commitsApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/commits?per_page=20",
   replenishmentFile: "02 - Responsaveis_Reposição.CSV",
-  consumoFile: "03 - Consumo.csv",
-  optimizedDataFile: "data/catalog.json.gz?v=10.7.32",
+  consumoFile: "data/consumo-consolidado.csv?v=10.7.44",
+  consumoFallbackFile: "03 - Consumo.csv",
+  optimizedDataFile: "data/catalog.json.gz?v=10.7.44",
   imageApi: "https://api.github.com/repos/tiagosilvagba/Almoxarifado/contents/imagens?ref=main",
   imageFolder: "imagens",
   maxImages: 6,
@@ -1736,6 +1737,7 @@ async function loadCatalog() {
       comprasFallbackUrl: new URL(CONFIG.comprasFallbackFile, document.baseURI).href,
       replenishmentUrl: new URL(CONFIG.replenishmentFile, document.baseURI).href,
       consumoUrl: new URL(CONFIG.consumoFile, document.baseURI).href,
+      consumoFallbackUrl: new URL(CONFIG.consumoFallbackFile, document.baseURI).href,
     });
   } catch (error) {
     showError("Não foi possível iniciar o catálogo.", error.message);
@@ -6069,7 +6071,8 @@ function inventoryWorker() {
 
   self.onmessage = async (event) => {
     try {
-      const { optimizedDataUrl, saldoUrl, comprasApiUrl, commitsApiUrl, comprasFallbackUrl, replenishmentUrl, consumoUrl } = event.data;
+      const { optimizedDataUrl, saldoUrl, comprasApiUrl, commitsApiUrl, comprasFallbackUrl, replenishmentUrl, consumoUrl, consumoFallbackUrl } = event.data;
+      const fetchConsumption = async () => (await fetchOptionalText(consumoUrl)) ?? await fetchOptionalText(consumoFallbackUrl);
       if (optimizedDataUrl) {
         progress("Carregando a base otimizada…", 12);
         const optimizedPayload = await fetchOptimizedPayload(optimizedDataUrl);
@@ -6082,7 +6085,7 @@ function inventoryWorker() {
             : 0;
           if (optimizedPayload.items.length > 500 && cachedConsumptionCount < 25) {
             progress("Atualizando a base de consumo…", 40);
-            const refreshedConsumption = parseConsumptionCsv(await fetchOptionalText(consumoUrl));
+            const refreshedConsumption = parseConsumptionCsv(await fetchConsumption());
             if ((refreshedConsumption.records || []).length > cachedConsumptionCount) {
               optimizedPayload.consumption = refreshedConsumption;
               delete optimizedPayload.derivedIndicators;
@@ -6099,7 +6102,7 @@ function inventoryWorker() {
         fetchText(saldoUrl, "Saldo_Online"),
         discoverPurchaseParts(comprasApiUrl, comprasFallbackUrl),
         fetchOptionalText(replenishmentUrl),
-        fetchOptionalText(consumoUrl),
+        fetchConsumption(),
         fetchLatestCsvUpdate(commitsApiUrl),
       ]);
       progress("Arquivos baixados. Iniciando a consolidação…", 28);
