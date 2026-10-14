@@ -177,7 +177,7 @@ function cacheUi() {
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedRisk", "purchaseNeedAnalyze", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
-    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedViewMaterial", "purchaseNeedViewRepeat", "purchaseNeedRepeatControls", "purchaseNeedRepeatMonth", "purchaseNeedSupplierNote",
+    "purchaseNeedResultCount", "purchaseNeedListHeading", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedViewMaterial", "purchaseNeedViewRepeat", "purchaseNeedRepeatControls", "purchaseNeedRepeatMonth", "purchaseNeedSupplierNote",
     "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "purchaseNeedExportFormat", "exportPendingScButton", "pendingScExportFormat", "exportProcurementButton", "procurementExportFormat",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
@@ -3652,6 +3652,9 @@ function renderPurchaseNeedView() {
     button.classList.toggle("is-active", selected);
   }
   ui.purchaseNeedRepeatControls.classList.toggle("is-hidden", !repeat);
+  ui.purchaseNeedListHeading.textContent = repeat ? "Histórico de OFs repetidas por mês"
+    : material ? "Necessidades por família de material"
+      : supplier ? "Solicitações sugeridas por fornecedor" : "Sugestões para reposição";
   const visible = state.visiblePurchaseNeeds;
   state.purchaseSupplierGroups = supplier ? groupPurchaseNeedsBySupplier(visible) : [];
   state.purchaseMaterialGroups = material ? groupPurchaseNeedsByMaterialType(visible) : [];
@@ -3715,7 +3718,7 @@ function renderNextRepeatedPurchaseBatch() {
       '<small>Filial ' + escapeHtml(group.branchCode) + ' · ' + escapeHtml(formatRepeatedPurchaseMonth(group.month)) + '</small>' +
       '<small>' + integerFormatter.format(group.suppliers.length) + ' fornecedor(es)</small></span>' +
       '<span class="supplier-need-group__heading-stats"><strong>' + integerFormatter.format(group.orders.length) + ' OFs</strong>' +
-      '<small>' + (group.knownAmountCount ? currencyFormatter.format(group.knownAmount) + ' estimados' : 'Sem preço informado') +
+      '<small>' + (group.knownAmountCount ? currencyFormatter.format(group.knownAmount) + ' estimados (' + group.knownAmountCount + '/' + group.orders.length + ' OFs)' : 'Sem preço informado') +
       ' · Ver histórico ▾</small></span></summary><div class="supplier-need-group__items">' +
       group.orders.map((order) =>
         '<div class="supplier-need-row purchase-repeat-of-row">' +
