@@ -394,7 +394,7 @@ test("bootstrap de Inteligência aponta para versão atual e exibe falhas de car
   const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
   const moduleSource = fs.readFileSync(path.join(__dirname, "../app/modules/inteligencia-almoxarifado.js"), "utf8");
   assert.match(bootstrap, /inteligencia-almoxarifado\.js\?v=10\.7\.53/);
-  assert.match(html, /script\.js\?v=10\.7\.53/);
+  assert.match(html, /script\.js\?v=10\.7\.54/);
   assert.match(bootstrap, /Não foi possível carregar o módulo de Inteligência/);
   assert.match(moduleSource, /attributeFilter: \["data-active-page"\]/);
   assert.match(moduleSource, /refreshAfterRunning = false;\s+if \(isCurrent\(\)\) showFailure/);
