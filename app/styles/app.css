@@ -6420,3 +6420,72 @@ body.app-booting .app-nav-wrap {
     grid-column: 1 / -1;
   }
 }
+
+/* v10.7.47 — quatro visões de compra e auditoria de OFs repetidas, mobile-first */
+#page-necessidade-compra .purchase-need-repeat-controls {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--visual-border, #cbd5e1);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+#page-necessidade-compra .purchase-need-repeat-controls.is-hidden { display: none !important; }
+#page-necessidade-compra .purchase-need-repeat-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--navy-900, #123a63);
+  font-size: .8rem;
+  font-weight: 700;
+}
+#page-necessidade-compra .purchase-need-repeat-controls select {
+  min-height: 43px;
+  min-width: 170px;
+  border: 1px solid var(--visual-border, #cbd5e1);
+  border-radius: 9px;
+  background: var(--surface, #fff);
+  color: var(--navy-900, #123a63);
+  padding: 8px 10px;
+  font: inherit;
+}
+#page-necessidade-compra .purchase-need-repeat-controls small {
+  color: var(--muted, #64748b);
+  max-width: 590px;
+  line-height: 1.45;
+}
+#page-necessidade-compra .repeated-need-group {
+  border-left: 4px solid var(--blue-500, #2086d2);
+}
+#page-necessidade-compra .repeated-need-group .purchase-repeat-of-row { cursor: default; }
+#page-necessidade-compra .repeated-need-group .purchase-repeat-of-row:hover {
+  background: var(--surface, #fff);
+  border-color: var(--steel-200, #d8e1e8);
+}
+#page-necessidade-compra .purchase-repeat-item-button {
+  margin-top: 8px;
+  width: 100%;
+  min-height: 42px;
+}
+@media (max-width: 720px) {
+  #page-necessidade-compra .purchase-need-view-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #page-necessidade-compra #purchaseNeedViewMaterial { grid-column: auto; }
+  #page-necessidade-compra .purchase-need-view-switch__button {
+    min-height: 48px;
+    font-size: .8rem;
+    padding: 9px 6px;
+    overflow-wrap: anywhere;
+  }
+  #page-necessidade-compra .purchase-need-repeat-controls {
+    align-items: stretch;
+    gap: 9px;
+  }
+  #page-necessidade-compra .purchase-need-repeat-controls label,
+  #page-necessidade-compra .purchase-need-repeat-controls select { width: 100%; min-width: 0; }
+}
