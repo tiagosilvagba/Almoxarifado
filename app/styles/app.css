@@ -6489,3 +6489,17 @@ body.app-booting .app-nav-wrap {
   #page-necessidade-compra .purchase-need-repeat-controls label,
   #page-necessidade-compra .purchase-need-repeat-controls select { width: 100%; min-width: 0; }
 }
+
+/* Agrupamento: fornecedor sem identificação fica visível como uma pendência
+   única, antes dos fornecedores ordenados por número crescente de itens. */
+#page-necessidade-compra .supplier-need-group--unassigned {
+  border-style: dashed;
+  border-width: 2px;
+  border-color: var(--visual-accent, var(--blue-500, #2086d2));
+}
+#page-necessidade-compra .supplier-need-group--unassigned .supplier-need-group__heading-main > strong::before {
+  content: "Fornecedor pendente · ";
+  font-size: .73em;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+}
