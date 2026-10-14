@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "entries": [
+    {
+      "id": "2026-10-14T17-07-19-528Z-2e2584b36a",
+      "date": "2026-10-14T17:07:19.528Z",
+      "localDate": "2026-10-14",
+      "path": "data/historico-estoque/2026-10-14T17-07-19-528Z-2e2584b36a.json.gz",
+      "sourceDigest": "2e2584b36a07f3ff90675b9a42c00fe8c784364a148cbd1be0d45be5444a4140",
+      "sourceCount": 14,
+      "sourceCommit": "18bbbc500a6c1cfb7957f56aa25b23263153e997",
+      "bytes": 293148,
+      "items": 9098,
+      "positions": 10452,
+      "quantity": 24356147.149699993,
+      "value": 66207903.01193487,
+      "pricedPositions": 10452,
+      "unpricedPositions": 0
+    }
+  ]
+}
