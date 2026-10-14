@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.7.48">
+<html lang="pt-BR" data-app-version="10.7.49">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,8 +8,9 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Gestão de Almoxarifado</title>
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
-    <link rel="stylesheet" href="app/styles/app.css?v=10.7.48">
-    <script src="script.js?v=10.7.48" defer></script>
+    <link rel="stylesheet" href="app/styles/app.css?v=10.7.49">
+    <link rel="stylesheet" href="app/styles/inteligencia.css?v=10.7.49">
+    <script src="script.js?v=10.7.49" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -589,7 +590,7 @@
               <button type="button" id="wiClear" class="button button--secondary">Limpar filtros da inteligência</button>
             </div>
             <div class="wi-filters">
-              <label><span>Tipo de anomalia</span><select id="wiType"><option value="">Todas as anomalias</option><option value="repeat">Compras repetidas no mês</option><option value="excess">Compras acima do máximo</option><option value="zero">Zerados sem reposição</option></select></label>
+              <label><span>Tipo de anomalia</span><select id="wiType"><option value="">Todas as anomalias</option><option value="repeat">Compras repetidas no mês</option><option value="excess">Compras acima do máximo</option><option value="zero">Zerados ou risco de zerar</option></select></label>
               <label><span>Prioridade</span><select id="wiSeverity"><option value="">Todas as prioridades</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Média</option></select></label>
               <label><span>Filial</span><select id="wiBranch"><option value="">Todas as filiais</option></select></label>
               <label><span>Mês de emissão da OF</span><select id="wiMonth"><option value="">Todas as competências</option></select></label>
@@ -610,7 +611,7 @@
               <button type="button" id="wiMore" class="button button--secondary" hidden>Carregar mais ocorrências</button>
             </div>
           </section>
-          <p class="wi-disclaimer">Critérios: duas ou mais OFs distintas no mesmo mês, alerta de compra/projeção superior a 120% do máximo e saldo zerado sem OF/SC em aberto identificada no CCU 1500 da filial. As evidências devem ser conferidas antes da execução das ações.</p>
+          <p class="wi-disclaimer">Critérios: duas ou mais OFs distintas no mesmo mês; compra emitida ou projeção de estoque superior a 120% do máximo; saldo zerado ou cobertura estimada em até 30 dias, sem OF/SC em aberto identificada no CCU 1500 da filial. Projeções usam o consumo histórico ajustado. As evidências devem ser conferidas antes da execução das ações.</p>
         </section>
 
         <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">
