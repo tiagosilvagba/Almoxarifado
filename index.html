@@ -576,7 +576,7 @@
             <div>
               <span class="eyebrow">Monitoramento preventivo · compras e estoque</span>
               <h2 id="wiTitle">Inteligência do Almoxarifado</h2>
-              <p>Identifique comportamentos fora do esperado e consulte planos de ação 5W2H para apoiar a gestão. Nenhuma sugestão altera automaticamente SC, OF ou parâmetros.</p>
+              <p>Identifique compras repetidas, excesso, risco de falta e mínimo/máximo possivelmente obsoletos diante do consumo histórico. Consulte as evidências e os planos 5W2H antes de decidir; nenhuma sugestão altera SC, OF ou parâmetros automaticamente.</p>
             </div>
             <span id="wiStatus" class="context-label" role="status" aria-live="polite">Aguardando análise dos dados…</span>
           </header>
@@ -590,7 +590,7 @@
               <button type="button" id="wiClear" class="button button--secondary">Limpar filtros da inteligência</button>
             </div>
             <div class="wi-filters">
-              <label><span>Tipo de anomalia</span><select id="wiType"><option value="">Todas as anomalias</option><option value="repeat">Compras repetidas no mês</option><option value="excess">Compras acima do máximo</option><option value="zero">Zerados ou risco de zerar</option></select></label>
+              <label><span>Tipo de anomalia</span><select id="wiType"><option value="">Todas as anomalias</option><option value="repeat">Compras repetidas no mês</option><option value="excess">Compras acima do máximo</option><option value="zero">Zerados ou risco de zerar</option><option value="parameter">Mínimo/máximo possivelmente obsoletos</option></select></label>
               <label><span>Prioridade</span><select id="wiSeverity"><option value="">Todas as prioridades</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Média</option></select></label>
               <label><span>Filial</span><select id="wiBranch"><option value="">Todas as filiais</option></select></label>
               <label><span>Mês de emissão da OF</span><select id="wiMonth"><option value="">Todas as competências</option></select></label>
@@ -601,7 +601,7 @@
             <div class="wi-heading">
               <div>
                 <h3>Ocorrências e plano de ação 5W2H</h3>
-                <p>Análise de apoio à decisão. Prioridades e prazos são propostas e devem ser validados pela gestão.</p>
+                <p>Análise de apoio à decisão: propostas de mínimo/máximo exigem histórico suficiente, conferência do lead time, sazonalidade e aprovação da gestão. Prioridades e prazos são sugestões.</p>
               </div>
               <button id="wiExport" class="button button--export" type="button" disabled>Exportar Excel 5W2H</button>
             </div>
