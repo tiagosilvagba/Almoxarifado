@@ -492,7 +492,8 @@
     let lastItems = null;
     let engineResult = null;
     let visibleRows = [];
-    let batch = 45;
+    let batch = 0;
+    let renderedCount = 0;
     let dataRevision = -1;
     let dirty = true;
     let analysisPromise = null;
@@ -549,7 +550,7 @@
         ["Anomalias no recorte", rows.length, "all"],
       ].map(([label, value, type]) =>
         '<article class="wi-kpi"><span>' + esc(label) + '</span><strong>' + number.format(value)
-        + '</strong><small>' + (type === "all" ? "Com plano 5W2H" : "Ocorrências identificadas")
+        + '</strong><small>' + (type === "all" ? "Com planos 5W2H e PDCA" : "Ocorrências identificadas")
         + '</small></article>').join("");
     }
     const typeTitle = (type) => type === "repeat" ? "Compra repetida no mês"
@@ -591,8 +592,18 @@
       const host = document.getElementById("wiResults");
       if (!host) return;
       const until = Math.min(batch, visibleRows.length);
-      host.innerHTML = visibleRows.slice(0, until).map(card).join("")
-        || '<p class="wi-empty">Nenhuma anomalia corresponde aos filtros atuais. Isso não dispensa a verificação operacional do estoque.</p>';
+      if (renderedCount === 0) {
+        if (!visibleRows.length) {
+          host.innerHTML = '<p class="wi-empty">Nenhuma anomalia corresponde aos filtros atuais. Isso não dispensa a verificação operacional do estoque.</p>';
+        } else if (!host.firstElementChild || host.firstElementChild.classList.contains("wi-empty")) {
+          host.replaceChildren();
+        }
+      }
+      // Acrescentar somente novos cards; preservar detalhes abertos no mobile.
+      if (until > renderedCount) {
+        host.insertAdjacentHTML("beforeend", visibleRows.slice(renderedCount, until).map(card).join(""));
+        renderedCount = until;
+      }
       const more = document.getElementById("wiMore");
       if (more) more.hidden = until >= visibleRows.length;
       text("wiCount", "Exibindo " + number.format(until) + " de " + number.format(visibleRows.length) + " ocorrências");
@@ -612,7 +623,9 @@
       };
       visibleRows = engineResult.findings.filter((finding) => visibleFilter(finding, context));
       cards(visibleRows);
-      batch = 45;
+      batch = 16;
+      renderedCount = 0;
+      document.getElementById("wiResults")?.replaceChildren();
       renderBatch();
       text("wiStatus", number.format(visibleRows.length) + " anomalias no recorte · " + number.format(engineResult.analyzedItems) + " itens analisados");
       document.getElementById("wiExport").disabled = !visibleRows.length;
@@ -712,7 +725,7 @@
         applyFilters();
       });
       document.getElementById("wiMore")?.addEventListener("click", () => {
-        batch += 45;
+        batch += 16;
         renderBatch();
       });
       document.getElementById("wiExport")?.addEventListener("click", () => {
