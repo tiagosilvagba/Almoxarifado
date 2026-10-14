@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments, pageForHash } = require("../app/core/catalog-app.js");
 const {
-  monthForOrder, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding,
+  monthForOrder, stockArea, analyzeMinMaxObsolescence, analyzeWarehouseIntelligence, analyzeWarehouseIntelligenceInBatches, buildIntelligenceExport, planForFinding,
 } = require("../app/modules/inteligencia-almoxarifado.js");
 
 const helpers = { buildRepeatedPurchasesByMonth, getItemPurchaseCommitments };
@@ -199,4 +199,80 @@ test("aba Inteligência tem ícone no mobile e não recria lista de itens para c
   assert.match(core, /visibleFilter\(f, context\)/);
   assert.match(core, /itemCodes: new Set\(\(st\?\.filteredItems/);
   assert.match(core, /analyzeWarehouseIntelligenceInBatches\(sourceItems/);
+});
+
+test("local >599 na filial 704, inclusive 0600, é classificado como Alm. Preparados", () => {
+  assert.equal(stockArea({branchCode: "704", localCode: "600", branchName: "ROLANDIA - AB.AVES"}), "ROLANDIA - ALM. PREPARADOS");
+  assert.equal(stockArea({branchCode: "0704", localCode: "0600", branchName: "ROLANDIA - AB.AVES"}), "ROLANDIA - ALM. PREPARADOS");
+  assert.equal(stockArea({branchCode: "704", localCode: "599", branchName: "ROLANDIA - AB.AVES"}), "ROLANDIA - AB.AVES");
+  assert.equal(stockArea({branchCode: "705", localCode: "600", branchName: "Outra filial"}), "Outra filial");
+});
+
+test("mínimo/máximo obsoletos: detecta divergência histórica, demonstra proposta e 5W2H", () => {
+  const src = item("407919", [position(100, 200, 90, "600")]);
+  const consumption = { records: [{
+    code: "407919", branchCode: "704", localCode: "600",
+    monthlyTotals: { "07/2026": 10, "08/2026": 12, "09/2026": 11, "10/2026": 10 },
+  }] };
+  const output = analyzeWarehouseIntelligence([src], helpers, { consumption });
+  const issue = output.findings.find((f) => f.type === "parameter");
+  assert.ok(issue);
+  assert.equal(output.summary.parameter, 1);
+  assert.equal(issue.stockArea, "ROLANDIA - ALM. PREPARADOS");
+  assert.equal(issue.currentMinimum, 90);
+  assert.equal(issue.currentMaximum, 200);
+  assert.ok(issue.suggestedMinimum < issue.currentMinimum);
+  assert.ok(issue.suggestedMaximum < issue.currentMaximum);
+  assert.equal(issue.leadTimeSource, "estimated");
+  assert.equal(issue.consideredMonthCount, 4);
+  assert.match(issue.plan.how, /aprovação/);
+  assert.match(issue.plan.how, /mín/);
+  const report = buildIntelligenceExport(output.findings);
+  assert.ok(report.headers.includes("Mínimo referência"));
+  assert.ok(report.headers.includes("Máximo referência"));
+  assert.ok(report.numericColumns.has(report.headers.indexOf("Consumo médio/mês")));
+  assert.equal(report.rows[0][report.headers.indexOf("Área de estoque")], "ROLANDIA - ALM. PREPARADOS");
+});
+
+test("mínimo/máximo: histórico insuficiente não gera falso alerta, e limite baixo pode ser crítico", () => {
+  const low = item("123", [position(5, 10, 2, "7")]);
+  const missing = analyzeWarehouseIntelligence([low], helpers, { consumption: { records: [{
+    code: "123", branchCode: "704", localCode: "7",
+    monthlyTotals: { "08/2026": 50, "09/2026": 60 },
+  }] } });
+  assert.equal(missing.summary.parameter, 0);
+  const enough = analyzeWarehouseIntelligence([low], helpers, { consumption: { records: [{
+    code: "123", branchCode: "704", localCode: "7",
+    monthlyTotals: { "07/2026": 50, "08/2026": 60, "09/2026": 55 },
+  }] } });
+  const anomaly = enough.findings.find((f) => f.type === "parameter");
+  assert.ok(anomaly);
+  assert.equal(anomaly.severity, "alta");
+  assert.ok(anomaly.suggestedMinimum > 2);
+  assert.ok(anomaly.suggestedMaximum > 10);
+});
+
+test("mínimo/máximo: lead time real altera referência, sem alterar cadastro", () => {
+  const src = item("345", [position(20, 30, 10, "600")]);
+  const pos = src.positions[0];
+  const monthly = { monthlyTotals: { "07/2026": 30, "08/2026": 30, "09/2026": 30 } };
+  const estimated = analyzeMinMaxObsolescence(src, pos, monthly, null, {});
+  const real = analyzeMinMaxObsolescence(src, pos, monthly, {leadTimeSource:"real",leadTimeDays:60}, {});
+  assert.ok(real);
+  assert.ok(estimated);
+  assert.ok(real.suggestedMinimum > estimated.suggestedMinimum);
+  assert.equal(real.leadTimeSource, "real");
+  assert.equal(pos.minimum, 10);
+  assert.equal(pos.maximum, 30);
+  const noConsumption = analyzeMinMaxObsolescence(src, pos, {monthlyTotals: {}}, null, {});
+  assert.equal(noConsumption, null);
+});
+
+test("aba inteligência oferece filtro de parâmetros obsoletos, ícone e módulo versionado", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../index.html"),"utf8");
+  const script = fs.readFileSync(path.join(__dirname, "../script.js"),"utf8");
+  const features = fs.readFileSync(path.join(__dirname, "../app/layers/features.js"),"utf8");
+  assert.match(html, /value="parameter">Mínimo\/máximo/);
+  assert.match(features, /"inteligencia-almoxarifado": '<svg/);
+  assert.match(script, /inteligencia-almoxarifado\.js\?v=10\.7\./);
 });
