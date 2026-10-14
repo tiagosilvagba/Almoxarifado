@@ -46,6 +46,16 @@ node tools/build_catalog.mjs
 
 O arquivo `data/consumo-meta.json` informa os meses carregados e substituídos, e a rotina falha de forma segura se houver arquivos mensais duplicados ou inconsistentes.
 
+## Necessidade de compra: visão por fornecedor
+
+Na aba **Necessidade de Compra**, selecione **Por fornecedor** para ver as sugestões agrupadas sem modificar a visão original **Por item**.
+
+- Os grupos contêm apenas posições com **compra líquida positiva**, após descontar as coberturas por SC e OF; posições já cobertas e alertas especiais de Cavaco continuam na visão Por item.
+- A indicação usa a OF mais recente do mesmo código de item e **mesma filial**. Se não houver OF na filial, um único fornecedor no histórico pode ser sugerido com aviso de confirmação. Vários fornecedores possíveis ficam em **Fornecedor a definir**.
+- Cada grupo informa itens distintos, posições, valor líquido estimado e prioridades. Clique em um grupo para ver e abrir cada necessidade com seu código, filial, local e quantidade.
+- O Excel/PDF segue a visão selecionada. **Por fornecedor** gera a planilha com nome e origem do fornecedor sugerido, sem perder as informações originais de lead time, cobertura e valor.
+- **Atenção:** o agrupamento não emite SC, não escolhe definitivamente o fornecedor e não modifica saldos ou regras de compra. O comprador deve confirmar fornecedor, valor e condições antes de gerar a solicitação.
+
 ## Desempenho
 
 Os arquivos de compras são processados sequencialmente dentro de um Web Worker. Apenas uma parte permanece como texto na memória durante a consolidação, evitando o pico provocado pelo carregamento simultâneo de todas as bases.
