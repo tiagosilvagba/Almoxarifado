@@ -576,7 +576,7 @@
             <div>
               <span class="eyebrow">Monitoramento preventivo · compras e estoque</span>
               <h2 id="wiTitle">Inteligência do Almoxarifado</h2>
-              <p>Identifique compras repetidas, excesso, risco de falta e mínimo/máximo possivelmente obsoletos diante do consumo histórico. Consulte as evidências e os planos 5W2H antes de decidir; nenhuma sugestão altera SC, OF ou parâmetros automaticamente.</p>
+              <p>Identifique compras repetidas, excesso, risco de falta e mínimo/máximo possivelmente obsoletos diante do consumo histórico. Consulte as evidências, o 5W2H e o ciclo PDCA para cada ocorrência antes de decidir; nenhuma sugestão altera SC, OF ou parâmetros automaticamente.</p>
             </div>
             <span id="wiStatus" class="context-label" role="status" aria-live="polite">Aguardando análise dos dados…</span>
           </header>
@@ -600,10 +600,10 @@
           <section class="wi-panel" aria-label="Anomalias detectadas e planos de ação">
             <div class="wi-heading">
               <div>
-                <h3>Ocorrências e plano de ação 5W2H</h3>
-                <p>Análise de apoio à decisão: propostas de mínimo/máximo exigem histórico suficiente, conferência do lead time, sazonalidade e aprovação da gestão. Prioridades e prazos são sugestões.</p>
+                <h3>Ocorrências e planos 5W2H + PDCA</h3>
+                <p>Cada ocorrência contém plano 5W2H e ciclo PDCA com ações, indicador, meta e prazo de verificação. São propostas para aprovação e acompanhamento; não representam ações concluídas. Recomendações de mínimo/máximo exigem validação do consumo, lead time e sazonalidade.</p>
               </div>
-              <button id="wiExport" class="button button--export" type="button" disabled>Exportar Excel 5W2H</button>
+              <button id="wiExport" class="button button--export" type="button" disabled>Exportar Excel 5W2H + PDCA</button>
             </div>
             <div id="wiResults" class="wi-results" aria-live="polite"></div>
             <div class="wi-footer">
@@ -611,7 +611,7 @@
               <button type="button" id="wiMore" class="button button--secondary" hidden>Carregar mais ocorrências</button>
             </div>
           </section>
-          <p class="wi-disclaimer">Critérios: duas ou mais OFs distintas no mesmo mês; compra emitida ou projeção de estoque superior a 120% do máximo; saldo zerado ou cobertura estimada em até 30 dias, sem OF/SC em aberto identificada no CCU 1500 da filial. Projeções usam o consumo histórico ajustado. As evidências devem ser conferidas antes da execução das ações.</p>
+          <p class="wi-disclaimer">Critérios: duas ou mais OFs distintas no mesmo mês; compra emitida ou projeção de estoque superior a 120% do máximo; saldo zerado ou cobertura estimada em até 30 dias, sem OF/SC em aberto identificada no CCU 1500 da filial. Projeções usam o consumo histórico ajustado. As evidências, metas e responsabilidades dos planos 5W2H + PDCA devem ser conferidas e aprovadas antes da execução. O Dashboard não registra automaticamente o cumprimento das etapas.</p>
         </section>
 
         <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">
