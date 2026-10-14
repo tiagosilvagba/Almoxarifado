@@ -15,6 +15,41 @@
   const isCancelled = (value) => ["s", "sim", "1", "true", "yes"].includes(normalize(value));
   const isWarehouseCcu = (value) => /^0*1500(?:[.,]0+)?$/.test(clean(value));
 
+  // A data da OF deve conservar o dia do documento original, sem converter
+  // horários/fusos. Aceita data brasileira, ISO e serial de data do Excel.
+  function formatOfDateBr(value) {
+    const original = clean(value);
+    if (!original) return "";
+    let day, month, year;
+    const serialMatch = original.match(/^(\d{5})(?:[.,]\d+)?$/);
+    if (serialMatch) {
+      const serial = Number(serialMatch[1]);
+      const date = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+      if (!Number.isFinite(date.getTime())) return "";
+      day = date.getUTCDate();
+      month = date.getUTCMonth() + 1;
+      year = date.getUTCFullYear();
+    } else {
+      const br = original.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?=$|\s|T)/);
+      const iso = original.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?=$|\s|T)/);
+      if (br) {
+        day = Number(br[1]);
+        month = Number(br[2]);
+        year = Number(br[3].length === 2 ? "20" + br[3] : br[3]);
+      } else if (iso) {
+        year = Number(iso[1]);
+        month = Number(iso[2]);
+        day = Number(iso[3]);
+      } else {
+        return "";
+      }
+    }
+    const valid = new Date(Date.UTC(year, month - 1, day));
+    if (year < 1900 || year > 2100 || valid.getUTCFullYear() !== year
+      || valid.getUTCMonth() + 1 !== month || valid.getUTCDate() !== day) return "";
+    return [String(day).padStart(2, "0"), String(month).padStart(2, "0"), String(year)].join("/");
+  }
+
   // Um registro sem CCU informado é indeterminado e NÃO pode ser rotulado
   // como compra fora do 1500. Exige SC válida + OF emitida.
   function isConfirmedOutsideWarehousePurchase(record) {
@@ -88,7 +123,7 @@
               supplier: clean(of.supplier || record.rec?.supplier),
               requester: clean(sc.requesterName),
               buyer: clean(sc.buyerName || of.buyerName),
-              ofDate: clean(of.date),
+              ofDate: formatOfDateBr(of.date),
               requested: number(of.requestedQuantity),
               delivered: number(of.deliveredQuantity),
               invoice: clean(record.rec?.invoice),
@@ -100,6 +135,7 @@
             if (!old.invoice) old.invoice = clean(record.rec?.invoice);
             if (!old.supplier) old.supplier = clean(of.supplier || record.rec?.supplier);
             if (!old.buyer) old.buyer = clean(sc.buyerName || of.buyerName);
+            if (!old.ofDate) old.ofDate = formatOfDateBr(of.date);
           }
         }
       }
@@ -272,7 +308,7 @@
         <td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.item)}</td>
         <td>${escapeHtml(row.branchCode)} · ${escapeHtml(row.branchNames)}</td><td>${escapeHtml(row.ccu)}</td>
         <td>${decimal.format(row.stockQuantity)}</td><td>${money.format(row.stockValue)}</td>
-        <td>${escapeHtml(row.sc)}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(row.ofDate || "—")}</td>
+        <td>${escapeHtml(row.sc)}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(formatOfDateBr(row.ofDate) || "—")}</td>
         <td>${decimal.format(row.requested)}</td><td>${decimal.format(row.delivered)}</td>
         <td>${escapeHtml(row.supplier || "—")}</td><td>${escapeHtml(row.buyer || "—")}</td>
         <td>${escapeHtml(row.requester || "—")}</td><td>${escapeHtml(row.responsibles || "—")}</td>
@@ -296,7 +332,7 @@
         title: "Compras fora do CCU 1500 com saldo atual",
         filename: "compras-fora-cc1500-com-saldo.xls",
         headers: ["Código","Descrição","Filial","CCU da etiqueta","Saldo atual","Valor saldo","SC","OF","Data OF","Qtd. OF","Entregue","Fornecedor","Comprador","Solicitante","Responsável reposição","Posições"],
-        rows: filtered.map((r) => [r.code,r.item,`${r.branchCode} · ${r.branchNames}`,r.ccu,r.stockQuantity,r.stockValue,r.sc,r.of,r.ofDate,r.requested,r.delivered,r.supplier,r.buyer,r.requester,r.responsibles,r.addresses]),
+        rows: filtered.map((r) => [r.code,r.item,`${r.branchCode} · ${r.branchNames}`,r.ccu,r.stockQuantity,r.stockValue,r.sc,r.of,formatOfDateBr(r.ofDate),r.requested,r.delivered,r.supplier,r.buyer,r.requester,r.responsibles,r.addresses]),
         numericColumns: new Set([4,5,9,10]), currencyColumns: new Set([5]), dateColumns: new Set([8]), pdfIdentityColumns: [0,7],
         filterSummary: "Somente saldo positivo com OF emitida e CCU explícito diferente de 1500. Valores de estoque podem repetir em OFs do mesmo item e filial.",
       });
@@ -354,5 +390,5 @@
     else init();
   }
 
-  return { isConfirmedOutsideWarehousePurchase, buildDirectPurchaseStockRows, summarizeDirectPurchaseStock, install };
+  return { isConfirmedOutsideWarehousePurchase, formatOfDateBr, buildDirectPurchaseStockRows, summarizeDirectPurchaseStock, install };
 });
