@@ -94,6 +94,22 @@ Cada ocorrência recebe um **5W2H específico (O quê, Por quê, Onde, Quando, Q
 
 Filtros: tipo, prioridade, filial, competência, pesquisa e filtros globais; exportação Excel com o plano completo. O motor e seus testes ficam em `app/modules/inteligencia-almoxarifado.js` e `tests/warehouse-intelligence.test.js`.
 
+
+## Histórico de atualizações dos CSVs e comparativo de estoque
+
+A aba **Histórico do Estoque** guarda as posições de estoque de cada publicação consolidada dos CSVs. O workflow `Preparar bases de dados` constrói o catálogo, depois executa `tools/build_stock_history.mjs` e registra:
+
+- Um arquivo de snapshot comprimido por atualização em `data/historico-estoque/<data-hora>-<assinatura>.json.gz`, contendo código sem pontos, descrição, filial, local, repartição, divisão, prateleira, saldo, custo unitário, valor do estoque, mínimo e máximo.
+- Um índice público `data/historico-estoque/index.json` com data/hora em UTC, data local, assinatura das fontes, commit de origem e totais.
+- Uma nova captura quando qualquer CSV do manifesto ou consumo mensal muda. Se o conteúdo for idêntico, não duplica; snapshots antigos não são substituídos.
+- O navegador consulta apenas o índice e **duas capturas selecionadas**, para reduzir tempo de carregamento e consumo de memória.
+
+Na aba, selecione **Posição inicial** e **Posição final**, filtre por item, filial ou local e visualize saldo inicial, saldo final, variação quantitativa e financeira, itens incluídos, retirados e alterados. É possível exportar o recorte em CSV compatível com Excel.
+
+**Exemplo:** escolha a captura de 14/10/2026 e outra efetuada 50 dias depois. O histórico não fabrica posições intermediárias, não consulta futuras movimentações e não recria retroativamente as versões anteriores à implantação. O horário é o da captura do arquivo; valores de estoque dependem dos custos disponibilizados. A soma de quantidades de unidades diferentes é apenas uma soma aritmética, não um indicador físico homogêneo.
+
+Teste automatizado: `tests/stock-history.test.js`. Para reconstruir o índice a partir das fontes atuais: `python tools/build_manifest.py`, `python tools/build_consumption.py`, `node tools/build_catalog.mjs`, `node tools/build_stock_history.mjs`. **Não remova a pasta de históricos** ao atualizar o site.
+
 ## Desempenho
 
 Os arquivos de compras são processados sequencialmente dentro de um Web Worker. Apenas uma parte permanece como texto na memória durante a consolidação, evitando o pico provocado pelo carregamento simultâneo de todas as bases.
