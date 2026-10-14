@@ -22,8 +22,32 @@ python tools/build_manifest.py
 
 Arquivos de compras são reconhecidos pelo padrão `01 - Compras_Almox_Parte_NN.CSV`. Não há limite fixo de quatro partes.
 
+## Consumo por mês (automatizado)
+
+**Envie um CSV por mês na pasta [`consumo-mensal/`](consumo-mensal/README.md)**, por exemplo:
+
+- `consumo-mensal/2026-08.csv`
+- `consumo-mensal/2026-09.csv`
+- `consumo-mensal/2026-10.csv`
+
+Também são aceitos nomes como `03 - Consumo_Out_2026.csv` na raiz.
+
+O workflow **Preparar bases de dados** consolida os arquivos em `data/consumo-consolidado.csv` e em `data/catalog.json.gz`, sem precisar executar comandos ou atualizar o site manualmente. A aba Consumo, a Revisão de Mínimo/Máximo e os cálculos de reposição continuam usando a mesma base, agora atualizada automaticamente.
+
+O histórico original `03 - Consumo.csv` é preservado como legado; cada CSV mensal substitui integralmente os registros do mês correspondente (evitando duplicação). **Envie sempre o mês completo**, pois um upload parcial substituirá o mês inteiro. Para corrigir um mês, substitua o CSV anterior em vez de criar outro com o mesmo período.
+
+Validação local opcional:
+
+```bash
+python tools/build_consumption.py
+python -m unittest discover -s tests -p 'test_*.py'
+node tools/build_catalog.mjs
+```
+
+O arquivo `data/consumo-meta.json` informa os meses carregados e substituídos, e a rotina falha de forma segura se houver arquivos mensais duplicados ou inconsistentes.
+
 ## Desempenho
 
 Os arquivos de compras são processados sequencialmente dentro de um Web Worker. Apenas uma parte permanece como texto na memória durante a consolidação, evitando o pico provocado pelo carregamento simultâneo de todas as bases.
 
-O fluxo `Preparar bases de dados` também transforma os CSVs em `data/catalog.json.gz`. O navegador prioriza essa base compactada e usa os CSVs originais apenas como recuperação. A base otimizada é armazenada no cache do aplicativo e atualizada em segundo plano.
+O fluxo `Preparar bases de dados` consolida o consumo e também transforma os CSVs em `data/catalog.json.gz`. O navegador prioriza essa base compactada e usa os CSVs originais apenas como recuperação. A base otimizada é armazenada no cache do aplicativo e atualizada em segundo plano.
