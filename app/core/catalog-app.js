@@ -91,6 +91,10 @@ const state = {
   purchaseNeedVisible: 0,
   purchaseNeedView: "item",
   purchaseSupplierGroups: [],
+  purchaseRepeatCacheItems: null,
+  purchaseRepeatCache: [],
+  purchaseRepeatedGroups: [],
+  purchaseRepeatMonth: "",
   purchaseMaterialGroups: [],
   purchaseNeedByKey: new Map(),
   activePurchaseNeed: null,
@@ -173,7 +177,7 @@ function cacheUi() {
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
     "stockTableWrap", "historySummary", "historyTableWrap", "historyLoadMore",
     "purchaseNeedItems", "purchaseNeedPositions", "purchaseNeedRuptures", "purchaseNeedRisk", "purchaseNeedAnalyze", "purchaseNeedEstimated", "purchaseNeedWithoutMax",
-    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedViewMaterial", "purchaseNeedSupplierNote",
+    "purchaseNeedResultCount", "purchaseNeedTableWrap", "purchaseNeedLoadMore", "purchaseNeedVisibleCount", "purchaseNeedViewItem", "purchaseNeedViewSupplier", "purchaseNeedViewMaterial", "purchaseNeedViewRepeat", "purchaseNeedRepeatControls", "purchaseNeedRepeatMonth", "purchaseNeedSupplierNote",
     "pendingScListCount", "pendingScTableWrap", "pendingScLoadMore", "pendingScVisibleCount", "exportPurchaseNeedButton", "purchaseNeedExportFormat", "exportPendingScButton", "pendingScExportFormat", "exportProcurementButton", "procurementExportFormat",
     "purchaseNeedModal", "purchaseModalClose",
     "purchaseModalCode", "purchaseModalTitle", "purchaseModalSubtitle", "purchaseModalSummary",
@@ -280,6 +284,8 @@ function bindEvents() {
   ui.purchaseNeedTableWrap.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-purchase-need-key]");
     if (trigger) openPurchaseNeedModal(trigger.dataset.purchaseNeedKey);
+    const purchased = event.target.closest("[data-repeat-item]");
+    if (purchased) openItem(purchased.dataset.repeatItem);
   });
   ui.pendingScTableWrap.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-pending-sc-key]");
@@ -289,6 +295,11 @@ function bindEvents() {
   ui.purchaseNeedViewItem.addEventListener("click", () => setPurchaseNeedView("item"));
   ui.purchaseNeedViewSupplier.addEventListener("click", () => setPurchaseNeedView("supplier"));
   ui.purchaseNeedViewMaterial.addEventListener("click", () => setPurchaseNeedView("material"));
+  ui.purchaseNeedViewRepeat.addEventListener("click", () => setPurchaseNeedView("repeat"));
+  ui.purchaseNeedRepeatMonth.addEventListener("change", () => {
+    state.purchaseRepeatMonth = ui.purchaseNeedRepeatMonth.value;
+    if (state.purchaseNeedView === "repeat") renderPurchaseNeedView();
+  });
   ui.pendingScLoadMore.addEventListener("click", renderNextPendingScBatch);
   ui.exportCatalogButton.addEventListener("click", () => exportCatalog(ui.catalogExportFormat.value));
   ui.exportPurchaseNeedButton.addEventListener("click", () => exportPurchaseNeeds(ui.purchaseNeedExportFormat.value));
@@ -3502,6 +3513,91 @@ function groupPurchaseNeedsByMaterialType(needs) {
     return b.estimatedValue - a.estimatedValue
       || a.materialType.localeCompare(b.materialType, "pt-BR", { sensitivity: "base" });
   });
+}
+
+// Histórico de OFs: mesma referência de item, mesma filial, mesma competência.
+// Vários recebimentos/linhas de SC da mesma OF contam como UMA compra.
+// Não confundir com a necessidade líquida de compra, que é outra análise.
+function buildRepeatedPurchasesByMonth(items) {
+  const candidates = new Map();
+  for (const item of items || []) {
+    const code = String(item?.code || "").replace(/\./g, "").trim();
+    if (!code) continue;
+    for (const record of item.history || []) {
+      const of = record?.of;
+      const sc = record?.sc;
+      if (!of?.code || /cancelad|anulad/i.test(String(of.status || ""))
+        || /cancelad|anulad/i.test(String(sc?.status || ""))
+        || /^(?:s|sim|1|true|yes)$/i.test(String(sc?.cancelled || "").trim())
+        || /^(?:s|sim|1|true|yes)$/i.test(String(of.cancelled || "").trim())) continue;
+      const timestamp = dateTimestamp(of.date);
+      if (!(timestamp > 0)) continue;
+      const branchCode = normalizeBranchCode(of.deliveryBranchCode || sc?.destinationBranch || sc?.branchCode || record.branchCode || "");
+      if (!branchCode) continue; // filial indeterminada: não forçar vínculo
+      const month = new Date(timestamp).toISOString().slice(0, 7);
+      const key = code + "::" + branchCode + "::" + month;
+      if (!candidates.has(key)) candidates.set(key, {
+        key, code, name: item.name || item.detailedName || code,
+        branchCode, month, item, ordersByCode: new Map(),
+      });
+      const group = candidates.get(key);
+      const ofCode = String(of.code).trim();
+      const quantity = Number(of.requestedQuantity);
+      const unitValue = Number(of.unitValue);
+      const amount = Number.isFinite(quantity) && quantity > 0 && Number.isFinite(unitValue) && unitValue > 0
+        ? quantity * unitValue : null;
+      const order = {
+        code: ofCode, date: formatDate(of.date, ""),
+        timestamp, supplier: String(of.supplier || record.rec?.supplier || "").trim(),
+        sc: String(sc?.code || "").trim(), quantity: Number.isFinite(quantity) && quantity >= 0 ? quantity : null,
+        unitValue: Number.isFinite(unitValue) && unitValue > 0 ? unitValue : null,
+        amount, ccu: String(sc?.allocationCostCenter || sc?.costCenter || "").trim(),
+      };
+      const previous = group.ordersByCode.get(ofCode);
+      // Repetições do mesmo pedido por notas/recebimentos não somam quantidades.
+      // Preserva a linha com maior preenchimento, sem somar entregas ou valores.
+      const completeness = (entry) => Number(Boolean(entry.supplier)) + Number(Boolean(entry.sc))
+        + Number(entry.quantity != null) + Number(entry.unitValue != null) + Number(Boolean(entry.ccu));
+      if (!previous || completeness(order) > completeness(previous)) group.ordersByCode.set(ofCode, order);
+    }
+  }
+  return [...candidates.values()].filter((group) => group.ordersByCode.size >= 2).map((group) => {
+    const orders = [...group.ordersByCode.values()].sort((a,b) => b.timestamp - a.timestamp || a.code.localeCompare(b.code,"pt-BR",{numeric:true}));
+    return {
+      key: group.key, item: group.item, code: group.code, name: group.name,
+      branchCode: group.branchCode, month: group.month, orders,
+      totalQuantity: orders.reduce((sum, row) => sum + (row.quantity || 0), 0),
+      knownAmount: orders.reduce((sum, row) => sum + (row.amount || 0), 0),
+      knownAmountCount: orders.filter((row) => row.amount !== null).length,
+      suppliers: [...new Set(orders.map((row) => row.supplier).filter(Boolean))],
+    };
+  }).sort((a,b) => b.month.localeCompare(a.month) || b.orders.length-a.orders.length
+    || a.code.localeCompare(b.code, "pt-BR",{numeric:true}) || a.branchCode.localeCompare(b.branchCode,"pt-BR",{numeric:true}));
+}
+
+function formatRepeatedPurchaseMonth(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})$/);
+  return match ? match[2] + "/" + match[1] : String(value || "");
+}
+
+function buildRepeatedPurchasesExportReport(groups, generatedAt = new Date()) {
+  const rows = (groups || []).flatMap((group) => group.orders.map((of) => [
+    group.code, group.name, group.branchCode, formatRepeatedPurchaseMonth(group.month),
+    group.orders.length, of.code, of.date, of.supplier, of.sc,
+    of.quantity, of.unitValue, of.amount, of.ccu,
+  ]));
+  return {
+    title: "Itens comprados mais de uma vez no mês",
+    filename: "compras-repetidas-por-mes.xls",
+    generatedAt,
+    headers: ["Código", "Descrição", "Filial da OF", "Competência", "OFs distintas no mês", "Número OF", "Data OF", "Fornecedor", "SC", "Qtd. solicitada OF", "Valor unitário OF", "Valor estimado OF", "Centro de custo"],
+    rows,
+    numericColumns: new Set([4, 9, 10, 11]),
+    currencyColumns: new Set([10, 11]),
+    dateColumns: new Set([6]),
+    pdfIdentityColumns: [0, 1, 3, 5],
+    filterSummary: "Compras históricas por mesmo código do item, filial e mês da data OF; pelo menos duas OFs distintas. Recebimentos repetidos não geram novas compras. Valores estimados somente quando quantidade e valor unitário estão disponíveis.",
+  };
 }
 
 function setPurchaseNeedView(view) {
@@ -7078,5 +7174,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
