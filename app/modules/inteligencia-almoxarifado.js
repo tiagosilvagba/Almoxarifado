@@ -331,6 +331,7 @@
     let analysisPromise = null;
     let analysisItems = null;
     let analysisVersion = 0;
+    let refreshAfterRunning = false;
     const esc = escapeHtml;
     const text = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     const helpers = () => ({
@@ -444,9 +445,15 @@
         return;
       }
       if (force || st.items !== lastItems || !engineResult) {
-        if (analysisPromise && analysisItems === st.items && !force) return;
+        if (analysisPromise && analysisItems === st.items && !force) {
+          // Reabertura após sair da aba: a execução anterior pode ter
+          // sido cancelada; retomar assim que ela encerrar.
+          refreshAfterRunning = true;
+          return;
+        }
         const sourceItems = st.items;
         const version = ++analysisVersion;
+        refreshAfterRunning = false;
         analysisItems = sourceItems;
         engineResult = null;
         const exportButton = document.getElementById("wiExport");
@@ -489,6 +496,9 @@
           if (version === analysisVersion) {
             analysisPromise = null;
             analysisItems = null;
+            const shouldResume = refreshAfterRunning && isCurrent() && !engineResult;
+            refreshAfterRunning = false;
+            if (shouldResume) win.setTimeout(() => refresh(), 0);
           }
         });
         return;
