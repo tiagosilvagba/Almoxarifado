@@ -1210,7 +1210,7 @@ function pageForHash(hash) {
   // O índice rápido usa âncoras #instr-... dentro da aba Instruções.
   // Elas são seções, não páginas desconhecidas que devam abrir o Dashboard.
   if (/^instr-[a-z0-9-]+$/i.test(page)) return "instrucoes";
-  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "follow-up", "itens-sem-giro", "comparativo-mensal", "compras-fora-cc1500", "inteligencia-almoxarifado", "instrucoes"].includes(page)
+  return ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max", "follow-up", "itens-sem-giro", "comparativo-mensal", "compras-fora-cc1500", "inteligencia-almoxarifado", "historico-estoque", "instrucoes"].includes(page)
     ? page
     : "dashboard";
 }
@@ -1315,7 +1315,7 @@ function animatePageEntry(panel) {
 }
 
 function navigateToPage(page, updateHash) {
-  const validPage = [...FILTERED_PAGE_IDS, "follow-up", "itens-sem-giro", "comparativo-mensal", "compras-fora-cc1500", "inteligencia-almoxarifado", "instrucoes"].includes(page) ? page : "dashboard";
+  const validPage = [...FILTERED_PAGE_IDS, "follow-up", "itens-sem-giro", "comparativo-mensal", "compras-fora-cc1500", "inteligencia-almoxarifado", "historico-estoque", "instrucoes"].includes(page) ? page : "dashboard";
   const root = document.documentElement;
   const previousPage = root.dataset.activePage || "";
 
