@@ -3441,12 +3441,10 @@ function groupPurchaseNeedsBySupplier(needs) {
     if (priority === "Risco de ruptura") group.risks += 1;
   }
   return [...groups.values()].sort((a, b) => {
-    // Fornecedor a definir no primeiro card: mesmo com muitos fornecedores,
-    // todas as pendências sem origem confiável continuam visíveis.
-    if ((a.key === "__a_definir__") !== (b.key === "__a_definir__")) return a.key === "__a_definir__" ? -1 : 1;
-    // Demais fornecedores em ordem crescente pelo número de itens únicos.
-    return a.itemCodes.size - b.itemCodes.size
-      || a.entries.length - b.entries.length
+    // Maior quantidade de itens distintos primeiro, inclusive o grupo único
+    // "Fornecedor a definir". Em empate, priorizar mais posições e nome.
+    return b.itemCodes.size - a.itemCodes.size
+      || b.entries.length - a.entries.length
       || a.supplier.localeCompare(b.supplier, "pt-BR", { sensitivity: "base" });
   });
 }
