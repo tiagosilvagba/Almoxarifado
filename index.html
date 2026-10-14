@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.7.53">
+<html lang="pt-BR" data-app-version="10.7.54">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="app/styles/core.css?v=9.5">
     <link rel="stylesheet" href="app/styles/app.css?v=10.7.49">
     <link rel="stylesheet" href="app/styles/inteligencia.css?v=10.7.52">
-    <script src="script.js?v=10.7.53" defer></script>
+    <link rel="stylesheet" href="app/styles/historico.css?v=10.7.54">
+    <script src="script.js?v=10.7.54" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -105,6 +106,7 @@
           <a class="app-nav__tab" href="#consumo" data-page="consumo" role="tab" aria-selected="false" aria-controls="page-consumo">Consumo</a>
           <a class="app-nav__tab" href="#revisao-min-max" data-page="revisao-min-max" role="tab" aria-selected="false" aria-controls="page-revisao-min-max">Revisão de mín. e máx.</a>
           <a class="app-nav__tab" href="#inteligencia-almoxarifado" data-page="inteligencia-almoxarifado" data-icon-ready="true" role="tab" aria-selected="false" aria-controls="page-inteligencia-almoxarifado"><span class="app-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17h4l3-6 4 3 4-9 3 2"/><path d="M4 21h16M3 3h18"/><circle cx="18" cy="5" r="1"/></svg></span><span class="app-nav__label">Inteligência</span></a>
+          <a class="app-nav__tab" href="#historico-estoque" data-page="historico-estoque" role="tab" aria-selected="false" aria-controls="page-historico-estoque">Histórico do Estoque</a>
           <a class="app-nav__tab" href="#instrucoes" data-page="instrucoes" role="tab" aria-selected="false" aria-controls="page-instrucoes">Instruções</a>
         </nav>
       </div>
@@ -612,6 +614,50 @@
             </div>
           </section>
           <p class="wi-disclaimer">Critérios: duas ou mais OFs distintas no mesmo mês; compra emitida ou projeção de estoque superior a 120% do máximo; saldo zerado ou cobertura estimada em até 30 dias, sem OF/SC em aberto identificada no CCU 1500 da filial. Projeções usam o consumo histórico ajustado. As evidências, metas e responsabilidades dos planos 5W2H + PDCA devem ser conferidas e aprovadas antes da execução. O Dashboard não registra automaticamente o cumprimento das etapas.</p>
+        </section>
+
+
+        <section id="page-historico-estoque" class="page-panel sh-page is-hidden" data-page-panel="historico-estoque" aria-labelledby="shTitle">
+          <header class="sh-header">
+            <div>
+              <span class="eyebrow">Linha do tempo de atualizações · Estoque</span>
+              <h2 id="shTitle">Histórico e comparação do estoque</h2>
+              <p>Cada atualização dos CSVs consolidados gera uma posição histórica permanente. Compare dois momentos diferentes para identificar entradas, saídas, alterações de saldo e evolução de valores por item, filial e local.</p>
+            </div>
+            <span id="shStatus" class="context-label" role="status" aria-live="polite">Abra a aba para consultar as capturas históricas.</span>
+          </header>
+          <section class="sh-panel" aria-label="Período de comparação">
+            <div class="sh-heading">
+              <div><h3>Escolha duas posições registradas</h3><p class="sh-muted">As opções mostram a data e hora em que cada base foi capturada no GitHub. Uma comparação precisa de duas atualizações diferentes.</p></div>
+              <button id="shReload" class="button button--ghost" type="button">Atualizar histórico</button>
+            </div>
+            <div class="sh-controls">
+              <label><span>Posição inicial</span><select id="shStart" aria-label="Data e hora da posição inicial" disabled></select></label>
+              <label><span>Posição final</span><select id="shEnd" aria-label="Data e hora da posição final" disabled></select></label>
+            </div>
+          </section>
+          <div id="shKpis" class="sh-kpis" aria-label="Evolução de quantidade e valor do estoque"></div>
+          <section class="sh-panel" aria-label="Itens e movimentação entre as versões">
+            <div class="sh-heading">
+              <div><h3>Variações por posição</h3><p class="sh-muted">Compare por código do item sem pontos e refine por filial, local e situação.</p></div>
+              <button id="shExport" class="button button--export" type="button" disabled>Exportar comparativo CSV</button>
+            </div>
+            <div class="sh-filters">
+              <label><span>Pesquisar item</span><input id="shSearch" type="search" placeholder="Código do item ou descrição"></label>
+              <label><span>Filial</span><select id="shBranch"><option value="">Todas as filiais</option></select></label>
+              <label><span>Local</span><select id="shLocal"><option value="">Todos os locais</option></select></label>
+              <label><span>Visualização</span><select id="shMode"><option value="changed">Somente alterações</option><option value="all">Todas as posições</option></select></label>
+            </div>
+            <div class="sh-table-wrap">
+              <table class="sh-table">
+                <thead><tr><th>Item</th><th>Filial</th><th>Local / repartição</th><th>Saldo inicial</th><th>Saldo final</th><th>Variação</th><th>Variação R$</th><th>Situação</th></tr></thead>
+                <tbody id="shBody"></tbody>
+              </table>
+            </div>
+            <div class="sh-bottom"><span id="shCount" class="visible-count"></span><button id="shMore" class="button button--secondary" type="button" hidden>Carregar mais 40 posições</button></div>
+            <p id="shNote"></p>
+          </section>
+          <p class="sh-muted">Importante: a data registrada corresponde à publicação/consolidação do CSV, não necessariamente ao dia da movimentação real. Versões anteriores à ativação deste recurso não são criadas retroativamente. As diferenças representam posições em dois momentos e não substituem o livro de movimentações físicas.</p>
         </section>
 
         <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">
