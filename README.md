@@ -52,6 +52,8 @@ Na aba **Necessidade de Compra**, selecione **Por fornecedor** para ver as suges
 
 - Os grupos contêm apenas posições com **compra líquida positiva**, após descontar as coberturas por SC e OF; posições já cobertas e alertas especiais de Cavaco continuam na visão Por item.
 - A indicação usa a OF mais recente do mesmo código de item e **mesma filial**. Se não houver OF na filial, um único fornecedor no histórico pode ser sugerido com aviso de confirmação. Vários fornecedores possíveis ficam em **Fornecedor a definir**.
+- Fornecedores não identificados, campos como **Não informado** e históricos com múltiplas opções sem confirmação são agrupados em **um único card Fornecedor a definir**, exibido primeiro para não ficar escondido pela paginação.
+- Os **demais cards** são ordenados pela **quantidade crescente de itens distintos** (do menor para o maior), e não pelo valor de compra nem pelo número de posições; em caso de empate, considera posições e nome do fornecedor.
 - Cada grupo informa itens distintos, posições, valor líquido estimado e prioridades. Clique em um grupo para ver e abrir cada necessidade com seu código, filial, local e quantidade.
 - O Excel/PDF segue a visão selecionada. **Por fornecedor** gera a planilha com nome e origem do fornecedor sugerido, sem perder as informações originais de lead time, cobertura e valor.
 - **Atenção:** o agrupamento não emite SC, não escolhe definitivamente o fornecedor e não modifica saldos ou regras de compra. O comprador deve confirmar fornecedor, valor e condições antes de gerar a solicitação.
