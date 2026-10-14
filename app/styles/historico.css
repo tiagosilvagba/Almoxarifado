@@ -1,0 +1,30 @@
+/* Histórico do Estoque — leve, isolado e responsivo. */
+.sh-page{min-width:0}
+.sh-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 16px}
+.sh-header h2{font-size:clamp(1.45rem,2.5vw,2rem);margin:.35rem 0}
+.sh-header p{max-width:860px;line-height:1.55;margin:6px 0;color:var(--muted,#607086)}
+#shStatus{max-width:100%;overflow-wrap:anywhere}
+.sh-panel{background:var(--surface,#fff);border:1px solid var(--border,#dce4ed);border-radius:18px;padding:20px;margin:0 0 18px;min-width:0}
+.sh-panel h3{font-size:1.05rem;margin:0 0 6px}
+.sh-muted{font-size:.88rem;color:var(--muted,#64748b);line-height:1.5;margin:4px 0 16px}
+.sh-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sh-controls label,.sh-filters label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.84rem;min-width:0}
+.sh-controls select,.sh-filters select,.sh-filters input{font:inherit;color:inherit;box-sizing:border-box;background:var(--surface,#fff);border:1px solid var(--border,#cbd5e1);border-radius:11px;padding:10px 12px;min-width:0;width:100%;min-height:42px}
+.sh-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.sh-kpi{border:1px solid var(--border,#dce4ed);border-radius:14px;background:var(--surface,#fff);padding:15px;min-width:0}
+.sh-kpi span{display:block;font-size:.78rem;color:var(--muted,#64748b);margin-bottom:8px}
+.sh-kpi strong{font-size:clamp(1rem,1.8vw,1.3rem);font-weight:700;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.sh-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.sh-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(165px,1fr) minmax(165px,1fr);gap:12px;margin-bottom:16px}
+.sh-table-wrap{overflow:auto;max-width:100%;border:1px solid var(--border,#dce4ed);border-radius:12px}
+.sh-table{border-collapse:collapse;width:100%;min-width:880px;font-size:.85rem}
+.sh-table th{padding:12px 10px;text-align:left;background:var(--surface-soft,#f3f6fa);white-space:nowrap;font-weight:700;position:sticky;top:0}
+.sh-table td{padding:11px 10px;border-top:1px solid var(--border,#e7ebf0);vertical-align:top}
+.sh-table td:first-child{min-width:175px}
+.sh-table td small{display:block;color:var(--muted,#64748b);margin-top:4px;max-width:260px;overflow-wrap:anywhere}
+.sh-table .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sh-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:15px}
+#shNote{font-size:.83rem;color:var(--muted,#64748b);margin:12px 0 0}
+@media(max-width:960px){.sh-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sh-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.sh-panel{padding:14px}.sh-controls,.sh-kpis,.sh-filters{grid-template-columns:1fr 1fr;gap:9px}.sh-kpi{padding:11px}.sh-kpi strong{font-size:1.03rem}.sh-filters label:last-child{grid-column:span 2}}
+@media(max-width:370px){.sh-controls,.sh-filters{grid-template-columns:1fr}.sh-filters label:last-child{grid-column:auto}}
