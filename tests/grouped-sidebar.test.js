@@ -63,7 +63,7 @@ test("alternar entre celular e computador restaura ou aplica a navegação corre
   const start = source.indexOf("function synchronizeResponsiveMode() {");
   const end = source.indexOf("\n  let nav",start);
   assert.ok(start >= 0 && end > start,"a sincronização responsiva deve estar presente");
-  const classes = new Set(["almox-nav-ready","almox-mobile-menu-open"]);
+  const classes = new Set(["almox-mobile-menu-open"]);
   const root = {
     classList: {
       contains(name){return classes.has(name);},
