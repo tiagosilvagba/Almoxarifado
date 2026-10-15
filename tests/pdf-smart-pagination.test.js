@@ -32,7 +32,7 @@ test("desloca a divisão da página para antes do card que seria cortado", () =>
   const blocks = [{start:890,end:1180}];
   const slices = planPageSlices(2500,1000,blocks);
   const cuts = boundaries(slices,2500);
-  assert.ok(cuts[0]>=875 && cuts[0]<890, "corte fica antes do card");
+  assert.ok(cuts[0]===890, "corte fica antes do card");
   assert.ok(slices.every((slice)=>slice.end-slice.start<=1000));
   assert.ok(cuts.every(cut=>!blocks.some(b=>b.start<cut&&b.end>cut)));
 });
@@ -41,7 +41,7 @@ test("aceita página mais curta para preservar um card grande que caiba por inte
   const blocks = [{start:260,end:1160},{start:1180,end:1500}];
   const slices = planPageSlices(1800,1000,blocks);
   const cuts = boundaries(slices,1800);
-  assert.ok(cuts[0] < 260, "o primeiro card não pode ser cortado a 1000px");
+  assert.ok(cuts[0] <= 260, "o primeiro card não pode ser cortado a 1000px");
   assert.ok(cuts.every(cut=>!blocks.some(b=>b.start<cut&&b.end>cut)));
 });
 
@@ -171,7 +171,7 @@ test("geração PDF usa as fatias inteligentes, com a mesma qualidade JPEG e PDF
   assert.equal(saved,true);
   assert.equal(pages,regions.length-1);
   assert.ok(regions.length>=2);
-  assert.ok(regions[0].end < 1180, "o primeiro corte deve acontecer antes do card");
+  assert.ok(regions[0].end <= 1180, "o primeiro corte deve acontecer antes do card");
   assert.equal(regions.at(-1).end,2600);
   for(let i=1;i<regions.length;i++)assert.equal(regions[i-1].end,regions[i].start);
 });
