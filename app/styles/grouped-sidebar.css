@@ -215,7 +215,7 @@ html.almox-nav-ready .almox-menu__backdrop {display:none}
 
 /* Celular/tablet estreito: drawer por toque, com categorias expansíveis. */
 @media (max-width:900px) {
-  html.almox-nav-ready .app-nav-wrap {
+  html.almox-nav-ready[data-viewport-mode] .app-nav-wrap {
     position:fixed !important;
     left:0 !important;
     right:auto !important;
@@ -299,7 +299,7 @@ html.almox-nav-ready .almox-menu__backdrop {display:none}
   html.almox-nav-ready :is(body,body.uses-bottom-navigation) {
     padding-bottom:18px !important;
   }
-  html.almox-nav-ready body > main.main-content {
+  html.almox-nav-ready[data-viewport-mode] body > main.main-content {
     margin-left:0 !important;
     width:100% !important;
     padding-bottom:24px !important;
