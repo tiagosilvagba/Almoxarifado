@@ -6,7 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
 const zlib = require("node:zlib");
-const { compareSnapshots, summarize, latestPerDay } = require("../app/modules/historico-estoque.js");
+const { compareSnapshots, summarize, latestPerDay, formatCompactMoney, compactSigned, buildHistoryExcelReport } = require("../app/modules/historico-estoque.js");
 
 test("compara posições por código sem pontos, filial e endereço; identifica inclusões e saídas", () => {
   const old = { rows: [
@@ -186,4 +186,29 @@ test("aba, versão e workflow estão ligados ao histórico em arquivos separados
   assert.match(core, /"historico-estoque"/);
   assert.match(workflow, /node tools\/build_stock_history\.mjs/);
   assert.match(workflow, /data\/historico-estoque/);
+});
+test("Histórico abrevia moedas na tela e mantém valores numéricos completos no Excel", () => {
+  const compact = (v) => formatCompactMoney(v).replace(/\s/g, " ");
+  assert.ok(compact(66207903.01).includes("66,2 mi"));
+  assert.ok(compact(1450000).includes("1,5 mi"));
+  assert.ok(compact(85250.5).includes("85,3 mil"));
+  assert.ok(compact(-1450000).includes("-1,5 mi"));
+  assert.ok(compactSigned(1450000).replace(/\s/g, " ").startsWith("+R$"));
+  const rows = compareSnapshots(
+    { rows: [["243370", "Peça", "704", "299", "", "", "", 20, 5, 100]] },
+    { rows: [["243370", "Peça", "704", "299", "", "", "", 15, 5, 75]] }
+  );
+  const report = buildHistoryExcelReport(rows, "14/10/2026", "03/12/2026");
+  assert.equal(report.filename, "comparativo-historico-estoque.xls");
+  assert.deepEqual([...report.currencyColumns], [10, 11, 12]);
+  assert.deepEqual([...report.numericColumns], [7, 8, 9]);
+  assert.deepEqual(report.rows[0].slice(10, 13), [100, 75, -25]);
+  assert.equal(report.rows[0][0], "243370");
+  assert.ok(report.filterSummary.includes("14/10/2026"));
+  const html = require("node:fs").readFileSync(path.join(__dirname, "../index.html"), "utf8");
+  const js = require("node:fs").readFileSync(path.join(__dirname, "../app/modules/historico-estoque.js"), "utf8");
+  const core = require("node:fs").readFileSync(path.join(__dirname, "../app/core/catalog-app.js"), "utf8");
+  assert.ok(html.includes("Exportar comparativo Excel"));
+  assert.ok(js.includes('exportReport("excel", report)'));
+  assert.ok(core.includes('NumberFormat ss:Format="&quot;R$&quot; #,##0.00"'));
 });
