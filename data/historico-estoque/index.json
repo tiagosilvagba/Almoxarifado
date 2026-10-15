@@ -95,7 +95,9 @@
       "quantity": 23647303.7406,
       "value": 66624864.76839153,
       "pricedPositions": 10451,
-      "unpricedPositions": 0
+      "unpricedPositions": 0,
+      "balanceSha": "e07d615c11e85b53",
+      "sourceFile": "00 - Saldo_Online.csv"
     }
   ]
 }
