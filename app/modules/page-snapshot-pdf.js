@@ -119,6 +119,81 @@
     button.addEventListener("click", exportActivePage);
   }
 
+  // Identifica blocos que devem permanecer na mesma folha sempre que
+  // couberem inteiros: cards, indicadores, títulos, imagens e linhas de tabela.
+  // O PDF continua sendo uma captura visual, mas o corte passa a respeitar
+  // as coordenadas REAIS desses componentes na página.
+  function collectProtectedBands(target, canvas, pageLimitPx) {
+    if (typeof target.getBoundingClientRect !== "function"
+      || typeof target.querySelectorAll !== "function") return [];
+    const root = target.getBoundingClientRect();
+    const cssHeight = Math.max(1, root.height || 0, target.scrollHeight || 0, target.clientHeight || 0);
+    const pxPerCss = canvas.height / cssHeight;
+    if (!Number.isFinite(pxPerCss) || pxPerCss <= 0) return [];
+
+    const selectors = [
+      ".metric", ".analytics-card", ".report-card", ".item-card",
+      ".catalog-group-card", ".review-card", ".stock-card",
+      ".summary-cards > *", ".need-summary > *", ".decision-list > *",
+      ".instruction-section", ".instruction-grid > *", ".section-heading",
+      ".results__heading", ".catalog-group-view", ".page-panel h1",
+      ".page-panel h2", ".page-panel h3", ".page-panel h4",
+      "p", "li", "figure", "img", "canvas", "svg", "table tr",
+      ".table-wrap tr", ".month-compare-table tr", ".data-table tr",
+      ".chart-card", ".procurement-funnel", ".catalog-group-card__item",
+      ".supplier-need-group", ".purchase-need-row", ".report-card__summary",
+    ];
+    const bands = [];
+    for (const element of target.querySelectorAll(selectors.join(","))) {
+      if (typeof element.getBoundingClientRect !== "function"
+        || element.closest?.(".is-hidden,[hidden]")) continue;
+      const rect = element.getBoundingClientRect();
+      if (!rect || !Number.isFinite(rect.top) || !Number.isFinite(rect.bottom)
+        || !(rect.height > 6) || !(rect.width > 10)) continue;
+      const start = Math.max(0, Math.round((rect.top - root.top) * pxPerCss));
+      let end = Math.min(canvas.height, Math.round((rect.bottom - root.top) * pxPerCss));
+      // Evita título órfão no fim da página; reserva também espaço para o
+      // primeiro trecho do conteúdo que vem depois do título.
+      if (/^H[1-4]$|^THEAD$/.test(String(element.tagName || ""))) {
+        end = Math.min(canvas.height, end + Math.round(32 * pxPerCss));
+      }
+      const length = end - start;
+      // Blocos mais altos que quase uma página inteira não podem ser
+      // preservados sem truncar informação. Nestes, protegem-se os filhos.
+      if (length < 8 || length >= pageLimitPx * 0.92 || start >= canvas.height) continue;
+      bands.push({ start, end });
+    }
+    return bands.sort((a, b) => b.start - a.start);
+  }
+
+  // Nunca omite pixels nem repete trechos: cada fatia termina precisamente
+  // onde a próxima começa. Prefere a folga imediatamente antes de um bloco
+  // a dividir sua imagem, seu texto ou uma linha de uma tabela.
+  function planPageSlices(totalHeight, pageLimitPx, protectedBands = []) {
+    const height = Math.max(0, Math.floor(totalHeight));
+    const limit = Math.max(1, Math.floor(pageLimitPx));
+    const slices = [];
+    const gap = Math.max(3, Math.min(12, Math.round(limit * 0.005)));
+    let y = 0;
+    while (y < height) {
+      const maximum = Math.min(height, y + limit);
+      let cut = maximum;
+      if (maximum < height) {
+        const minimumFill = y + Math.floor(limit * 0.55);
+        for (const band of protectedBands) {
+          if (band.start >= cut || band.end <= cut) continue;
+          if (band.end - band.start >= limit * 0.92) continue;
+          const before = Math.floor(band.start - gap);
+          if (before >= minimumFill && before > y) cut = before;
+        }
+      }
+      if (cut <= y) cut = maximum;
+      slices.push({ start: y, end: cut });
+      y = cut;
+    }
+    return slices;
+  }
+
   async function exportActivePage() {
     if (exporting) return;
     const button = document.getElementById("pagePdfButton");
@@ -173,23 +248,23 @@
       const usableHeight = pageHeight - margin * 2;
       const pxPerMm = canvas.width / usableWidth;
       const sliceHeightPx = Math.max(1, Math.floor(usableHeight * pxPerMm));
+      const protectedBands = collectProtectedBands(target, canvas, sliceHeightPx);
+      const pages = planPageSlices(canvas.height, sliceHeightPx, protectedBands);
       const slice = document.createElement("canvas");
       const ctx = slice.getContext("2d");
-      let y = 0;
-      let page = 0;
 
-      while (y < canvas.height) {
-        const currentHeight = Math.min(sliceHeightPx, canvas.height - y);
+      for (const [page, bounds] of pages.entries()) {
+        const currentHeight = bounds.end - bounds.start;
         slice.width = canvas.width;
         slice.height = currentHeight;
-        ctx.clearRect(0,0,slice.width,slice.height);
-        ctx.drawImage(canvas,0,y,canvas.width,currentHeight,0,0,canvas.width,currentHeight);
-        const image = slice.toDataURL("image/jpeg",0.92);
+        ctx.clearRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, bounds.start, canvas.width, currentHeight,
+          0, 0, canvas.width, currentHeight);
+        const image = slice.toDataURL("image/jpeg", 0.92);
         const renderedHeight = currentHeight / pxPerMm;
         if (page > 0) pdf.addPage("a4", orientation);
-        pdf.addImage(image,"JPEG",margin,margin,usableWidth,renderedHeight,undefined,"FAST");
-        y += currentHeight;
-        page += 1;
+        pdf.addImage(image, "JPEG", margin, margin, usableWidth, renderedHeight,
+          undefined, "FAST");
       }
 
       pdf.save(filename(target));
@@ -214,6 +289,11 @@
       installButton();
       if (document.getElementById("pagePdfButton") || tries > 40) clearInterval(timer);
     },150);
+  }
+
+  // Permite testar as decisões de paginação sem inicializar o navegador.
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { planPageSlices, collectProtectedBands };
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once:true });
