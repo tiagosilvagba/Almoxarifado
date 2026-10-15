@@ -16,6 +16,7 @@
   const escapeHtml = (s) => clean(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const compactCurrency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
   const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
   const dateBr = (value) => {
     const text = clean(value);
@@ -600,7 +601,7 @@
         + (f.month ? ' · Mês ' + esc(f.month.slice(5) + "/" + f.month.slice(0, 4)) : "")
         + '</span><p class="wi-issue__evidence">' + esc(f.evidence) + '</p>'
         + '<div class="wi-issue__stats"><span>Qtde. envolvida: <strong>' + number.format(f.quantity)
-        + '</strong></span><span>Impacto potencial: <strong>' + (f.estimatedImpact == null ? "A apurar" : currency.format(f.estimatedImpact))
+        + '</strong></span><span>Impacto potencial: <strong>' + (f.estimatedImpact == null ? "A apurar" : compactCurrency.format(f.estimatedImpact))
         + '</strong></span></div>'
         + '<details class="wi-5w2h"><summary>Ver plano de ação 5W2H</summary><dl class="wi-plan">'
         + cells.map(([label, v]) => '<div><dt>' + esc(label) + '</dt><dd>' + esc(v) + '</dd></div>').join("")
