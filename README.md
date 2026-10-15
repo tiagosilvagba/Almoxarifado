@@ -104,7 +104,7 @@ A aba **Histórico do Estoque** guarda as posições de estoque de cada publica�
 - Uma nova captura quando qualquer CSV do manifesto ou consumo mensal muda. Se o conteúdo for idêntico, não duplica; snapshots antigos não são substituídos.
 - O navegador consulta apenas o índice e **duas capturas selecionadas**, para reduzir tempo de carregamento e consumo de memória.
 
-Na aba, selecione **Posição inicial** e **Posição final**, filtre por item, filial ou local e visualize saldo inicial, saldo final, variação quantitativa e financeira, itens incluídos, retirados e alterados. É possível exportar o recorte em CSV compatível com Excel.
+Na aba, selecione **Posição inicial** e **Posição final**, filtre por item, filial ou local e visualize saldo inicial, saldo final, variação quantitativa e financeira, itens incluídos, retirados e alterados. Os valores monetários são exibidos no mesmo padrão compacto do card **Valor total do estoque** (por exemplo, `R$ 66,2 mi`), com valor completo ao passar o mouse. É possível **exportar o recorte em Excel (`.xls`)**, com células financeiras numéricas, completas e formatadas em **R$**, preservando os centavos e a possibilidade de aplicar fórmulas.
 
 **Exemplo:** escolha a captura de 14/10/2026 e outra efetuada 50 dias depois. O histórico não fabrica posições intermediárias, não consulta futuras movimentações e não recria retroativamente as versões anteriores à implantação. O horário é o da captura do arquivo; valores de estoque dependem dos custos disponibilizados. A soma de quantidades de unidades diferentes é apenas uma soma aritmética, não um indicador físico homogêneo.
 
