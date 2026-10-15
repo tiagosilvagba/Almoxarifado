@@ -3536,38 +3536,46 @@ function groupPurchaseNeedsBySupplier(needs) {
   });
 }
 
-// Reconhece famílias pela peça descrita (não pelo grupo contábil genérico).
-// Em caso de várias palavras, prevalece a primeira no nome do item.
+// Classificação funcional de materiais: prevalece o tipo físico indicado no
+// nome/descrição, mesmo quando Nm Classe aponta para uma área contábil genérica.
+// Sinônimos de uma família compartilham UM rótulo nas visões Catálogo/Compras.
+// Não modifica Nm Classe de origem nem as chaves e quantidades do estoque.
+// Quando coexistem várias peças no texto, vence a primeira referência explícita.
 const PURCHASE_MATERIAL_FAMILIES = Object.freeze([
   ["Rolamentos", /\b(?:ROLAMENT(?:O|OS)|BEARINGS?)\b/],
-  ["Sensores", /\b(?:SENSOR(?:ES)?|FOTOCELULA(?:S)?|ENCODER(?:S)?)\b/],
+  ["Mancais", /\b(?:MANCAL|MANCAIS|PEDESTAL DE ROLAMENTO)\b/],
+  ["Sensores", /\b(?:SENSOR(?:ES)?|FOTOCELULA(?:S)?|ENCODER(?:S)?|DETECTOR(?:ES)? DE PROXIMIDADE)\b/],
   ["Correias", /\b(?:CORREIA(?:S)?|BELTS?)\b/],
-  ["Válvulas", /\b(?:VALVULA(?:S)?)\b/],
+  ["Válvulas", /\b(?:VALVULA(?:S)?|ELETROVALVULA(?:S)?)\b/],
   ["Redutores", /\b(?:MOTOREDUTOR(?:ES)?|MOTORREDUTOR(?:ES)?|REDUTOR(?:ES)?)\b/],
-  ["Motores", /\b(?:MOTOR(?:ES)?)\b/],
-  ["Bombas", /\b(?:BOMBA(?:S)?)\b/],
-  ["Mangueiras", /\b(?:MANGUEIRA(?:S)?)\b/],
-  ["Tubos e conexões", /\b(?:TUBO(?:S)?|CONEX(?:AO|OES)|NIPLE(?:S)?)\b/],
-  ["Filtros", /\b(?:FILTRO(?:S)?|ELEMENTO FILTRANTE)\b/],
-  ["Parafusos", /\b(?:PARAFUSO(?:S)?|PRISIONEIRO(?:S)?)\b/],
-  ["Porcas e arruelas", /\b(?:PORCA(?:S)?|ARRUELA(?:S)?)\b/],
-  ["Retentores e vedações", /\b(?:RETENTOR(?:ES)?|VEDAC(?:AO|OES)|GAXETA(?:S)?|O.?RING)\b/],
+  ["Motores", /\b(?:MOTOR(?:ES)?|SERVOMOTOR(?:ES)?)\b/],
+  ["Bombas", /\b(?:MOTOBOMBA(?:S)?|BOMBA(?:S)?)\b/],
+  ["Mangueiras", /\b(?:MANGUEIRA(?:S)?|MANGOTE(?:S)?)\b/],
+  ["Tubos e conexões", /\b(?:TUBO(?:S)?|CONEX(?:AO|OES)|NIPLE(?:S)?|FLANGE(?:S)?|COTOVELO(?:S)?|JOELHO(?:S)?|LUVA(?:S)? (?:DE )?(?:REDUCAO|PVC|ROSCA(?:VEL)?|SOLDAVEL))\b/],
+  ["Filtros", /\b(?:FILTRO(?:S)?|ELEMENTO(?:S)? FILTRANTE(?:S)?|CARTUCHO(?:S)? FILTRANTE(?:S)?)\b/],
+  // Mesmo grupo para parafusos, porcas, arruelas, rebites e demais fixadores.
+  // "Bucha de fixação" é fixador; "bucha de bronze" segue em Buchas.
+  ["Parafusos e porcas", /\b(?:PARAFUSO(?:S)?|PORCA(?:S)?|ARRUELA(?:S)?|REBITE(?:S)?|REBITADOR(?:ES)?|PRISIONEIRO(?:S)?|CHUMBADOR(?:ES)?|ABRACADEIRA(?:S)?|PRESILHA(?:S)?|GRAMPO(?:S)?|GRAMPA(?:S)?|FIXADOR(?:ES)?|FIXACAO|BARRA(?:S)? ROSCADA(?:S)?|ESTOJO(?:S)? ROSCADO(?:S)?|BUCHA(?:S)? (?:DE |PARA )?(?:FIXACAO|NYLON|PAREDE|PARAFUSO(?:S)?))\b/],
+  ["Retentores e vedações", /\b(?:RETENTOR(?:ES)?|VEDAC(?:AO|OES)|GAXETA(?:S)?|O.?RING(?:S)?|ANEL(?:IS)? DE VEDACAO|JUNTA(?:S)? DE VEDACAO)\b/],
   ["Buchas", /\b(?:BUCHA(?:S)?)\b/],
   ["Polias", /\b(?:POLIA(?:S)?)\b/],
   ["Correntes", /\b(?:CORRENTE(?:S)?)\b/],
-  ["Engrenagens", /\b(?:ENGRENAGEM|ENGRENAGENS|PINHAO)\b/],
-  ["Acoplamentos", /\b(?:ACOPLAMENTO(?:S)?)\b/],
+  ["Engrenagens", /\b(?:ENGRENAGEM|ENGRENAGENS|PINHAO|PINHOES|CREMALHEIRA(?:S)?)\b/],
+  ["Acoplamentos", /\b(?:ACOPLAMENTO(?:S)?|LUVA(?:S)? DE ACOPLAMENTO)\b/],
   ["Cilindros e atuadores", /\b(?:CILINDRO(?:S)?|ATUADOR(?:ES)?)\b/],
   ["Disjuntores e contatores", /\b(?:DISJUNTOR(?:ES)?|CONTATOR(?:ES)?)\b/],
   ["Relés e temporizadores", /\b(?:RELE(?:S)?|TEMPORIZADOR(?:ES)?)\b/],
-  ["Cabos elétricos", /\b(?:CABO(?:S)?|FIO(?:S)?)\b/],
+  ["Cabos de aço", /\b(?:CABO(?:S)? DE ACO|CABO(?:S)? DE INOX)\b/],
+  ["Cabos elétricos", /\b(?:CABO(?:S)?|FIO(?:S)?|CONDUTOR(?:ES)? ELETRICO(?:S)?)\b/],
   ["Fusíveis", /\b(?:FUSIVEL|FUSIVEIS)\b/],
-  ["Placas e componentes eletrônicos", /\b(?:PLACA(?:S)?|MODULO(?:S)?|INVERSOR(?:ES)?|CLP)\b/],
-  ["Instrumentos de medição", /\b(?:MANOMETRO(?:S)?|TERMOMETRO(?:S)?|PRESSOSTATO(?:S)?|TRANSMISSOR(?:ES)?)\b/],
+  ["Placas e componentes eletrônicos", /\b(?:PLACA(?:S)? ELETRONICA(?:S)?|MODULO(?:S)? ELETRONICO(?:S)?|INVERSOR(?:ES)?|CLP(?:S)?)\b/],
+  ["Instrumentos de medição", /\b(?:MANOMETRO(?:S)?|TERMOMETRO(?:S)?|PRESSOSTATO(?:S)?|TRANSMISSOR(?:ES)?|PAQUIMETRO(?:S)?|MICROMETRO(?:S)?)\b/],
   ["Óleos e lubrificantes", /\b(?:OLEO(?:S)?|LUBRIFICANTE(?:S)?|GRAXA(?:S)?)\b/],
-  ["Ferramentas", /\b(?:FERRAMENTA(?:S)?|ALICATE(?:S)?|BROCA(?:S)?)\b/],
-  ["Fixadores e abraçadeiras", /\b(?:ABRACADEIRA(?:S)?|REBITE(?:S)?)\b/],
-  ["Equipamentos de proteção", /\b(?:LUVA(?:S)?|CAPACETE(?:S)?|OCULOS)\b/],
+  ["Ferramentas", /\b(?:FERRAMENTA(?:S)?|ALICATE(?:S)?|BROCA(?:S)?|CHAVE(?:S)? (?:DE FENDA|PHILLIPS|ALLEN|BOCA|COMBINADA|ESTRELA))\b/],
+  ["Equipamentos de proteção", /\b(?:LUVA(?:S)?|CAPACETE(?:S)?|OCULOS|PROTETOR(?:ES)? AURICULAR(?:ES)?|RESPIRADOR(?:ES)?|AVENTAL(?:IS)?)\b/],
+  ["Materiais de limpeza", /\b(?:DETERGENTE(?:S)?|DESINFETANTE(?:S)?|SABAO|SABONETE(?:S)?|VASSOURA(?:S)?|ALVEJANTE(?:S)?|LIMPADOR(?:ES)? MULTIUSO)\b/],
+  ["Embalagens", /\b(?:EMBALAGEM|EMBALAGENS|PAPELAO|FITA(?:S)? ADESIVA(?:S)?|FILME(?:S)? STRETCH)\b/],
+  ["Tintas e solventes", /\b(?:TINTA(?:S)?|SOLVENTE(?:S)?|THINNER|PRIMER|VERNIZ(?:ES)?)\b/],
 ]);
 function purchaseNeedMaterialType(need) {
   const item = need?.item || {};
