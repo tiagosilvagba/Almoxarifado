@@ -4263,15 +4263,20 @@ function exportPurchaseNeeds(format = "excel") {
   exportReport(format, report);
 }
 
-function exportCatalog(format = "excel") {
-  const rows = state.filteredItems.flatMap((item) => currentScopedPositions(item).map((position) => {
+function buildCatalogExportReport(items, view = "item", scopedPositions = (item) => item.positions || []) {
+  const grouped = view === "supplier" || view === "material";
+  const entries = grouped
+    ? groupCatalogItems(items, view, scopedPositions).flatMap((group) =>
+      group.entries.map(({ item, source }) => ({ item, groupName: group.name, source })))
+    : (items || []).map((item) => ({ item, groupName:"", source:"" }));
+  const rows = entries.flatMap(({ item, groupName, source }) => scopedPositions(item).map((position) => {
     const stockStatus = position.negative ? "Saldo negativo"
       : position.outOfStock ? "Zerado"
         : position.belowMin ? "Abaixo do mínimo"
           : position.aboveMax ? "Acima do máximo"
             : position.unconfigured ? "Sem parametrização"
               : "Dentro da faixa";
-    return [
+    const row = [
       item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
       position.branchCode, position.branchName, position.localCode, position.localName, position.localType,
       position.quantity, position.minimum, position.maximum, stockStatus, position.forecast,
@@ -4279,11 +4284,19 @@ function exportCatalog(format = "excel") {
       (position.replenishmentResponsibles || item.replenishmentResponsibles || []).join(" | "),
       (item.suppliers || []).join(" | "),
     ];
+    return grouped ? [groupName, source, ...row] : row;
   }));
-  exportReport(format, {
-    title: "Catálogo de estoque",
-    filename: "catalogo-de-estoque.xls",
-    headers: [
+  const groupHeaders = !grouped ? [] : view === "supplier"
+    ? ["Fornecedor sugerido", "Origem da sugestão"]
+    : ["Tipo de material", "Origem da classificação"];
+  const shift = grouped ? 2 : 0;
+  return {
+    title: grouped ? (view === "supplier" ? "Catálogo por fornecedor" : "Catálogo por tipo de material")
+      : "Catálogo de estoque",
+    filename: grouped
+      ? (view === "supplier" ? "catalogo-por-fornecedor.xls" : "catalogo-por-tipo-material.xls")
+      : "catalogo-de-estoque.xls",
+    headers: [...groupHeaders,
       "Código do item", "Descrição", "Descrição detalhada", "Categorias", "Unidades",
       "Código filial", "Filial", "Código local", "Local de estoque", "Tipo de local",
       "Saldo atual", "Mínimo", "Máximo", "Situação do estoque", "Previsão de consumo",
@@ -4291,9 +4304,17 @@ function exportCatalog(format = "excel") {
       "Responsáveis pela reposição", "Fornecedores",
     ],
     rows,
-    numericColumns: new Set([10, 11, 12, 14, 15, 16]),
-    currencyColumns: new Set([15, 16]),
-  });
+    numericColumns: new Set([10, 11, 12, 14, 15, 16].map((index) => index + shift)),
+    currencyColumns: new Set([15, 16].map((index) => index + shift)),
+    filterSummary: grouped ? "Catálogo completo filtrado, sem restringir a compras pendentes. "
+      + (view === "supplier" ? "Fornecedor sugerido pelo histórico; confirmar com comprador."
+        : "Família identificada pelo item ou por Nm Classe do Saldo Online.") : "",
+  };
+}
+
+function exportCatalog(format = "excel") {
+  exportReport(format, buildCatalogExportReport(state.filteredItems,
+    state.catalogGrouping, (item) => currentScopedPositions(item)));
 }
 
 function exportPendingSc(format = "excel") {
@@ -7490,5 +7511,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { groupCatalogItems, resetInitialPageToDashboard, buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { groupCatalogItems, buildCatalogExportReport, resetInitialPageToDashboard, buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
