@@ -143,7 +143,7 @@ html.almox-nav-ready .almox-menu__popup {
   padding:14px;
   border-radius:19px;
   border:1px solid rgba(190,215,241,.38);
-  background:color-mix(in srgb,var(--app-chrome-background,#102a44) 93%,transparent);
+  background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.025)),var(--app-chrome-background,#102a44);
   color:var(--almox-menu-text);
   box-shadow:0 22px 60px rgba(3,15,33,.34),inset 0 1px rgba(255,255,255,.15);
   -webkit-backdrop-filter:blur(24px) saturate(150%);
@@ -273,7 +273,7 @@ html.almox-nav-ready .almox-menu__backdrop {display:none}
     padding:10px 16px;
     border-radius:16px;
     border:1px solid rgba(173,205,235,.40);
-    background:color-mix(in srgb,var(--app-chrome-background,#142a43) 92%,transparent);
+    background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.04)),var(--app-chrome-background,#142a43);
     color:var(--app-chrome-text,#fff);
     font:inherit;
     font-size:14px;
