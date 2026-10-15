@@ -16,6 +16,22 @@
       "value": 66207903.01193487,
       "pricedPositions": 10452,
       "unpricedPositions": 0
+    },
+    {
+      "id": "2026-10-15T11-14-00-663Z-e047bc5d9a",
+      "date": "2026-10-15T11:14:00.663Z",
+      "localDate": "2026-10-15",
+      "path": "data/historico-estoque/2026-10-15T11-14-00-663Z-e047bc5d9a.json.gz",
+      "sourceDigest": "e047bc5d9a88aa207a933304df6ff42053cdbfa918661ae47e01e474df1be263",
+      "sourceCount": 14,
+      "sourceCommit": "9f0b77fb4811409fc4b8dcaaf3bdf341f20f37eb",
+      "bytes": 293147,
+      "items": 9098,
+      "positions": 10452,
+      "quantity": 24356147.149699993,
+      "value": 66207903.01193487,
+      "pricedPositions": 10452,
+      "unpricedPositions": 0
     }
   ]
 }
