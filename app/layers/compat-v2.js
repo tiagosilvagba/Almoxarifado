@@ -38,7 +38,7 @@ function enforceVersion() {
 }
 
 function isDesktopNavigationMode() {
-  return window.matchMedia("(min-width: 900px)").matches || window.matchMedia("(hover:hover) and (pointer:fine)").matches;
+  return window.matchMedia("(min-width:901px)").matches;
 }
 
 function setImportantStyle(node, property, value) {
@@ -84,7 +84,10 @@ function forceResponsiveNavigation() {
   document.documentElement.classList.add("desktop-nav-forced");
   const topbar = document.querySelector(".topbar");
   const topOffset = Math.max(70, Math.round(topbar?.getBoundingClientRect().height || 86));
-  const sideWidth = 250;
+  const navReady = document.documentElement.classList.contains?.("almox-nav-ready");
+  const sideWidth = navReady
+    ? (document.documentElement.classList.contains?.("almox-nav-compact") ? 72 : 232)
+    : 250;
 
   setImportantStyle(navWrap,"display","block");
   setImportantStyle(navWrap,"visibility","visible");
