@@ -38,6 +38,25 @@
     return node;
   };
   const mobile = () => window.matchMedia("(max-width:900px)").matches;
+
+  // Em telas pequenas a navegação nativa volta a ser exibida, exatamente
+  // como antes do menu agrupado (barra inferior horizontal com todas as abas).
+  // A classe almox-nav-ready só deve existir no desktop.
+  function synchronizeResponsiveMode() {
+    const root = document.documentElement;
+    const groupedDesktop = !mobile();
+    const wasGrouped = root.classList.contains("almox-nav-ready");
+    root.classList.toggle("almox-nav-ready", groupedDesktop);
+    if (!groupedDesktop) {
+      root.classList.remove("almox-mobile-menu-open");
+      if (backdrop) backdrop.hidden = true;
+      if (mobileButton) mobileButton.setAttribute("aria-expanded","false");
+      closePopup();
+    }
+    if (wasGrouped !== groupedDesktop && typeof forceResponsiveNavigation === "function") {
+      forceResponsiveNavigation();
+    }
+  }
   let nav, navWrap, shell, groupsHost, popup, toggle, mobileButton, backdrop;
   let sections = [];
   let activeGroup = null;
@@ -269,7 +288,7 @@
     navWrap = document.querySelector(".app-nav-wrap");
     nav = navWrap?.querySelector(".app-nav");
     if (!navWrap || !nav || document.getElementById("almoxGroupedMenu")) return;
-    document.documentElement.classList.add("almox-nav-ready");
+    document.documentElement.classList.toggle("almox-nav-ready", !mobile());
     nav.classList.add("almox-navigation-source");
 
     shell = document.createElement("div");
@@ -350,6 +369,7 @@
       }
     });
     window.addEventListener("resize",() => {
+      synchronizeResponsiveMode();
       if (mobile()) closePopup();
       else {
         setDrawer(false);
@@ -365,6 +385,7 @@
     new MutationObserver(syncActive).observe(document.documentElement,{attributes:true,attributeFilter:["data-active-page"]});
     setMode(safeRead() === "compact",false);
     renderGroups();
+    synchronizeResponsiveMode();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",install,{once:true});
   else install();
