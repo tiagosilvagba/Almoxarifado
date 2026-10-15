@@ -169,6 +169,7 @@
     const { document } = win;
     const decimal = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    const compactMoney = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
     let source = [], filtered = [], lastItems = null, dirty = true, visible = 150;
     let branchSelection = "", ccuSelection = "";
 
@@ -299,7 +300,7 @@
         ["Códigos com ocorrência", decimal.format(totals.codes)],
         ["SC/OF distintas", decimal.format(totals.orders)],
         ["Saldo físico (sem duplicar OFs)", decimal.format(totals.stockQuantity)],
-        ["Valor atual em estoque", money.format(totals.stockValue)],
+        ["Valor atual em estoque", compactMoney.format(totals.stockValue)],
       ];
       const kpiHost = document.getElementById("dcKpis");
       if (kpiHost) kpiHost.innerHTML = kpis.map(([label,value]) => `<article class="dc-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
@@ -307,7 +308,7 @@
       if (body) body.innerHTML = filtered.slice(0, visible).map((row) => `<tr>
         <td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.item)}</td>
         <td>${escapeHtml(row.branchCode)} · ${escapeHtml(row.branchNames)}</td><td>${escapeHtml(row.ccu)}</td>
-        <td>${decimal.format(row.stockQuantity)}</td><td>${money.format(row.stockValue)}</td>
+        <td>${decimal.format(row.stockQuantity)}</td><td>${compactMoney.format(row.stockValue)}</td>
         <td>${escapeHtml(row.sc)}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(formatOfDateBr(row.ofDate) || "—")}</td>
         <td>${decimal.format(row.requested)}</td><td>${decimal.format(row.delivered)}</td>
         <td>${escapeHtml(row.supplier || "—")}</td><td>${escapeHtml(row.buyer || "—")}</td>
