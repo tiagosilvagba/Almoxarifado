@@ -2851,7 +2851,7 @@ function renderDecisionLists() {
   const needs = state.derivedIndicatorsReady
     ? getVisiblePurchaseNeeds().filter((need) => need.netSuggested > 0).sort((a, b) => b.estimatedValue - a.estimatedValue).slice(0, 5)
     : [];
-  ui.dashboardPriorityList.innerHTML = needs.map((need) => `<button type="button" data-purchase-need-key="${escapeHtml(need.key)}"><span><strong>${escapeHtml(need.item.code)} · ${escapeHtml(need.item.name)}</strong><small>${escapeHtml([need.position.branchCode, need.position.localCode].filter(Boolean).join(" · "))}</small></span><b>${currencyFormatter.format(need.estimatedValue)}</b></button>`).join("") || `<p class="chart-empty">Sem necessidade para o recorte atual.</p>`;
+  ui.dashboardPriorityList.innerHTML = needs.map((need) => `<button type="button" data-purchase-need-key="${escapeHtml(need.key)}"><span><strong>${escapeHtml(need.item.code)} · ${escapeHtml(need.item.name)}</strong><small>${escapeHtml([need.position.branchCode, need.position.localCode].filter(Boolean).join(" · "))}</small></span><b>${compactCurrencyFormatter.format(need.estimatedValue)}</b></button>`).join("") || `<p class="chart-empty">Sem necessidade para o recorte atual.</p>`;
 
   const excess = [];
   for (const item of state.filteredItems) for (const position of currentScopedPositions(item)) {
@@ -2859,7 +2859,7 @@ function renderDecisionLists() {
     excess.push({ item, position, value: (position.quantity - position.maximum) * (position.unitCost || 0) });
   }
   excess.sort((a, b) => b.value - a.value);
-  ui.dashboardExcessList.innerHTML = excess.slice(0, 5).map(({ item, position, value }) => `<button type="button" data-item-code="${escapeHtml(item.code)}"><span><strong>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</strong><small>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · "))} · excesso ${numberFormatter.format(position.quantity - position.maximum)}</small></span><b>${currencyFormatter.format(value)}</b></button>`).join("") || `<p class="chart-empty">Sem excesso para o recorte atual.</p>`;
+  ui.dashboardExcessList.innerHTML = excess.slice(0, 5).map(({ item, position, value }) => `<button type="button" data-item-code="${escapeHtml(item.code)}"><span><strong>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</strong><small>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · "))} · excesso ${numberFormatter.format(position.quantity - position.maximum)}</small></span><b>${compactCurrencyFormatter.format(value)}</b></button>`).join("") || `<p class="chart-empty">Sem excesso para o recorte atual.</p>`;
 }
 
 function handleChartFilter(event) {
@@ -3353,7 +3353,7 @@ function renderNextPendingScBatch() {
     <span class="item-card__address">${escapeHtml(formatItemAddress(item, record.branchCode))}</span>
     <span class="item-card__address">Reposição: ${escapeHtml(scopedReplenishmentResponsibles(item).join(", ") || "Não informada")}</span>
     <span class="report-card__meta"><span><small>Solicitante</small><strong>${escapeHtml(sc.requesterName || "—")}</strong></span><span><small>Quantidade</small><strong>${formatOptionalNumber(sc.quantity)}</strong></span></span>
-    <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></span>
+    <span class="report-card__footer"><span>${escapeHtml(formatDate(sc.deliveryDate, "Entrega não informada"))}${isOverdue(sc.deliveryDate) ? " · atrasada" : ""}</span><strong>${sc.estimatedValue == null ? "—" : compactCurrencyFormatter.format(sc.estimatedValue)}</strong></span>
   </button>`).join(""));
   state.pendingScVisible = end;
   ui.pendingScVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.pendingScRows.length)} solicitações`;
@@ -3830,7 +3830,7 @@ function renderNextRepeatedPurchaseBatch() {
       '<small>Filial ' + escapeHtml(group.branchCode) + ' · ' + escapeHtml(formatRepeatedPurchaseMonth(group.month)) + '</small>' +
       '<small>' + integerFormatter.format(group.suppliers.length) + ' fornecedor(es)</small></span>' +
       '<span class="supplier-need-group__heading-stats"><strong>' + integerFormatter.format(group.orders.length) + ' OFs</strong>' +
-      '<small>' + (group.knownAmountCount ? currencyFormatter.format(group.knownAmount) + ' estimados (' + group.knownAmountCount + '/' + group.orders.length + ' OFs)' : 'Sem preço informado') +
+      '<small>' + (group.knownAmountCount ? compactCurrencyFormatter.format(group.knownAmount) + ' estimados (' + group.knownAmountCount + '/' + group.orders.length + ' OFs)' : 'Sem preço informado') +
       ' · Ver histórico ▾</small></span></summary><div class="supplier-need-group__items">' +
       group.orders.map((order) =>
         '<div class="supplier-need-row purchase-repeat-of-row">' +
@@ -3839,7 +3839,7 @@ function renderNextRepeatedPurchaseBatch() {
           '<small>CCU ' + escapeHtml(order.ccu || "Não informado") + '</small></span>' +
           '<span class="supplier-need-row__numbers"><strong>' +
             (order.quantity == null ? "Qtd. não informada" : numberFormatter.format(order.quantity) + ' un.') + '</strong>' +
-          '<small>' + (order.amount == null ? "Valor não informado" : currencyFormatter.format(order.amount) + ' estimados') +
+          '<small>' + (order.amount == null ? "Valor não informado" : compactCurrencyFormatter.format(order.amount) + ' estimados') +
           '</small></span></div>'
       ).join("") +
       '<button type="button" class="button button--secondary purchase-repeat-item-button" data-repeat-item="' +
@@ -3865,7 +3865,7 @@ function renderNextPurchaseSupplierBatch() {
             <small>${integerFormatter.format(group.itemCodes.size)} itens · ${integerFormatter.format(group.entries.length)} posições</small>
             <small>${group.key === "__a_definir__" ? "Itens sem fornecedor identificado ou com múltiplos fornecedores possíveis · validar antes da SC" : escapeHtml([...group.sources].join(" · "))}</small>
           </span>
-          <span class="supplier-need-group__heading-stats"><strong>${currencyFormatter.format(group.estimatedValue)}</strong>
+          <span class="supplier-need-group__heading-stats"><strong>${compactCurrencyFormatter.format(group.estimatedValue)}</strong>
             <small>${group.ruptures ? `${group.ruptures} rupturas · ` : ""}${group.risks ? `${group.risks} em risco · ` : ""}Abrir itens <span aria-hidden="true">▾</span></small>
           </span>
         </summary>
@@ -3878,7 +3878,7 @@ function renderNextPurchaseSupplierBatch() {
             </span>
             <span class="supplier-need-row__numbers">
               <strong>${numberFormatter.format(need.netSuggested)} ${escapeHtml((need.item.units || []).join(", ") || "un.")}</strong>
-              <small>${currencyFormatter.format(need.estimatedValue)}</small>
+              <small>${compactCurrencyFormatter.format(need.estimatedValue)}</small>
             </span>
           </button>`).join("")}
         </div>
@@ -3902,7 +3902,7 @@ function renderNextPurchaseMaterialBatch() {
             <small>${integerFormatter.format(group.itemCodes.size)} itens · ${integerFormatter.format(group.entries.length)} posições</small>
             <small>${escapeHtml([...group.sources].join(" · "))}</small>
           </span>
-          <span class="supplier-need-group__heading-stats"><strong>${currencyFormatter.format(group.estimatedValue)}</strong>
+          <span class="supplier-need-group__heading-stats"><strong>${compactCurrencyFormatter.format(group.estimatedValue)}</strong>
             <small>${group.ruptures ? `${group.ruptures} rupturas · ` : ""}${group.risks ? `${group.risks} em risco · ` : ""}Abrir itens <span aria-hidden="true">▾</span></small>
           </span>
         </summary>
@@ -3915,7 +3915,7 @@ function renderNextPurchaseMaterialBatch() {
             </span>
             <span class="supplier-need-row__numbers">
               <strong>${numberFormatter.format(need.netSuggested)} ${escapeHtml((need.item.units || []).join(", ") || "un.")}</strong>
-              <small>${currencyFormatter.format(need.estimatedValue)}</small>
+              <small>${compactCurrencyFormatter.format(need.estimatedValue)}</small>
             </span>
           </button>`).join("")}
         </div>
@@ -3981,7 +3981,7 @@ function renderNextPurchaseNeedBatch() {
       ? `<span class="report-card__meta"><span><small>OFs</small><strong>${escapeHtml(ofCodes.join(", ") || "—")}</strong></span><span><small>Saldo somado das OFs</small><strong>${numberFormatter.format(cavacoOfBalance)}</strong></span><span><small>Déficit até ${numberFormatter.format(cavacoThreshold)}</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span><span class="purchase-coverage-note cavaco-supplier-note"><strong>Fornecedor:</strong> ${escapeHtml(cavacoSupplier || "Não informado")}</span><span class="purchase-coverage-note cavaco-alert-note">Gatilho especial: iniciar reposição quando o saldo somado das OFs abertas deste fornecedor ficar abaixo de ${numberFormatter.format(cavacoThreshold)}.</span>`
       : `<span class="report-card__meta"><span><small>Saldo</small><strong>${numberFormatter.format(position.quantity)}</strong></span><span><small>Coberto por ${escapeHtml(coverageSource)}</small><strong>${numberFormatter.format(coveredQuantity)}</strong></span><span><small>Compra líquida</small><strong>${numberFormatter.format(netSuggested)}</strong></span></span>${(ofCodes.length || scCodes.length) ? `<span class="purchase-coverage-note">${ofCodes.length ? `OF: ${escapeHtml(ofCodes.join(", "))}` : ""}${ofCodes.length && scCodes.length ? " · " : ""}${scCodes.length ? `SC: ${escapeHtml(scCodes.join(", "))}` : ""}</span>` : ""}`}
     ${need.alexsandroCriterion && netSuggested <= 0 ? '<span class="purchase-coverage-note"><strong>Reposição coberta por SC/OF · compra líquida zero</strong></span>' : ""}
-    <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${currencyFormatter.format(estimatedValue)}</strong></span>
+    <span class="report-card__footer"><span>${escapeHtml([position.branchCode, position.localCode].filter(Boolean).join(" · ") || "—")}</span><strong>${compactCurrencyFormatter.format(estimatedValue)}</strong></span>
   </button>`; }).join(""));
   state.purchaseNeedVisible = end;
   ui.purchaseNeedVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visiblePurchaseNeeds.length)} necessidades`;
@@ -4014,7 +4014,7 @@ function openPurchaseNeedModal(key) {
     <article><span>SC sem OF · CCU 1500</span><strong>${numberFormatter.format(pendingScQuantity)}</strong></article>
     <article><span>Cobertura total</span><strong>${numberFormatter.format(coveredQuantity)}</strong></article>
     <article><span>Comprar líquido</span><strong>${numberFormatter.format(netSuggested)}</strong></article>
-    <article><span>Valor estimado</span><strong>${currencyFormatter.format(estimatedValue)}</strong></article>`;
+    <article><span>Valor estimado</span><strong>${compactCurrencyFormatter.format(estimatedValue)}</strong></article>`;
   renderOperationalInsights(ui.purchaseModalOperational, getOperationalInsight(item, position.branchCode, position), { showLeadTimeBreakdown: true });
   ui.purchaseModalDetails.innerHTML = `
     <div><dt>Unidade</dt><dd>${escapeHtml((item.units || []).join(", ") || "—")}</dd></div>
@@ -4026,7 +4026,7 @@ function openPurchaseNeedModal(key) {
     <div><dt>Responsável pela reposição</dt><dd>${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informado")}</dd></div>
     <div><dt>Fornecedores relacionados</dt><dd>${escapeHtml((item.suppliers || []).join(", ") || "—")}</dd></div>
     <div><dt>Prioridade</dt><dd>${escapeHtml(purchaseNeedPriorityLabel(need))}</dd></div>
-    <div><dt>Preço de referência</dt><dd>${currencyFormatter.format(referencePrice)}</dd></div>
+    <div><dt>Preço de referência</dt><dd>${compactCurrencyFormatter.format(referencePrice)}</dd></div>
     <div><dt>Origem da cobertura</dt><dd>${escapeHtml(coverageSource)}</dd></div>
     <div><dt>OFs consideradas</dt><dd>${escapeHtml(ofCodes.length ? ofCodes.join(", ") : "Nenhuma")}</dd></div>
     <div><dt>SCs sem OF consideradas</dt><dd>${escapeHtml(scCodes.length ? scCodes.join(", ") : "Nenhuma")}</dd></div>
@@ -4055,7 +4055,7 @@ function openPendingScModal(key) {
   ui.pendingScSubject.innerHTML = `<span class="status-pill ${isOverdue(sc.deliveryDate) ? "status-pill--critical" : "status-pill--pending"}">${isOverdue(sc.deliveryDate) ? "Entrega prevista vencida" : "Processo pendente"}</span><div><strong>SC ${escapeHtml(sc.code)} sem Ordem de Fornecimento</strong><small>Solicitada por ${escapeHtml(sc.requesterName || "usuário não informado")} em ${escapeHtml(formatDate(sc.date))}</small></div>`;
   ui.pendingScModalSummary.innerHTML = `
     <article><span>Quantidade</span><strong>${formatOptionalNumber(sc.quantity)}</strong></article>
-    <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : currencyFormatter.format(sc.estimatedValue)}</strong></article>
+    <article><span>Valor estimado</span><strong>${sc.estimatedValue == null ? "—" : compactCurrencyFormatter.format(sc.estimatedValue)}</strong></article>
     <article><span>Criação</span><strong>${escapeHtml(formatDate(sc.date))}</strong></article>
     <article><span>Entrega</span><strong>${escapeHtml(formatDate(sc.deliveryDate))}</strong></article>
     <article><span>Tempo aguardando</span><strong>${escapeHtml(ageLabel(sc.date))}</strong></article>`;
@@ -5317,7 +5317,7 @@ function renderConsumptionAnalysis() {
   ui.consumptionPositionCount.textContent = integerFormatter.format(rows.length);
   ui.consumptionHistoricalTotal.textContent = numberFormatter.format(historicalTotal);
   ui.consumptionAdjustedAverage.textContent = numberFormatter.format(adjustedAverage);
-  ui.consumptionEstimatedValue.textContent = estimatedValueRows.length ? currencyFormatter.format(estimatedMonthlyValue) : "Sem preço";
+  ui.consumptionEstimatedValue.textContent = estimatedValueRows.length ? compactCurrencyFormatter.format(estimatedMonthlyValue) : "Sem preço";
   ui.consumptionOutlierCount.textContent = integerFormatter.format(outlierCount);
   ui.consumptionResultCount.textContent = pluralize(rows.length, "posição", "posições");
 
@@ -5375,7 +5375,7 @@ function renderNextConsumptionBatch() {
   const start = state.consumptionVisible;
   const end = Math.min(start + CONFIG.reportBatch, state.visibleConsumptionRows.length);
   if (start >= end) return;
-  body.insertAdjacentHTML("beforeend", state.visibleConsumptionRows.slice(start, end).map((row) => `<tr tabindex="0" data-consumption-item="${escapeHtml(row.item.code)}"><td><strong>${escapeHtml(row.item.name)}</strong><small>Código ${escapeHtml(row.item.code)}</small></td><td><strong>${escapeHtml(row.position.branchName || row.position.branchCode || "—")}</strong><small>${escapeHtml([row.position.branchCode, row.position.localCode, row.position.localName].filter(Boolean).join(" · "))}</small></td><td><strong>${numberFormatter.format(row.averageMonthlyConsumption)}</strong><small>${row.outlierMonthCount ? `${integerFormatter.format(row.outlierMonthCount)} anomalia(s) excluída(s)` : "sem anomalias"}</small></td><td><strong>${row.latest ? numberFormatter.format(row.latest.value) : "—"}</strong><small>${escapeHtml(row.latest?.month || "sem competência")}</small></td><td>${numberFormatter.format(row.historicalTotal)}</td><td>${numberFormatter.format(row.position.quantity || 0)}</td><td>${row.coverageDays === null ? "—" : `${numberFormatter.format(row.coverageDays)} dias`}</td><td>${row.estimatedMonthlyValue === null ? "Sem preço" : currencyFormatter.format(row.estimatedMonthlyValue)}</td><td>${integerFormatter.format(row.consideredMonthCount)}/${integerFormatter.format(row.monthCount)} meses</td></tr>`).join(""));
+  body.insertAdjacentHTML("beforeend", state.visibleConsumptionRows.slice(start, end).map((row) => `<tr tabindex="0" data-consumption-item="${escapeHtml(row.item.code)}"><td><strong>${escapeHtml(row.item.name)}</strong><small>Código ${escapeHtml(row.item.code)}</small></td><td><strong>${escapeHtml(row.position.branchName || row.position.branchCode || "—")}</strong><small>${escapeHtml([row.position.branchCode, row.position.localCode, row.position.localName].filter(Boolean).join(" · "))}</small></td><td><strong>${numberFormatter.format(row.averageMonthlyConsumption)}</strong><small>${row.outlierMonthCount ? `${integerFormatter.format(row.outlierMonthCount)} anomalia(s) excluída(s)` : "sem anomalias"}</small></td><td><strong>${row.latest ? numberFormatter.format(row.latest.value) : "—"}</strong><small>${escapeHtml(row.latest?.month || "sem competência")}</small></td><td>${numberFormatter.format(row.historicalTotal)}</td><td>${numberFormatter.format(row.position.quantity || 0)}</td><td>${row.coverageDays === null ? "—" : `${numberFormatter.format(row.coverageDays)} dias`}</td><td>${row.estimatedMonthlyValue === null ? "Sem preço" : compactCurrencyFormatter.format(row.estimatedMonthlyValue)}</td><td>${integerFormatter.format(row.consideredMonthCount)}/${integerFormatter.format(row.monthCount)} meses</td></tr>`).join(""));
   state.consumptionVisible = end;
   ui.consumptionVisibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(state.visibleConsumptionRows.length)} posições`;
   ui.consumptionLoadMore.classList.toggle("is-hidden", end >= state.visibleConsumptionRows.length);
@@ -5430,9 +5430,9 @@ function renderConsumptionReview() {
   ui.reviewAdjustCount.textContent = integerFormatter.format(visible.length - ideal - insufficient);
   ui.reviewInsufficientCount.textContent = integerFormatter.format(insufficient);
   ui.reviewAverageLeadTime.textContent = leadTimes.length ? `${numberFormatter.format(averageLeadTime)} dias` : "Sem histórico";
-  ui.reviewIncreaseValue.textContent = currencyFormatter.format(financialImpact.increase);
-  ui.reviewReductionValue.textContent = currencyFormatter.format(financialImpact.reduction);
-  ui.reviewNetImpactValue.textContent = currencyFormatter.format(financialImpact.net);
+  ui.reviewIncreaseValue.textContent = compactCurrencyFormatter.format(financialImpact.increase);
+  ui.reviewReductionValue.textContent = compactCurrencyFormatter.format(financialImpact.reduction);
+  ui.reviewNetImpactValue.textContent = compactCurrencyFormatter.format(financialImpact.net);
   ui.reviewNetImpactCard.classList.toggle("is-increase", financialImpact.net > 0);
   ui.reviewNetImpactCard.classList.toggle("is-reduction", financialImpact.net < 0);
   ui.reviewResultCount.textContent = pluralize(visible.length, "posição", "posições");
@@ -5785,7 +5785,7 @@ function openMinMaxReviewModal(key) {
     <article><span>Mínimo sugerido</span><strong>${formatOptionalNumber(review.recommendedMinimum)}</strong><small>inclui margem preventiva de 20%</small></article>
     <article><span>${review.maximumStrategy === "preserve" ? "Máximo mantido" : "Máximo sugerido"}</span><strong>${formatOptionalNumber(review.recommendedMaximum)}</strong><small>${review.maximumStrategy === "preserve" ? "já suporta o mínimo seguro" : "cobertura para ciclo de reposição"}</small></article>
     <article><span>Próxima compra</span><strong>${escapeHtml(getOperationalInsight(item, position.branchCode, position).nextPurchase)}</strong></article>
-    <article><span>Preço de referência</span><strong>${review.referencePrice > 0 ? currencyFormatter.format(review.referencePrice) : "Não disponível"}</strong><small>${review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível"}</small></article>
+    <article><span>Preço de referência</span><strong>${review.referencePrice > 0 ? compactCurrencyFormatter.format(review.referencePrice) : "Não disponível"}</strong><small>${review.referencePriceSource === "stock" ? "Custo unitário atual" : review.referencePriceSource === "purchase" ? "Último preço de compra" : "Sem preço disponível"}</small></article>
     <article class="review-impact-summary review-impact-summary--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}"><span>Impacto no estoque máximo</span><strong>${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</strong><small>${formatReferenceValue(review.currentMaximumValue, review.referencePrice)} → ${formatReferenceValue(review.recommendedMaximumValue, review.referencePrice)}</small></article>`;
   const message = review.status === "ideal"
     ? "Os parâmetros atuais estão dentro da faixa aceitável de ±20% da recomendação calculada."
@@ -5798,7 +5798,7 @@ function openMinMaxReviewModal(key) {
   ui.reviewModalDetails.innerHTML = `
     <section><h3>Consumo mensal</h3><div class="monthly-consumption-list">${months.map(({ month, value, isOutlier }) => `<span class="${isOutlier ? "is-outlier" : "is-considered"}"><small>${escapeHtml(month)}</small><strong>${numberFormatter.format(value)}</strong><i>${isOutlier ? "Anomalia excluída" : "Considerado na média"}</i></span>`).join("")}</div></section>
     <section><h3>Base do lead time</h3><dl><div><dt>Origem</dt><dd>${review.leadTimeSource === "real" ? "Mediana entre criação da SC e entrada do recebimento" : "Padrão estimado de 30 dias"}</dd></div><div><dt>Amostras válidas</dt><dd>${integerFormatter.format(review.leadSamples.length)}</dd></div><div><dt>Tempos encontrados</dt><dd>${review.leadSamples.length ? review.leadSamples.map((value) => `${value} dias`).join(", ") : "Nenhum recebimento relacionado"}</dd></div></dl></section>
-    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Responsável pela reposição</dt><dd>${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informado")}</dd></div><div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "Não informada")}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div><div><dt>Divisão</dt><dd>${escapeHtml(position.division || "Não informada")}</dd></div><div><dt>Custo unitário</dt><dd>${currencyFormatter.format(position.unitCost || 0)}</dd></div></dl></section>
+    <section><h3>Posição atual</h3><dl><div><dt>Saldo</dt><dd>${numberFormatter.format(position.quantity)}</dd></div><div><dt>Responsável pela reposição</dt><dd>${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "Não informado")}</dd></div><div><dt>Repartição</dt><dd>${escapeHtml(position.partition || "Não informada")}</dd></div><div><dt>Prateleira</dt><dd>${escapeHtml(position.shelf || "Não informada")}</dd></div><div><dt>Divisão</dt><dd>${escapeHtml(position.division || "Não informada")}</dd></div><div><dt>Custo unitário</dt><dd>${compactCurrencyFormatter.format(position.unitCost || 0)}</dd></div></dl></section>
     <section class="review-financial-impact"><h3>Impacto financeiro estimado</h3><dl><div><dt>Mínimo atual</dt><dd>${formatReferenceValue(review.currentMinimumValue, review.referencePrice)}</dd></div><div><dt>Mínimo sugerido</dt><dd>${formatReferenceValue(review.recommendedMinimumValue, review.referencePrice)}</dd></div><div><dt>Impacto no mínimo</dt><dd class="impact-value impact-value--${review.minimumValueImpact > 0 ? "increase" : review.minimumValueImpact < 0 ? "reduce" : "neutral"}">${escapeHtml(formatValueImpact(review.minimumValueImpact, review.referencePrice))}</dd></div><div><dt>Máximo atual</dt><dd>${formatReferenceValue(review.currentMaximumValue, review.referencePrice)}</dd></div><div><dt>Máximo sugerido</dt><dd>${formatReferenceValue(review.recommendedMaximumValue, review.referencePrice)}</dd></div><div><dt>Impacto no máximo</dt><dd class="impact-value impact-value--${review.maximumValueImpact > 0 ? "increase" : review.maximumValueImpact < 0 ? "reduce" : "neutral"}">${escapeHtml(formatValueImpact(review.maximumValueImpact, review.referencePrice))}</dd></div></dl></section>`;
   if (typeof ui.reviewModal.showModal === "function") ui.reviewModal.showModal(); else ui.reviewModal.setAttribute("open", "");
   ui.reviewModalClose.focus();
@@ -5870,7 +5870,7 @@ function renderCatalogGroupCard(group, index) {
       <span class="catalog-group-card__metrics">
         <span><small>Itens distintos</small><b>${integerFormatter.format(group.itemCodes.size)}</b></span>
         <span><small>Saldo</small><b>${numberFormatter.format(group.quantity)}</b></span>
-        <span><small>Valor em estoque</small><b>${currencyFormatter.format(group.value)}</b></span>
+        <span><small>Valor em estoque</small><b>${compactCurrencyFormatter.format(group.value)}</b></span>
       </span>
     </button>
     <div id="${panelId}" class="catalog-group-card__items" hidden></div>`;
@@ -5893,7 +5893,7 @@ function appendCatalogGroupItems(index) {
     button.dataset.itemCode = item.code;
     button.innerHTML = `<span><b>${escapeHtml(item.code)}</b> · ${escapeHtml(item.name)}</span>
       <small title="${escapeHtml(source)}">Saldo: ${numberFormatter.format(quantity)} ·
-      ${currencyFormatter.format(value)}</small>`;
+      ${compactCurrencyFormatter.format(value)}</small>`;
     fragment.append(button);
   }
   panel.append(fragment);
@@ -6086,7 +6086,7 @@ function openItem(code) {
   const history = modalScopedHistory(item);
   ui.modalBadges.innerHTML = statusBadges(item, positions, history).map(badgeHtml).join("");
   renderBranchBalances(positions);
-  ui.modalStockValue.textContent = currencyFormatter.format(positions.reduce((sum, position) => sum + (position.stockValue || 0), 0));
+  ui.modalStockValue.textContent = compactCurrencyFormatter.format(positions.reduce((sum, position) => sum + (position.stockValue || 0), 0));
   ui.modalPositionCount.textContent = integerFormatter.format(positions.length);
   ui.modalHistoryCount.textContent = integerFormatter.format(history.length);
   renderOperationalInsights(ui.modalOperationalInsights, getOperationalInsight(item, "", null, positions));
@@ -6101,7 +6101,7 @@ function openItem(code) {
     ["Filiais", unique(positions.map((position) => position.branchName || position.branchCode)).join(" · ") || "Sem posição nos filtros"],
     ["Fornecedores", scopedSuppliers.join(" · ") || "Sem fornecedor nos filtros"],
     ["Última movimentação de compra", formatDate(lastPurchase?.rec?.entryDate || lastPurchase?.of?.date || lastPurchase?.sc?.date)],
-    ["Último preço conhecido", scopedPrice > 0 ? currencyFormatter.format(scopedPrice) : "Não informado"],
+    ["Último preço conhecido", scopedPrice > 0 ? compactCurrencyFormatter.format(scopedPrice) : "Não informado"],
   ];
   ui.modalDetails.innerHTML = details.map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
   renderStorageAddresses(item, positions);
@@ -6346,8 +6346,8 @@ function renderStock(item, scopedPositions = null) {
       <td class="number">${numberFormatter.format(position.quantity)}</td>
       <td class="number">${formatOptionalNumber(position.minimum)}</td>
       <td class="number">${formatOptionalNumber(position.maximum)}</td>
-      <td class="number">${currencyFormatter.format(position.unitCost)}</td>
-      <td class="number">${currencyFormatter.format(position.stockValue)}</td>
+      <td class="number">${compactCurrencyFormatter.format(position.unitCost)}</td>
+      <td class="number">${compactCurrencyFormatter.format(position.stockValue)}</td>
       <td>${escapeHtml(position.shelf || "—")}</td>
       <td class="cell-wrap">${escapeHtml((position.replenishmentResponsibles || []).join(", ") || "—")}</td>
       <td>${badges.length ? badges.map(badgeHtml).join(" ") : badgeHtml(["Normal", "success"])}</td>
@@ -6393,8 +6393,8 @@ function renderHistory(item, scopedHistory = null) {
       <td class="cell-wrap">${escapeHtml(supplier)}</td>
       <td class="number">${requestedQuantity == null ? "—" : numberFormatter.format(requestedQuantity)}</td>
       <td class="number">${deliveredQuantity == null ? "—" : numberFormatter.format(deliveredQuantity)}</td>
-      <td class="number">${unitValue == null ? "—" : currencyFormatter.format(unitValue)}</td>
-      <td class="number">${documentValue == null ? "—" : currencyFormatter.format(documentValue)}</td>
+      <td class="number">${unitValue == null ? "—" : compactCurrencyFormatter.format(unitValue)}</td>
+      <td class="number">${documentValue == null ? "—" : compactCurrencyFormatter.format(documentValue)}</td>
     </tr>`;
   }).join("");
 
@@ -6599,11 +6599,11 @@ function formatValueImpact(value, referencePrice) {
   if (!(Number(referencePrice) > 0)) return "Preço indisponível";
   const impact = Number(value) || 0;
   if (Math.abs(impact) < 0.005) return "Sem impacto financeiro";
-  return `${impact > 0 ? "Aumento" : "Redução"} de ${currencyFormatter.format(Math.abs(impact))}`;
+  return `${impact > 0 ? "Aumento" : "Redução"} de ${compactCurrencyFormatter.format(Math.abs(impact))}`;
 }
 
 function formatReferenceValue(value, referencePrice) {
-  return Number(referencePrice) > 0 ? currencyFormatter.format(Number(value) || 0) : "Não disponível";
+  return Number(referencePrice) > 0 ? compactCurrencyFormatter.format(Number(value) || 0) : "Não disponível";
 }
 
 function formatDate(value, fallback = "—") {
@@ -6669,7 +6669,7 @@ function formatProcessNumber(value) {
 }
 
 function formatProcessCurrency(value) {
-  return value == null ? "Não informado" : currencyFormatter.format(value);
+  return value == null ? "Não informado" : compactCurrencyFormatter.format(value);
 }
 
 function formatFlag(value) {
