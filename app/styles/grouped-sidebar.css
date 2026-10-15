@@ -314,3 +314,24 @@ html.almox-nav-ready .almox-menu__backdrop {display:none}
     transition:none !important;
   }
 }
+
+/* Regressão corrigida: no celular restaura a barra horizontal inferior original.
+ * A camada Apple Glass agrupada não deve ocupar espaço nem captar toques. */
+@media (max-width:900px) {
+  html #almoxGroupedMenu,
+  html #almoxMobileMenuButton,
+  html #almoxSidebarPopup,
+  html .almox-menu__backdrop {
+    display:none !important;
+    pointer-events:none !important;
+  }
+
+  /* Segurança contra mudanças de viewport antes da sincronização do JavaScript. */
+  html.almox-nav-ready .app-nav-wrap .app-nav.almox-navigation-source {
+    position:static !important;
+    inset:auto !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    height:100% !important;
+  }
+}
