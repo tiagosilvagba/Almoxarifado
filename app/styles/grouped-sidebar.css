@@ -6,6 +6,7 @@ html.almox-nav-ready {
   --almox-menu-text: var(--app-chrome-text,#f5f8ff);
   --almox-menu-border: rgba(196,218,241,.22);
 }
+html.almox-nav-ready.almox-nav-expanded { --almox-sidebar-width: var(--almox-sidebar-expanded); }
 html.almox-nav-ready.almox-nav-compact { --almox-sidebar-width: var(--almox-sidebar-compact); }
 
 /* Mantém as âncoras reais no DOM para preservar todos os listeners existentes. */
