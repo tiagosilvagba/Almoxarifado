@@ -2597,7 +2597,7 @@ function renderCatalogResults() {
   ui.catalogGroupNote.textContent = view === "supplier"
     ? "Agrupamento de todos os itens filtrados pelo fornecedor da última OF válida. Prefere a filial selecionada; quando necessário, usa o último fornecedor do item em outra filial. Confirme a sugestão com o comprador."
     : view === "material"
-      ? "Família identificada pelo nome/descrição do item e cadastro. Para itens não identificados, utiliza Nm Classe do Saldo Online. Não depende de necessidade de compra."
+      ? "Agrupamento pela descrição física do item, independentemente da classe contábil. Parafusos, porcas, arruelas, rebites e fixadores são unificados em Parafusos e porcas. Nm Classe serve como apoio quando o material não é identificado. Não depende de necessidade de compra."
       : "";
   state.catalogGroups = view === "item" ? [] : groupCatalogItems(state.filteredItems, view,
     (item) => currentScopedPositions(item));
@@ -3799,7 +3799,7 @@ function renderPurchaseNeedView() {
     ui.purchaseNeedSupplierNote.textContent = repeat
       ? "Auditoria histórica de compras: mesma peça (código), mesma filial e mesmo mês, com duas ou mais OFs distintas. Linhas de recebimento repetidas não duplicam compras. Apura todas as OFs históricas, inclusive de itens sem necessidade de reposição atual. Filial da OF não identifica local físico específico."
       : (material
-        ? "Famílias identificadas por nome, descrição ou cadastro da peça. Para itens não reconhecidos, utiliza-se Nm Classe do Saldo Online. Sem classe válida, permanece em Outros materiais / classificar."
+        ? "Famílias padronizadas pelo nome e descrição da peça, independentemente do grupo contábil. Parafusos, porcas, arruelas, rebites e fixadores aparecem em Parafusos e porcas. Se a peça não for reconhecida, utiliza Nm Classe do Saldo Online; sem classe válida fica em Outros materiais / classificar."
         : "Fornecedores sugeridos pelo histórico: prioriza a última OF da filial; sem fornecedor identificado na filial, usa a última compra datada do mesmo item, inclusive de outra filial, sujeita à confirmação do comprador. O card Fornecedor a definir reúne somente os itens sem fonte segura. Os demais cards são classificados do maior para o menor número de itens distintos.")
         + " Apenas compras líquidas positivas. "
         + [excludedCovered ? excludedCovered + " posição(ões) já coberta(s)" : "",
