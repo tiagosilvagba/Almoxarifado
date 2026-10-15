@@ -38,7 +38,7 @@ function enforceVersion() {
 }
 
 function isDesktopNavigationMode() {
-  return window.matchMedia("(min-width: 900px)").matches || window.matchMedia("(hover:hover) and (pointer:fine)").matches;
+  return window.matchMedia("(min-width:901px)").matches;
 }
 
 function setImportantStyle(node, property, value) {
