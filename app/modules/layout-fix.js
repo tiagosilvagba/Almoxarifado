@@ -81,11 +81,13 @@
     setImportant(main,'width',`calc(100% - ${sideWidth()}px)`);
     setImportant(main,'max-width','none');
 
-    setImportant(topbarContent,'margin-left',side);
-    setImportant(topbarContent,'width',`calc(100% - ${sideWidth()}px)`);
+    // O cabeçalho é uma linha independente: a marca, o status das bases e
+    // as ações podem ocupar toda a largura, mesmo com menu lateral compacto.
+    setImportant(topbarContent,'margin-left','0');
+    setImportant(topbarContent,'width','100%');
     setImportant(topbarContent,'max-width','none');
-    setImportant(topbarContent,'padding-left',contentPad);
-    setImportant(topbarContent,'padding-right',contentPad);
+    setImportant(topbarContent,'padding-left','clamp(12px,1.5vw,24px)');
+    setImportant(topbarContent,'padding-right','clamp(12px,1.5vw,24px)');
 
     document.documentElement.style.setProperty('--desktop-nav-width',side);
     document.documentElement.style.setProperty('--desktop-topbar-height',`${top}px`);

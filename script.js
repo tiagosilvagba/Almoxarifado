@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 10.7: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "10.7.59";
+const BOOTSTRAP_VERSION = "10.7.60";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -29,7 +29,7 @@ const MODULES = Object.freeze({
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
   comparison: [
     ["./app/modules/comparativo-meta.js?v=7.0", "metas"],
-    ["./app/modules/layout-fix.js?v=7.0", "layout"],
+    ["./app/modules/layout-fix.js?v=10.7.60", "layout"],
     ["./app/modules/comparativo-periodos.js?v=7.0", "períodos"],
     ["./app/modules/comparativo-excel-padrao.js?v=10.7.2", "Excel"],
     ["./app/modules/comparativo-item-split.js?v=7.0", "itens"],

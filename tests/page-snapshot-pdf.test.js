@@ -18,13 +18,23 @@ test("PDF visual utiliza renderizador que reconhece as funções modernas de cor
   assert.match(source, /pdf\.save\(filename\(target\)\)/);
 });
 
-test("marca Gestão de Almoxarifado fica acima do menu somente no desktop", () => {
-  const desktop = css.match(/\/\* Identidade no canto superior esquerdo[\s\S]*?@media \(min-width:901px\) \{([\s\S]*)$/);
-  assert.ok(desktop,"o posicionamento do topo deve ser limitado ao desktop");
+test("a marca e as atualizações compartilham o topo inteiro, sem herdar a largura do menu", () => {
+  const desktop = css.match(/\/\* Cabeçalho livre da largura da navegação[\s\S]*?@media \(min-width:901px\) \{([\s\S]*)$/);
+  assert.ok(desktop,"o layout horizontal deve ser aplicado apenas no desktop");
   assert.match(desktop[1], /\.topbar \.topbar__content > \.brand \{/);
-  assert.match(desktop[1], /left:0 !important/);
-  assert.match(desktop[1], /position:absolute !important/);
-  assert.match(desktop[1], /justify-content:flex-end !important/);
+  assert.match(desktop[1], /width:auto !important/);
+  assert.match(desktop[1], /max-width:none !important/);
+  assert.match(desktop[1], /position:static !important/);
+  assert.match(desktop[1], /\.brand__copy \{/);
+  assert.match(desktop[1], /flex-flow:row wrap !important/);
+  assert.match(desktop[1], /\.brand \.brand__meta \{/);
+  assert.match(desktop[1], /\.topbar__actions \{/);
+  const html = fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
+  assert.match(html, /<h1>Gestão de Almoxarifado<\/h1>\s*<p class="brand__meta"/);
+  assert.match(html, /id="statusLine".*id="baseUpdateBadge".*id="versionBadge"/);
+  const sync = fs.readFileSync(path.join(ROOT,"app/modules/layout-fix.js"),"utf8");
+  assert.match(sync, /setImportant\(topbarContent,'margin-left','0'\)/);
+  assert.match(sync, /setImportant\(topbarContent,'width','100%'\)/);
   assert.match(css, /html #almoxGroupedMenu,/,"o celular continua com a navegação original");
 });
 
