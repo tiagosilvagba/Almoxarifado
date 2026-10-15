@@ -45,7 +45,9 @@ test("sugere fornecedor da OF mais recente na filial exata, sem misturar outra f
     name: "Fornecedor Gama", source: "Última OF na mesma filial",
     alternatives: ["Fornecedor Alfa", "Fornecedor Gama"],
   });
-  assert.equal(suggestPurchaseNeedSupplier(mockNeed("243370", "706", "5", 10, 5, history, ["A", "B"])).name, "Fornecedor a definir");
+  const fallback = suggestPurchaseNeedSupplier(mockNeed("243370", "706", "5", 10, 5, history, ["A", "B"]));
+  assert.equal(fallback.name, "Fornecedor Beta");
+  assert.equal(fallback.source, "Última OF do item (outra filial; confirmar)");
 });
 
 test("sem OF na filial usa fornecedor único conhecido, mas múltiplos ficam a definir", () => {
@@ -58,6 +60,41 @@ test("sem OF na filial usa fornecedor único conhecido, mas múltiplos ficam a d
   const none = suggestPurchaseNeedSupplier(mockNeed("24","704","5", 10, 4, [], []));
   assert.equal(none.name, "Fornecedor a definir");
   assert.equal(none.source, "Sem fornecedor identificado");
+});
+
+
+test("quando a filial não define fornecedor, usa a última compra datada pelo mesmo código", () => {
+  const oldPurchase = hist("Fornecedor Antigo", "705", "2026-08-01", "OF40");
+  const newerPurchase = hist("Fornecedor Atual", "703", "2026-10-13", "OF41");
+  const invalidNewest = hist("Fornecedor a definir", "704", "2026-10-15", "OF42");
+  const canceledNewest = hist("Fornecedor Cancelado", "704", "2026-10-16", "OF43", true);
+  const need = mockNeed("407919", "704", "299", 12, 10,
+    [oldPurchase,newerPurchase,invalidNewest,canceledNewest],["Fornecedor Antigo","Fornecedor Atual"]);
+  const suggestion = suggestPurchaseNeedSupplier(need);
+  assert.equal(suggestion.name, "Fornecedor Atual");
+  assert.match(suggestion.source, /outra filial; confirmar/);
+  const groups = groupPurchaseNeedsBySupplier([need]);
+  assert.equal(groups.length,1);
+  assert.equal(groups[0].supplier,"Fornecedor Atual");
+  const report = buildSupplierGroupedPurchaseExport([need],new Date(2026,9,15),[]);
+  assert.equal(report.rows[0][0],"Fornecedor Atual");
+  assert.match(report.rows[0][1], /outra filial; confirmar/);
+});
+
+test("prefere fornecedor válido do recebimento quando OF indica A definir", () => {
+  const purchase = hist("A definir", "705", "2026-10-12", "OF51");
+  purchase.rec = {supplier:"Fornecedor Recebido",entryDate:"2026-10-14"};
+  const suggestion = suggestPurchaseNeedSupplier(
+    mockNeed("407920", "704", "299", 5, 10, [purchase], ["Fornecedor 1","Fornecedor 2"]));
+  assert.equal(suggestion.name,"Fornecedor Recebido");
+  assert.match(suggestion.source,/outra filial/);
+});
+
+test("compra sem data comprovável não define fornecedor arbitrariamente", () => {
+  const undated = hist("Fornecedor Incerto","705","","OF999");
+  const noDate = suggestPurchaseNeedSupplier(
+    mockNeed("407921","704","299",5,10,[undated],["Fornecedor 1","Fornecedor 2"]));
+  assert.equal(noDate.name,"Fornecedor a definir");
 });
 
 test("agrupa uma única vez por posição, exclui coberturas e Cavaco sem modificar entrada", () => {
