@@ -393,7 +393,7 @@ test("bootstrap de Inteligência aponta para versão atual e exibe falhas de car
   const bootstrap = fs.readFileSync(path.join(__dirname, "../script.js"), "utf8");
   const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
   const moduleSource = fs.readFileSync(path.join(__dirname, "../app/modules/inteligencia-almoxarifado.js"), "utf8");
-  assert.match(bootstrap, /inteligencia-almoxarifado\.js\?v=10\.7\.53/);
+  assert.match(bootstrap, /inteligencia-almoxarifado\.js\?v=10\.7\.63/);
   const version = bootstrap.match(/const BOOTSTRAP_VERSION = "([^"]+)"/)?.[1];
   assert.ok(version, "a versão do bootstrap deve ser declarada");
   assert.ok(html.includes("script.js?v=" + version), "index deve carregar a versão atual do bootstrap");
