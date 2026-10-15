@@ -341,6 +341,9 @@ html.almox-nav-ready .almox-menu__backdrop {display:none}
  * o cabeçalho original e a barra inferior de navegação. */
 @media (min-width:901px) {
   html.almox-nav-ready .topbar__content {
+    /* Alguns temas definem position:relative aqui; a marca deve se ancorar
+       ao cabeçalho inteiro, e não ao conteúdo deslocado pela sidebar. */
+    position:static !important;
     justify-content:flex-end !important;
   }
   html.almox-nav-ready .topbar .topbar__content > .brand {
