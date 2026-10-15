@@ -48,11 +48,56 @@ test("a camada de navegação reutiliza o clique original sem alterar o roteamen
   assert.match(read("app/modules/layout-fix.js"),/sideWidth\(\)/);
 });
 
-test("os dois modos e o drawer mobile têm regras isoladas",() => {
+test("modo desktop mantém submenu e alternância de largura; mobile mantém a barra nativa",() => {
   assert.match(styles,/\.almox-nav-compact/);
   assert.match(styles,/\.almox-nav-expanded/);
   assert.match(styles,/\.almox-menu__popup/);
   assert.match(styles,/@media \(max-width:900px\)/);
-  assert.match(styles,/\.almox-menu__mobile-open/);
+  assert.match(styles,/html #almoxGroupedMenu,/);
+  assert.match(styles,/html #almoxMobileMenuButton,/);
+  assert.match(styles,/\.app-nav\.almox-navigation-source\s*\{/);
   assert.match(styles,/prefers-reduced-motion:reduce/);
+});
+
+test("alternar entre celular e computador restaura ou aplica a navegação correta",() => {
+  const start = source.indexOf("function synchronizeResponsiveMode() {");
+  const end = source.indexOf("\n  let nav",start);
+  assert.ok(start >= 0 && end > start,"a sincronização responsiva deve estar presente");
+  const classes = new Set(["almox-nav-ready","almox-mobile-menu-open"]);
+  const root = {
+    classList: {
+      contains(name){return classes.has(name);},
+      toggle(name,enabled){if(enabled)classes.add(name);else classes.delete(name);},
+      remove(name){classes.delete(name);}
+    }
+  };
+  let viewport = 390;
+  let repaired = 0;
+  let closed = 0;
+  const backdrop = { hidden: false };
+  const mobileButton = {
+    values:new Map(),
+    setAttribute(name,value){this.values.set(name,value);}
+  };
+  const context = vm.createContext({
+    document:{documentElement:root},
+    mobile:()=>viewport<=900,
+    backdrop,mobileButton,
+    closePopup:()=>closed++,
+    forceResponsiveNavigation:()=>repaired++
+  });
+  vm.runInContext(source.slice(start,end),context);
+  vm.runInContext("synchronizeResponsiveMode()",context);
+  assert.equal(classes.has("almox-nav-ready"),false,"a tela do celular mantém navegação original");
+  assert.equal(classes.has("almox-mobile-menu-open"),false,"drawer não pode ficar aberto no celular");
+  assert.equal(backdrop.hidden,true);
+  assert.equal(mobileButton.values.get("aria-expanded"),"false");
+  viewport = 1440;
+  vm.runInContext("synchronizeResponsiveMode()",context);
+  assert.equal(classes.has("almox-nav-ready"),true,"desktop usa menu Apple Glass");
+  viewport = 390;
+  vm.runInContext("synchronizeResponsiveMode()",context);
+  assert.equal(classes.has("almox-nav-ready"),false,"redimensionamento restaura a barra inferior");
+  assert.equal(repaired,2,"a geometria deve ser recalculada apenas nas mudanças de modo");
+  assert.ok(closed>=2);
 });
