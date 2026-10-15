@@ -267,6 +267,7 @@
     let dirty = true;
     const selected = { delivery: new Set(), branch: new Set(), supplier: new Set(), requester: new Set(), age: new Set() };
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    const compactMoney = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
     const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
     const filterOptionCache = new Map();
 
@@ -415,7 +416,7 @@
       document.getElementById("fuBody").innerHTML = [...filtered]
         .sort((left, right) => right.days - left.days)
         .slice(0, windowObject.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches ? 400 : 1200)
-        .map((row) => `<tr class="${row.days > 90 ? "fu-row--treatment" : ""}"><td class="fu-risk">${row.days}</td><td><strong>${escapeHtml(ageBucket(row.days))}</strong></td><td>${escapeHtml(row.ofCreated || "—")}</td><td><strong>${escapeHtml(row.deliveryStatus)}</strong></td><td>${escapeHtml(row.branch)}</td><td>${escapeHtml(row.item)}</td><td>${escapeHtml(row.sc || "—")}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(row.scStatus)}</td><td>${escapeHtml(row.supplier)}</td><td>${escapeHtml(row.delivery || "—")}</td><td>${escapeHtml(row.requester)}</td><td>${row.stockBalance === null ? "—" : number.format(row.stockBalance)}</td><td>${number.format(row.requested)}</td><td>${number.format(row.delivered)}</td><td>${number.format(row.quantity)}</td><td>${row.value ? money.format(row.value) : "—"}</td></tr>`)
+        .map((row) => `<tr class="${row.days > 90 ? "fu-row--treatment" : ""}"><td class="fu-risk">${row.days}</td><td><strong>${escapeHtml(ageBucket(row.days))}</strong></td><td>${escapeHtml(row.ofCreated || "—")}</td><td><strong>${escapeHtml(row.deliveryStatus)}</strong></td><td>${escapeHtml(row.branch)}</td><td>${escapeHtml(row.item)}</td><td>${escapeHtml(row.sc || "—")}</td><td>${escapeHtml(row.of)}</td><td>${escapeHtml(row.scStatus)}</td><td>${escapeHtml(row.supplier)}</td><td>${escapeHtml(row.delivery || "—")}</td><td>${escapeHtml(row.requester)}</td><td>${row.stockBalance === null ? "—" : number.format(row.stockBalance)}</td><td>${number.format(row.requested)}</td><td>${number.format(row.delivered)}</td><td>${number.format(row.quantity)}</td><td>${row.value ? compactMoney.format(row.value) : "—"}</td></tr>`)
         .join("") || '<tr><td colspan="17">Nenhuma SC com compra confirmada e entrega pendente.</td></tr>';
     }
 
