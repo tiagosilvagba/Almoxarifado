@@ -60,7 +60,7 @@ Na aba **Necessidade de Compra**, selecione **Por fornecedor** para ver as suges
 
 ## Necessidade de compra: tipos de material por descrição
 
-Selecione **Por tipo de material** na Necessidade de Compra. O sistema reconhece a família física da peça a partir do **nome e da descrição detalhada**, usando o cadastro apenas como apoio quando a descrição não identifica o material. Exemplos: **Rolamentos, Sensores, Correias, Válvulas, Motores, Redutores, Bombas, Parafusos, Filtros, Polias, Mangueiras e Instrumentos de medição**.
+Selecione **Por tipo de material** na Necessidade de Compra. O sistema reconhece a família física da peça a partir do **nome e da descrição detalhada**, usando o cadastro apenas como apoio quando a descrição não identifica o material. Exemplos: **Rolamentos, Sensores, Correias, Válvulas, Motores, Redutores, Bombas, Parafusos e porcas, Filtros, Polias, Mangueiras e Instrumentos de medição**. **Parafusos, porcas, arruelas, rebites, prisioneiros, chumbadores, abraçadeiras, presilhas e barras roscadas são unificados em Parafusos e porcas**, mesmo quando Nm Classe indica Manutenção Industrial e Mecânica, Fixadores ou outra classe. A família física tem prioridade sobre a classe contábil; o cadastro original não é editado. As mesmas famílias são aplicadas no Catálogo, na Necessidade de Compra e nos respectivos relatórios Excel/PDF.
 
 - Um item pertence somente a uma família, sem duplicação de consumo, posições, cobertura ou valores.
 - Quando não há família identificável, o item fica em **Outros materiais / classificar**, sem inventar classificação.
