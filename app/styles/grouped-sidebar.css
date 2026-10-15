@@ -1,0 +1,315 @@
+/* Navegação Apple Glass agrupada: a lógica de páginas permanece na .app-nav original. */
+html.almox-nav-ready {
+  --almox-sidebar-expanded: 232px;
+  --almox-sidebar-compact: 72px;
+  --almox-sidebar-width: var(--almox-sidebar-expanded);
+  --almox-menu-text: var(--app-chrome-text,#f5f8ff);
+  --almox-menu-border: rgba(196,218,241,.22);
+}
+html.almox-nav-ready.almox-nav-compact { --almox-sidebar-width: var(--almox-sidebar-compact); }
+
+/* Mantém as âncoras reais no DOM para preservar todos os listeners existentes. */
+html.almox-nav-ready .app-nav-wrap .app-nav.almox-navigation-source {
+  position:absolute !important;
+  left:-20000px !important;
+  top:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  height:0 !important;
+}
+html.almox-nav-ready .almox-menu {
+  width:100%;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:15px 10px 26px;
+  color:var(--almox-menu-text);
+  font-family:inherit;
+}
+html.almox-nav-ready .almox-menu svg,
+html.almox-nav-ready .almox-menu__popup svg,
+html.almox-nav-ready .almox-menu__mobile-open svg {
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linejoin:round;
+  stroke-linecap:round;
+}
+html.almox-nav-ready .almox-menu__header {
+  display:flex;
+  min-height:48px;
+  align-items:center;
+  gap:10px;
+  padding:5px 5px 11px;
+  border-bottom:1px solid var(--almox-menu-border);
+}
+html.almox-nav-ready .almox-menu__mark {
+  display:grid;
+  place-items:center;
+  flex:0 0 36px;
+  width:36px;
+  height:36px;
+  border-radius:13px;
+  background:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.05));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 5px 16px rgba(0,0,0,.10);
+}
+html.almox-nav-ready .almox-menu__brand {
+  font-size:.9rem;
+  font-weight:850;
+  letter-spacing:.07em;
+  flex:1;
+}
+html.almox-nav-ready .almox-menu__toggle {
+  min-width:34px;
+  min-height:34px;
+  padding:7px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--almox-menu-border);
+  border-radius:11px;
+  background:rgba(255,255,255,.09);
+  color:inherit;
+  cursor:pointer;
+}
+html.almox-nav-ready .almox-menu__toggle svg {width:17px;height:17px}
+html.almox-nav-ready .almox-menu__toggle:hover,
+html.almox-nav-ready .almox-menu__group-button:hover {
+  background:rgba(255,255,255,.18);
+  border-color:rgba(208,227,255,.36);
+}
+html.almox-nav-ready .almox-menu__groups {
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+}
+html.almox-nav-ready .almox-menu__group {min-width:0}
+html.almox-nav-ready .almox-menu__group-button {
+  appearance:none;
+  width:100%;
+  min-height:47px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:11px 12px;
+  border:1px solid transparent;
+  border-radius:13px;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-size:13.5px;
+  font-weight:650;
+  text-align:left;
+  cursor:pointer;
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+html.almox-nav-ready .almox-menu__group-button > svg { flex-shrink:0 }
+html.almox-nav-ready .almox-menu__group.is-open .almox-menu__group-button,
+html.almox-nav-ready .almox-menu__group-button.is-active {
+  background:rgba(156,209,255,.18);
+  border-color:rgba(159,208,252,.34);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15);
+}
+html.almox-nav-ready .almox-menu__group-label {
+  min-width:0;
+  flex:1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+html.almox-nav-ready .almox-menu__group-arrow {display:grid;place-items:center;opacity:.58}
+html.almox-nav-ready .almox-menu__group-arrow svg {width:15px;height:15px;flex-basis:15px}
+html.almox-nav-ready.almox-nav-compact .almox-menu {padding-inline:8px}
+html.almox-nav-ready.almox-nav-compact .almox-menu__header {flex-direction:column;padding-inline:0;gap:6px}
+html.almox-nav-ready.almox-nav-compact .almox-menu__brand,
+html.almox-nav-ready.almox-nav-compact .almox-menu__group-label,
+html.almox-nav-ready.almox-nav-compact .almox-menu__group-arrow {display:none}
+html.almox-nav-ready.almox-nav-compact .almox-menu__group-button {justify-content:center;padding:11px 0}
+html.almox-nav-ready.almox-nav-compact .almox-menu__toggle {margin-top:2px}
+
+/* O popover é um portal no body, não fica recortado pelo scroll da sidebar. */
+html.almox-nav-ready .almox-menu__popup {
+  position:fixed;
+  z-index:2147483640;
+  box-sizing:border-box;
+  width:264px;
+  max-width:calc(100vw - 20px);
+  max-height:calc(100dvh - 20px);
+  overflow-y:auto;
+  padding:14px;
+  border-radius:19px;
+  border:1px solid rgba(190,215,241,.38);
+  background:color-mix(in srgb,var(--app-chrome-background,#102a44) 93%,transparent);
+  color:var(--almox-menu-text);
+  box-shadow:0 22px 60px rgba(3,15,33,.34),inset 0 1px rgba(255,255,255,.15);
+  -webkit-backdrop-filter:blur(24px) saturate(150%);
+  backdrop-filter:blur(24px) saturate(150%);
+}
+html.almox-nav-ready .almox-menu__popup[hidden],
+html.almox-nav-ready .almox-menu__inline[hidden],
+html.almox-nav-ready .almox-menu__backdrop[hidden] {display:none !important}
+html.almox-nav-ready .almox-menu__popup-title {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:14px;
+  padding:4px 5px 12px;
+  margin-bottom:7px;
+  border-bottom:1px solid var(--almox-menu-border);
+}
+html.almox-nav-ready .almox-menu__popup-title svg {width:19px;height:19px;flex-basis:19px}
+html.almox-nav-ready .almox-menu__popup-links {display:grid;gap:3px}
+html.almox-nav-ready .almox-menu__link {
+  display:flex;
+  align-items:center;
+  min-height:40px;
+  gap:9px;
+  padding:10px 9px;
+  border-radius:10px;
+  border:1px solid transparent;
+  color:inherit;
+  font-size:13px;
+  font-weight:550;
+  line-height:1.35;
+  text-decoration:none;
+  cursor:pointer;
+}
+html.almox-nav-ready .almox-menu__link svg {width:13px;height:13px;flex-basis:13px;opacity:.6}
+html.almox-nav-ready .almox-menu__link:hover,
+html.almox-nav-ready .almox-menu__link:focus-visible,
+html.almox-nav-ready .almox-menu__link.is-active {
+  background:rgba(140,203,255,.19);
+  border-color:rgba(162,211,255,.26);
+  color:inherit;
+}
+html.almox-nav-ready :is(.almox-menu__group-button,.almox-menu__toggle,.almox-menu__link,.almox-menu__mobile-open):focus-visible {
+  outline:3px solid #57a5f5;
+  outline-offset:2px;
+}
+html.almox-nav-ready .almox-menu__inline {display:none}
+html.almox-nav-ready .almox-menu__mobile-open,
+html.almox-nav-ready .almox-menu__backdrop {display:none}
+
+/* Ajustes de geometria em paralelo às rotinas legadas de posicionamento. */
+@media (min-width:901px) {
+  html.almox-nav-ready .app-nav-wrap {
+    width:var(--almox-sidebar-width) !important;
+    transition:width .2s ease;
+  }
+  html.almox-nav-ready body > main.main-content {
+    margin-left:var(--almox-sidebar-width) !important;
+    width:calc(100% - var(--almox-sidebar-width)) !important;
+    transition:margin-left .2s ease,width .2s ease;
+  }
+  html.almox-nav-ready .topbar__content {
+    margin-left:var(--almox-sidebar-width) !important;
+    width:calc(100% - var(--almox-sidebar-width)) !important;
+    transition:margin-left .2s ease,width .2s ease;
+  }
+}
+
+/* Celular/tablet estreito: drawer por toque, com categorias expansíveis. */
+@media (max-width:900px) {
+  html.almox-nav-ready .app-nav-wrap {
+    position:fixed !important;
+    left:0 !important;
+    right:auto !important;
+    top:0 !important;
+    bottom:0 !important;
+    height:100dvh !important;
+    max-height:none !important;
+    width:min(84vw,320px) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    transform:translateX(-110%) !important;
+    transition:transform .22s ease !important;
+    visibility:visible !important;
+    pointer-events:none !important;
+    z-index:2147483005 !important;
+    border-radius:0 23px 23px 0;
+    box-shadow:12px 0 35px rgba(0,0,0,.27);
+  }
+  html.almox-nav-ready.almox-mobile-menu-open .app-nav-wrap {
+    transform:translateX(0) !important;
+    pointer-events:auto !important;
+  }
+  html.almox-nav-ready :is(.almox-menu__brand,.almox-menu__group-label,.almox-menu__group-arrow) {
+    display:initial !important;
+  }
+  html.almox-nav-ready .almox-menu {padding:20px 13px 32px}
+  html.almox-nav-ready .almox-menu__header {flex-direction:row !important;gap:10px !important}
+  html.almox-nav-ready .almox-menu__toggle {display:none}
+  html.almox-nav-ready .almox-menu__group-button {
+    width:100%;
+    justify-content:flex-start !important;
+    padding:12px 11px !important;
+  }
+  html.almox-nav-ready .almox-menu__group-label {flex:1}
+  html.almox-nav-ready .almox-menu__group-arrow {margin-left:auto}
+  html.almox-nav-ready .almox-menu__inline {
+    display:grid;
+    gap:2px;
+    padding:4px 4px 8px 19px;
+  }
+  html.almox-nav-ready .almox-menu__inline .almox-menu__link {
+    min-height:42px;
+    font-size:13px;
+  }
+  html.almox-nav-ready .almox-menu__popup {display:none !important}
+  html.almox-nav-ready .almox-menu__mobile-open {
+    position:fixed;
+    z-index:2147483010;
+    left:15px;
+    bottom:calc(15px + env(safe-area-inset-bottom));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:48px;
+    padding:10px 16px;
+    border-radius:16px;
+    border:1px solid rgba(173,205,235,.40);
+    background:color-mix(in srgb,var(--app-chrome-background,#142a43) 92%,transparent);
+    color:var(--app-chrome-text,#fff);
+    font:inherit;
+    font-size:14px;
+    font-weight:700;
+    box-shadow:0 10px 28px rgba(2,14,30,.26);
+    -webkit-backdrop-filter:blur(19px);
+    backdrop-filter:blur(19px);
+    cursor:pointer;
+  }
+  html.almox-nav-ready .almox-menu__backdrop:not([hidden]) {
+    display:block;
+    position:fixed;
+    z-index:2147483004;
+    inset:0;
+    width:100%;
+    height:100%;
+    padding:0;
+    border:0;
+    background:rgba(2,8,19,.52);
+    cursor:pointer;
+  }
+  html.almox-nav-ready :is(body,body.uses-bottom-navigation) {
+    padding-bottom:18px !important;
+  }
+  html.almox-nav-ready body > main.main-content {
+    margin-left:0 !important;
+    width:100% !important;
+    padding-bottom:24px !important;
+  }
+  html.almox-nav-ready .topbar__content {
+    margin-left:0 !important;
+    width:100% !important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  html.almox-nav-ready :is(.app-nav-wrap,.topbar__content,body > main.main-content,.almox-menu__group-button) {
+    transition:none !important;
+  }
+}
