@@ -2,7 +2,11 @@
 
 (() => {
   const DESKTOP_MIN = 901;
-  const SIDE_WIDTH = 250;
+  function sideWidth(){
+    const root = document.documentElement;
+    if (!root.classList.contains("almox-nav-ready")) return 250;
+    return root.classList.contains("almox-nav-compact") ? 72 : 232;
+  }
   let resizeTimer = null;
   let topbarObserver = null;
   let structureObserver = null;
@@ -54,7 +58,7 @@
     document.documentElement.classList.add('desktop-layout-synced');
     const rect=topbar.getBoundingClientRect();
     const top=Math.max(0,Math.round(rect.bottom));
-    const side=`${SIDE_WIDTH}px`;
+    const side=`${sideWidth()}px`;
     const contentPad='clamp(18px,2.2vw,34px)';
 
     setImportant(navWrap,'position','fixed');
@@ -74,11 +78,11 @@
     setImportant(nav,'margin','0');
 
     setImportant(main,'margin-left',side);
-    setImportant(main,'width',`calc(100% - ${SIDE_WIDTH}px)`);
+    setImportant(main,'width',`calc(100% - ${sideWidth()}px)`);
     setImportant(main,'max-width','none');
 
     setImportant(topbarContent,'margin-left',side);
-    setImportant(topbarContent,'width',`calc(100% - ${SIDE_WIDTH}px)`);
+    setImportant(topbarContent,'width',`calc(100% - ${sideWidth()}px)`);
     setImportant(topbarContent,'max-width','none');
     setImportant(topbarContent,'padding-left',contentPad);
     setImportant(topbarContent,'padding-right',contentPad);
@@ -178,6 +182,8 @@
       wrapLegacyNavigation();
       alignDesktopChrome();
     },ms));
+
+    window.addEventListener("almox:sidebar-mode",()=>alignDesktopChrome());
 
     window.addEventListener('resize',()=>{
       clearTimeout(resizeTimer);
