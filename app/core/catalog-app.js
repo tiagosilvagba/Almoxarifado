@@ -83,6 +83,8 @@ const state = {
   imagePromise: null,
   webImageCache: new Map(),
   renderedCount: 0,
+  catalogGrouping: "item",
+  catalogGroups: [],
   activeItem: null,
   historyVisible: CONFIG.historyBatch,
   lastFocusedElement: null,
@@ -174,7 +176,7 @@ function cacheUi() {
     "branchFilter", "locationFilter", "replenishmentResponsibleFilter", "categoryFilter", "unitFilter", "supplierFilter", "requesterFilter", "ccuClassificationFilter", "itemCodeFilter", "scStatusFilter",
     "stockStatusFilter", "positiveBalanceFilter", "clearFilters", "applyFiltersButton",
     "filterToggleButton", "closeFiltersButton", "globalFiltersPanel", "activeFilterCount", "analysisFocusToggle",
-    "filterSummary", "catalogSort", "catalogView", "resultCount", "cardsGrid", "emptyState", "exportCatalogButton", "catalogExportFormat",
+    "filterSummary", "catalogSort", "catalogView", "catalogGroupViewItem", "catalogGroupViewSupplier", "catalogGroupViewMaterial", "catalogGroupNote", "resultCount", "cardsGrid", "emptyState", "exportCatalogButton", "catalogExportFormat",
     "loadMoreButton", "visibleCount", "itemModal", "modalCode", "modalTitle",
     "modalSubtitle", "modalClose", "modalPrevious", "modalNext", "modalBadges", "modalGallery", "modalBranchBalances",
     "modalStockValue", "modalPositionCount", "modalHistoryCount", "modalDetails", "modalAddressBlock",
@@ -250,7 +252,11 @@ function bindEvents() {
   ui.positiveBalanceFilter.addEventListener("change", markFilterDraftDirty);
   ui.searchInput.addEventListener("input", markFilterDraftDirty);
   ui.catalogSort.addEventListener("change", applyFilters);
-  ui.catalogView.addEventListener("change", () => ui.cardsGrid.classList.toggle("is-list-view", ui.catalogView.value === "list"));
+  ui.catalogView.addEventListener("change", () => ui.cardsGrid.classList.toggle("is-list-view",
+    state.catalogGrouping === "item" && ui.catalogView.value === "list"));
+  ui.catalogGroupViewItem.addEventListener("click", () => setCatalogGrouping("item"));
+  ui.catalogGroupViewSupplier.addEventListener("click", () => setCatalogGrouping("supplier"));
+  ui.catalogGroupViewMaterial.addEventListener("click", () => setCatalogGrouping("material"));
 
   ui.clearFilters.addEventListener("click", clearFilters);
   ui.applyFiltersButton.addEventListener("click", () => applyAllFilters(true));
@@ -479,7 +485,23 @@ function bindEvents() {
 
   ui.cardsGrid.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-item-code]");
-    if (trigger) openItem(trigger.dataset.itemCode);
+    if (trigger) { openItem(trigger.dataset.itemCode); return; }
+    const more = event.target.closest("[data-catalog-group-more]");
+    if (more) {
+      event.preventDefault();
+      appendCatalogGroupItems(Number(more.dataset.catalogGroupMore));
+      return;
+    }
+    const group = event.target.closest("[data-catalog-group-toggle]");
+    if (group) {
+      const index = Number(group.dataset.catalogGroupToggle);
+      const panel = document.getElementById("catalog-group-items-" + index);
+      if (!panel) return;
+      const expanding = panel.hidden;
+      panel.hidden = !expanding;
+      group.setAttribute("aria-expanded", String(expanding));
+      if (expanding && !panel.dataset.shown) appendCatalogGroupItems(index);
+    }
   });
 
   ui.modalClose.addEventListener("click", closeModal);
@@ -2550,7 +2572,35 @@ function applyFilters(renderCatalog = true) {
   renderCatalogResults();
 }
 
+function setCatalogGrouping(view) {
+  if (!["item", "supplier", "material"].includes(view) || state.catalogGrouping === view) return;
+  state.catalogGrouping = view;
+  renderCatalogResults();
+}
+
 function renderCatalogResults() {
+  const view = state.catalogGrouping;
+  for (const [button,selected] of [
+    [ui.catalogGroupViewItem, view === "item"],
+    [ui.catalogGroupViewSupplier, view === "supplier"],
+    [ui.catalogGroupViewMaterial, view === "material"],
+  ]) {
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  }
+  ui.catalogView.disabled = view !== "item";
+  ui.catalogView.title = view === "item" ? "Alternar cards e lista de itens"
+    : "Cards e lista compacta disponíveis na visualização Por item";
+  ui.cardsGrid.classList.toggle("is-list-view", view === "item" && ui.catalogView.value === "list");
+  ui.cardsGrid.classList.toggle("is-catalog-group-view", view !== "item");
+  ui.catalogGroupNote.classList.toggle("is-hidden", view === "item");
+  ui.catalogGroupNote.textContent = view === "supplier"
+    ? "Agrupamento de todos os itens filtrados pelo fornecedor da última OF válida. Prefere a filial selecionada; quando necessário, usa o último fornecedor do item em outra filial. Confirme a sugestão com o comprador."
+    : view === "material"
+      ? "Família identificada pelo nome/descrição do item e cadastro. Para itens não identificados, utiliza Nm Classe do Saldo Online. Não depende de necessidade de compra."
+      : "";
+  state.catalogGroups = view === "item" ? [] : groupCatalogItems(state.filteredItems, view,
+    (item) => currentScopedPositions(item));
   state.renderedCount = 0;
   ui.cardsGrid.replaceChildren();
   renderNextBatch();
@@ -4213,15 +4263,20 @@ function exportPurchaseNeeds(format = "excel") {
   exportReport(format, report);
 }
 
-function exportCatalog(format = "excel") {
-  const rows = state.filteredItems.flatMap((item) => currentScopedPositions(item).map((position) => {
+function buildCatalogExportReport(items, view = "item", scopedPositions = (item) => item.positions || []) {
+  const grouped = view === "supplier" || view === "material";
+  const entries = grouped
+    ? groupCatalogItems(items, view, scopedPositions).flatMap((group) =>
+      group.entries.map(({ item, source }) => ({ item, groupName: group.name, source })))
+    : (items || []).map((item) => ({ item, groupName:"", source:"" }));
+  const rows = entries.flatMap(({ item, groupName, source }) => scopedPositions(item).map((position) => {
     const stockStatus = position.negative ? "Saldo negativo"
       : position.outOfStock ? "Zerado"
         : position.belowMin ? "Abaixo do mínimo"
           : position.aboveMax ? "Acima do máximo"
             : position.unconfigured ? "Sem parametrização"
               : "Dentro da faixa";
-    return [
+    const row = [
       item.code, item.name, item.detailedName, (item.categories || []).join(" | "), (item.units || []).join(" | "),
       position.branchCode, position.branchName, position.localCode, position.localName, position.localType,
       position.quantity, position.minimum, position.maximum, stockStatus, position.forecast,
@@ -4229,11 +4284,19 @@ function exportCatalog(format = "excel") {
       (position.replenishmentResponsibles || item.replenishmentResponsibles || []).join(" | "),
       (item.suppliers || []).join(" | "),
     ];
+    return grouped ? [groupName, source, ...row] : row;
   }));
-  exportReport(format, {
-    title: "Catálogo de estoque",
-    filename: "catalogo-de-estoque.xls",
-    headers: [
+  const groupHeaders = !grouped ? [] : view === "supplier"
+    ? ["Fornecedor sugerido", "Origem da sugestão"]
+    : ["Tipo de material", "Origem da classificação"];
+  const shift = grouped ? 2 : 0;
+  return {
+    title: grouped ? (view === "supplier" ? "Catálogo por fornecedor" : "Catálogo por tipo de material")
+      : "Catálogo de estoque",
+    filename: grouped
+      ? (view === "supplier" ? "catalogo-por-fornecedor.xls" : "catalogo-por-tipo-material.xls")
+      : "catalogo-de-estoque.xls",
+    headers: [...groupHeaders,
       "Código do item", "Descrição", "Descrição detalhada", "Categorias", "Unidades",
       "Código filial", "Filial", "Código local", "Local de estoque", "Tipo de local",
       "Saldo atual", "Mínimo", "Máximo", "Situação do estoque", "Previsão de consumo",
@@ -4241,9 +4304,17 @@ function exportCatalog(format = "excel") {
       "Responsáveis pela reposição", "Fornecedores",
     ],
     rows,
-    numericColumns: new Set([10, 11, 12, 14, 15, 16]),
-    currencyColumns: new Set([15, 16]),
-  });
+    numericColumns: new Set([10, 11, 12, 14, 15, 16].map((index) => index + shift)),
+    currencyColumns: new Set([15, 16].map((index) => index + shift)),
+    filterSummary: grouped ? "Catálogo completo filtrado, sem restringir a compras pendentes. "
+      + (view === "supplier" ? "Fornecedor sugerido pelo histórico; confirmar com comprador."
+        : "Família identificada pelo item ou por Nm Classe do Saldo Online.") : "",
+  };
+}
+
+function exportCatalog(format = "excel") {
+  exportReport(format, buildCatalogExportReport(state.filteredItems,
+    state.catalogGrouping, (item) => currentScopedPositions(item)));
 }
 
 function exportPendingSc(format = "excel") {
@@ -5738,8 +5809,108 @@ function closeMinMaxReviewModal() {
   else ui.reviewModal.removeAttribute("open");
 }
 
+
+/** Agrupamento de TODO o catálogo filtrado, sem testar necessidade de compra.
+ * Um código é contado uma vez por grupo; o estoque é somado somente das
+ * posições abrangidas pelos filtros de filial/local/situação.
+ */
+function groupCatalogItems(items, mode, scopedPositions = (item) => item.positions || []) {
+  if (mode !== "supplier" && mode !== "material") return [];
+  const groups = new Map();
+  for (const item of items || []) {
+    if (!item?.code) continue;
+    const positions = scopedPositions(item) || [];
+    const position = mode === "material"
+      ? (positions.find((entry) => entry.stockClass) || positions[0] || null)
+      : (positions[0] || null);
+    const classification = mode === "supplier"
+      ? suggestPurchaseNeedSupplier({ item, position })
+      : purchaseNeedMaterialType({ item, position });
+    const name = classification.name;
+    const undefinedGroup = mode === "supplier"
+      ? name === "Fornecedor a definir"
+      : name === "Outros materiais / classificar";
+    const key = undefinedGroup ? "__unclassified__" : normalizeSearch(name);
+    if (!groups.has(key)) groups.set(key, {
+      key, name, entries: [], itemCodes: new Set(), quantity: 0, value: 0, unclassified: undefinedGroup,
+    });
+    const group = groups.get(key);
+    if (group.itemCodes.has(item.code)) continue;
+    const quantity = positions.reduce((total,entry) => total + (Number(entry.quantity) || 0), 0);
+    const value = positions.reduce((total,entry) => total + (Number(entry.stockValue) || 0), 0);
+    group.entries.push({ item, quantity, value, source: classification.source });
+    group.itemCodes.add(item.code);
+    group.quantity += quantity;
+    group.value += value;
+  }
+  return [...groups.values()].sort((a,b) => {
+    if (a.unclassified !== b.unclassified) {
+      return mode === "supplier" ? (a.unclassified ? -1 : 1) : (a.unclassified ? 1 : -1);
+    }
+    return mode === "supplier"
+      ? b.itemCodes.size - a.itemCodes.size || b.value - a.value
+        || a.name.localeCompare(b.name, "pt-BR", { sensitivity:"base" })
+      : b.value - a.value || b.itemCodes.size - a.itemCodes.size
+        || a.name.localeCompare(b.name, "pt-BR", { sensitivity:"base" });
+  });
+}
+
+function renderCatalogGroupCard(group, index) {
+  const card = document.createElement("article");
+  card.className = "catalog-group-card";
+  const panelId = "catalog-group-items-" + index;
+  card.innerHTML = `
+    <button class="catalog-group-card__toggle" type="button"
+      data-catalog-group-toggle="${index}" aria-expanded="false" aria-controls="${panelId}">
+      <span class="catalog-group-card__top">
+        <span class="catalog-group-card__kind">${state.catalogGrouping === "supplier" ? "Fornecedor" : "Tipo de material"}</span>
+        <span class="catalog-group-card__chevron" aria-hidden="true">⌄</span>
+      </span>
+      <strong class="catalog-group-card__name">${escapeHtml(group.name)}</strong>
+      <span class="catalog-group-card__metrics">
+        <span><small>Itens distintos</small><b>${integerFormatter.format(group.itemCodes.size)}</b></span>
+        <span><small>Saldo</small><b>${numberFormatter.format(group.quantity)}</b></span>
+        <span><small>Valor em estoque</small><b>${currencyFormatter.format(group.value)}</b></span>
+      </span>
+    </button>
+    <div id="${panelId}" class="catalog-group-card__items" hidden></div>`;
+  return card;
+}
+
+function appendCatalogGroupItems(index) {
+  const group = state.catalogGroups[index];
+  const panel = document.getElementById("catalog-group-items-" + index);
+  if (!group || !panel || panel.hidden) return;
+  const start = Number(panel.dataset.shown || 0);
+  const end = Math.min(start + 25, group.entries.length);
+  const fragment = document.createDocumentFragment();
+  panel.querySelector(".catalog-group-card__more")?.remove();
+  for (let i = start; i < end; i++) {
+    const { item, quantity, value, source } = group.entries[i];
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "catalog-group-card__item";
+    button.dataset.itemCode = item.code;
+    button.innerHTML = `<span><b>${escapeHtml(item.code)}</b> · ${escapeHtml(item.name)}</span>
+      <small title="${escapeHtml(source)}">Saldo: ${numberFormatter.format(quantity)} ·
+      ${currencyFormatter.format(value)}</small>`;
+    fragment.append(button);
+  }
+  panel.append(fragment);
+  panel.dataset.shown = String(end);
+  if (end < group.entries.length) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "catalog-group-card__more";
+    button.dataset.catalogGroupMore = String(index);
+    button.textContent = "Mostrar mais (" + integerFormatter.format(group.entries.length - end) + " restantes)";
+    panel.append(button);
+  }
+}
+
 function renderNextBatch() {
-  const total = state.filteredItems.length;
+  const grouped = state.catalogGrouping !== "item";
+  const total = grouped ? state.catalogGroups.length : state.filteredItems.length;
   if (!total) {
     ui.emptyState.classList.remove("is-hidden");
     ui.loadMoreButton.classList.add("is-hidden");
@@ -5749,16 +5920,20 @@ function renderNextBatch() {
 
   ui.emptyState.classList.add("is-hidden");
   const start = state.renderedCount;
-  const end = Math.min(start + calculateBatchSize(), total);
+  const end = Math.min(start + (grouped ? 12 : calculateBatchSize()), total);
   const fragment = document.createDocumentFragment();
 
   for (let index = start; index < end; index += 1) {
-    fragment.append(renderCard(state.filteredItems[index]));
+    fragment.append(grouped
+      ? renderCatalogGroupCard(state.catalogGroups[index], index)
+      : renderCard(state.filteredItems[index]));
   }
 
   ui.cardsGrid.append(fragment);
   state.renderedCount = end;
-  ui.visibleCount.textContent = `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(total)} itens`;
+  ui.visibleCount.textContent = grouped
+    ? `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(total)} grupos · ${integerFormatter.format(state.filteredItems.length)} itens filtrados`
+    : `Exibindo ${integerFormatter.format(end)} de ${integerFormatter.format(total)} itens`;
   ui.loadMoreButton.classList.toggle("is-hidden", end >= total);
 }
 
@@ -7338,5 +7513,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { resetInitialPageToDashboard, buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { groupCatalogItems, buildCatalogExportReport, resetInitialPageToDashboard, buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
