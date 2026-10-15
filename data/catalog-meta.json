@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-15T18:35:38.928Z",
+  "generatedAt": "2026-10-15T19:15:36.874Z",
   "items": 18494,
   "saldoRows": 10451,
   "comprasRows": 85430,
@@ -15,6 +15,6 @@
   "consumptionMonthlyFiles": [],
   "derivedReviews": 4236,
   "derivedPurchaseNeeds": 961,
-  "uncompressedBytes": 208079388,
-  "compressedBytes": 9122693
+  "uncompressedBytes": 208890217,
+  "compressedBytes": 9189266
 }
