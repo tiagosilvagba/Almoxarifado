@@ -91,8 +91,8 @@
     return known;
   }
   function activePage() {
-    return document.documentElement.dataset.activePage
-      || nav.querySelector(".app-nav__tab.is-active")?.dataset.page
+    return nav.querySelector(".app-nav__tab.is-active")?.dataset.page
+      || document.documentElement.dataset.activePage
       || window.location.hash.replace("#","");
   }
   function syncActive() {
@@ -224,7 +224,10 @@
     button.addEventListener("pointerenter",event => {
       if (!mobile() && event.pointerType !== "touch") openPopup(group,button);
     });
-    button.addEventListener("click",() => activate(group,button));
+    button.addEventListener("click",() => {
+      if (mobile()) activate(group,button);
+      else openPopup(group,button);
+    });
     button.addEventListener("keydown",event => {
       if (event.key === "Escape") { closePopup();button.focus(); }
       if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") {
@@ -358,6 +361,7 @@
     },{passive:true});
     window.addEventListener("hashchange",() => { syncActive();if (mobile()) setDrawer(false); });
     new MutationObserver(scheduleRender).observe(nav,{childList:true,subtree:true,characterData:true});
+    new MutationObserver(syncActive).observe(nav,{attributes:true,subtree:true,attributeFilter:["class"]});
     new MutationObserver(syncActive).observe(document.documentElement,{attributes:true,attributeFilter:["data-active-page"]});
     setMode(safeRead() === "compact",false);
     renderGroups();
