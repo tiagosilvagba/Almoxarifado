@@ -1222,11 +1222,11 @@ function pageFromHash() {
   return pageForHash(window.location.hash);
 }
 
-function resetInitialPageToDashboard() {
-  if (typeof window === "undefined" || !window.location || !window.history) return;
-  if (window.location.hash === "#dashboard") return;
+function resetInitialPageToDashboard(win = typeof window !== "undefined" ? window : null) {
+  if (!win?.location || !win.history) return;
+  if (win.location.hash === "#dashboard") return;
   // Não adiciona uma entrada extra ao histórico do navegador.
-  window.history.replaceState(null, "", window.location.pathname + window.location.search + "#dashboard");
+  win.history.replaceState(null, "", win.location.pathname + win.location.search + "#dashboard");
 }
 
 const FILTERED_PAGE_IDS = ["dashboard", "catalogo", "necessidade-compra", "sc-pendente-of", "consulta-sc-of", "tempo-geracao-of", "consumo", "revisao-min-max"];
@@ -3510,7 +3510,7 @@ function purchaseNeedMaterialType(need) {
   // A classe da posição prevalece para não misturar filiais/locais do mesmo item.
   const stockClass = String(need?.position?.stockClass || item.stockClass || "").trim();
   const normalizedClass = normalizeSearch(stockClass);
-  if (stockClass && !/^(?:a classificar|sem classificacao|nao classificado|nao informado|nao definida|indefinido|outros materiais classificar|n a)$/.test(normalizedClass)) {
+  if (stockClass && !/^(?:a classificar|sem classe|sem classificacao|nao classificado|nao informado|nao definida|indefinido|outros materiais classificar|n a)$/.test(normalizedClass)) {
     return { name: stockClass, source: "Nm Classe (Saldo Online)", details: categories };
   }
   return { name: "Outros materiais / classificar", source: "Família não identificada", details: categories };
@@ -6661,7 +6661,7 @@ function inventoryWorker() {
 
         // A classe do saldo é preservada separadamente de grupo/subgrupo.
         // Usa o código normalizado como chave, também para itens zerados.
-        if (className && !item.stockClass) item.stockClass = className;
+        if (className && (!item.stockClass || /^(?:a classificar|sem classe|sem classificacao|nao informado|indefinido)$/i.test(normalizeSearch(item.stockClass)))) item.stockClass = className;
         item.name = item.name || shortName || detailedName;
         item.detailedName = item.detailedName || detailedName;
         if (unit) item._units.add(unit);
@@ -7314,5 +7314,5 @@ function inventoryWorker() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
+  module.exports = { resetInitialPageToDashboard, buildRepeatedPurchasesByMonth, formatRepeatedPurchaseMonth, buildRepeatedPurchasesExportReport, purchaseNeedMaterialType, groupPurchaseNeedsByMaterialType, buildMaterialGroupedPurchaseExport, suggestPurchaseNeedSupplier, groupPurchaseNeedsBySupplier, buildSupplierGroupedPurchaseExport, summarizePurchaseNeedStockRisk, pageForHash, buildItemGlobalSearchIndex, itemMatchesGlobalSearch, alexsandroPurchaseCriterion, isPurchaseNeedEligiblePosition, isActionableOrAlexsandroNeed, purchaseNeedPriorityLabel, purchaseNeedCriterionLabel, purchaseNeedLeadTimeInfo, suggestedPurchaseDeliveryDate, buildPurchaseNeedsExportReport, inventoryWorker, precomputeDerivedIndicators, formatDate, createPdfBlob, buildPdfColumnGroups, isClosedOf, isOpenOfForPurchase, isActiveScForPurchaseCoverage, getItemPurchaseCommitments, isWarehouseSc, itemHasWarehouseStock, itemIsWarehouseStockItem, recordMatchesCcuClassification, positionMatchesReplenishmentResponsible, loadingProgressCeilingFor, analyzeMonthlyConsumption, numericMedian, calculateMinMaxMetrics, pendingScRowsForExport, procurementFunnelCounts, summarizeMinMaxFinancialImpact, isCavacoItem, isCavacoOfAlert, generationDaysBetween, ofGenerationBucketFor, calculateOfGenerationMetrics, ofGenerationDateParts, buildOfGenerationTrend };
 }
