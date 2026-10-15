@@ -9,7 +9,13 @@
   const PAGE = "historico-estoque";
   const INDEX = "./data/historico-estoque/index.json";
   const nf = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+  // Mesma formatação compacta do card Valor total do estoque no Dashboard.
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const compactMoney = new Intl.NumberFormat("pt-BR", {
+    style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1,
+  });
+  const formatCompactMoney = (value) => compactMoney.format(value);
+  const compactSigned = (value) => (value > 0 ? "+" : "") + formatCompactMoney(value);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
   const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -112,6 +118,27 @@
     return result;
   }
 
+  function buildHistoryExcelReport(rows, initialDate, finalDate) {
+    return {
+      title: "Comparativo histórico do estoque",
+      filename: "comparativo-historico-estoque.xls",
+      headers: [
+        "Código", "Item", "Filial", "Local", "Repartição", "Divisão", "Prateleira",
+        "Saldo inicial", "Saldo final", "Variação de saldo",
+        "Valor inicial (R$)", "Valor final (R$)", "Variação financeira (R$)", "Situação",
+      ],
+      rows: rows.map((r) => [
+        r.code, r.name, r.branch, r.local, r.partition, r.division, r.shelf,
+        r.startQty, r.endQty, r.deltaQty, r.startValue, r.endValue, r.deltaValue, r.status,
+      ]),
+      // Células numéricas completas, formatadas como moeda R$ pelo Excel.
+      // Nenhum valor compactado ou convertido para texto é exportado.
+      numericColumns: new Set([7, 8, 9]),
+      currencyColumns: new Set([10, 11, 12]),
+      filterSummary: "Posição inicial: " + initialDate + " · Posição final: " + finalDate,
+    };
+  }
+
   function install(win) {
     if (win.__almoxStockHistoryInstalled) return;
     win.__almoxStockHistoryInstalled = true;
@@ -175,15 +202,18 @@
         ["Quantidade inicial", nf.format(sums.startQty)],
         ["Quantidade final", nf.format(sums.endQty)],
         ["Variação de quantidade", signed(sums.endQty - sums.startQty)],
-        ["Valor inicial conhecido", money.format(sums.startValue)],
-        ["Valor final conhecido", money.format(sums.endValue)],
-        ["Variação de valor conhecido", signed(sums.endValue - sums.startValue, money)],
+        ["Valor inicial conhecido", formatCompactMoney(sums.startValue), money.format(sums.startValue)],
+        ["Valor final conhecido", formatCompactMoney(sums.endValue), money.format(sums.endValue)],
+        ["Variação de valor conhecido", compactSigned(sums.endValue - sums.startValue),
+          signed(sums.endValue - sums.startValue, money)],
         ["Posições com mudança", nf.format(sums.changed)],
         ["Posições incluídas / retiradas", sums.added + " / " + sums.removed],
       ];
       const host = $("shKpis");
-      if (host) host.innerHTML = cards.map(([label,value]) =>
-        '<div class="sh-kpi"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>').join("");
+      if (host) host.innerHTML = cards.map(([label, value, full]) =>
+        '<div class="sh-kpi"><span>' + esc(label) + '</span><strong'
+          + (full ? ' title="' + esc(full) + '"' : '') + '>'
+          + esc(value) + '</strong></div>').join("");
       if ($("shNote")) $("shNote").textContent = sums.unpriced
         ? nf.format(sums.unpriced) + " posições com valor ausente em uma das datas. Os valores monetários são parciais."
         : "Valores baseados no custo/valor cadastrado em cada captura. A variação inclui efeitos de quantidade e custo.";
@@ -199,7 +229,8 @@
         + '<td class="num">' + nf.format(r.startQty) + '</td>'
         + '<td class="num">' + nf.format(r.endQty) + '</td>'
         + '<td class="num">' + signed(r.deltaQty) + '</td>'
-        + '<td class="num">' + esc(signed(r.deltaValue, money)) + '</td>'
+        + '<td class="num" title="' + esc(signed(r.deltaValue, money)) + '">'
+        + esc(compactSigned(r.deltaValue)) + '</td>'
         + '<td>' + esc(r.status) + '</td></tr>').join("");
       if ($("shCount")) $("shCount").textContent = nf.format(visible.length) + " de "
         + nf.format(filteredRows.length) + " posições com mudança";
@@ -290,9 +321,11 @@
           status("1 dia registrado: " + ts(first.date) + ". A comparação ficará disponível após uma atualização do Saldo Online em outro dia.");
           if ($("shKpis")) $("shKpis").innerHTML = [
             ["Itens", first.items], ["Posições", first.positions],
-            ["Quantidade", nf.format(first.quantity)], ["Valor conhecido", money.format(first.value)],
-          ].map(([k, v]) => '<div class="sh-kpi"><span>' + esc(k)
-            + '</span><strong>' + esc(v) + '</strong></div>').join("");
+            ["Quantidade", nf.format(first.quantity)],
+            ["Valor conhecido", formatCompactMoney(first.value), money.format(first.value)],
+          ].map(([k, v, full]) => '<div class="sh-kpi"><span>' + esc(k)
+            + '</span><strong' + (full ? ' title="' + esc(full) + '"' : '')
+            + '>' + esc(v) + '</strong></div>').join("");
         } else {
           await compare();
         }
@@ -303,25 +336,18 @@
       return indexPromise;
     }
 
-    function exportCsv() {
+    function exportExcel() {
       if (!filteredRows.length) return;
-      const cells = [
-        ["Data inicial", $("shStart")?.selectedOptions[0]?.textContent || ""],
-        ["Data final", $("shEnd")?.selectedOptions[0]?.textContent || ""],
-        [],
-        ["Código","Item","Filial","Local","Repartição","Divisão","Prateleira","Saldo inicial",
-          "Saldo final","Variação","Valor inicial","Valor final","Variação R$","Situação"],
-        ...filteredRows.map((r) => [r.code, r.name, r.branch, r.local, r.partition, r.division, r.shelf,
-          r.startQty, r.endQty, r.deltaQty, r.startValue, r.endValue, r.deltaValue, r.status]),
-      ];
-      const escapeCell = (value) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
-      const csv = "\uFEFF" + cells.map((line) => line.map(escapeCell).join(";")).join("\r\n");
-      const url = win.URL.createObjectURL(new win.Blob([csv], { type: "text/csv;charset=utf-8;" }));
-      const link = doc.createElement("a");
-      link.href = url;
-      link.download = "comparativo-historico-estoque.csv";
-      link.click();
-      win.setTimeout(() => win.URL.revokeObjectURL(url), 2000);
+      if (typeof exportReport !== "function") {
+        status("A exportação Excel não está disponível. Atualize a página e tente novamente.");
+        return;
+      }
+      const report = buildHistoryExcelReport(
+        filteredRows,
+        $("shStart")?.selectedOptions[0]?.textContent || "",
+        $("shEnd")?.selectedOptions[0]?.textContent || "",
+      );
+      exportReport("excel", report);
     }
 
     function open() {
@@ -338,7 +364,7 @@
         rendered = Math.min(rendered + 40, filteredRows.length);
         draw();
       });
-      $("shExport")?.addEventListener("click", exportCsv);
+      $("shExport")?.addEventListener("click", exportExcel);
       $("shReload")?.addEventListener("click", () => {
         loaded = false; indexPromise = null; entries = []; cache.clear();
         loadIndex();
@@ -358,5 +384,6 @@
     else init();
   }
 
-  return { aggregate, compareSnapshots, summarize, latestPerDay, install };
+  return { aggregate, compareSnapshots, summarize, latestPerDay,
+    formatCompactMoney, compactSigned, buildHistoryExcelReport, install };
 });
