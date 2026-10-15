@@ -3403,30 +3403,54 @@ function suggestPurchaseNeedSupplier(need) {
   const position = need?.position || {};
   const branch = normalizeBranchCode(position.branchCode);
   const history = [];
+  const allPurchases = [];
   for (const record of item.history || []) {
     const of = record?.of;
-    const name = String(of?.supplier || record?.rec?.supplier || "").trim();
-    if (!of?.code || !hasIdentifiedPurchaseSupplier(name) || /cancelad/i.test(String(of.status || "")) || /cancelad/i.test(String(record.sc?.status || ""))
+    if (!of?.code || /cancelad|anulad/i.test(String(of.status || ""))
+      || /cancelad|anulad/i.test(String(record.sc?.status || ""))
+      || /^(s|sim|yes|true|1)$/i.test(String(of.cancelled || "").trim())
       || /^(s|sim|yes|true|1)$/i.test(String(record.sc?.cancelled || "").trim())) continue;
-    const deliveryBranch = normalizeBranchCode(of.deliveryBranchCode || record.sc?.destinationBranch || record.sc?.branchCode || record.branchCode || "");
-    if (!branch || !deliveryBranch || deliveryBranch !== branch) continue;
-    history.push({
-      name,
-      timestamp: dateTimestamp(of.date) || dateTimestamp(record.rec?.entryDate) || Number(record.sortKey) || 0,
-      code: String(of.code),
-    });
+
+    // O fornecedor da OF pode estar "A definir" enquanto o recebimento
+    // identifica o fornecedor efetivo da mesma compra.
+    const name = [of.supplier, record.rec?.supplier]
+      .map((candidate) => String(candidate ?? "").trim())
+      .find(hasIdentifiedPurchaseSupplier);
+    if (!name) continue;
+    const timestamp = dateTimestamp(of.date) || dateTimestamp(record.rec?.entryDate)
+      || Number(record.sortKey) || 0;
+    // Sem uma data válida não é possível afirmar qual foi a última compra.
+    if (!Number.isFinite(timestamp) || timestamp <= 0) continue;
+    const deliveryBranch = normalizeBranchCode(
+      of.deliveryBranchCode || record.sc?.destinationBranch || record.sc?.branchCode || record.branchCode || ""
+    );
+    const purchase = { name, timestamp, code:String(of.code), branch:deliveryBranch };
+    allPurchases.push(purchase);
+    if (branch && deliveryBranch === branch) history.push(purchase);
   }
-  history.sort((a, b) => b.timestamp - a.timestamp || b.code.localeCompare(a.code, "pt-BR", { numeric: true }));
+  const newestFirst = (a, b) => b.timestamp - a.timestamp
+    || b.code.localeCompare(a.code, "pt-BR", { numeric:true });
+  history.sort(newestFirst);
+  allPurchases.sort(newestFirst);
   const alternatives = [...new Set((item.suppliers || []).map((name) => String(name).trim()).filter(hasIdentifiedPurchaseSupplier))];
   if (history.length) {
     return { name: history[0].name, source: "Última OF na mesma filial", alternatives };
   }
-  // Com mais de um fornecedor e sem histórico da filial não há como escolher
-  // com segurança. A confirmação é feita pelo comprador, fora do sistema.
+  // Fallback solicitado: se a filial da necessidade não tem fornecedor
+  // identificado, usar a última compra do mesmo código, inclusive de outra
+  // filial, e sinalizar que o comprador deve confirmar a indicação.
+  if (allPurchases.length) {
+    return {
+      name: allPurchases[0].name,
+      source: allPurchases[0].branch ? "Última OF do item (outra filial; confirmar)"
+        : "Última OF do item (filial não informada; confirmar)",
+      alternatives,
+    };
+  }
   if (alternatives.length === 1) {
     return { name: alternatives[0], source: "Fornecedor único no histórico; confirmar", alternatives };
   }
-  return { name: "Fornecedor a definir", source: alternatives.length ? "Múltiplos fornecedores; confirmar" : "Sem fornecedor identificado", alternatives };
+  return { name: "Fornecedor a definir", source: alternatives.length ? "Múltiplos fornecedores sem OF datada; confirmar" : "Sem fornecedor identificado", alternatives };
 }
 
 function groupPurchaseNeedsBySupplier(needs) {
@@ -3718,7 +3742,7 @@ function renderPurchaseNeedView() {
       ? "Auditoria histórica de compras: mesma peça (código), mesma filial e mesmo mês, com duas ou mais OFs distintas. Linhas de recebimento repetidas não duplicam compras. Apura todas as OFs históricas, inclusive de itens sem necessidade de reposição atual. Filial da OF não identifica local físico específico."
       : (material
         ? "Famílias identificadas por nome, descrição ou cadastro da peça. Para itens não reconhecidos, utiliza-se Nm Classe do Saldo Online. Sem classe válida, permanece em Outros materiais / classificar."
-        : "Fornecedores sugeridos pelo histórico; confirmar com o comprador antes de gerar a SC. O card Fornecedor a definir reúne os itens sem identificação segura e fica primeiro; os demais cards são classificados por quantidade crescente de itens distintos.")
+        : "Fornecedores sugeridos pelo histórico: prioriza a última OF da filial; sem fornecedor identificado na filial, usa a última compra datada do mesmo item, inclusive de outra filial, sujeita à confirmação do comprador. O card Fornecedor a definir reúne somente os itens sem fonte segura. Os demais cards são classificados do maior para o menor número de itens distintos.")
         + " Apenas compras líquidas positivas. "
         + [excludedCovered ? excludedCovered + " posição(ões) já coberta(s)" : "",
           excludedCavaco ? excludedCavaco + " alerta(s) especial(is) de Cavaco" : ""]
