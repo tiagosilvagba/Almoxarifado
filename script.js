@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 10.7: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "10.7.62";
+const BOOTSTRAP_VERSION = "10.7.63";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -11,19 +11,19 @@ const IS_MOBILE_DEVICE = IS_IOS
   || window.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches;
 
 const MODULES = Object.freeze({
-  base: "./app/layers/features.js?v=10.7.61",
+  base: "./app/layers/features.js?v=10.7.63",
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   groupedSidebar: "./app/modules/grouped-sidebar.js?v=10.7.56",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
   balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
   area: "./app/modules/area-filter-active.js?v=7.9",
-  noTurn: "./app/modules/itens-sem-giro.js?v=10.7.10",
+  noTurn: "./app/modules/itens-sem-giro.js?v=10.7.63",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",
-  followUp: "./app/modules/follow-up.js?v=10.7.35",
-  outsideCcu: "./app/modules/compras-fora-cc1500.js?v=10.7.43",
+  followUp: "./app/modules/follow-up.js?v=10.7.63",
+  outsideCcu: "./app/modules/compras-fora-cc1500.js?v=10.7.63",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.40",
-  intelligence: "./app/modules/inteligencia-almoxarifado.js?v=10.7.53",
-  stockHistory: "./app/modules/historico-estoque.js?v=10.7.57",
+  intelligence: "./app/modules/inteligencia-almoxarifado.js?v=10.7.63",
+  stockHistory: "./app/modules/historico-estoque.js?v=10.7.63",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
   pdf: "./app/modules/page-snapshot-pdf.js?v=10.7.62",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",
