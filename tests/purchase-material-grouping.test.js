@@ -9,6 +9,8 @@ const {
   groupPurchaseNeedsByMaterialType,
   buildMaterialGroupedPurchaseExport,
   buildPurchaseNeedsExportReport,
+  groupCatalogItems,
+  buildCatalogExportReport,
 } = require("../app/core/catalog-app.js");
 
 function need(code, categories, net, price = 10, extra = {}) {
@@ -177,4 +179,105 @@ test("nova opção existe em mobile e não há aspas extras na chamada ao script
   assert.doesNotMatch(html, /script\.js\?v=[^"]+""/);
   assert.match(js, /state\.purchaseNeedView === "material"/);
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+});
+
+
+test("parafusos, porcas, arruelas, rebites e fixadores recebem UMA família apesar do Nm Classe", () => {
+  const variants = [
+    ["701", "PARAFUSO SEXTAVADO M10", "Parafusos e porcas"],
+    ["702", "PORCA SEXTAVADA M10", "Manutenção Industrial e Mecânica"],
+    ["703", "ARRUELA LISA M10", "Materiais de Manutenção"],
+    ["704", "REBITE POP ALUMINIO 4MM", "Fixadores"],
+    ["705", "PRISIONEIRO M12", "Manutenção Industrial e Mecânica"],
+    ["706", "CHUMBADOR PARABOLT M12", "Hidráulica"],
+    ["707", "ABRACADEIRA INOX", "Manutenção industrial e mecânica"],
+    ["708", "BARRA ROSCADA ACO", "Outros"],
+    ["709", "BUCHA NYLON 8MM", "Materiais mecânicos"],
+    ["710", "PRESILHA METALICA", "Manutenção industrial e mecânica"],
+  ];
+  const entries=variants.map(([code,name,stockClass])=>{
+    const n=need(code,["Manutenção Industrial e Mecânica",stockClass],5);
+    n.item.name=name;n.item.detailedName=name;
+    n.item.stockClass=stockClass;n.position.stockClass=stockClass;
+    return n;
+  });
+  for(const n of entries){
+    const classification=purchaseNeedMaterialType(n);
+    assert.equal(classification.name,"Parafusos e porcas",n.item.name);
+    assert.equal(classification.source,"Nome do item",n.item.name);
+  }
+  const groups=groupPurchaseNeedsByMaterialType(entries);
+  assert.equal(groups.length,1);
+  assert.equal(groups[0].materialType,"Parafusos e porcas");
+  assert.equal(groups[0].itemCodes.size,variants.length);
+  assert.equal(groups[0].estimatedValue,variants.length*50);
+  const report=buildMaterialGroupedPurchaseExport(entries,new Date(2026,9,15),[]);
+  assert.equal(report.rows.length,variants.length);
+  assert.ok(report.rows.every(row=>row[0]==="Parafusos e porcas"));
+});
+
+test("prioriza nome e descrição: classe contábil genérica não prevalece sobre o material",()=>{
+  const a=need("720",["Manutenção Industrial e Mecânica"],5);
+  a.item.name="MATERIAL PARA MANUTENCAO";
+  a.item.detailedName="Rebite alumínio cabeça redonda";
+  a.position.stockClass="Manutenção Industrial e Mecânica";
+  assert.deepEqual(purchaseNeedMaterialType(a),{
+    name:"Parafusos e porcas",source:"Descrição detalhada",
+    details:[],
+  });
+  const b=need("721",["Manutenção Industrial e Mecânica"],3);
+  b.item.name="ROLAMENTO 6204 PARA MOTOR";
+  b.position.stockClass="Parafusos e porcas";
+  assert.equal(purchaseNeedMaterialType(b).name,"Rolamentos");
+  const c=need("722",["Manutenção Industrial e Mecânica"],4);
+  c.item.name="Parafuso para válvula de pressão";
+  c.position.stockClass="Valvulas";
+  assert.equal(purchaseNeedMaterialType(c).name,"Parafusos e porcas");
+});
+
+test("mesma padronização no catálogo: um código em dois locais conta uma vez",()=>{
+  const variants=[
+    ["800","PARAFUSO SEXTAVADO","Parafusos e porcas",12,60],
+    ["801","PORCA M10","Manutenção industrial e mecânica",5,25],
+    ["802","REBITE POP","Fixadores",6,30],
+  ];
+  const items=variants.map(([code,name,stockClass,qty,value])=>({
+    code,name,detailedName:name,categories:[stockClass],stockClass,
+    flags:{},units:["UN"],suppliers:[],history:[],
+    positions:[{branchCode:"704",localCode:"299",stockClass,quantity:qty,stockValue:value}],
+  }));
+  items[0].positions.push({branchCode:"704",localCode:"300",quantity:3,stockValue:15,stockClass:"Manutenção industrial e mecânica"});
+  const groups=groupCatalogItems(items,"material");
+  assert.equal(groups.length,1);
+  assert.equal(groups[0].name,"Parafusos e porcas");
+  assert.equal(groups[0].itemCodes.size,3);
+  assert.equal(groups[0].quantity,26);
+  assert.equal(groups[0].value,130);
+  const exportData=buildCatalogExportReport(items,"material");
+  assert.equal(exportData.rows.length,4,"todas as posições devem constar da planilha");
+  assert.ok(exportData.rows.every(row=>row[0]==="Parafusos e porcas"));
+  assert.equal(exportData.rows.reduce((sum,row)=>sum+row[exportData.headers.indexOf("Valor em estoque")],0),130);
+});
+
+test("famílias similares são padronizadas sem confundir ferramenta e peça",()=>{
+  const scenarios=[
+    ["REBITADOR MANUAL","Ferramentas"],
+    ["LUVA DE REDUCAO SOLDAVEL","Tubos e conexões"],
+    ["LUVA NITRILICA","Equipamentos de proteção"],
+    ["LUVA DE ACOPLAMENTO","Acoplamentos"],
+    ["BUCHA BRONZE","Buchas"],
+    ["MOTOR REDUTOR TRIFASICO","Redutores"],
+    ["MOTOBOMBA CENTRIFUGA","Bombas"],
+    ["MANCAL FLANGEADO","Mancais"],
+    ["FILTRO CARTUCHO","Filtros"],
+    ["CABO DE ACO 3MM","Cabos de aço"],
+    ["CABO ELETRICO FLEXIVEL","Cabos elétricos"],
+    ["DETERGENTE ALCALINO","Materiais de limpeza"],
+    ["FITA ADESIVA TRANSPARENTE","Embalagens"],
+  ];
+  for (const [name,expected] of scenarios) {
+    const n=need("901",["Manutenção Industrial e Mecânica"],5);
+    n.item.name=name;n.position.stockClass="Manutenção Industrial e Mecânica";
+    assert.equal(purchaseNeedMaterialType(n).name,expected,name);
+  }
 });
