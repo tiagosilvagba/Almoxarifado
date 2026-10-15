@@ -5820,7 +5820,9 @@ function groupCatalogItems(items, mode, scopedPositions = (item) => item.positio
   for (const item of items || []) {
     if (!item?.code) continue;
     const positions = scopedPositions(item) || [];
-    const position = positions.find((entry) => entry.stockClass) || positions[0] || null;
+    const position = mode === "material"
+      ? (positions.find((entry) => entry.stockClass) || positions[0] || null)
+      : (positions[0] || null);
     const classification = mode === "supplier"
       ? suggestPurchaseNeedSupplier({ item, position })
       : purchaseNeedMaterialType({ item, position });
