@@ -5,7 +5,9 @@
   if (window.__almoxPageSnapshotPdfInstalled) return;
   window.__almoxPageSnapshotPdfInstalled = true;
 
-  const HTML2CANVAS_URL = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+  // A implementação original não entende color(), oklch() ou color-mix() dos temas.
+  const HTML2CANVAS_URL = "https://cdn.jsdelivr.net/npm/html2canvas-pro@2.5.2/dist/html2canvas-pro.min.js";
+  const HTML2CANVAS_MIRROR = "https://unpkg.com/html2canvas-pro@2.5.2/dist/html2canvas-pro.min.js";
   const JSPDF_URL = "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js";
   let loadingLibraries = null;
   let exporting = false;
@@ -32,7 +34,17 @@
   function ensureLibraries() {
     if (loadingLibraries) return loadingLibraries;
     loadingLibraries = (async () => {
-      await loadScript(HTML2CANVAS_URL, () => typeof window.html2canvas === "function");
+      if (!window.__almoxPdfCanvasProLoaded) {
+        try {
+          await loadScript(HTML2CANVAS_URL, () => false);
+        } catch {
+          await loadScript(HTML2CANVAS_MIRROR, () => false);
+        }
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("O renderizador de PDF não iniciou corretamente.");
+        }
+        window.__almoxPdfCanvasProLoaded = true;
+      }
       await loadScript(JSPDF_URL, () => Boolean(window.jspdf?.jsPDF));
     })().catch((error) => { loadingLibraries = null; throw error; });
     return loadingLibraries;
@@ -121,13 +133,22 @@
     try {
       await ensureLibraries();
       await document.fonts?.ready;
-      const background = getComputedStyle(document.body).backgroundColor || "#ffffff";
-      const scale = Math.min(2, Math.max(1.15, window.devicePixelRatio || 1));
+      // Evita estourar os limites de memória em relatórios longos no celular.
+      const width = Math.max(1, target.scrollWidth, target.clientWidth);
+      const height = Math.max(1, target.scrollHeight, target.clientHeight);
+      const maxPixels = window.matchMedia("(max-width:900px)")?.matches ? 10_000_000 : 24_000_000;
+      const desiredScale = Math.min(2, Math.max(1.15, window.devicePixelRatio || 1));
+      const scale = Math.min(desiredScale, Math.sqrt(maxPixels / (width * height)),
+        16384 / Math.max(width, height));
+      if (scale < 0.35) {
+        throw new Error("A página está extensa demais para uma única captura. Reduza os resultados visíveis e tente novamente.");
+      }
       const canvas = await window.html2canvas(target, {
         scale,
         useCORS:true,
         allowTaint:false,
-        backgroundColor: background === "rgba(0, 0, 0, 0)" ? null : background,
+        // Fundo neutro válido independentemente da sintaxe de cor usada pelo tema.
+        backgroundColor:"#ffffff",
         logging:false,
         scrollX:0,
         scrollY:-window.scrollY,
@@ -135,6 +156,9 @@
         windowHeight:Math.max(document.documentElement.clientHeight, target.scrollHeight),
         onclone:(doc) => {
           doc.documentElement.classList.add("pdf-export-clone");
+          const captureStyles = doc.createElement("style");
+          captureStyles.textContent = ".pdf-export-clone *, .pdf-export-clone *::before, .pdf-export-clone *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important}";
+          doc.head.append(captureStyles);
           doc.querySelectorAll(".is-hidden,[hidden]").forEach((el) => { if (el.id !== target.id) el.style.display = "none"; });
         }
       });
