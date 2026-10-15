@@ -138,7 +138,7 @@
       ".instruction-section", ".instruction-grid > *", ".section-heading",
       ".results__heading", ".catalog-group-view", ".page-panel h1",
       ".page-panel h2", ".page-panel h3", ".page-panel h4",
-      "p", "li", "figure", "img", "canvas", "svg", "table tr",
+      "p", "li", "figure", "img", "canvas", "svg", "table thead", "table tr",
       ".table-wrap tr", ".month-compare-table tr", ".data-table tr",
       ".chart-card", ".procurement-funnel", ".catalog-group-card__item",
       ".supplier-need-group", ".purchase-need-row", ".report-card__summary",
@@ -160,7 +160,7 @@
       const length = end - start;
       // Blocos mais altos que quase uma página inteira não podem ser
       // preservados sem truncar informação. Nestes, protegem-se os filhos.
-      if (length < 8 || length >= pageLimitPx * 0.92 || start >= canvas.height) continue;
+      if (length < 8 || length >= pageLimitPx * 0.98 || start >= canvas.height) continue;
       bands.push({ start, end });
     }
     return bands.sort((a, b) => b.start - a.start);
@@ -179,10 +179,10 @@
       const maximum = Math.min(height, y + limit);
       let cut = maximum;
       if (maximum < height) {
-        const minimumFill = y + Math.floor(limit * 0.55);
+        const minimumFill = y + Math.max(12, Math.floor(limit * 0.10));
         for (const band of protectedBands) {
           if (band.start >= cut || band.end <= cut) continue;
-          if (band.end - band.start >= limit * 0.92) continue;
+          if (band.end - band.start >= limit * 0.98) continue;
           const before = Math.floor(band.start - gap);
           if (before >= minimumFill && before > y) cut = before;
         }
