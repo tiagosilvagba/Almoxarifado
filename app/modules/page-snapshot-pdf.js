@@ -173,17 +173,20 @@
     const height = Math.max(0, Math.floor(totalHeight));
     const limit = Math.max(1, Math.floor(pageLimitPx));
     const slices = [];
-    const gap = Math.max(3, Math.min(12, Math.round(limit * 0.005)));
+    // A ordem decrescente evita recortar o elemento imediatamente anterior.
+    // Margens artificiais podem cair sobre a linha anterior em tabelas densas;
+    // encostar a quebra no INÍCIO do próximo bloco preserva ambos integralmente.
+    const bands = [...protectedBands].sort((a, b) => b.start - a.start);
     let y = 0;
     while (y < height) {
       const maximum = Math.min(height, y + limit);
       let cut = maximum;
       if (maximum < height) {
         const minimumFill = y + Math.max(12, Math.floor(limit * 0.10));
-        for (const band of protectedBands) {
+        for (const band of bands) {
           if (band.start >= cut || band.end <= cut) continue;
           if (band.end - band.start >= limit * 0.98) continue;
-          const before = Math.floor(band.start - gap);
+          const before = Math.floor(band.start);
           if (before >= minimumFill && before > y) cut = before;
         }
       }
