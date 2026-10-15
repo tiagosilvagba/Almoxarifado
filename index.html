@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-app-version="10.7.56">
+<html lang="pt-BR" data-app-version="10.7.57">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="app/styles/inteligencia.css?v=10.7.52">
     <link rel="stylesheet" href="app/styles/historico.css?v=10.7.54">
     <link rel="stylesheet" href="app/styles/grouped-sidebar.css?v=10.7.56">
-    <script src="script.js?v=10.7.56" defer></script>
+    <script src="script.js?v=10.7.57" defer></script>
   </head>
   <body class="app-booting">
     <section id="startupScreen" class="startup-screen" aria-live="polite" aria-busy="true">
@@ -623,13 +623,13 @@
             <div>
               <span class="eyebrow">Linha do tempo de atualizações · Estoque</span>
               <h2 id="shTitle">Histórico e comparação do estoque</h2>
-              <p>Cada atualização dos CSVs consolidados gera uma posição histórica permanente. Compare dois momentos diferentes para identificar entradas, saídas, alterações de saldo e evolução de valores por item, filial e local.</p>
+              <p>As posições são registradas a partir das alterações do arquivo Saldo_Online.csv. Quando houver duas ou mais atualizações no mesmo dia, o comparativo utiliza a última posição do dia. Compare datas diferentes para identificar entradas, saídas e variações de saldo e valor por item, filial e local.</p>
             </div>
             <span id="shStatus" class="context-label" role="status" aria-live="polite">Abra a aba para consultar as capturas históricas.</span>
           </header>
           <section class="sh-panel" aria-label="Período de comparação">
             <div class="sh-heading">
-              <div><h3>Escolha duas posições registradas</h3><p class="sh-muted">As opções mostram a data e hora em que cada base foi capturada no GitHub. Uma comparação precisa de duas atualizações diferentes.</p></div>
+              <div><h3>Escolha duas posições diárias</h3><p class="sh-muted">Cada data apresenta apenas a atualização mais recente do Saldo Online naquele dia (horário de Brasília). As capturas intermediárias permanecem arquivadas. Selecione dois dias diferentes para comparar.</p></div>
               <button id="shReload" class="button button--ghost" type="button">Atualizar histórico</button>
             </div>
             <div class="sh-controls">
@@ -658,7 +658,7 @@
             <div class="sh-bottom"><span id="shCount" class="visible-count"></span><button id="shMore" class="button button--secondary" type="button" hidden>Carregar mais 40 posições</button></div>
             <p id="shNote"></p>
           </section>
-          <p class="sh-muted">Importante: a data registrada corresponde à publicação/consolidação do CSV, não necessariamente ao dia da movimentação real. Versões anteriores à ativação deste recurso não são criadas retroativamente. As diferenças representam posições em dois momentos e não substituem o livro de movimentações físicas.</p>
+          <p class="sh-muted">Importante: o histórico considera o Saldo_Online.csv, não alterações isoladas de compras ou consumo. A data indica quando a posição foi consolidada, não necessariamente quando ocorreu a movimentação física. Versões anteriores à ativação não são reconstruídas retroativamente.</p>
         </section>
 
         <section id="page-instrucoes" class="page-panel instructions-page is-hidden" data-page-panel="instrucoes" aria-labelledby="instructionsTitle">

@@ -7,6 +7,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
@@ -14,7 +15,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIR = path.join(ROOT, "data", "historico-estoque");
 const INDEX = path.join(DIR, "index.json");
 const MANIFEST = path.join(ROOT, "data-manifest.json");
-const CATALOG = path.join(ROOT, "data", "catalog.json.gz");
+const SALDO_FILE = "00 - Saldo_Online.csv";
 
 const safeNumber = (value) => {
   if (value === null || value === undefined || value === "") return null;
@@ -68,20 +69,55 @@ export function stockSummary(rows) {
   };
 }
 
+/**
+ * A linha do tempo de estoque é governada somente pelo arquivo de saldo.
+ * Atualizações de compras, consumo ou outros CSVs não criam posição fictícia.
+ */
 export async function sourceSignature(root = ROOT) {
   const manifest = JSON.parse(await fs.readFile(path.join(root, "data-manifest.json"), "utf8"));
-  // O manifesto possui hash de todos os CSVs da raiz. Consumo mensal também entra no hash.
-  const sources = manifest.map(({ path, sha, size }) => [path, sha, size])
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  const monthlyDir = path.join(root, "consumo-mensal");
-  const monthly = await fs.readdir(monthlyDir).catch(() => []);
-  for (const name of monthly.sort()) {
-    if (!/\.csv$/i.test(name)) continue;
-    const contents = await fs.readFile(path.join(monthlyDir, name));
-    sources.push(["consumo-mensal/" + name, crypto.createHash("sha256").update(contents).digest("hex").slice(0, 16), contents.length]);
+  if (!Array.isArray(manifest)) throw new Error("Manifesto de CSVs inválido.");
+  const saldo = manifest.find((entry) => entry.path === SALDO_FILE);
+  if (!saldo?.sha) throw new Error("Arquivo Saldo_Online.csv não encontrado no manifesto.");
+  const digest = crypto.createHash("sha256")
+    .update(JSON.stringify([saldo.path, saldo.sha, saldo.size])).digest("hex");
+  return {
+    digest,
+    balanceSha: saldo.sha,
+    sourceCount: 1,
+    sourceFiles: [SALDO_FILE],
+  };
+}
+
+function gitSaldoBlob(root, revision) {
+  if (!revision || !/^[a-f0-9]{40}$/.test(revision)) return "";
+  try {
+    return execFileSync("git", ["rev-parse", revision + ":" + SALDO_FILE], {
+      cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
   }
-  const digest = crypto.createHash("sha256").update(JSON.stringify(sources)).digest("hex");
-  return { digest, sourceCount: sources.length, sourceFiles: sources.map((s) => s[0]) };
+}
+
+function gitSaldoBlobAtHead(root) {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD:" + SALDO_FILE], {
+      cwd: root, encoding: "utf8", stdio: ["ignore","pipe","ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+async function readStockRows(root) {
+  const raw = await fs.readFile(path.join(root, "data", "catalog.json.gz"));
+  const catalog = JSON.parse(gunzipSync(raw).toString("utf8"));
+  if (!Array.isArray(catalog.items) || !catalog.items.length) {
+    throw new Error("Catálogo vazio: snapshot não gravado.");
+  }
+  const rows = compactStock(catalog.items);
+  if (!rows.length) throw new Error("Catálogo sem posições válidas: snapshot não gravado.");
+  return rows;
 }
 
 export function snapshotDocument(rows, createdAt, sourceDigest) {
@@ -103,22 +139,40 @@ export async function buildStockHistory({
   try { index = JSON.parse(await fs.readFile(indexFile, "utf8")); }
   catch (error) { if (error.code !== "ENOENT") throw error; }
   if (!Array.isArray(index.entries)) throw new Error("Índice de histórico inválido.");
-  // Só comparar com a ÚLTIMA captura: se o usuário restaurar uma base antiga,
-  // isso é uma nova atualização operacional e deve ganhar outra data histórica.
-  const latest = index.entries[index.entries.length - 1];
-  if (latest?.sourceDigest === signature.digest) {
-    console.log("Histórico: fontes inalteradas desde a última captura.");
+  // O último registro define o arquivo de saldo já processado. Mesmo que o
+  // estoque volte a um saldo antigo, uma nova alteração no CSV gera nova captura.
+  const latest = [...index.entries].sort((a,b) => a.date.localeCompare(b.date)
+    || a.id.localeCompare(b.id)).at(-1);
+  if (latest?.balanceSha === signature.balanceSha || latest?.sourceDigest === signature.digest) {
+    console.log("Histórico: Saldo_Online.csv não mudou desde a última captura.");
     return { created: false, entry: null };
   }
 
-  // Garantir que todos os CSVs foram consolidados antes de capturar a versão.
-  const raw = await fs.readFile(path.join(root, "data", "catalog.json.gz"));
-  const catalog = JSON.parse(gunzipSync(raw).toString("utf8"));
-  if (!Array.isArray(catalog.items) || !catalog.items.length) {
-    throw new Error("Catálogo vazio: snapshot não gravado.");
+  // Migração dos índices antigos: antes o hash englobava TODOS os CSVs.
+  // Comparar o blob git do saldo na captura anterior evita gravar uma
+  // posição extra ao atualizar somente compras/consumo após a migração.
+  if (latest && !latest.balanceSha) {
+    const previousGitBlob = gitSaldoBlob(root, latest.sourceCommit);
+    const currentGitBlob = gitSaldoBlob(root, sourceCommit) || gitSaldoBlobAtHead(root);
+    let unchangedSaldo = Boolean(previousGitBlob && currentGitBlob && previousGitBlob === currentGitBlob);
+    if (!unchangedSaldo && !previousGitBlob) {
+      // Em bases locais sem Git, comparar o snapshot já existente com a base atual.
+      try {
+        const prior = JSON.parse(gunzipSync(await fs.readFile(path.join(root, latest.path))).toString("utf8"));
+        unchangedSaldo = JSON.stringify(prior.rows) === JSON.stringify(await readStockRows(root));
+      } catch { /* Se não é possível comparar, preserva o registro e cria nova captura. */ }
+    }
+    if (unchangedSaldo) {
+      latest.balanceSha = signature.balanceSha;
+      latest.sourceFile = SALDO_FILE;
+      await fs.writeFile(indexFile, JSON.stringify(index, null, 2) + "\n", "utf8");
+      console.log("Histórico: índice antigo atualizado; Saldo_Online.csv sem alteração.");
+      return { created: false, entry: null };
+    }
   }
-  const rows = compactStock(catalog.items);
-  if (!rows.length) throw new Error("Catálogo sem posições válidas: snapshot não gravado.");
+
+  // O catálogo é consolidado antes do histórico e só é lido se o saldo mudou.
+  const rows = await readStockRows(root);
   const document = snapshotDocument(rows, at, signature.digest);
   const compressed = gzipSync(Buffer.from(JSON.stringify(document)), { level: 9 });
   const timestamp = at.replace(/[:.]/g, "-");
@@ -133,6 +187,7 @@ export async function buildStockHistory({
     }).format(new Date(at)),
     path: "data/historico-estoque/" + file,
     sourceDigest: signature.digest, sourceCount: signature.sourceCount,
+    balanceSha: signature.balanceSha, sourceFile: SALDO_FILE,
     sourceCommit: text(sourceCommit), bytes: compressed.length,
     ...stockSummary(rows),
   };

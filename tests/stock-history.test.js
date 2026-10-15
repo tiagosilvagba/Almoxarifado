@@ -6,7 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
 const zlib = require("node:zlib");
-const { compareSnapshots, summarize } = require("../app/modules/historico-estoque.js");
+const { compareSnapshots, summarize, latestPerDay } = require("../app/modules/historico-estoque.js");
 
 test("compara posições por código sem pontos, filial e endereço; identifica inclusões e saídas", () => {
   const old = { rows: [
@@ -88,6 +88,91 @@ test("gerador persiste versões separadas e não cria duplicatas sem mudança de
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
+});
+
+
+test("considera só a última atualização do Saldo Online de cada dia, no fuso de São Paulo", () => {
+  const snapshots = [
+    { id:"dia14-cedo",date:"2026-10-14T12:00:00.000Z",localDate:"2026-10-14",path:"data/historico-estoque/1.json.gz" },
+    { id:"dia15-cedo",date:"2026-10-15T11:00:00.000Z",localDate:"2026-10-15",path:"data/historico-estoque/2.json.gz" },
+    { id:"dia15-final",date:"2026-10-15T19:00:00.000Z",localDate:"2026-10-15",path:"data/historico-estoque/3.json.gz" },
+    { id:"dia14-mais-tarde",date:"2026-10-15T01:00:00.000Z",path:"data/historico-estoque/4.json.gz" },
+  ];
+  const picked = latestPerDay([snapshots[2],snapshots[1],snapshots[0],snapshots[3]]);
+  assert.deepEqual(picked.map((x) => x.id),["dia14-mais-tarde","dia15-final"]);
+  assert.equal(latestPerDay([snapshots[1],snapshots[2]]).length,1);
+  assert.deepEqual(latestPerDay([]),[]);
+});
+
+test("alterar outro CSV não cria histórico; duas atualizações de saldo no dia usam a última", async () => {
+  const { buildStockHistory } = await import("../tools/build_stock_history.mjs");
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "almox-stock-saldo-only-"));
+  const writeCatalog = (qty) => fs.writeFile(path.join(root,"data","catalog.json.gz"), zlib.gzipSync(JSON.stringify({
+    items: [{code:"407919",name:"Item",flags:{},positions:[
+      {branchCode:"704",localCode:"299",partition:"A",quantity:qty,unitCost:2,stockValue:qty*2}
+    ]}]
+  })));
+  const manifest = (saldo,compra) => fs.writeFile(path.join(root,"data-manifest.json"),JSON.stringify([
+    {path:"00 - Saldo_Online.csv",sha:saldo,size:120},
+    {path:"01 - Compras_Almox_Parte_01.CSV",sha:compra,size:200}
+  ]));
+  try {
+    await fs.mkdir(path.join(root,"data"),{recursive:true});
+    await fs.mkdir(path.join(root,"consumo-mensal"),{recursive:true});
+    await writeCatalog(10);await manifest("saldo-a","compra-a");
+    const a=await buildStockHistory({root,at:"2026-10-15T10:00:00.000Z"});
+    assert.equal(a.created,true);
+    assert.equal(a.entry.sourceCount,1);
+    assert.equal(a.entry.sourceFile,"00 - Saldo_Online.csv");
+    await writeCatalog(99);await manifest("saldo-a","compra-b");
+    const purchasesOnly=await buildStockHistory({root,at:"2026-10-15T11:00:00.000Z"});
+    assert.equal(purchasesOnly.created,false,"somente compras não devem gerar posição histórica");
+    await writeCatalog(14);await manifest("saldo-b","compra-b");
+    const b=await buildStockHistory({root,at:"2026-10-15T12:00:00.000Z"});
+    assert.equal(b.created,true);
+    await writeCatalog(16);await manifest("saldo-c","compra-b");
+    const c=await buildStockHistory({root,at:"2026-10-15T15:00:00.000Z"});
+    assert.equal(c.created,true);
+    const idx=JSON.parse(await fs.readFile(path.join(root,"data","historico-estoque","index.json"),"utf8"));
+    assert.equal(idx.entries.length,3,"todas as versões permanecem arquivadas");
+    assert.deepEqual(latestPerDay(idx.entries).map((x)=>x.id),[c.entry.id],
+      "somente a última posição do dia aparece para comparação");
+    const previous=JSON.parse(zlib.gunzipSync(await fs.readFile(path.join(root,b.entry.path))).toString());
+    const latest=JSON.parse(zlib.gunzipSync(await fs.readFile(path.join(root,c.entry.path))).toString());
+    assert.equal(compareSnapshots(previous,latest)[0].deltaQty,2);
+  } finally {
+    await fs.rm(root,{recursive:true,force:true});
+  }
+});
+
+test("migra registros antigos sem inventar captura por alteração de outros CSVs",async()=>{
+  const { buildStockHistory }=await import("../tools/build_stock_history.mjs");
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),"almox-stock-migrate-"));
+  try {
+    await fs.mkdir(path.join(root,"data"),{recursive:true});
+    await fs.mkdir(path.join(root,"consumo-mensal"),{recursive:true});
+    const writeManifest=(saldo,other)=>fs.writeFile(path.join(root,"data-manifest.json"),JSON.stringify([
+      {path:"00 - Saldo_Online.csv",sha:saldo,size:30},
+      {path:"03 - Consumo.csv",sha:other,size:60}
+    ]));
+    await fs.writeFile(path.join(root,"data","catalog.json.gz"),zlib.gzipSync(JSON.stringify({
+      items:[{code:"777",name:"Estoque",positions:[{branchCode:"704",localCode:"299",quantity:10,unitCost:2,stockValue:20}]}]
+    })));
+    await writeManifest("saldo-antigo","consumo-1");
+    const initial=await buildStockHistory({root,at:"2026-10-14T16:00:00.000Z"});
+    const indexPath=path.join(root,"data","historico-estoque","index.json");
+    const index=JSON.parse(await fs.readFile(indexPath,"utf8"));
+    delete index.entries[0].balanceSha;
+    index.entries[0].sourceDigest="assinatura-antiga-todos-csvs";
+    await fs.writeFile(indexPath,JSON.stringify(index));
+    await writeManifest("saldo-antigo","consumo-2");
+    const migrated=await buildStockHistory({root,at:"2026-10-15T16:00:00.000Z"});
+    assert.equal(migrated.created,false);
+    const saved=JSON.parse(await fs.readFile(indexPath,"utf8"));
+    assert.equal(saved.entries.length,1);
+    assert.equal(saved.entries[0].balanceSha,"saldo-antigo");
+    assert.equal(saved.entries[0].id,initial.entry.id);
+  } finally {await fs.rm(root,{recursive:true,force:true});}
 });
 
 test("aba, versão e workflow estão ligados ao histórico em arquivos separados", async () => {

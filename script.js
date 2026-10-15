@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 10.7: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "10.7.56";
+const BOOTSTRAP_VERSION = "10.7.57";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -23,7 +23,7 @@ const MODULES = Object.freeze({
   outsideCcu: "./app/modules/compras-fora-cc1500.js?v=10.7.43",
   purchaseLeadTime: "./app/modules/purchase-need-lead-time.js?v=10.7.40",
   intelligence: "./app/modules/inteligencia-almoxarifado.js?v=10.7.53",
-  stockHistory: "./app/modules/historico-estoque.js?v=10.7.54",
+  stockHistory: "./app/modules/historico-estoque.js?v=10.7.57",
   imageViewer: "./app/modules/image-viewer.js?v=8.9",
   pdf: "./app/modules/page-snapshot-pdf.js?v=7.0",
   photos: "./app/modules/github-photo-upload-v2.js?v=7.0",

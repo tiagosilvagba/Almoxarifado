@@ -22,6 +22,25 @@
     timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short",
   }).format(new Date(iso));
 
+  // Apenas a última captura de cada dia (fuso de Brasília) participa da
+  // comparação. As versões intermediárias continuam arquivadas no GitHub.
+  function latestPerDay(records) {
+    const days = new Map();
+    for (const entry of records || []) {
+      if (!entry || !entry.id || !entry.path || !entry.date || !Number.isFinite(Date.parse(entry.date))) continue;
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(entry.localDate || "")
+        ? entry.localDate
+        : new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "America/Sao_Paulo", year:"numeric", month:"2-digit", day:"2-digit",
+        }).format(new Date(entry.date));
+      const previous = days.get(day);
+      if (!previous || entry.date > previous.date || (entry.date === previous.date && entry.id > previous.id)) {
+        days.set(day, entry);
+      }
+    }
+    return [...days.values()].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+
   // Repetições de linhas no CSV são somadas por posição física, jamais duplicadas.
   function aggregate(snapshot) {
     const map = new Map();
@@ -254,11 +273,9 @@
     async function loadIndex() {
       if (indexPromise) return indexPromise;
       indexPromise = (async () => {
-        status("Consultando versões salvas dos arquivos CSV…");
+        status("Consultando as últimas posições diárias do Saldo Online…");
         const index = await getIndex();
-        entries = Array.isArray(index.entries)
-          ? index.entries.filter((e) => e && e.id && e.path && e.date).sort((a, b) => a.date.localeCompare(b.date))
-          : [];
+        entries = latestPerDay(Array.isArray(index.entries) ? index.entries : []);
         selectedRows = []; filteredRows = []; rendered = 0;
         if ($("shBody")) $("shBody").replaceChildren();
         if ($("shKpis")) $("shKpis").replaceChildren();
@@ -267,10 +284,10 @@
         setOptions();
         loaded = true;
         if (!entries.length) {
-          status("Ainda não há capturas. O histórico começa na próxima consolidação dos CSVs.");
+          status("Ainda não há posições. O histórico começa na próxima atualização do Saldo Online.");
         } else if (entries.length === 1) {
           const first = entries[0];
-          status("1 captura registrada em " + ts(first.date) + ". Após uma nova atualização dos CSVs, a comparação ficará disponível.");
+          status("1 dia registrado: " + ts(first.date) + ". A comparação ficará disponível após uma atualização do Saldo Online em outro dia.");
           if ($("shKpis")) $("shKpis").innerHTML = [
             ["Itens", first.items], ["Posições", first.positions],
             ["Quantidade", nf.format(first.quantity)], ["Valor conhecido", money.format(first.value)],
@@ -341,5 +358,5 @@
     else init();
   }
 
-  return { aggregate, compareSnapshots, summarize, install };
+  return { aggregate, compareSnapshots, summarize, latestPerDay, install };
 });
