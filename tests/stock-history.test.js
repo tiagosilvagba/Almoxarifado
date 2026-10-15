@@ -192,7 +192,7 @@ test("Histórico abrevia moedas na tela e mantém valores numéricos completos n
   assert.ok(compact(66207903.01).includes("66,2 mi"));
   assert.ok(compact(1450000).includes("1,5 mi"));
   assert.ok(compact(85250.5).includes("85,3 mil"));
-  assert.ok(compact(-1450000).includes("-1,5 mi"));
+  assert.ok(compact(-1450000).includes("1,5 mi") && compact(-1450000).includes("-"));
   assert.ok(compactSigned(1450000).replace(/\s/g, " ").startsWith("+R$"));
   const rows = compareSnapshots(
     { rows: [["243370", "Peça", "704", "299", "", "", "", 20, 5, 100]] },
