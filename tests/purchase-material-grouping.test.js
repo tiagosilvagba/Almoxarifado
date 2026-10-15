@@ -117,6 +117,53 @@ test("exportação Por tipo preserva dados da compra, valor total e células de 
   assert.match(report.filterSummary, /categoria|material/);
 });
 
+
+test("material sem família identificável usa Nm Classe da posição do Saldo Online", () => {
+  const a = need("407919", ["Grupo geral", "Subgrupo geral"], 12, 15);
+  a.position.stockClass = "Instrumentação Industrial";
+  a.item.stockClass = "Classe desatualizada";
+  assert.deepEqual(purchaseNeedMaterialType(a), {
+    name: "Instrumentação Industrial",
+    source: "Nm Classe (Saldo Online)",
+    details: ["Grupo geral", "Subgrupo geral"],
+  });
+  const b = need("407920", ["Grupo geral"], 5, 8);
+  b.item.stockClass = "Material de limpeza";
+  assert.equal(purchaseNeedMaterialType(b).name, "Material de limpeza");
+  const c = need("407921", ["Grupo geral"], 6, 8);
+  c.position.stockClass = "A classificar";
+  assert.equal(purchaseNeedMaterialType(c).name, "Outros materiais / classificar");
+  const groups = groupPurchaseNeedsByMaterialType([a, b, c]);
+  assert.equal(groups.length, 3);
+  assert.equal(groups.flatMap((group) => group.entries).length, 3);
+  assert.ok(groups.some((group) => group.materialType === "Instrumentação Industrial"));
+  assert.ok(groups.some((group) => group.materialType === "Material de limpeza"));
+  assert.equal(groups.at(-1).materialType, "Outros materiais / classificar");
+  const report = buildMaterialGroupedPurchaseExport([a, b, c], new Date(2026,9,15), []);
+  assert.ok(report.rows.some((r) => r[0] === "Instrumentação Industrial"));
+  assert.ok(report.rows.some((r) => r[0] === "Material de limpeza"));
+});
+
+test("classificação pela descrição permanece prioritária e respeita a posição", () => {
+  const a = need("407922", ["Grupo geral"], 9);
+  a.item.name = "Sensor de temperatura";
+  a.position.stockClass = "Automação";
+  assert.equal(purchaseNeedMaterialType(a).name, "Sensores");
+  const b = need("407923", ["Grupo geral"], 3);
+  b.item.stockClass = "Linha geral";
+  b.position.stockClass = "Materiais hidráulicos";
+  assert.equal(purchaseNeedMaterialType(b).name, "Materiais hidráulicos");
+  assert.equal(purchaseNeedMaterialType(b).source, "Nm Classe (Saldo Online)");
+});
+
+test("o leitor CSV mantém a coluna Nm Classe separada em itens e posições", () => {
+  const code = fs.readFileSync(path.join(__dirname, "../app/core/catalog-app.js"), "utf8");
+  assert.match(code, /const className = clean\(get\("Nm Classe"\)\)/);
+  assert.match(code, /stockClass: className/);
+  assert.match(code, /if \(className && \(!item\.stockClass/);
+  assert.match(code, /item\.categories = \[\.\.\.item\._categories\]/);
+});
+
 test("nova opção existe em mobile e não há aspas extras na chamada ao script", () => {
   const html = fs.readFileSync(path.join(__dirname, "../index.html"),"utf8");
   const js = fs.readFileSync(path.join(__dirname, "../app/core/catalog-app.js"),"utf8");
