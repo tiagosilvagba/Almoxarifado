@@ -451,3 +451,68 @@ html.almox-nav-ready .almox-menu__backdrop {display:none}
     margin-left:auto !important;
   }
 }
+
+/* Atualizações por fonte no cabeçalho: chips leves e legíveis. */
+.base-update-badge.base-update-badge--sources {
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+  max-width:100%;
+  width:auto;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:inherit;
+  white-space:normal;
+  font-size:.69rem;
+  font-weight:500;
+}
+.base-update-badge--sources .base-update-source {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:24px;
+  padding:3px 7px;
+  border:1px solid rgba(186,230,253,.22);
+  border-radius:8px;
+  background:rgba(255,255,255,.07);
+  color:inherit;
+  line-height:1.25;
+  white-space:nowrap;
+}
+.base-update-source__label { font-weight:700; }
+.base-update-source__date { font-weight:450; font-variant-numeric:tabular-nums; opacity:.9; }
+html.almox-nav-ready .topbar .brand__meta > #baseUpdateBadge.base-update-badge--sources {
+  flex:0 1 auto;
+  white-space:normal;
+}
+html.os-ios .base-update-badge.base-update-badge--sources {
+  border:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+html.os-ios .base-update-badge--sources .base-update-source {
+  background:rgba(118,118,128,.10);
+  border-color:rgba(118,118,128,.16);
+  color:var(--ios-text);
+}
+html.os-ios[data-theme] .base-update-badge--sources .base-update-source {
+  background:rgba(255,255,255,.10) !important;
+  border-color:rgba(255,255,255,.16) !important;
+  color:rgba(255,255,255,.86) !important;
+}
+@media (max-width:700px) {
+  .base-update-badge.base-update-badge--sources {
+    display:flex;
+    flex-wrap:wrap;
+    width:auto;
+    margin:4px 0 0;
+    gap:4px;
+  }
+  .base-update-badge--sources .base-update-source {
+    padding:3px 6px;
+    font-size:.67rem;
+  }
+}

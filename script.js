@@ -1,7 +1,7 @@
 "use strict";
 
 /** Bootstrap 10.7: unifica a versão exibida desde o primeiro quadro da página. */
-const BOOTSTRAP_VERSION = "10.7.64";
+const BOOTSTRAP_VERSION = "10.7.65";
 const BOOTSTRAP_VERSION_LABEL = `Versão ${BOOTSTRAP_VERSION}`;
 window.__ALMOX_VERSION__ = BOOTSTRAP_VERSION;
 window.__ALMOX_VERSION_LABEL__ = BOOTSTRAP_VERSION_LABEL;
@@ -15,7 +15,7 @@ const MODULES = Object.freeze({
   responsive: "./app/modules/responsive-layout.js?v=9.2",
   groupedSidebar: "./app/modules/grouped-sidebar.js?v=10.7.56",
   commitQueue: "./app/modules/github-commit-queue.js?v=7.0",
-  balanceTime: "./app/modules/saldo-update-time.js?v=7.0",
+  balanceTime: "./app/modules/saldo-update-time.js?v=10.7.65",
   area: "./app/modules/area-filter-active.js?v=7.9",
   noTurn: "./app/modules/itens-sem-giro.js?v=10.7.63",
   noTurnCross: "./app/modules/itens-sem-giro-cruzamento.js?v=7.0",

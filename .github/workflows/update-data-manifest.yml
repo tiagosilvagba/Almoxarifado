@@ -47,7 +47,7 @@ jobs:
         run: node tools/build_stock_history.mjs
       - name: Publicar bases atualizadas
         run: |
-          if [ -z "$(git status --porcelain -- data-manifest.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json data/historico-estoque)" ]; then
+          if [ -z "$(git status --porcelain -- data-manifest.json data/update-times.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json data/historico-estoque)" ]; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
