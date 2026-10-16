@@ -1,0 +1,14 @@
+{
+  "saldo": {
+    "file": "00 - Saldo_Online.csv",
+    "updatedAt": "2026-10-15T12:15:35Z"
+  },
+  "compras": {
+    "file": "01 - Compras_Almox_Parte_04.CSV",
+    "updatedAt": "2026-10-15T11:58:01Z"
+  },
+  "consumo": {
+    "file": "03 - Consumo.csv",
+    "updatedAt": "2026-09-02T16:31:17Z"
+  }
+}
