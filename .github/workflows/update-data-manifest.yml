@@ -52,7 +52,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data-manifest.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json data/historico-estoque
+          git add data-manifest.json data/update-times.json data/catalog.json.gz data/catalog-meta.json data/consumo-consolidado.csv data/consumo-meta.json data/historico-estoque
           git commit -m "Atualiza bases otimizadas e guarda histórico permanente de estoque"
 
           for attempt in 1 2 3; do
