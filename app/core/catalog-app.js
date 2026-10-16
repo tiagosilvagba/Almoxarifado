@@ -2075,7 +2075,10 @@ function showLoading(title, message) {
   if (ui.startupMessage) ui.startupMessage.textContent = message || "Preparando seu ambiente…";
   ui.retryButton.classList.add("is-hidden");
   ui.statusLine.textContent = message;
-  ui.baseUpdateBadge.classList.add("is-hidden");
+  // Não oculta horários de arquivos já publicados durante a recarga do painel.
+  if (!window.almoxSaldoUpdateTime?.restoreBadge?.()) {
+    ui.baseUpdateBadge.classList.add("is-hidden");
+  }
   stopLoadingProgressPulse();
   state.loadingProgressValue = 0;
   state.loadingProgressCeiling = loadingProgressCeilingFor(0);
@@ -2148,6 +2151,9 @@ function renderLoadingProgress(complete = false) {
 }
 
 function updateBaseTimestamp(value) {
+  // A data de compilação da base não pode substituir as três datas dos CSVs.
+  // Preserva a indicação geral apenas quando o índice por fonte estiver indisponível.
+  if (window.almoxSaldoUpdateTime?.restoreBadge?.()) return;
   const timestamp = Date.parse(value || "");
   if (!Number.isFinite(timestamp)) {
     ui.baseUpdateBadge.classList.add("is-hidden");

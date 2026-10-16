@@ -28,9 +28,9 @@
 
   function render() {
     const badge = document.getElementById("baseUpdateBadge");
-    if (!badge || !lastData) return;
+    if (!badge || !lastData) return false;
     const dataSignature = JSON.stringify(SOURCES.map(({key}) => lastData[key]));
-    if (lastRendered === dataSignature && badge.childElementCount === SOURCES.length && !badge.classList.contains("is-hidden")) return;
+    if (lastRendered === dataSignature && badge.childElementCount === SOURCES.length && !badge.classList.contains("is-hidden")) return true;
     lastRendered = dataSignature;
 
     const cells = SOURCES.map(({key,label}) => {
@@ -57,6 +57,7 @@
     badge.title = "Última alteração dos arquivos de origem, horário de Brasília";
     badge.setAttribute("aria-label", SOURCES.map(({key,label}) =>
       `${label}: ${formatDate(lastData[key]?.updatedAt, true)}`).join("; "));
+    return true;
   }
 
   async function refresh(force = false) {
@@ -98,6 +99,7 @@
   [400, 1000, 2200, 5000].forEach(delay => setTimeout(render, delay));
   window.almoxSaldoUpdateTime = Object.freeze({
     refresh: () => refresh(true),
+    restoreBadge: render,
     file:"00 - Saldo_Online.csv"
   });
 })();
